@@ -207,7 +207,15 @@ class TestValidator {
     ];
     
     const key = entry.key.toLowerCase();
-    const value = (entry.value || '').toLowerCase();
+    
+    // Handle both string and object values
+    let value = '';
+    if (typeof entry.value === 'string') {
+      value = entry.value.toLowerCase();
+    } else if (typeof entry.value === 'object' && entry.value !== null) {
+      // Convert object to string for analysis
+      value = JSON.stringify(entry.value).toLowerCase();
+    }
     
     return commitIndicators.some(indicator => 
       key.includes(indicator) || value.includes(indicator)

@@ -31,7 +31,7 @@ const customJestConfig = {
     '**/__tests__/**/*.(test|spec).(js|jsx|ts|tsx)',
     '**/*.(test|spec).(js|jsx|ts|tsx)',
   ],
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@components/(.*)$': '<rootDir>/src/components/$1',
     '^@utils/(.*)$': '<rootDir>/src/utils/$1',
