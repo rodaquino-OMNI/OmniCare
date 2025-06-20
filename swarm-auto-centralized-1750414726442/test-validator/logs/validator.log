@@ -1,0 +1,13 @@
+🚀 Starting Test Validator System...
+🔍 New Memory activity detected: backup-2025-06-20T10-25-05-439Z.json
+❌ Failed to analyze memory backup: TypeError: (entry.value || "").toLowerCase is not a function
+    at TestValidator.isCommitEntry (/Users/rodrigo/claude-projects/OmniCare/swarm-auto-centralized-1750414726442/test-validator/scripts/test-validator.js:210:39)
+    at TestValidator.analyzeMemoryBackup (/Users/rodrigo/claude-projects/OmniCare/swarm-auto-centralized-1750414726442/test-validator/scripts/test-validator.js:175:18)
+    at TestValidator.checkForNewCommits (/Users/rodrigo/claude-projects/OmniCare/swarm-auto-centralized-1750414726442/test-validator/scripts/test-validator.js:153:34)
+    at TestValidator.monitorLoop (/Users/rodrigo/claude-projects/OmniCare/swarm-auto-centralized-1750414726442/test-validator/scripts/test-validator.js:114:20)
+    at TestValidator.start (/Users/rodrigo/claude-projects/OmniCare/swarm-auto-centralized-1750414726442/test-validator/scripts/test-validator.js:49:10)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+✅ Test Validator System started successfully
+📊 Monitoring Memory at: /Users/rodrigo/claude-projects/OmniCare/memory
+📁 Results stored at: /Users/rodrigo/claude-projects/OmniCare/swarm-auto-centralized-1750414726442/test-validator/results
+🔄 Polling every 10 seconds

@@ -1,0 +1,13 @@
+{
+  "objective": "recover memory and resume pending tasks until finish building OmniCare EMR",
+  "strategy": "development",
+  "mode": "centralized",
+  "maxAgents": 10,
+  "timeout": 60,
+  "parallel": true,
+  "monitor": true,
+  "output": "json",
+  "outputDir": "./reports",
+  "timestamp": "2025-06-20T01:02:17.603Z",
+  "id": "swarm-development-centralized-1750381337603"
+}

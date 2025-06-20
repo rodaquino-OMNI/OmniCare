@@ -1,0 +1,1697 @@
+{
+  "dependencyMap": {
+    ".storybook/main.ts": [],
+    ".storybook/preview.ts": [
+      "src/design-system/themes/omnicare-theme.ts"
+    ],
+    "backend/dist/config/index.d.ts": [],
+    "backend/dist/config/index.js": [
+      "node_modules:dotenv",
+      "node_modules:path"
+    ],
+    "backend/dist/controllers/analytics.controller.d.ts": [
+      "backend/dist/services/analytics/clinical-quality-measures.service.js",
+      "backend/dist/services/analytics/financial-analytics.service.js",
+      "backend/dist/services/analytics/operational-metrics.service.js",
+      "backend/dist/services/analytics/population-health.service.js",
+      "backend/dist/services/analytics/reporting-engine.service.js"
+    ],
+    "backend/dist/controllers/analytics.controller.js": [
+      "backend/dist/services/analytics/clinical-quality-measures.service.js",
+      "backend/dist/services/analytics/financial-analytics.service.js",
+      "backend/dist/services/analytics/operational-metrics.service.js",
+      "backend/dist/services/analytics/population-health.service.js",
+      "backend/dist/services/analytics/reporting-engine.service.js"
+    ],
+    "backend/dist/controllers/auth.controller.d.ts": [
+      "node_modules:express"
+    ],
+    "backend/dist/controllers/auth.controller.js": [
+      "node_modules:jsonwebtoken",
+      "src/auth/jwt.service.ts",
+      "src/services/session.service.ts",
+      "src/services/audit.service.ts",
+      "src/types/auth.types.ts"
+    ],
+    "backend/dist/controllers/fhir.controller.d.ts": [
+      "node_modules:express"
+    ],
+    "backend/dist/controllers/fhir.controller.js": [],
+    "backend/dist/healthcheck.d.ts": [],
+    "backend/dist/healthcheck.js": [
+      "node_modules:http",
+      "node_modules:process"
+    ],
+    "backend/dist/index.d.ts": [
+      "node_modules:express"
+    ],
+    "backend/dist/index.js": [
+      "node_modules:express",
+      "node_modules:cors",
+      "node_modules:helmet",
+      "node_modules:morgan",
+      "node_modules:compression",
+      "node_modules:express-rate-limit"
+    ],
+    "backend/dist/middleware/auth.middleware.d.ts": [
+      "node_modules:express"
+    ],
+    "backend/dist/middleware/auth.middleware.js": [
+      "node_modules:jsonwebtoken"
+    ],
+    "backend/dist/models/base.model.d.ts": [],
+    "backend/dist/models/base.model.js": [],
+    "backend/dist/models/encounter.model.d.ts": [
+      "backend/dist/models/base.model.js"
+    ],
+    "backend/dist/models/encounter.model.js": [],
+    "backend/dist/models/index.d.ts": [],
+    "backend/dist/models/index.js": [
+      "backend/dist/models/patient.model.js",
+      "backend/dist/models/encounter.model.js",
+      "backend/dist/models/base.model.js"
+    ],
+    "backend/dist/models/patient.model.d.ts": [
+      "backend/dist/models/base.model.js"
+    ],
+    "backend/dist/models/patient.model.js": [],
+    "backend/dist/routes/index.d.ts": [],
+    "backend/dist/routes/index.js": [
+      "node_modules:express",
+      "src/controllers/auth.controller.ts"
+    ],
+    "backend/dist/services/analytics/clinical-quality-measures.service.d.ts": [
+      "node_modules:events"
+    ],
+    "backend/dist/services/analytics/clinical-quality-measures.service.js": [
+      "node_modules:events"
+    ],
+    "backend/dist/services/analytics/financial-analytics.service.d.ts": [
+      "node_modules:events"
+    ],
+    "backend/dist/services/analytics/financial-analytics.service.js": [
+      "node_modules:events"
+    ],
+    "backend/dist/services/analytics/operational-metrics.service.d.ts": [
+      "node_modules:events"
+    ],
+    "backend/dist/services/analytics/operational-metrics.service.js": [
+      "node_modules:events"
+    ],
+    "backend/dist/services/analytics/population-health.service.d.ts": [
+      "node_modules:events"
+    ],
+    "backend/dist/services/analytics/population-health.service.js": [
+      "node_modules:events"
+    ],
+    "backend/dist/services/analytics/reporting-engine.service.d.ts": [
+      "node_modules:events"
+    ],
+    "backend/dist/services/analytics/reporting-engine.service.js": [
+      "node_modules:events"
+    ],
+    "backend/dist/services/cds-hooks.service.d.ts": [],
+    "backend/dist/services/cds-hooks.service.js": [
+      "backend/dist/services/fhir-resources.service.js"
+    ],
+    "backend/dist/services/fhir-resources.service.d.ts": [],
+    "backend/dist/services/fhir-resources.service.js": [
+      "backend/dist/services/medplum.service.js"
+    ],
+    "backend/dist/services/fhir-transformation.service.d.ts": [],
+    "backend/dist/services/fhir-transformation.service.js": [],
+    "backend/dist/services/integration/direct/direct-trust.service.d.ts": [
+      "backend/dist/services/integration/types/direct.types.js",
+      "backend/dist/services/integration/types/integration.types.js"
+    ],
+    "backend/dist/services/integration/direct/direct-trust.service.js": [
+      "node_modules:nodemailer",
+      "node_modules:crypto",
+      "node_modules:fs",
+      "backend/dist/services/integration/types/direct.types.js"
+    ],
+    "backend/dist/services/integration/fhir/fhir-validation.service.d.ts": [
+      "backend/dist/services/integration/types/integration.types.js"
+    ],
+    "backend/dist/services/integration/fhir/fhir-validation.service.js": [
+      "node_modules:ajv",
+      "node_modules:ajv-formats",
+      "node_modules:axios",
+      "node_modules:crypto"
+    ],
+    "backend/dist/services/integration/hl7v2/hl7v2-parser.service.d.ts": [
+      "backend/dist/services/integration/types/hl7v2.types.js",
+      "backend/dist/services/integration/types/integration.types.js"
+    ],
+    "backend/dist/services/integration/hl7v2/hl7v2-parser.service.js": [],
+    "backend/dist/services/integration/index.d.ts": [],
+    "backend/dist/services/integration/index.js": [
+      "backend/dist/services/integration/fhir/fhir-validation.service.js",
+      "backend/dist/services/integration/hl7v2/hl7v2-parser.service.js",
+      "backend/dist/services/integration/direct/direct-trust.service.js",
+      "backend/dist/services/integration/types/integration.types.js",
+      "backend/dist/services/integration/types/hl7v2.types.js",
+      "backend/dist/services/integration/types/direct.types.js"
+    ],
+    "backend/dist/services/integration/types/direct.types.d.ts": [],
+    "backend/dist/services/integration/types/direct.types.js": [],
+    "backend/dist/services/integration/types/hl7v2.types.d.ts": [],
+    "backend/dist/services/integration/types/hl7v2.types.js": [],
+    "backend/dist/services/integration/types/integration.types.d.ts": [],
+    "backend/dist/services/integration/types/integration.types.js": [],
+    "backend/dist/services/medplum.service.d.ts": [],
+    "backend/dist/services/medplum.service.js": [],
+    "backend/dist/services/smart-fhir.service.d.ts": [],
+    "backend/dist/services/smart-fhir.service.js": [
+      "node_modules:jsonwebtoken",
+      "node_modules:axios",
+      "node_modules:crypto"
+    ],
+    "backend/dist/services/subscriptions.service.d.ts": [
+      "node_modules:ws",
+      "node_modules:events"
+    ],
+    "backend/dist/services/subscriptions.service.js": [
+      "node_modules:ws",
+      "node_modules:events",
+      "backend/dist/services/medplum.service.js",
+      "node_modules:axios"
+    ],
+    "backend/dist/services/validation.service.d.ts": [],
+    "backend/dist/services/validation.service.js": [
+      "node_modules:joi"
+    ],
+    "backend/dist/types/fhir.d.ts": [],
+    "backend/dist/types/fhir.js": [],
+    "backend/dist/utils/logger.d.ts": [
+      "node_modules:winston"
+    ],
+    "backend/dist/utils/logger.js": [
+      "node_modules:winston",
+      "node_modules:path"
+    ],
+    "backend/jest.config.js": [],
+    "backend/src/config/index.ts": [
+      "node_modules:dotenv",
+      "node_modules:path"
+    ],
+    "backend/src/controllers/analytics.controller.ts": [
+      "node_modules:express"
+    ],
+    "backend/src/controllers/auth.controller.ts": [
+      "node_modules:express",
+      "node_modules:jsonwebtoken",
+      "node_modules:bcrypt",
+      "src/auth/jwt.service.ts",
+      "src/services/session.service.ts",
+      "src/services/audit.service.ts",
+      "src/types/auth.types.ts",
+      "src/config/auth.config.ts"
+    ],
+    "backend/src/controllers/clinical-workflows.controller.ts": [
+      "node_modules:express"
+    ],
+    "backend/src/controllers/fhir.controller.ts": [
+      "node_modules:express"
+    ],
+    "backend/src/healthcheck.ts": [
+      "node_modules:http",
+      "node_modules:process"
+    ],
+    "backend/src/index.ts": [
+      "node_modules:express",
+      "node_modules:cors",
+      "node_modules:helmet",
+      "node_modules:morgan",
+      "node_modules:compression",
+      "node_modules:express-rate-limit"
+    ],
+    "backend/src/middleware/auth.middleware.ts": [
+      "node_modules:express",
+      "node_modules:jsonwebtoken",
+      "src/auth/jwt.service.ts",
+      "src/services/session.service.ts",
+      "src/services/audit.service.ts",
+      "src/auth/role-permissions.ts",
+      "src/types/auth.types.ts"
+    ],
+    "backend/src/models/base.model.ts": [],
+    "backend/src/models/billing.model.ts": [],
+    "backend/src/models/encounter.model.ts": [],
+    "backend/src/models/index.ts": [],
+    "backend/src/models/organization.model.ts": [],
+    "backend/src/models/patient.model.ts": [],
+    "backend/src/models/practitioner.model.ts": [],
+    "backend/src/routes/index.ts": [
+      "node_modules:express",
+      "src/controllers/auth.controller.ts"
+    ],
+    "backend/src/services/analytics/clinical-quality-measures.service.ts": [
+      "node_modules:events"
+    ],
+    "backend/src/services/analytics/financial-analytics.service.ts": [
+      "node_modules:events"
+    ],
+    "backend/src/services/analytics/operational-metrics.service.ts": [
+      "node_modules:events"
+    ],
+    "backend/src/services/analytics/population-health.service.ts": [
+      "node_modules:events"
+    ],
+    "backend/src/services/analytics/reporting-engine.service.ts": [
+      "node_modules:events"
+    ],
+    "backend/src/services/care-coordination.service.ts": [
+      "backend/src/services/medplum.service.ts"
+    ],
+    "backend/src/services/cds-hooks.service.ts": [
+      "node_modules:axios",
+      "backend/src/services/medplum.service.ts",
+      "backend/src/services/fhir-resources.service.ts"
+    ],
+    "backend/src/services/fhir-resources.service.ts": [
+      "backend/src/services/medplum.service.ts"
+    ],
+    "backend/src/services/fhir-transformation.service.ts": [],
+    "backend/src/services/integration/direct/direct-trust.service.ts": [
+      "node_modules:nodemailer",
+      "node_modules:crypto",
+      "node_modules:fs",
+      "backend/src/services/integration/types/integration.types.ts"
+    ],
+    "backend/src/services/integration/fhir/fhir-resource-mapper.ts": [
+      "backend/src/services/integration/types/integration.types.ts",
+      "backend/src/services/integration/fhir/fhir-resource-validators.ts"
+    ],
+    "backend/src/services/integration/fhir/fhir-resource-validators.ts": [
+      "backend/src/services/integration/types/integration.types.ts"
+    ],
+    "backend/src/services/integration/fhir/fhir-validation.service.ts": [
+      "node_modules:ajv",
+      "node_modules:ajv-formats",
+      "backend/src/services/integration/types/integration.types.ts",
+      "node_modules:axios",
+      "backend/src/services/integration/fhir/fhir-resource-validators.ts",
+      "node_modules:crypto"
+    ],
+    "backend/src/services/integration/hl7v2/hl7v2-parser.service.ts": [
+      "backend/src/services/integration/types/integration.types.ts"
+    ],
+    "backend/src/services/integration/hl7v2/hl7v2-to-fhir-transformer.ts": [
+      "backend/src/services/integration/types/integration.types.ts",
+      "backend/src/services/integration/fhir/fhir-resource-validators.ts",
+      "node_modules:crypto"
+    ],
+    "backend/src/services/integration/index.ts": [],
+    "backend/src/services/integration/types/direct.types.ts": [],
+    "backend/src/services/integration/types/hl7v2.types.ts": [],
+    "backend/src/services/integration/types/integration.types.ts": [],
+    "backend/src/services/medplum.service.ts": [],
+    "backend/src/services/referral.service.ts": [
+      "backend/src/services/medplum.service.ts"
+    ],
+    "backend/src/services/smart-fhir.service.ts": [
+      "node_modules:jsonwebtoken",
+      "node_modules:axios",
+      "node_modules:crypto"
+    ],
+    "backend/src/services/subscriptions.service.ts": [
+      "node_modules:ws",
+      "node_modules:events",
+      "backend/src/services/medplum.service.ts"
+    ],
+    "backend/src/services/telemedicine.service.ts": [
+      "backend/src/services/medplum.service.ts"
+    ],
+    "backend/src/services/validation.service.ts": [
+      "node_modules:joi"
+    ],
+    "backend/src/types/fhir.ts": [],
+    "backend/src/utils/logger.ts": [
+      "node_modules:winston",
+      "node_modules:path"
+    ],
+    "backend/tests/integration/auth.controller.integration.test.ts": [
+      "node_modules:supertest",
+      "node_modules:express",
+      "node_modules:jsonwebtoken",
+      "backend/src/controllers/auth.controller.ts",
+      "backend/src/services/smart-fhir.service.ts",
+      "backend/src/config/index.ts",
+      "backend/src/utils/logger.ts"
+    ],
+    "backend/tests/integration/fhir.controller.integration.test.ts": [
+      "node_modules:supertest",
+      "node_modules:express",
+      "backend/src/controllers/fhir.controller.ts",
+      "backend/src/services/fhir-resources.service.ts",
+      "backend/src/middleware/auth.middleware.ts",
+      "backend/src/utils/logger.ts"
+    ],
+    "backend/tests/security/auth-security.test.ts": [
+      "node_modules:supertest",
+      "node_modules:express",
+      "backend/src/controllers/auth.controller.ts",
+      "node_modules:jsonwebtoken"
+    ],
+    "backend/tests/security/hipaa-compliance.test.ts": [
+      "node_modules:supertest",
+      "node_modules:express",
+      "node_modules:jsonwebtoken",
+      "backend/src/middleware/auth.middleware.ts",
+      "backend/src/utils/logger.ts"
+    ],
+    "backend/tests/setup.ts": [
+      "node_modules:dotenv"
+    ],
+    "backend/tests/unit/services/fhir-resources.service.test.ts": [
+      "backend/src/services/fhir-resources.service.ts",
+      "backend/src/services/medplum.service.ts",
+      "backend/src/utils/logger.ts"
+    ],
+    "backend/tests/unit/services/medplum.service.test.ts": [
+      "backend/src/services/medplum.service.ts",
+      "backend/src/utils/logger.ts",
+      "backend/src/config/index.ts"
+    ],
+    "backend/tests/unit/utils/logger.test.ts": [
+      "node_modules:winston",
+      "backend/src/utils/logger.ts"
+    ],
+    "frontend/jest.config.js": [],
+    "frontend/jest.setup.js": [
+      "node_modules:util"
+    ],
+    "frontend/next.config.ts": [
+      "node_modules:next"
+    ],
+    "frontend/playwright.config.ts": [],
+    "frontend/src/app/auth/login/page.tsx": [
+      "node_modules:next"
+    ],
+    "frontend/src/app/dashboard/page.tsx": [],
+    "frontend/src/app/layout.tsx": [
+      "node_modules:next"
+    ],
+    "frontend/src/app/page.tsx": [
+      "node_modules:react"
+    ],
+    "frontend/src/components/admin/AdminDashboard.tsx": [
+      "node_modules:react",
+      "src/types/administrative.ts"
+    ],
+    "frontend/src/components/admin/AppointmentManagement.tsx": [
+      "node_modules:react",
+      "node_modules:react-big-calendar",
+      "node_modules:moment",
+      "src/types/administrative.ts"
+    ],
+    "frontend/src/components/admin/BillingManagement.tsx": [
+      "node_modules:react",
+      "src/types/administrative.ts"
+    ],
+    "frontend/src/components/admin/PatientRegistration.tsx": [
+      "node_modules:react",
+      "src/types/administrative.ts"
+    ],
+    "frontend/src/components/auth/__tests__/LoginForm.test.tsx": [
+      "frontend/src/components/auth/LoginForm.tsx"
+    ],
+    "frontend/src/components/auth/LoginForm.tsx": [
+      "node_modules:react"
+    ],
+    "frontend/src/components/auth/ProtectedRoute.tsx": [
+      "node_modules:react"
+    ],
+    "frontend/src/components/clinical/ClinicalNoteInput.tsx": [
+      "node_modules:react",
+      "frontend/src/components/clinical/SmartText.tsx"
+    ],
+    "frontend/src/components/clinical/SmartText.tsx": [
+      "node_modules:react"
+    ],
+    "frontend/src/components/layout/AppLayout.tsx": [
+      "node_modules:react",
+      "frontend/src/components/layout/Sidebar.tsx",
+      "frontend/src/components/layout/Header.tsx"
+    ],
+    "frontend/src/components/layout/Header.tsx": [
+      "node_modules:react"
+    ],
+    "frontend/src/components/layout/Sidebar.tsx": [
+      "node_modules:react"
+    ],
+    "frontend/src/components/patient/__tests__/PatientHeader.test.tsx": [
+      "frontend/src/components/patient/PatientHeader.tsx"
+    ],
+    "frontend/src/components/patient/PatientChart.tsx": [
+      "node_modules:react"
+    ],
+    "frontend/src/components/patient/PatientHeader.tsx": [
+      "node_modules:react"
+    ],
+    "frontend/src/components/patient/PatientList.tsx": [
+      "node_modules:react"
+    ],
+    "frontend/src/components/patient/PatientSummary.tsx": [
+      "node_modules:react"
+    ],
+    "frontend/src/components/patient/PatientTimeline.tsx": [
+      "node_modules:react"
+    ],
+    "frontend/src/constants/index.ts": [],
+    "frontend/src/constants/theme.ts": [],
+    "frontend/src/lib/medplum.ts": [],
+    "frontend/src/lib/providers.tsx": [
+      "node_modules:react",
+      "frontend/src/lib/medplum.ts"
+    ],
+    "frontend/src/services/fhir.service.ts": [
+      "node_modules:axios"
+    ],
+    "frontend/src/stores/__tests__/auth.test.ts": [
+      "frontend/src/stores/auth.ts"
+    ],
+    "frontend/src/stores/auth.ts": [
+      "node_modules:zustand",
+      "src/auth/role-permissions.ts"
+    ],
+    "frontend/src/stores/patient.ts": [
+      "node_modules:zustand"
+    ],
+    "frontend/src/stores/ui.ts": [
+      "node_modules:zustand"
+    ],
+    "frontend/src/types/administrative.ts": [],
+    "frontend/src/types/index.ts": [],
+    "frontend/src/utils/index.ts": [
+      "node_modules:date-fns"
+    ],
+    "frontend/tests/e2e/clinical-workflow.spec.ts": [],
+    "frontend/tests/e2e/global-setup.ts": [],
+    "frontend/tests/e2e/global-teardown.ts": [],
+    "frontend/tests/e2e/patient-registration.spec.ts": [],
+    "mobile/babel.config.js": [],
+    "mobile/index.js": [
+      "node_modules:react-native",
+      "mobile/src/App.tsx"
+    ],
+    "mobile/metro.config.js": [],
+    "mobile/src/App.tsx": [
+      "node_modules:react",
+      "node_modules:react-native",
+      "node_modules:react-native-safe-area-context",
+      "node_modules:react-native-paper",
+      "node_modules:react-native-gesture-handler",
+      "mobile/src/navigation/AppNavigator.tsx",
+      "mobile/src/navigation/AuthNavigator.tsx",
+      "mobile/src/screens/LoadingScreen.tsx",
+      "mobile/src/services/OfflineProvider.tsx",
+      "mobile/src/services/AuthProvider.tsx",
+      "mobile/src/services/NotificationProvider.tsx",
+      "mobile/src/services/SyncProvider.tsx",
+      "mobile/src/config/theme.ts",
+      "mobile/src/config/medplum.ts"
+    ],
+    "mobile/src/components/FormField.tsx": [
+      "node_modules:react",
+      "node_modules:react-native",
+      "node_modules:react-native-paper"
+    ],
+    "mobile/src/components/PatientCard.tsx": [
+      "node_modules:react",
+      "node_modules:react-native",
+      "node_modules:react-native-paper"
+    ],
+    "mobile/src/components/TaskCard.tsx": [
+      "node_modules:react",
+      "node_modules:react-native",
+      "node_modules:react-native-paper"
+    ],
+    "mobile/src/components/VitalSignsCard.tsx": [
+      "node_modules:react",
+      "node_modules:react-native",
+      "node_modules:react-native-paper"
+    ],
+    "mobile/src/config/medplum.ts": [],
+    "mobile/src/config/theme.ts": [
+      "node_modules:react-native-paper"
+    ],
+    "mobile/src/navigation/AppNavigator.tsx": [
+      "node_modules:react"
+    ],
+    "mobile/src/navigation/AuthNavigator.tsx": [
+      "node_modules:react"
+    ],
+    "mobile/src/screens/ClinicalNotesScreen.tsx": [
+      "node_modules:react",
+      "node_modules:react-native",
+      "node_modules:react-native-paper",
+      "node_modules:react-native-safe-area-context"
+    ],
+    "mobile/src/screens/DashboardScreen.tsx": [
+      "node_modules:react",
+      "node_modules:react-native",
+      "node_modules:react-native-safe-area-context"
+    ],
+    "mobile/src/screens/HomeCareTaskScreen.tsx": [
+      "node_modules:react",
+      "node_modules:react-native",
+      "node_modules:react-native-paper",
+      "node_modules:react-native-safe-area-context"
+    ],
+    "mobile/src/screens/HomeCareVisitScreen.tsx": [
+      "node_modules:react",
+      "node_modules:react-native",
+      "node_modules:react-native-paper",
+      "node_modules:react-native-safe-area-context"
+    ],
+    "mobile/src/screens/LoadingScreen.tsx": [
+      "node_modules:react",
+      "node_modules:react-native",
+      "node_modules:react-native-paper",
+      "node_modules:react-native-safe-area-context"
+    ],
+    "mobile/src/screens/LoginScreen.tsx": [
+      "node_modules:react",
+      "node_modules:react-native",
+      "node_modules:react-native-safe-area-context"
+    ],
+    "mobile/src/screens/MedicationAdminScreen.tsx": [
+      "node_modules:react",
+      "node_modules:react-native-safe-area-context",
+      "node_modules:react-native-qrcode-scanner",
+      "node_modules:react-native-camera",
+      "node_modules:date-fns"
+    ],
+    "mobile/src/screens/NotificationsScreen.tsx": [
+      "node_modules:react",
+      "node_modules:react-native",
+      "node_modules:react-native-paper",
+      "node_modules:react-native-safe-area-context",
+      "node_modules:date-fns"
+    ],
+    "mobile/src/screens/PatientAppointmentsScreen.tsx": [
+      "node_modules:react",
+      "node_modules:react-native",
+      "node_modules:react-native-paper",
+      "node_modules:react-native-safe-area-context"
+    ],
+    "mobile/src/screens/PatientDetailScreen.tsx": [
+      "node_modules:react",
+      "node_modules:react-native-safe-area-context",
+      "node_modules:date-fns"
+    ],
+    "mobile/src/screens/PatientListScreen.tsx": [
+      "node_modules:react",
+      "node_modules:react-native-safe-area-context"
+    ],
+    "mobile/src/screens/PatientMedicationsScreen.tsx": [
+      "node_modules:react",
+      "node_modules:react-native",
+      "node_modules:react-native-paper",
+      "node_modules:react-native-safe-area-context"
+    ],
+    "mobile/src/screens/PatientMessagesScreen.tsx": [
+      "node_modules:react",
+      "node_modules:react-native",
+      "node_modules:react-native-paper",
+      "node_modules:react-native-safe-area-context"
+    ],
+    "mobile/src/screens/PatientPortalScreen.tsx": [
+      "node_modules:react",
+      "node_modules:react-native",
+      "node_modules:react-native-paper",
+      "node_modules:react-native-safe-area-context"
+    ],
+    "mobile/src/screens/PhotoCaptureScreen.tsx": [
+      "node_modules:react",
+      "node_modules:react-native",
+      "node_modules:react-native-paper",
+      "node_modules:react-native-safe-area-context",
+      "node_modules:react-native-image-picker"
+    ],
+    "mobile/src/screens/ProfileScreen.tsx": [
+      "node_modules:react",
+      "node_modules:react-native",
+      "node_modules:react-native-paper",
+      "node_modules:react-native-safe-area-context"
+    ],
+    "mobile/src/screens/ScheduleScreen.tsx": [
+      "node_modules:react",
+      "node_modules:react-native",
+      "node_modules:react-native-paper",
+      "node_modules:react-native-safe-area-context"
+    ],
+    "mobile/src/screens/SettingsScreen.tsx": [
+      "node_modules:react",
+      "node_modules:react-native",
+      "node_modules:react-native-paper",
+      "node_modules:react-native-safe-area-context"
+    ],
+    "mobile/src/screens/SyncStatusScreen.tsx": [
+      "node_modules:react",
+      "node_modules:react-native",
+      "node_modules:react-native-paper",
+      "node_modules:react-native-safe-area-context",
+      "node_modules:date-fns"
+    ],
+    "mobile/src/screens/TaskListScreen.tsx": [
+      "node_modules:react",
+      "node_modules:react-native-safe-area-context",
+      "node_modules:date-fns"
+    ],
+    "mobile/src/screens/VitalSignsScreen.tsx": [
+      "node_modules:react",
+      "node_modules:react-native-safe-area-context"
+    ],
+    "mobile/src/services/AuthProvider.tsx": [
+      "node_modules:react",
+      "node_modules:react-native-biometrics"
+    ],
+    "mobile/src/services/NotificationProvider.tsx": [
+      "node_modules:react",
+      "node_modules:react-native-push-notification",
+      "node_modules:react-native"
+    ],
+    "mobile/src/services/OfflineProvider.tsx": [
+      "node_modules:react"
+    ],
+    "mobile/src/services/SyncProvider.tsx": [
+      "node_modules:react",
+      "node_modules:react-native",
+      "mobile/src/services/OfflineProvider.tsx",
+      "mobile/src/services/AuthProvider.tsx",
+      "mobile/src/services/NotificationProvider.tsx"
+    ],
+    "mobile/src/types/index.ts": [],
+    "next.config.js": [],
+    "postcss.config.js": [],
+    "src/auth/jwt.service.ts": [
+      "node_modules:jsonwebtoken",
+      "node_modules:bcrypt",
+      "node_modules:otplib",
+      "node_modules:qrcode",
+      "node_modules:crypto",
+      "node_modules:uuid",
+      "src/config/auth.config.ts",
+      "src/auth/role-permissions.ts"
+    ],
+    "src/auth/role-permissions.ts": [
+      "src/types/auth.types.ts"
+    ],
+    "src/auth/sso-integration.ts": [
+      "node_modules:passport-saml",
+      "node_modules:passport-jwt",
+      "node_modules:passport-oauth2",
+      "node_modules:passport",
+      "node_modules:crypto",
+      "node_modules:events",
+      "src/auth/jwt.service.ts",
+      "src/services/audit.service.ts",
+      "src/services/session.service.ts",
+      "src/types/auth.types.ts"
+    ],
+    "src/cds/alerts/AlertService.ts": [],
+    "src/cds/allergies/AllergyAlertService.ts": [],
+    "src/cds/analytics/PerformanceAnalyticsService.ts": [],
+    "src/cds/calculators/ClinicalCalculatorService.ts": [],
+    "src/cds/CDSOrchestrator.ts": [
+      "src/cds/hooks/CDSHooksService.ts",
+      "src/cds/interactions/DrugInteractionService.ts",
+      "src/cds/allergies/AllergyAlertService.ts",
+      "src/cds/guidelines/ClinicalGuidelinesService.ts",
+      "src/cds/scoring/RiskScoringService.ts",
+      "src/cds/alerts/AlertService.ts"
+    ],
+    "src/cds/evidence/EvidenceRecommendationService.ts": [],
+    "src/cds/guidelines/ClinicalGuidelinesService.ts": [],
+    "src/cds/hooks/CDSHooksService.ts": [
+      "src/cds/interactions/DrugInteractionService.ts",
+      "src/cds/allergies/AllergyAlertService.ts",
+      "src/cds/guidelines/ClinicalGuidelinesService.ts"
+    ],
+    "src/cds/index.ts": [],
+    "src/cds/interactions/DrugInteractionService.ts": [],
+    "src/cds/quality/QualityMeasuresService.ts": [],
+    "src/cds/scoring/RiskScoringService.ts": [],
+    "src/cds/types/CDSTypes.ts": [],
+    "src/clinical/assessment/ClinicalAssessmentService.ts": [],
+    "src/clinical/assessment/types.ts": [],
+    "src/clinical/emergency/EmergencyCareService.ts": [
+      "src/clinical/assessment/types.ts"
+    ],
+    "src/clinical/emergency/types.ts": [
+      "src/clinical/assessment/types.ts"
+    ],
+    "src/clinical/encounters/OutpatientEncounterService.ts": [
+      "src/clinical/assessment/types.ts"
+    ],
+    "src/clinical/encounters/types.ts": [
+      "src/clinical/assessment/types.ts"
+    ],
+    "src/clinical/hospital/HospitalAdmissionService.ts": [
+      "src/clinical/assessment/types.ts",
+      "src/clinical/medication/types.ts"
+    ],
+    "src/clinical/hospital/types.ts": [
+      "src/clinical/assessment/types.ts",
+      "src/clinical/medication/types.ts"
+    ],
+    "src/clinical/laboratory/LaboratoryDiagnosticService.ts": [
+      "src/clinical/assessment/types.ts"
+    ],
+    "src/clinical/laboratory/types.ts": [
+      "src/clinical/assessment/types.ts"
+    ],
+    "src/clinical/medication/MedicationManagementService.ts": [
+      "src/clinical/assessment/types.ts"
+    ],
+    "src/clinical/medication/types.ts": [],
+    "src/clinical/templates/ClinicalTemplateService.ts": [],
+    "src/clinical/templates/types.ts": [
+      "src/clinical/assessment/types.ts"
+    ],
+    "src/components/AdminDashboard.tsx": [
+      "node_modules:react",
+      "src/types/administrative.ts"
+    ],
+    "src/components/AppointmentManagement.tsx": [
+      "node_modules:react",
+      "node_modules:react-big-calendar",
+      "node_modules:moment",
+      "src/types/administrative.ts"
+    ],
+    "src/components/BillingManagement.tsx": [
+      "node_modules:react",
+      "src/types/administrative.ts"
+    ],
+    "src/components/PatientRegistration.tsx": [
+      "node_modules:react",
+      "node_modules:react-hook-form",
+      "node_modules:yup",
+      "src/types/administrative.ts"
+    ],
+    "src/components/ReportingAnalytics.tsx": [
+      "node_modules:react",
+      "node_modules:recharts",
+      "src/types/administrative.ts"
+    ],
+    "src/config/auth.config.ts": [
+      "src/types/auth.types.ts"
+    ],
+    "src/controllers/auth.controller.ts": [
+      "node_modules:express",
+      "node_modules:express-validator",
+      "node_modules:express-rate-limit",
+      "src/auth/jwt.service.ts",
+      "src/services/audit.service.ts",
+      "src/config/auth.config.ts"
+    ],
+    "src/design-system/components/ClinicalAlert/ClinicalAlert.tsx": [
+      "node_modules:react",
+      "src/design-system/tokens/colors.ts",
+      "src/design-system/tokens/typography.ts",
+      "src/design-system/tokens/spacing.ts",
+      "src/design-system/utils/index.ts"
+    ],
+    "src/design-system/components/ClinicalAlert/index.ts": [],
+    "src/design-system/components/index.ts": [],
+    "src/design-system/components/MedicalBadge/index.ts": [],
+    "src/design-system/components/MedicalBadge/MedicalBadge.tsx": [
+      "node_modules:react",
+      "src/design-system/utils/index.ts",
+      "src/design-system/tokens/colors.ts"
+    ],
+    "src/design-system/components/VitalSignCard/index.ts": [],
+    "src/design-system/components/VitalSignCard/VitalSignCard.tsx": [
+      "node_modules:react",
+      "src/design-system/components/MedicalBadge/index.ts",
+      "src/design-system/tokens/colors.ts",
+      "src/design-system/tokens/typography.ts",
+      "src/design-system/tokens/spacing.ts",
+      "src/design-system/utils/index.ts"
+    ],
+    "src/design-system/index.ts": [],
+    "src/design-system/themes/omnicare-theme.ts": [
+      "src/design-system/tokens/colors.ts",
+      "src/design-system/tokens/typography.ts",
+      "src/design-system/tokens/spacing.ts"
+    ],
+    "src/design-system/tokens/colors.ts": [],
+    "src/design-system/tokens/spacing.ts": [],
+    "src/design-system/tokens/typography.ts": [],
+    "src/design-system/utils/index.ts": [
+      "src/design-system/tokens/colors.ts"
+    ],
+    "src/middleware/security.middleware.ts": [
+      "node_modules:express",
+      "node_modules:helmet",
+      "node_modules:express-rate-limit",
+      "node_modules:express-mongo-sanitize",
+      "node_modules:xss",
+      "node_modules:hpp",
+      "src/auth/jwt.service.ts",
+      "src/services/session.service.ts",
+      "src/services/audit.service.ts",
+      "src/config/auth.config.ts",
+      "src/auth/role-permissions.ts",
+      "src/types/auth.types.ts",
+      "node_modules:uuid"
+    ],
+    "src/pages/_app.tsx": [],
+    "src/pages/admin/dashboard.tsx": [
+      "node_modules:react",
+      "src/components/AdminDashboard.tsx",
+      "src/components/PatientRegistration.tsx",
+      "src/components/AppointmentManagement.tsx",
+      "src/components/BillingManagement.tsx",
+      "src/components/ReportingAnalytics.tsx",
+      "src/types/administrative.ts"
+    ],
+    "src/services/administrative.ts": [],
+    "src/services/audit.service.ts": [
+      "node_modules:winston",
+      "node_modules:winston-daily-rotate-file",
+      "node_modules:events",
+      "node_modules:crypto",
+      "node_modules:path",
+      "src/config/auth.config.ts",
+      "src/types/auth.types.ts"
+    ],
+    "src/services/auth.controller.ts": [
+      "node_modules:express",
+      "node_modules:events",
+      "src/config/auth.config.ts",
+      "src/services/password.service.ts",
+      "src/services/session.service.ts",
+      "src/services/oauth.service.ts",
+      "src/services/mfa.service.ts",
+      "src/services/encryption.service.ts",
+      "src/services/audit.service.ts"
+    ],
+    "src/services/compliance.service.ts": [
+      "node_modules:path",
+      "node_modules:events",
+      "node_modules:csv-writer",
+      "src/services/audit.service.ts",
+      "src/config/auth.config.ts"
+    ],
+    "src/services/encryption.service.ts": [
+      "node_modules:crypto",
+      "node_modules:path",
+      "src/config/auth.config.ts"
+    ],
+    "src/services/mfa.service.ts": [
+      "node_modules:speakeasy",
+      "node_modules:qrcode",
+      "node_modules:crypto",
+      "node_modules:events",
+      "src/config/auth.config.ts",
+      "src/types/auth.types.ts",
+      "src/services/audit.service.ts",
+      "src/services/encryption.service.ts"
+    ],
+    "src/services/oauth.service.ts": [
+      "node_modules:jsonwebtoken",
+      "node_modules:crypto",
+      "node_modules:util",
+      "node_modules:events",
+      "src/config/auth.config.ts",
+      "src/types/auth.types.ts",
+      "src/services/audit.service.ts",
+      "src/services/encryption.service.ts",
+      "src/services/session.service.ts"
+    ],
+    "src/services/password.service.ts": [
+      "node_modules:bcrypt",
+      "node_modules:crypto",
+      "node_modules:events",
+      "src/config/auth.config.ts",
+      "src/types/auth.types.ts",
+      "src/services/audit.service.ts"
+    ],
+    "src/services/session.service.ts": [
+      "node_modules:uuid",
+      "node_modules:ioredis",
+      "node_modules:events",
+      "src/config/auth.config.ts",
+      "src/types/auth.types.ts",
+      "src/services/audit.service.ts"
+    ],
+    "src/stories/ClinicalAlert.stories.tsx": [
+      "src/design-system/components/ClinicalAlert/index.ts"
+    ],
+    "src/stories/DesignTokens.stories.tsx": [
+      "src/design-system/tokens/colors.ts",
+      "src/design-system/tokens/typography.ts",
+      "src/design-system/tokens/spacing.ts"
+    ],
+    "src/stories/MedicalBadge.stories.tsx": [
+      "src/design-system/components/MedicalBadge/index.ts"
+    ],
+    "src/stories/VitalSignCard.stories.tsx": [
+      "src/design-system/components/VitalSignCard/index.ts"
+    ],
+    "src/types/administrative.ts": [],
+    "src/types/auth.types.ts": [],
+    "src/utils/administrative.ts": [
+      "node_modules:date-fns",
+      "src/types/administrative.ts"
+    ],
+    "tailwind.config.js": []
+  },
+  "packageDependencies": {
+    "backend/package.json": {
+      "dependencies": {
+        "@medplum/core": "^4.1.10",
+        "@medplum/fhirtypes": "^4.1.10",
+        "express": "^4.18.2",
+        "cors": "^2.8.5",
+        "helmet": "^7.1.0",
+        "morgan": "^1.10.0",
+        "compression": "^1.7.4",
+        "express-rate-limit": "^7.4.0",
+        "jsonwebtoken": "^9.0.2",
+        "bcryptjs": "^2.4.3",
+        "joi": "^17.11.0",
+        "ws": "^8.14.2",
+        "redis": "^4.6.10",
+        "pg": "^8.11.3",
+        "dotenv": "^16.3.1",
+        "uuid": "^9.0.1",
+        "axios": "^1.6.0",
+        "node-cron": "^3.0.3",
+        "winston": "^3.11.0",
+        "fhir": "^4.11.1",
+        "smart-client": "^1.1.1"
+      },
+      "devDependencies": {
+        "@types/express": "^4.17.21",
+        "@types/cors": "^2.8.17",
+        "@types/morgan": "^1.9.9",
+        "@types/compression": "^1.7.5",
+        "@types/jsonwebtoken": "^9.0.5",
+        "@types/bcryptjs": "^2.4.6",
+        "@types/ws": "^8.5.10",
+        "@types/pg": "^8.10.7",
+        "@types/uuid": "^9.0.7",
+        "@types/node": "^20.9.0",
+        "@types/node-cron": "^3.0.11",
+        "@types/jest": "^29.5.8",
+        "@types/supertest": "^6.0.2",
+        "typescript": "^5.2.2",
+        "nodemon": "^3.0.1",
+        "jest": "^29.7.0",
+        "ts-jest": "^29.1.1",
+        "supertest": "^6.3.3",
+        "jest-mock": "^29.7.0",
+        "jest-environment-node": "^29.7.0",
+        "nock": "^13.4.0",
+        "testcontainers": "^10.4.0",
+        "eslint": "^8.54.0",
+        "@typescript-eslint/eslint-plugin": "^6.12.0",
+        "@typescript-eslint/parser": "^6.12.0",
+        "prettier": "^3.1.0"
+      },
+      "peerDependencies": {},
+      "scripts": {
+        "start": "node dist/index.js",
+        "dev": "nodemon src/index.ts",
+        "build": "tsc",
+        "test": "jest",
+        "test:watch": "jest --watch",
+        "test:coverage": "jest --coverage",
+        "test:unit": "jest --testPathPattern=unit",
+        "test:integration": "jest --testPathPattern=integration",
+        "test:e2e": "jest --testPathPattern=e2e",
+        "typecheck": "tsc --noEmit",
+        "lint": "eslint src/**/*.ts",
+        "format": "prettier --write src/**/*.ts"
+      }
+    },
+    "frontend/package.json": {
+      "dependencies": {
+        "@hookform/resolvers": "^5.1.1",
+        "@mantine/charts": "^7.17.8",
+        "@mantine/core": "^7.17.8",
+        "@mantine/dates": "^7.17.8",
+        "@mantine/form": "^7.17.8",
+        "@mantine/hooks": "^7.17.8",
+        "@mantine/modals": "^7.17.8",
+        "@mantine/notifications": "^7.17.8",
+        "@mantine/spotlight": "^7.17.8",
+        "@medplum/core": "^4.1.10",
+        "@medplum/fhirtypes": "^4.1.10",
+        "@medplum/react": "^4.1.10",
+        "@tabler/icons-react": "^3.34.0",
+        "@tanstack/react-query": "^5.80.10",
+        "@tanstack/react-query-devtools": "^5.80.10",
+        "@types/react-big-calendar": "^1.16.2",
+        "@types/recharts": "^1.8.29",
+        "date-fns": "^4.1.0",
+        "dayjs": "^1.11.13",
+        "lucide-react": "^0.518.0",
+        "next": "15.3.4",
+        "react": "^18.3.1",
+        "react-big-calendar": "^1.19.4",
+        "react-dom": "^18.3.1",
+        "react-hook-form": "^7.58.1",
+        "recharts": "^2.15.3",
+        "zod": "^3.25.67",
+        "zustand": "^5.0.5"
+      },
+      "devDependencies": {
+        "@eslint/eslintrc": "^3",
+        "@playwright/test": "^1.40.1",
+        "@tailwindcss/postcss": "^4",
+        "@testing-library/jest-dom": "^6.1.5",
+        "@testing-library/react": "^14.1.2",
+        "@testing-library/user-event": "^14.5.1",
+        "@types/jest": "^29.5.8",
+        "@types/node": "^20",
+        "@types/react": "^18",
+        "@types/react-dom": "^18",
+        "axe-core": "^4.8.3",
+        "eslint": "^9",
+        "eslint-config-next": "15.3.4",
+        "jest": "^29.7.0",
+        "jest-axe": "^8.0.0",
+        "jest-environment-jsdom": "^29.7.0",
+        "tailwindcss": "^4",
+        "typescript": "^5"
+      },
+      "peerDependencies": {},
+      "scripts": {
+        "dev": "next dev --turbopack",
+        "build": "next build",
+        "start": "next start",
+        "lint": "next lint",
+        "test": "jest",
+        "test:watch": "jest --watch",
+        "test:coverage": "jest --coverage",
+        "test:e2e": "playwright test",
+        "test:e2e:ui": "playwright test --ui",
+        "typecheck": "tsc --noEmit"
+      }
+    },
+    "mobile/package.json": {
+      "dependencies": {
+        "@medplum/expo-polyfills": "^4.1.10",
+        "@medplum/core": "^4.1.10",
+        "@react-native-async-storage/async-storage": "^1.21.0",
+        "@react-native-community/netinfo": "^11.1.0",
+        "@react-navigation/native": "^6.1.9",
+        "@react-navigation/native-stack": "^6.9.17",
+        "@react-navigation/bottom-tabs": "^6.5.11",
+        "@react-navigation/drawer": "^6.6.6",
+        "react": "18.2.0",
+        "react-native": "0.72.6",
+        "react-native-safe-area-context": "^4.7.4",
+        "react-native-screens": "^3.27.0",
+        "react-native-gesture-handler": "^2.13.4",
+        "react-native-reanimated": "^3.6.1",
+        "react-native-vector-icons": "^10.0.3",
+        "react-native-paper": "^5.11.1",
+        "react-native-biometrics": "^3.0.1",
+        "react-native-image-picker": "^7.0.3",
+        "react-native-vision-camera": "^3.6.16",
+        "react-native-push-notification": "^8.1.1",
+        "@react-native-firebase/app": "^18.6.1",
+        "@react-native-firebase/messaging": "^18.6.1",
+        "react-native-offline": "^6.0.2",
+        "react-native-sqlite-storage": "^6.0.1",
+        "react-native-keychain": "^8.1.3",
+        "react-native-device-info": "^10.11.0",
+        "react-native-uuid": "^2.0.1",
+        "react-native-date-picker": "^4.3.3",
+        "react-native-modal": "^13.0.1",
+        "react-native-permissions": "^4.1.4"
+      },
+      "devDependencies": {
+        "@babel/core": "^7.22.0",
+        "@babel/preset-env": "^7.22.0",
+        "@babel/runtime": "^7.22.0",
+        "@react-native/eslint-config": "^0.72.0",
+        "@react-native/metro-config": "^0.72.0",
+        "@tsconfig/react-native": "^3.0.0",
+        "@types/react": "^18.2.6",
+        "@types/react-test-renderer": "^18.0.0",
+        "babel-jest": "^29.2.1",
+        "eslint": "^8.19.0",
+        "jest": "^29.2.1",
+        "metro-react-native-babel-preset": "0.76.8",
+        "prettier": "^2.4.1",
+        "react-test-renderer": "18.2.0",
+        "typescript": "4.8.4"
+      },
+      "peerDependencies": {},
+      "scripts": {
+        "android": "react-native run-android",
+        "ios": "react-native run-ios",
+        "lint": "eslint .",
+        "start": "react-native start",
+        "test": "jest",
+        "typecheck": "tsc --noEmit"
+      }
+    },
+    "package.json": {
+      "dependencies": {
+        "express": "^4.18.2",
+        "express-rate-limit": "^7.1.5",
+        "helmet": "^7.1.0",
+        "cors": "^2.8.5",
+        "jsonwebtoken": "^9.0.2",
+        "bcrypt": "^5.1.1",
+        "speakeasy": "^2.0.0",
+        "qrcode": "^1.5.3",
+        "crypto": "^1.0.1",
+        "winston": "^3.11.0",
+        "winston-daily-rotate-file": "^4.7.1",
+        "joi": "^17.11.0",
+        "express-validator": "^7.0.1",
+        "express-mongo-sanitize": "^2.2.0",
+        "xss": "^1.0.14",
+        "hpp": "^0.2.3",
+        "compression": "^1.7.4",
+        "cookie-parser": "^1.4.6",
+        "dotenv": "^16.3.1",
+        "mongoose": "^8.0.3",
+        "redis": "^4.6.11",
+        "ioredis": "^5.3.2",
+        "node-cache": "^5.1.2",
+        "uuid": "^9.0.1",
+        "@types/node": "^20.10.4",
+        "passport": "^0.7.0",
+        "passport-local": "^1.0.0",
+        "passport-jwt": "^4.0.1",
+        "passport-oauth2": "^1.7.0",
+        "express-session": "^1.17.3",
+        "connect-redis": "^7.1.0",
+        "express-brute": "^1.0.1",
+        "express-brute-redis": "^0.0.1",
+        "node-2fa": "^2.0.3",
+        "otplib": "^12.0.1"
+      },
+      "devDependencies": {
+        "@types/express": "^4.17.21",
+        "@types/cors": "^2.8.17",
+        "@types/jsonwebtoken": "^9.0.5",
+        "@types/bcrypt": "^5.0.2",
+        "@types/speakeasy": "^2.0.10",
+        "@types/qrcode": "^1.5.5",
+        "@types/joi": "^17.2.3",
+        "@types/compression": "^1.7.5",
+        "@types/cookie-parser": "^1.4.6",
+        "@types/uuid": "^9.0.7",
+        "@types/passport": "^1.0.16",
+        "@types/passport-local": "^1.0.38",
+        "@types/passport-jwt": "^3.0.13",
+        "@types/express-session": "^1.17.10",
+        "@types/express-brute": "^1.0.4",
+        "typescript": "^5.3.3",
+        "ts-node": "^10.9.1",
+        "ts-node-dev": "^2.0.0",
+        "jest": "^29.7.0",
+        "@types/jest": "^29.5.8",
+        "ts-jest": "^29.1.1",
+        "eslint": "^8.55.0",
+        "@typescript-eslint/eslint-plugin": "^6.13.1",
+        "@typescript-eslint/parser": "^6.13.1",
+        "supertest": "^6.3.3",
+        "@types/supertest": "^2.0.16"
+      },
+      "peerDependencies": {},
+      "scripts": {
+        "build": "tsc",
+        "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+        "start": "node dist/index.js",
+        "test": "jest",
+        "test:watch": "jest --watch",
+        "test:coverage": "jest --coverage",
+        "lint": "eslint src/**/*.ts",
+        "lint:fix": "eslint src/**/*.ts --fix",
+        "typecheck": "tsc --noEmit"
+      }
+    }
+  },
+  "buildOutputMap": {
+    "backend/dist/config/index.d.ts": "backend/src/config/index.ts",
+    "backend/dist/config/index.js": "backend/src/config/index.ts",
+    "backend/dist/controllers/analytics.controller.d.ts": "backend/src/controllers/analytics.controller.ts",
+    "backend/dist/controllers/analytics.controller.js": "backend/src/controllers/analytics.controller.ts",
+    "backend/dist/controllers/auth.controller.d.ts": "backend/src/controllers/auth.controller.ts",
+    "backend/dist/controllers/auth.controller.js": "backend/src/controllers/auth.controller.ts",
+    "backend/dist/controllers/fhir.controller.d.ts": "backend/src/controllers/fhir.controller.ts",
+    "backend/dist/controllers/fhir.controller.js": "backend/src/controllers/fhir.controller.ts",
+    "backend/dist/healthcheck.d.ts": "backend/src/healthcheck.ts",
+    "backend/dist/healthcheck.js": "backend/src/healthcheck.ts",
+    "backend/dist/index.d.ts": "backend/src/index.ts",
+    "backend/dist/index.js": "backend/src/index.ts",
+    "backend/dist/middleware/auth.middleware.d.ts": "backend/src/middleware/auth.middleware.ts",
+    "backend/dist/middleware/auth.middleware.js": "backend/src/middleware/auth.middleware.ts",
+    "backend/dist/models/base.model.d.ts": "backend/src/models/base.model.ts",
+    "backend/dist/models/base.model.js": "backend/src/models/base.model.ts",
+    "backend/dist/models/encounter.model.d.ts": "backend/src/models/encounter.model.ts",
+    "backend/dist/models/encounter.model.js": "backend/src/models/encounter.model.ts",
+    "backend/dist/models/index.d.ts": "backend/src/models/index.ts",
+    "backend/dist/models/index.js": "backend/src/models/index.ts",
+    "backend/dist/models/patient.model.d.ts": "backend/src/models/patient.model.ts",
+    "backend/dist/models/patient.model.js": "backend/src/models/patient.model.ts",
+    "backend/dist/routes/index.d.ts": "backend/src/routes/index.ts",
+    "backend/dist/routes/index.js": "backend/src/routes/index.ts",
+    "backend/dist/services/analytics/clinical-quality-measures.service.d.ts": "backend/src/services/analytics/clinical-quality-measures.service.ts",
+    "backend/dist/services/analytics/clinical-quality-measures.service.js": "backend/src/services/analytics/clinical-quality-measures.service.ts",
+    "backend/dist/services/analytics/financial-analytics.service.d.ts": "backend/src/services/analytics/financial-analytics.service.ts",
+    "backend/dist/services/analytics/financial-analytics.service.js": "backend/src/services/analytics/financial-analytics.service.ts",
+    "backend/dist/services/analytics/operational-metrics.service.d.ts": "backend/src/services/analytics/operational-metrics.service.ts",
+    "backend/dist/services/analytics/operational-metrics.service.js": "backend/src/services/analytics/operational-metrics.service.ts",
+    "backend/dist/services/analytics/population-health.service.d.ts": "backend/src/services/analytics/population-health.service.ts",
+    "backend/dist/services/analytics/population-health.service.js": "backend/src/services/analytics/population-health.service.ts",
+    "backend/dist/services/analytics/reporting-engine.service.d.ts": "backend/src/services/analytics/reporting-engine.service.ts",
+    "backend/dist/services/analytics/reporting-engine.service.js": "backend/src/services/analytics/reporting-engine.service.ts",
+    "backend/dist/services/cds-hooks.service.d.ts": "backend/src/services/cds-hooks.service.ts",
+    "backend/dist/services/cds-hooks.service.js": "backend/src/services/cds-hooks.service.ts",
+    "backend/dist/services/fhir-resources.service.d.ts": "backend/src/services/fhir-resources.service.ts",
+    "backend/dist/services/fhir-resources.service.js": "backend/src/services/fhir-resources.service.ts",
+    "backend/dist/services/fhir-transformation.service.d.ts": "backend/src/services/fhir-transformation.service.ts",
+    "backend/dist/services/fhir-transformation.service.js": "backend/src/services/fhir-transformation.service.ts",
+    "backend/dist/services/integration/direct/direct-trust.service.d.ts": "backend/src/services/integration/direct/direct-trust.service.ts",
+    "backend/dist/services/integration/direct/direct-trust.service.js": "backend/src/services/integration/direct/direct-trust.service.ts",
+    "backend/dist/services/integration/fhir/fhir-validation.service.d.ts": "backend/src/services/integration/fhir/fhir-validation.service.ts",
+    "backend/dist/services/integration/fhir/fhir-validation.service.js": "backend/src/services/integration/fhir/fhir-validation.service.ts",
+    "backend/dist/services/integration/hl7v2/hl7v2-parser.service.d.ts": "backend/src/services/integration/hl7v2/hl7v2-parser.service.ts",
+    "backend/dist/services/integration/hl7v2/hl7v2-parser.service.js": "backend/src/services/integration/hl7v2/hl7v2-parser.service.ts",
+    "backend/dist/services/integration/index.d.ts": "backend/src/services/integration/index.ts",
+    "backend/dist/services/integration/index.js": "backend/src/services/integration/index.ts",
+    "backend/dist/services/integration/types/direct.types.d.ts": "backend/src/services/integration/types/direct.types.ts",
+    "backend/dist/services/integration/types/direct.types.js": "backend/src/services/integration/types/direct.types.ts",
+    "backend/dist/services/integration/types/hl7v2.types.d.ts": "backend/src/services/integration/types/hl7v2.types.ts",
+    "backend/dist/services/integration/types/hl7v2.types.js": "backend/src/services/integration/types/hl7v2.types.ts",
+    "backend/dist/services/integration/types/integration.types.d.ts": "backend/src/services/integration/types/integration.types.ts",
+    "backend/dist/services/integration/types/integration.types.js": "backend/src/services/integration/types/integration.types.ts",
+    "backend/dist/services/medplum.service.d.ts": "backend/src/services/medplum.service.ts",
+    "backend/dist/services/medplum.service.js": "backend/src/services/medplum.service.ts",
+    "backend/dist/services/smart-fhir.service.d.ts": "backend/src/services/smart-fhir.service.ts",
+    "backend/dist/services/smart-fhir.service.js": "backend/src/services/smart-fhir.service.ts",
+    "backend/dist/services/subscriptions.service.d.ts": "backend/src/services/subscriptions.service.ts",
+    "backend/dist/services/subscriptions.service.js": "backend/src/services/subscriptions.service.ts",
+    "backend/dist/services/validation.service.d.ts": "backend/src/services/validation.service.ts",
+    "backend/dist/services/validation.service.js": "backend/src/services/validation.service.ts",
+    "backend/dist/types/fhir.d.ts": "backend/src/types/fhir.ts",
+    "backend/dist/types/fhir.js": "backend/src/types/fhir.ts",
+    "backend/dist/utils/logger.d.ts": "backend/src/utils/logger.ts",
+    "backend/dist/utils/logger.js": "backend/src/utils/logger.ts"
+  },
+  "commitGroups": [
+    {
+      "id": "config-and-setup",
+      "description": "Configuration files, memory backups, and project setup",
+      "files": [
+        ".claude/config.json",
+        ".claude/settings.json",
+        "backend/.claude/memory.json",
+        "backend/jest.config.js",
+        "backend/package-lock.json",
+        "backend/package.json",
+        "backend/tsconfig.json",
+        "frontend/jest.config.js",
+        "frontend/next.config.ts",
+        "frontend/package-lock.json",
+        "frontend/package.json",
+        "frontend/playwright.config.ts",
+        "frontend/tsconfig.json",
+        "memory/backups/backup-2025-06-20T01-04-58-697Z.json",
+        "memory/backups/backup-2025-06-20T01-04-59-808Z.json",
+        "memory/backups/backup-2025-06-20T01-04-59-948Z.json",
+        "memory/backups/backup-2025-06-20T01-05-15-118Z.json",
+        "memory/backups/backup-2025-06-20T01-05-16-442Z.json",
+        "memory/backups/backup-2025-06-20T01-05-19-309Z.json",
+        "memory/backups/backup-2025-06-20T01-05-51-064Z.json",
+        "memory/backups/backup-2025-06-20T10-19-56-710Z.json",
+        "memory/backups/backup-2025-06-20T10-19-57-000Z.json",
+        "memory/backups/backup-2025-06-20T10-19-58-149Z.json",
+        "memory/backups/backup-2025-06-20T10-20-03-714Z.json",
+        "memory/backups/backup-2025-06-20T10-20-04-546Z.json",
+        "memory/backups/backup-2025-06-20T10-20-12-612Z.json",
+        "memory/backups/backup-2025-06-20T10-20-27-672Z.json",
+        "memory/data/entries.json",
+        "mobile/babel.config.js",
+        "mobile/metro.config.js",
+        "mobile/package-lock.json",
+        "mobile/package.json",
+        "mobile/tsconfig.json",
+        "next.config.js",
+        "package-lock.json",
+        "package.json",
+        "postcss.config.js",
+        "src/config/auth.config.ts",
+        "tailwind.config.js",
+        "tsconfig.json"
+      ],
+      "priority": 1,
+      "mustCommitFirst": true
+    },
+    {
+      "id": "types-and-models",
+      "description": "Type definitions and data models",
+      "files": [
+        "backend/dist/models/base.model.d.ts",
+        "backend/dist/models/base.model.js",
+        "backend/dist/models/encounter.model.d.ts",
+        "backend/dist/models/encounter.model.js",
+        "backend/dist/models/index.d.ts",
+        "backend/dist/models/index.js",
+        "backend/dist/models/patient.model.d.ts",
+        "backend/dist/models/patient.model.js",
+        "backend/dist/services/integration/types/direct.types.d.ts",
+        "backend/dist/services/integration/types/direct.types.js",
+        "backend/dist/services/integration/types/hl7v2.types.d.ts",
+        "backend/dist/services/integration/types/hl7v2.types.js",
+        "backend/dist/services/integration/types/integration.types.d.ts",
+        "backend/dist/services/integration/types/integration.types.js",
+        "backend/dist/types/fhir.d.ts",
+        "backend/dist/types/fhir.js",
+        "backend/src/models/base.model.ts",
+        "backend/src/models/billing.model.ts",
+        "backend/src/models/encounter.model.ts",
+        "backend/src/models/index.ts",
+        "backend/src/models/organization.model.ts",
+        "backend/src/models/patient.model.ts",
+        "backend/src/models/practitioner.model.ts",
+        "backend/src/services/integration/types/direct.types.ts",
+        "backend/src/services/integration/types/hl7v2.types.ts",
+        "backend/src/services/integration/types/integration.types.ts",
+        "backend/src/types/fhir.ts",
+        "frontend/src/types/administrative.ts",
+        "frontend/src/types/index.ts",
+        "mobile/src/types/index.ts",
+        "src/cds/types/CDSTypes.ts",
+        "src/types/administrative.ts",
+        "src/types/auth.types.ts"
+      ],
+      "priority": 2,
+      "dependsOn": [
+        "config-and-setup"
+      ]
+    },
+    {
+      "id": "services-and-utils",
+      "description": "Business logic services and utilities",
+      "files": [
+        "backend/dist/middleware/auth.middleware.d.ts",
+        "backend/dist/middleware/auth.middleware.js",
+        "backend/dist/services/analytics/clinical-quality-measures.service.d.ts",
+        "backend/dist/services/analytics/clinical-quality-measures.service.js",
+        "backend/dist/services/analytics/financial-analytics.service.d.ts",
+        "backend/dist/services/analytics/financial-analytics.service.js",
+        "backend/dist/services/analytics/operational-metrics.service.d.ts",
+        "backend/dist/services/analytics/operational-metrics.service.js",
+        "backend/dist/services/analytics/population-health.service.d.ts",
+        "backend/dist/services/analytics/population-health.service.js",
+        "backend/dist/services/analytics/reporting-engine.service.d.ts",
+        "backend/dist/services/analytics/reporting-engine.service.js",
+        "backend/dist/services/cds-hooks.service.d.ts",
+        "backend/dist/services/cds-hooks.service.js",
+        "backend/dist/services/fhir-resources.service.d.ts",
+        "backend/dist/services/fhir-resources.service.js",
+        "backend/dist/services/fhir-transformation.service.d.ts",
+        "backend/dist/services/fhir-transformation.service.js",
+        "backend/dist/services/integration/direct/direct-trust.service.d.ts",
+        "backend/dist/services/integration/direct/direct-trust.service.js",
+        "backend/dist/services/integration/fhir/fhir-validation.service.d.ts",
+        "backend/dist/services/integration/fhir/fhir-validation.service.js",
+        "backend/dist/services/integration/hl7v2/hl7v2-parser.service.d.ts",
+        "backend/dist/services/integration/hl7v2/hl7v2-parser.service.js",
+        "backend/dist/services/integration/index.d.ts",
+        "backend/dist/services/integration/index.js",
+        "backend/dist/services/medplum.service.d.ts",
+        "backend/dist/services/medplum.service.js",
+        "backend/dist/services/smart-fhir.service.d.ts",
+        "backend/dist/services/smart-fhir.service.js",
+        "backend/dist/services/subscriptions.service.d.ts",
+        "backend/dist/services/subscriptions.service.js",
+        "backend/dist/services/validation.service.d.ts",
+        "backend/dist/services/validation.service.js",
+        "backend/dist/utils/logger.d.ts",
+        "backend/dist/utils/logger.js",
+        "backend/src/middleware/auth.middleware.ts",
+        "backend/src/services/analytics/clinical-quality-measures.service.ts",
+        "backend/src/services/analytics/financial-analytics.service.ts",
+        "backend/src/services/analytics/operational-metrics.service.ts",
+        "backend/src/services/analytics/population-health.service.ts",
+        "backend/src/services/analytics/reporting-engine.service.ts",
+        "backend/src/services/care-coordination.service.ts",
+        "backend/src/services/cds-hooks.service.ts",
+        "backend/src/services/fhir-resources.service.ts",
+        "backend/src/services/fhir-transformation.service.ts",
+        "backend/src/services/integration/direct/direct-trust.service.ts",
+        "backend/src/services/integration/fhir/fhir-resource-mapper.ts",
+        "backend/src/services/integration/fhir/fhir-resource-validators.ts",
+        "backend/src/services/integration/fhir/fhir-validation.service.ts",
+        "backend/src/services/integration/hl7v2/hl7v2-parser.service.ts",
+        "backend/src/services/integration/hl7v2/hl7v2-to-fhir-transformer.ts",
+        "backend/src/services/integration/index.ts",
+        "backend/src/services/medplum.service.ts",
+        "backend/src/services/referral.service.ts",
+        "backend/src/services/smart-fhir.service.ts",
+        "backend/src/services/subscriptions.service.ts",
+        "backend/src/services/telemedicine.service.ts",
+        "backend/src/services/validation.service.ts",
+        "backend/src/utils/logger.ts",
+        "backend/tests/unit/services/fhir-resources.service.test.ts",
+        "backend/tests/unit/services/medplum.service.test.ts",
+        "backend/tests/unit/utils/logger.test.ts",
+        "frontend/src/services/fhir.service.ts",
+        "frontend/src/utils/index.ts",
+        "mobile/src/services/AuthProvider.tsx",
+        "mobile/src/services/NotificationProvider.tsx",
+        "mobile/src/services/OfflineProvider.tsx",
+        "mobile/src/services/SyncProvider.tsx",
+        "src/design-system/utils/index.ts",
+        "src/middleware/security.middleware.ts",
+        "src/services/administrative.ts",
+        "src/services/audit.service.ts",
+        "src/services/auth.controller.ts",
+        "src/services/compliance.service.ts",
+        "src/services/encryption.service.ts",
+        "src/services/mfa.service.ts",
+        "src/services/oauth.service.ts",
+        "src/services/password.service.ts",
+        "src/services/session.service.ts",
+        "src/utils/administrative.ts"
+      ],
+      "priority": 3,
+      "dependsOn": [
+        "types-and-models"
+      ]
+    },
+    {
+      "id": "controllers-and-routes",
+      "description": "API controllers and routing",
+      "files": [
+        "backend/dist/controllers/analytics.controller.d.ts",
+        "backend/dist/controllers/analytics.controller.js",
+        "backend/dist/controllers/auth.controller.d.ts",
+        "backend/dist/controllers/auth.controller.js",
+        "backend/dist/controllers/fhir.controller.d.ts",
+        "backend/dist/controllers/fhir.controller.js",
+        "backend/dist/routes/index.d.ts",
+        "backend/dist/routes/index.js",
+        "backend/src/controllers/analytics.controller.ts",
+        "backend/src/controllers/auth.controller.ts",
+        "backend/src/controllers/clinical-workflows.controller.ts",
+        "backend/src/controllers/fhir.controller.ts",
+        "backend/src/routes/index.ts",
+        "src/controllers/auth.controller.ts"
+      ],
+      "priority": 4,
+      "dependsOn": [
+        "services-and-utils"
+      ]
+    },
+    {
+      "id": "frontend-components",
+      "description": "UI components and screens",
+      "files": [
+        "frontend/src/components/admin/AdminDashboard.tsx",
+        "frontend/src/components/admin/AppointmentManagement.tsx",
+        "frontend/src/components/admin/BillingManagement.tsx",
+        "frontend/src/components/admin/PatientRegistration.tsx",
+        "frontend/src/components/auth/__tests__/LoginForm.test.tsx",
+        "frontend/src/components/auth/LoginForm.tsx",
+        "frontend/src/components/auth/ProtectedRoute.tsx",
+        "frontend/src/components/clinical/ClinicalNoteInput.tsx",
+        "frontend/src/components/clinical/SmartText.tsx",
+        "frontend/src/components/layout/AppLayout.tsx",
+        "frontend/src/components/layout/Header.tsx",
+        "frontend/src/components/layout/Sidebar.tsx",
+        "frontend/src/components/patient/__tests__/PatientHeader.test.tsx",
+        "frontend/src/components/patient/PatientChart.tsx",
+        "frontend/src/components/patient/PatientHeader.tsx",
+        "frontend/src/components/patient/PatientList.tsx",
+        "frontend/src/components/patient/PatientSummary.tsx",
+        "frontend/src/components/patient/PatientTimeline.tsx",
+        "mobile/src/components/FormField.tsx",
+        "mobile/src/components/PatientCard.tsx",
+        "mobile/src/components/TaskCard.tsx",
+        "mobile/src/components/VitalSignsCard.tsx",
+        "mobile/src/screens/ClinicalNotesScreen.tsx",
+        "mobile/src/screens/DashboardScreen.tsx",
+        "mobile/src/screens/HomeCareTaskScreen.tsx",
+        "mobile/src/screens/HomeCareVisitScreen.tsx",
+        "mobile/src/screens/LoadingScreen.tsx",
+        "mobile/src/screens/LoginScreen.tsx",
+        "mobile/src/screens/MedicationAdminScreen.tsx",
+        "mobile/src/screens/NotificationsScreen.tsx",
+        "mobile/src/screens/PatientAppointmentsScreen.tsx",
+        "mobile/src/screens/PatientDetailScreen.tsx",
+        "mobile/src/screens/PatientListScreen.tsx",
+        "mobile/src/screens/PatientMedicationsScreen.tsx",
+        "mobile/src/screens/PatientMessagesScreen.tsx",
+        "mobile/src/screens/PatientPortalScreen.tsx",
+        "mobile/src/screens/PhotoCaptureScreen.tsx",
+        "mobile/src/screens/ProfileScreen.tsx",
+        "mobile/src/screens/ScheduleScreen.tsx",
+        "mobile/src/screens/SettingsScreen.tsx",
+        "mobile/src/screens/SyncStatusScreen.tsx",
+        "mobile/src/screens/TaskListScreen.tsx",
+        "mobile/src/screens/VitalSignsScreen.tsx",
+        "src/components/AdminDashboard.tsx",
+        "src/components/AppointmentManagement.tsx",
+        "src/components/BillingManagement.tsx",
+        "src/components/PatientRegistration.tsx",
+        "src/components/ReportingAnalytics.tsx",
+        "src/design-system/components/ClinicalAlert/ClinicalAlert.tsx",
+        "src/design-system/components/ClinicalAlert/index.ts",
+        "src/design-system/components/index.ts",
+        "src/design-system/components/MedicalBadge/index.ts",
+        "src/design-system/components/MedicalBadge/MedicalBadge.tsx",
+        "src/design-system/components/VitalSignCard/index.ts",
+        "src/design-system/components/VitalSignCard/VitalSignCard.tsx",
+        "src/pages/_app.tsx",
+        "src/pages/admin/dashboard.tsx"
+      ],
+      "priority": 5,
+      "dependsOn": [
+        "types-and-models"
+      ]
+    },
+    {
+      "id": "tests",
+      "description": "Test files and test configuration",
+      "files": [
+        "backend/tests/integration/auth.controller.integration.test.ts",
+        "backend/tests/integration/fhir.controller.integration.test.ts",
+        "backend/tests/security/auth-security.test.ts",
+        "backend/tests/security/hipaa-compliance.test.ts",
+        "backend/tests/setup.ts",
+        "frontend/src/stores/__tests__/auth.test.ts",
+        "frontend/tests/e2e/clinical-workflow.spec.ts",
+        "frontend/tests/e2e/global-setup.ts",
+        "frontend/tests/e2e/global-teardown.ts",
+        "frontend/tests/e2e/patient-registration.spec.ts"
+      ],
+      "priority": 6,
+      "dependsOn": [
+        "controllers-and-routes",
+        "frontend-components"
+      ]
+    },
+    {
+      "id": "build-outputs",
+      "description": "Compiled build outputs",
+      "files": [
+        "backend/dist/config/index.d.ts",
+        "backend/dist/config/index.js",
+        "backend/dist/healthcheck.d.ts",
+        "backend/dist/healthcheck.js",
+        "backend/dist/index.d.ts",
+        "backend/dist/index.js"
+      ],
+      "priority": 7,
+      "dependsOn": [
+        "controllers-and-routes",
+        "frontend-components"
+      ],
+      "commitLast": true,
+      "note": "These are generated files - consider if they should be committed"
+    },
+    {
+      "id": "miscellaneous",
+      "description": "Other files not categorized",
+      "files": [
+        ".storybook/main.ts",
+        ".storybook/preview.ts",
+        "backend/src/config/index.ts",
+        "backend/src/healthcheck.ts",
+        "backend/src/index.ts",
+        "frontend/jest.setup.js",
+        "frontend/src/app/auth/login/page.tsx",
+        "frontend/src/app/dashboard/page.tsx",
+        "frontend/src/app/layout.tsx",
+        "frontend/src/app/page.tsx",
+        "frontend/src/constants/index.ts",
+        "frontend/src/constants/theme.ts",
+        "frontend/src/lib/medplum.ts",
+        "frontend/src/lib/providers.tsx",
+        "frontend/src/stores/auth.ts",
+        "frontend/src/stores/patient.ts",
+        "frontend/src/stores/ui.ts",
+        "mobile/index.js",
+        "mobile/src/App.tsx",
+        "mobile/src/config/medplum.ts",
+        "mobile/src/config/theme.ts",
+        "mobile/src/navigation/AppNavigator.tsx",
+        "mobile/src/navigation/AuthNavigator.tsx",
+        "src/auth/jwt.service.ts",
+        "src/auth/role-permissions.ts",
+        "src/auth/sso-integration.ts",
+        "src/cds/alerts/AlertService.ts",
+        "src/cds/allergies/AllergyAlertService.ts",
+        "src/cds/analytics/PerformanceAnalyticsService.ts",
+        "src/cds/calculators/ClinicalCalculatorService.ts",
+        "src/cds/CDSOrchestrator.ts",
+        "src/cds/evidence/EvidenceRecommendationService.ts",
+        "src/cds/guidelines/ClinicalGuidelinesService.ts",
+        "src/cds/hooks/CDSHooksService.ts",
+        "src/cds/index.ts",
+        "src/cds/interactions/DrugInteractionService.ts",
+        "src/cds/quality/QualityMeasuresService.ts",
+        "src/cds/scoring/RiskScoringService.ts",
+        "src/clinical/assessment/ClinicalAssessmentService.ts",
+        "src/clinical/assessment/types.ts",
+        "src/clinical/emergency/EmergencyCareService.ts",
+        "src/clinical/emergency/types.ts",
+        "src/clinical/encounters/OutpatientEncounterService.ts",
+        "src/clinical/encounters/types.ts",
+        "src/clinical/hospital/HospitalAdmissionService.ts",
+        "src/clinical/hospital/types.ts",
+        "src/clinical/laboratory/LaboratoryDiagnosticService.ts",
+        "src/clinical/laboratory/types.ts",
+        "src/clinical/medication/MedicationManagementService.ts",
+        "src/clinical/medication/types.ts",
+        "src/clinical/templates/ClinicalTemplateService.ts",
+        "src/clinical/templates/types.ts",
+        "src/design-system/index.ts",
+        "src/design-system/themes/omnicare-theme.ts",
+        "src/design-system/tokens/colors.ts",
+        "src/design-system/tokens/spacing.ts",
+        "src/design-system/tokens/typography.ts",
+        "src/stories/ClinicalAlert.stories.tsx",
+        "src/stories/DesignTokens.stories.tsx",
+        "src/stories/MedicalBadge.stories.tsx",
+        "src/stories/VitalSignCard.stories.tsx"
+      ],
+      "priority": 8
+    }
+  ],
+  "criticalChains": [],
+  "summary": {
+    "totalFiles": 302,
+    "sourceFiles": 272,
+    "packageJsonFiles": 4,
+    "buildOutputFiles": 66,
+    "commitGroups": 8
+  }
+}
