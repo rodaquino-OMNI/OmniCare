@@ -899,5 +899,25 @@
     "checksum": "2d4e1bcb549feddd51f6eb93f6e0b870fe0dbc48c0e78377c71cfb47f40ddbf3",
     "references": [],
     "dependencies": []
+  },
+  {
+    "id": "entry_mc4o26u5_hogauf4by",
+    "key": "swarm-auto-centralized-1750414726442/ui-manager/commits",
+    "value": "{\"timestamp\":\"2025-06-20T10:27:55.3NZ\",\"ui_commits_summary\":{\"total_commits\":6,\"commits_analyzed\":[{\"commit_hash\":\"71133fca\",\"commit_message\":\"Implement Mobile Application for Healthcare Providers\",\"timestamp\":\"2025-06-20T07:24:44-03:00\",\"files_changed\":\"mobile app components and screens\",\"commit_type\":\"feat(mobile)\"},{\"commit_hash\":\"1ed33ee1\",\"commit_message\":\"Implement Frontend Application with Clinical Workflows\",\"timestamp\":\"2025-06-20T07:24:30-03:00\",\"files_changed\":\"frontend React components, auth, patient, admin, clinical workflows\",\"commit_type\":\"feat(ui)\"},{\"commit_hash\":\"8e1a1eac\",\"commit_message\":\"Add OmniCare EMR Documentation and System Architecture\",\"timestamp\":\"2025-06-20T07:23:38-03:00\",\"files_changed\":\"documentation and architecture files\",\"commit_type\":\"docs\"},{\"commit_hash\":\"3002c6b1\",\"commit_message\":\"Initial Claude Configuration and Project Setup\",\"timestamp\":\"2025-06-20T07:23:04-03:00\",\"files_changed\":\"project setup and configuration\",\"commit_type\":\"feat(setup)\"},{\"commit_hash\":\"744dd132\",\"commit_message\":\"feat(ui): initialize frontend project configuration and build setup\",\"timestamp\":\"2025-06-20T07:22:16-03:00\",\"files_changed\":\"frontend build and configuration files\",\"commit_type\":\"feat(ui)\"},{\"commit_hash\":\"5a004daa\",\"commit_message\":\"feat(db): Add FHIR R4 compliant database schema foundation\",\"timestamp\":\"2025-06-20T07:21:58-03:00\",\"files_changed\":\"database schema and FHIR foundation\",\"commit_type\":\"feat(db)\"}],\"ui_components_committed\":{\"frontend_setup\":\"✅ Package.json, Next.js config, Jest, ESLint, Playwright setup\",\"core_app_structure\":\"✅ App router pages, layout, global styles\",\"authentication\":\"✅ LoginForm, ProtectedRoute components with tests\",\"layout_components\":\"✅ AppLayout, Header, Sidebar navigation\",\"patient_components\":\"✅ PatientHeader, PatientSummary, PatientTimeline, PatientChart, PatientList\",\"admin_components\":\"✅ AdminDashboard, PatientRegistration, AppointmentManagement, BillingManagement\",\"clinical_components\":\"✅ SmartText, ClinicalNoteInput with AI concept detection\",\"state_management\":\"✅ Auth, Patient, UI stores with Zustand\",\"services_utilities\":\"✅ FHIR service, Medplum integration, utils\",\"types_constants\":\"✅ TypeScript interfaces, theme constants\",\"testing_setup\":\"✅ Jest configuration, E2E tests with Playwright\",\"assets_static\":\"✅ SVG icons, favicon, public assets\"},\"testing_results\":{\"jest_config_fixed\":\"✅ Fixed moduleNameMapper typo in Jest configuration\",\"build_status\":\"⚠️ Build requires missing auth/role-permissions dependency\",\"test_status\":\"⚠️ Component tests require service mocks to be implemented\",\"e2e_excluded\":\"✅ E2E tests properly excluded from Jest, should run with Playwright\"},\"next_steps\":[\"Implement missing auth/role-permissions module for build to succeed\",\"Create mock services for component tests to pass\",\"Run Playwright E2E tests separately\",\"Add missing service dependencies referenced in stores\"],\"technical_stack\":{\"framework\":\"Next.js 14 with App Router\",\"ui_library\":\"React 18+ with TypeScript 5.x\",\"styling\":\"Tailwind CSS with Mantine components\",\"testing\":\"Jest + React Testing Library + Playwright E2E\",\"state_management\":\"Zustand stores\",\"fhir_integration\":\"Medplum FHIR client\"},\"commit_message_format\":\"Followed conventional commits with feat(ui): prefix for UI changes\",\"completion_status\":\"UI components successfully committed in organized groups with proper commit messages\"}}",
+    "type": "object",
+    "namespace": "default",
+    "tags": [],
+    "metadata": {},
+    "owner": "system",
+    "accessLevel": "shared",
+    "createdAt": "2025-06-20T10:27:55.805Z",
+    "updatedAt": "2025-06-20T10:27:55.805Z",
+    "lastAccessedAt": "2025-06-20T10:27:55.805Z",
+    "version": 1,
+    "size": 3679,
+    "compressed": true,
+    "checksum": "f5a95774017fd9b7fda66077d86ef92c349fe916bfe984685635b6c88e3fa331",
+    "references": [],
+    "dependencies": []
   }
 ]
