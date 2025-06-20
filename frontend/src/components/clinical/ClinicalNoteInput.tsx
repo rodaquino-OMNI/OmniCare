@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   Stack, 
   Group, 
@@ -39,10 +39,23 @@ import {
   IconX
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
+import { 
+  DocumentEditor,
+  Document,
+  NoteDisplay,
+  useMedplum
+} from '@medplum/react';
 import { SmartText } from './SmartText';
 import { useAuth } from '@/stores/auth';
-import { Patient, DocumentReference } from '@medplum/fhirtypes';
+import { 
+  Patient, 
+  DocumentReference, 
+  Reference,
+  CodeableConcept,
+  Identifier
+} from '@medplum/fhirtypes';
 import { formatDateTime, formatDate } from '@/utils';
+import { createReference } from '@medplum/core';
 
 interface ClinicalNote {
   id: string;
@@ -81,6 +94,19 @@ const NOTE_TYPES = [
   { value: 'nursing', label: 'Nursing Note' }
 ];
 
+// Helper function to get LOINC code for note type
+const getNoteTypeCode = (noteType: string): string => {
+  const noteTypeCodes: Record<string, string> = {
+    'progress': '11506-3',
+    'admission': '18842-5',
+    'discharge': '18842-5',
+    'procedure': '28570-0',
+    'consultation': '11488-4',
+    'nursing': '34815-3'
+  };
+  return noteTypeCodes[noteType] || '11506-3';
+};
+
 export function ClinicalNoteInput({
   patient,
   encounterId,
@@ -91,6 +117,7 @@ export function ClinicalNoteInput({
   showHistory = true
 }: ClinicalNoteInputProps) {
   const { user } = useAuth();
+  const medplum = useMedplum();
   const [activeTab, setActiveTab] = useState('compose');
   
   // Note composition state
@@ -99,14 +126,15 @@ export function ClinicalNoteInput({
   const [noteContent, setNoteContent] = useState('');
   const [noteStatus, setNoteStatus] = useState<'draft' | 'signed'>('draft');
   const [noteTags, setNoteTags] = useState<string[]>([]);
+  const [documentReference, setDocumentReference] = useState<DocumentReference | null>(null);
   
   // UI state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [showSignModal, setShowSignModal] = useState(false);
-  const [existingNotes, setExistingNotes] = useState<ClinicalNote[]>([]);
-  const [selectedHistoryNote, setSelectedHistoryNote] = useState<ClinicalNote | null>(null);
+  const [existingNotes, setExistingNotes] = useState<DocumentReference[]>([]);
+  const [selectedHistoryNote, setSelectedHistoryNote] = useState<DocumentReference | null>(null);
 
   // Auto-save state
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -169,45 +197,23 @@ export function ClinicalNoteInput({
 
   const loadPatientNotes = async () => {
     try {
-      // In production, this would load from FHIR DocumentReference resources
-      const mockNotes: ClinicalNote[] = [
-        {
-          id: '1',
-          type: 'progress',
-          title: 'Progress Note - Routine Follow-up',
-          content: 'Patient is doing well, vital signs stable...',
-          status: 'signed',
-          author: {
-            id: 'dr-smith',
-            name: 'Dr. John Smith',
-            role: 'physician'
-          },
-          createdAt: new Date(Date.now() - 86400000).toISOString(),
-          updatedAt: new Date(Date.now() - 86400000).toISOString(),
-          signedAt: new Date(Date.now() - 86400000).toISOString(),
-          encounterReference: encounterId
-        },
-        {
-          id: '2',
-          type: 'nursing',
-          title: 'Nursing Assessment',
-          content: 'Patient alert and oriented, ambulating without assistance...',
-          status: 'signed',
-          author: {
-            id: 'nurse-johnson',
-            name: 'Sarah Johnson, RN',
-            role: 'nurse'
-          },
-          createdAt: new Date(Date.now() - 43200000).toISOString(),
-          updatedAt: new Date(Date.now() - 43200000).toISOString(),
-          signedAt: new Date(Date.now() - 43200000).toISOString(),
-          encounterReference: encounterId
-        }
-      ];
+      // Load actual FHIR DocumentReference resources
+      const searchParams: Record<string, string> = {
+        patient: patient.id || '',
+        _sort: '-date',
+        _count: '10'
+      };
       
-      setExistingNotes(mockNotes);
+      if (encounterId) {
+        searchParams['encounter'] = encounterId;
+      }
+      
+      const notes = await medplum.searchResources('DocumentReference', searchParams);
+      setExistingNotes(notes);
     } catch (err) {
       console.error('Failed to load patient notes:', err);
+      // Fall back to empty array if loading fails
+      setExistingNotes([]);
     }
   };
 
@@ -247,28 +253,59 @@ export function ClinicalNoteInput({
       setLoading(true);
       setError(null);
 
-      const note: ClinicalNote = {
-        id: noteId || `note-${Date.now()}`,
-        type: selectedNoteType as any,
-        title: noteTitle,
-        content: noteContent,
-        status,
-        author: {
-          id: user?.id || '',
-          name: `${user?.firstName} ${user?.lastName}`,
-          role: user?.role || ''
+      // Create FHIR DocumentReference
+      const docRef: DocumentReference = {
+        resourceType: 'DocumentReference',
+        id: noteId,
+        status: status === 'signed' ? 'current' : 'draft',
+        docStatus: status === 'signed' ? 'final' : 'preliminary',
+        type: {
+          coding: [{
+            system: 'http://loinc.org',
+            code: getNoteTypeCode(selectedNoteType),
+            display: NOTE_TYPES.find(nt => nt.value === selectedNoteType)?.label
+          }]
         },
-        createdAt: noteId ? existingNotes.find(n => n.id === noteId)?.createdAt || new Date().toISOString() : new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        signedAt: status === 'signed' ? new Date().toISOString() : undefined,
-        encounterReference: encounterId,
-        tags: noteTags
+        subject: createReference(patient),
+        date: new Date().toISOString(),
+        author: user ? [{
+          reference: `Practitioner/${user.id}`,
+          display: `${user.firstName} ${user.lastName}`
+        }] : [],
+        description: noteTitle,
+        content: [{
+          attachment: {
+            contentType: 'text/plain',
+            data: btoa(noteContent)
+          }
+        }],
+        context: {
+          encounter: encounterId ? [{ reference: `Encounter/${encounterId}` }] : undefined
+        }
       };
 
-      // In production, this would save to FHIR DocumentReference
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Save to Medplum
+      const savedDoc = await medplum.createResource(docRef);
+      setDocumentReference(savedDoc);
 
       if (onSave) {
+        const note: ClinicalNote = {
+          id: savedDoc.id || '',
+          type: selectedNoteType as any,
+          title: noteTitle,
+          content: noteContent,
+          status,
+          author: {
+            id: user?.id || '',
+            name: `${user?.firstName} ${user?.lastName}`,
+            role: user?.role || ''
+          },
+          createdAt: savedDoc.date || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          signedAt: status === 'signed' ? new Date().toISOString() : undefined,
+          encounterReference: encounterId,
+          tags: noteTags
+        };
         onSave(note);
       }
 
@@ -405,53 +442,73 @@ export function ClinicalNoteInput({
 
         <Tabs.Panel value="compose" pt="md">
           <Card shadow="sm" padding="lg" withBorder>
-            <SmartText
-              value={noteContent}
-              onChange={setNoteContent}
-              placeholder={`Begin your ${NOTE_TYPES.find(nt => nt.value === selectedNoteType)?.label.toLowerCase()}...`}
-              minRows={8}
-              maxRows={25}
-              disabled={noteStatus === 'signed'}
-              showTemplates={true}
-              showAISuggestions={true}
-              patientContext={{
-                patientId: patient.id || '',
-                encounterId,
-                visitType: selectedNoteType
-              }}
-            />
+            {documentReference ? (
+              <DocumentEditor
+                reference={createReference(documentReference)}
+                onSave={async (doc) => {
+                  const content = doc.content?.[0]?.attachment?.data;
+                  if (content) {
+                    setNoteContent(atob(content));
+                  }
+                  await saveNote('draft');
+                }}
+              />
+            ) : (
+              <SmartText
+                value={noteContent}
+                onChange={setNoteContent}
+                placeholder={`Begin your ${NOTE_TYPES.find(nt => nt.value === selectedNoteType)?.label.toLowerCase()}...`}
+                minRows={8}
+                maxRows={25}
+                disabled={noteStatus === 'signed'}
+                showTemplates={true}
+                showAISuggestions={true}
+                patientContext={{
+                  patientId: patient.id || '',
+                  encounterId,
+                  visitType: selectedNoteType
+                }}
+              />
+            )}
           </Card>
         </Tabs.Panel>
 
         <Tabs.Panel value="preview" pt="md">
           <Card shadow="sm" padding="lg" withBorder>
-            <Stack gap="md">
-              <Group justify="space-between" align="flex-start">
-                <div>
-                  <Text fw={600} size="lg">{noteTitle}</Text>
-                  <Text size="sm" c="dimmed">
-                    {user?.firstName} {user?.lastName} ({user?.role}) • {formatDateTime(new Date())}
-                  </Text>
-                </div>
-                
-                <Group gap="sm">
-                  <ActionIcon variant="light" onClick={() => window.print()}>
-                    <IconPrint size={16} />
-                  </ActionIcon>
-                  <ActionIcon variant="light">
-                    <IconShare size={16} />
-                  </ActionIcon>
+            {documentReference ? (
+              <Document
+                reference={createReference(documentReference)}
+                onEdit={() => setActiveTab('compose')}
+              />
+            ) : (
+              <Stack gap="md">
+                <Group justify="space-between" align="flex-start">
+                  <div>
+                    <Text fw={600} size="lg">{noteTitle}</Text>
+                    <Text size="sm" c="dimmed">
+                      {user?.firstName} {user?.lastName} ({user?.role}) • {formatDateTime(new Date())}
+                    </Text>
+                  </div>
+                  
+                  <Group gap="sm">
+                    <ActionIcon variant="light" onClick={() => window.print()}>
+                      <IconPrint size={16} />
+                    </ActionIcon>
+                    <ActionIcon variant="light">
+                      <IconShare size={16} />
+                    </ActionIcon>
+                  </Group>
                 </Group>
-              </Group>
-              
-              <Divider />
-              
-              <Paper p="md" className="bg-gray-50 rounded-lg">
-                <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
-                  {noteContent || 'No content to preview'}
-                </div>
-              </Paper>
-            </Stack>
+                
+                <Divider />
+                
+                <Paper p="md" className="bg-gray-50 rounded-lg">
+                  <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
+                    {noteContent || 'No content to preview'}
+                  </div>
+                </Paper>
+              </Stack>
+            )}
           </Card>
         </Tabs.Panel>
 
@@ -468,34 +525,34 @@ export function ClinicalNoteInput({
                 ) : (
                   <ScrollArea mah={400}>
                     <Stack gap="sm">
-                      {existingNotes.map(note => (
+                      {existingNotes.map(docRef => (
                         <Paper
-                          key={note.id}
+                          key={docRef.id}
                           p="md"
                           className="border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50"
-                          onClick={() => setSelectedHistoryNote(note)}
+                          onClick={() => setSelectedHistoryNote(docRef)}
                         >
                           <Group justify="space-between" align="flex-start">
                             <div className="flex-1">
-                              <Text fw={500} size="sm">{note.title}</Text>
-                              <Text size="xs" c="dimmed" truncate>
-                                {note.content.substring(0, 100)}...
+                              <Text fw={500} size="sm">{docRef.description || 'Clinical Note'}</Text>
+                              <Text size="xs" c="dimmed">
+                                {docRef.type?.coding?.[0]?.display || 'Unknown Type'}
                               </Text>
                               <Group gap="md" mt="xs">
                                 <Text size="xs" c="dimmed">
-                                  {note.author.name}
+                                  {docRef.author?.[0]?.display || 'Unknown Author'}
                                 </Text>
                                 <Text size="xs" c="dimmed">
-                                  {formatDateTime(note.createdAt)}
+                                  {formatDateTime(docRef.date || '')}
                                 </Text>
                               </Group>
                             </div>
                             <Badge 
                               size="xs" 
-                              color={getStatusColor(note.status)}
+                              color={docRef.docStatus === 'final' ? 'green' : 'blue'}
                               variant="light"
                             >
-                              {note.status.toUpperCase()}
+                              {docRef.docStatus?.toUpperCase() || 'DRAFT'}
                             </Badge>
                           </Group>
                         </Paper>
@@ -595,52 +652,14 @@ export function ClinicalNoteInput({
       >
         {selectedHistoryNote && (
           <Stack gap="md">
-            <Group justify="space-between">
-              <div>
-                <Text fw={600} size="lg">{selectedHistoryNote.title}</Text>
-                <Text size="sm" c="dimmed">
-                  {selectedHistoryNote.author.name} • {formatDateTime(selectedHistoryNote.createdAt)}
-                </Text>
-              </div>
-              <Badge 
-                color={getStatusColor(selectedHistoryNote.status)}
-                variant="light"
-              >
-                {selectedHistoryNote.status.toUpperCase()}
-              </Badge>
-            </Group>
-            
-            <Divider />
-            
-            <Paper p="md" className="bg-gray-50 rounded-lg">
-              <Text style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
-                {selectedHistoryNote.content}
-              </Text>
-            </Paper>
-            
-            <Group justify="flex-end" gap="sm">
-              <Button
-                leftSection={<IconCopy size={16} />}
-                variant="light"
-                onClick={() => {
-                  navigator.clipboard.writeText(selectedHistoryNote.content);
-                  notifications.show({
-                    title: 'Copied',
-                    message: 'Note content copied to clipboard',
-                    color: 'blue'
-                  });
-                }}
-              >
-                Copy Content
-              </Button>
-              <Button
-                leftSection={<IconPrint size={16} />}
-                variant="light"
-                onClick={() => window.print()}
-              >
-                Print
-              </Button>
-            </Group>
+            <Document
+              reference={createReference(selectedHistoryNote)}
+              onEdit={() => {
+                setDocumentReference(selectedHistoryNote);
+                setActiveTab('compose');
+                setSelectedHistoryNote(null);
+              }}
+            />
           </Stack>
         )}
       </Modal>

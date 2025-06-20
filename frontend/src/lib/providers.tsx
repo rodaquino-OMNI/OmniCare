@@ -6,7 +6,9 @@ import { Notifications } from '@mantine/notifications';
 import { ModalsProvider } from '@mantine/modals';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { MedplumProvider } from '@medplum/react';
 import { MANTINE_THEME } from '@/constants/theme';
+import { medplumClient } from './medplum';
 
 // Import Mantine styles
 import '@mantine/core/styles.css';
@@ -14,6 +16,9 @@ import '@mantine/notifications/styles.css';
 import '@mantine/dates/styles.css';
 import '@mantine/spotlight/styles.css';
 import '@mantine/charts/styles.css';
+
+// Import Medplum styles
+import '@medplum/react/styles.css';
 
 // Create custom Mantine theme
 const theme = createTheme({
@@ -214,23 +219,25 @@ interface ProvidersProps {
 export function Providers({ children }: ProvidersProps) {
   return (
     <QueryClientProvider client={queryClient}>
-      <MantineProvider theme={theme} defaultColorScheme="light">
-        <ModalsProvider
-          modalProps={{
-            centered: true,
-            overlayProps: { backgroundOpacity: 0.55, blur: 3 },
-            transitionProps: { transition: 'fade', duration: 200 },
-          }}
-        >
-          <Notifications
-            position="top-right"
-            autoClose={5000}
-            limit={5}
-            containerWidth={400}
-          />
-          {children}
-        </ModalsProvider>
-      </MantineProvider>
+      <MedplumProvider medplum={medplumClient}>
+        <MantineProvider theme={theme} defaultColorScheme="light">
+          <ModalsProvider
+            modalProps={{
+              centered: true,
+              overlayProps: { backgroundOpacity: 0.55, blur: 3 },
+              transitionProps: { transition: 'fade', duration: 200 },
+            }}
+          >
+            <Notifications
+              position="top-right"
+              autoClose={5000}
+              limit={5}
+              containerWidth={400}
+            />
+            {children}
+          </ModalsProvider>
+        </MantineProvider>
+      </MedplumProvider>
       <ReactQueryDevtools
         initialIsOpen={false}
         position="bottom-right"
