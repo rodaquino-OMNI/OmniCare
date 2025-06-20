@@ -1,0 +1,312 @@
+# Security Testing Configuration for OmniCare EMR
+# This configuration defines security testing requirements and tools
+
+name: OmniCare EMR Security Testing
+version: "1.0.0"
+
+# Security Testing Tools Configuration
+tools:
+  # Static Application Security Testing (SAST)
+  eslint_security:
+    enabled: true
+    rules:
+      - "security/detect-object-injection"
+      - "security/detect-non-literal-regexp"
+      - "security/detect-non-literal-fs-filename"
+      - "security/detect-unsafe-regex"
+      - "security/detect-buffer-noassert"
+      - "security/detect-child-process"
+      - "security/detect-disable-mustache-escape"
+      - "security/detect-eval-with-expression"
+      - "security/detect-no-csrf-before-method-override"
+      - "security/detect-non-literal-require"
+      - "security/detect-possible-timing-attacks"
+      - "security/detect-pseudoRandomBytes"
+    exclude_paths:
+      - "node_modules/**"
+      - "dist/**"
+      - "coverage/**"
+
+  # Dependency Vulnerability Scanning
+  npm_audit:
+    enabled: true
+    severity_threshold: "moderate"
+    auto_fix: true
+    exclude_dev_dependencies: false
+
+  yarn_audit:
+    enabled: true
+    severity_threshold: "moderate"
+    auto_fix: true
+
+  # Dynamic Application Security Testing (DAST)
+  owasp_zap:
+    enabled: true
+    target_url: "http://localhost:3000"
+    scan_types:
+      - "baseline"
+      - "full_scan"
+      - "api_scan"
+    auth:
+      type: "form"
+      login_url: "/auth/login"
+      username_field: "email"
+      password_field: "password"
+      username: "doctor@omnicare.com"
+      password: "demo123"
+    contexts:
+      - name: "authenticated"
+        include_regex: ".*"
+        exclude_regex: ".*logout.*"
+
+  # API Security Testing
+  api_security:
+    enabled: true
+    base_url: "http://localhost:8080/api"
+    endpoints:
+      - path: "/auth/login"
+        methods: ["POST"]
+        auth_required: false
+      - path: "/auth/token"
+        methods: ["POST"]
+        auth_required: false
+      - path: "/fhir/Patient"
+        methods: ["GET", "POST", "PUT", "DELETE"]
+        auth_required: true
+      - path: "/fhir/Encounter"
+        methods: ["GET", "POST", "PUT", "DELETE"]
+        auth_required: true
+      - path: "/fhir/Observation"
+        methods: ["GET", "POST", "PUT", "DELETE"]
+        auth_required: true
+
+# Security Test Categories
+test_categories:
+  authentication:
+    - name: "SQL Injection in Login"
+      type: "injection"
+      severity: "critical"
+      description: "Test for SQL injection vulnerabilities in authentication"
+    
+    - name: "Brute Force Protection"
+      type: "authentication"
+      severity: "high"
+      description: "Test rate limiting and account lockout mechanisms"
+    
+    - name: "Session Management"
+      type: "session"
+      severity: "high"
+      description: "Test session timeout, secure cookies, and session fixation"
+    
+    - name: "Password Policy"
+      type: "authentication"
+      severity: "medium"
+      description: "Test password complexity and policy enforcement"
+
+  authorization:
+    - name: "Role-Based Access Control"
+      type: "authorization"
+      severity: "critical"
+      description: "Test proper enforcement of user roles and permissions"
+    
+    - name: "Privilege Escalation"
+      type: "authorization"
+      severity: "critical"
+      description: "Test for unauthorized privilege escalation"
+    
+    - name: "Direct Object References"
+      type: "authorization"
+      severity: "high"
+      description: "Test for insecure direct object references"
+
+  data_protection:
+    - name: "PHI Data Encryption"
+      type: "encryption"
+      severity: "critical"
+      description: "Test encryption of Protected Health Information"
+    
+    - name: "Data Transmission Security"
+      type: "encryption"
+      severity: "critical"
+      description: "Test HTTPS enforcement and certificate validation"
+    
+    - name: "Data Leakage"
+      type: "data_exposure"
+      severity: "high"
+      description: "Test for sensitive data exposure in responses"
+
+  input_validation:
+    - name: "XSS Protection"
+      type: "injection"
+      severity: "high"
+      description: "Test for Cross-Site Scripting vulnerabilities"
+    
+    - name: "CSRF Protection"
+      type: "csrf"
+      severity: "high"
+      description: "Test Cross-Site Request Forgery protection"
+    
+    - name: "File Upload Security"
+      type: "upload"
+      severity: "medium"
+      description: "Test file upload restrictions and validation"
+
+  infrastructure:
+    - name: "HTTP Security Headers"
+      type: "headers"
+      severity: "medium"
+      description: "Test presence of security headers"
+    
+    - name: "Information Disclosure"
+      type: "disclosure"
+      severity: "medium"
+      description: "Test for information leakage in error messages"
+    
+    - name: "Rate Limiting"
+      type: "dos"
+      severity: "medium"
+      description: "Test API rate limiting and DoS protection"
+
+# HIPAA Security Requirements
+hipaa_requirements:
+  access_control:
+    - "164.312(a)(1) - Access Control"
+    - "164.312(a)(2)(i) - Assigned Security Responsibility"
+    - "164.312(a)(2)(ii) - Workforce Training"
+    - "164.312(a)(2)(iii) - Information Access Management"
+    - "164.312(a)(2)(iv) - Information Technology Management"
+
+  audit_controls:
+    - "164.312(b) - Audit Controls"
+
+  integrity:
+    - "164.312(c)(1) - Integrity"
+    - "164.312(c)(2) - Electronic Protected Health Information Alteration or Destruction"
+
+  person_or_entity_authentication:
+    - "164.312(d) - Person or Entity Authentication"
+
+  transmission_security:
+    - "164.312(e)(1) - Transmission Security"
+    - "164.312(e)(2)(i) - Integrity Controls"
+    - "164.312(e)(2)(ii) - Encryption"
+
+# Security Testing Scripts
+scripts:
+  setup: |
+    # Install security testing dependencies
+    npm install --save-dev eslint-plugin-security
+    npm install --save-dev jest-security
+    npm install -g @owasp/zap-cli
+    
+  run_sast: |
+    # Run static security analysis
+    eslint --ext .js,.ts,.tsx --config .eslintrc-security.js src/
+    
+  run_dependency_scan: |
+    # Run dependency vulnerability scan
+    npm audit --audit-level moderate
+    npm audit fix
+    
+  run_dast: |
+    # Run dynamic security testing
+    zap-cli start
+    zap-cli open-url http://localhost:3000
+    zap-cli spider http://localhost:3000
+    zap-cli active-scan http://localhost:3000
+    zap-cli report -o security-report.html -f html
+    zap-cli shutdown
+    
+  run_api_security: |
+    # Run API security tests
+    npm run test:security:api
+
+# Security Test Environment
+environment:
+  variables:
+    NODE_ENV: "security-testing"
+    API_BASE_URL: "http://localhost:8080"
+    FRONTEND_URL: "http://localhost:3000"
+    TEST_USER_EMAIL: "security-test@omnicare.com"
+    TEST_USER_PASSWORD: "SecurityTest123!"
+
+# Reporting Configuration
+reporting:
+  formats:
+    - "html"
+    - "json"
+    - "junit"
+    - "sarif"
+  
+  output_directory: "./security-reports"
+  
+  severity_levels:
+    critical: "fail_build"
+    high: "warn"
+    medium: "info"
+    low: "info"
+  
+  notifications:
+    slack:
+      enabled: false
+      webhook_url: ""
+      channels: ["#security-alerts"]
+    
+    email:
+      enabled: false
+      recipients: ["security@omnicare.com"]
+
+# Compliance Mapping
+compliance:
+  hipaa:
+    - category: "access_control"
+      tests: ["Role-Based Access Control", "Privilege Escalation"]
+    - category: "audit_controls"
+      tests: ["Session Management", "Data Leakage"]
+    - category: "integrity"
+      tests: ["Data Transmission Security", "PHI Data Encryption"]
+    - category: "person_or_entity_authentication"
+      tests: ["SQL Injection in Login", "Brute Force Protection"]
+    - category: "transmission_security"
+      tests: ["Data Transmission Security", "HTTP Security Headers"]
+
+  gdpr:
+    - category: "data_protection"
+      tests: ["PHI Data Encryption", "Data Leakage"]
+    - category: "consent_management"
+      tests: ["Role-Based Access Control"]
+
+# Security Testing Schedule
+schedule:
+  sast:
+    frequency: "on_commit"
+    tools: ["eslint_security"]
+  
+  dependency_scan:
+    frequency: "daily"
+    tools: ["npm_audit", "yarn_audit"]
+  
+  dast:
+    frequency: "weekly"
+    tools: ["owasp_zap"]
+  
+  api_security:
+    frequency: "weekly"
+    tools: ["api_security"]
+  
+  penetration_testing:
+    frequency: "quarterly"
+    external_vendor: true
+
+# Security Testing Thresholds
+thresholds:
+  critical_vulnerabilities: 0
+  high_vulnerabilities: 5
+  medium_vulnerabilities: 20
+  low_vulnerabilities: 50
+  
+  code_coverage:
+    security_tests: 80
+    
+  performance_impact:
+    max_response_time_increase: "10%"

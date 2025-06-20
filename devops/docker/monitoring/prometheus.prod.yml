@@ -1,0 +1,118 @@
+# Prometheus Configuration for OmniCare EMR
+# Production environment monitoring with enhanced security and retention
+
+global:
+  scrape_interval: 10s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'omnicare-prod'
+    environment: 'production'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+      timeout: 30s
+      api_version: v2
+
+# Load rules once and periodically evaluate them according to the global settings
+rule_files:
+  - "alert_rules.yml"
+  - "recording_rules.yml"
+  - "hipaa_compliance_rules.yml"
+
+# Scrape configuration for OmniCare production services
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 30s
+
+  # OmniCare Backend API - Production
+  - job_name: 'omnicare-backend-prod'
+    static_configs:
+      - targets: ['omnicare-backend-prod:3001']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    basic_auth:
+      username: 'metrics'
+      password_file: '/etc/prometheus/secrets/metrics_password'
+
+  # OmniCare Frontend - Production
+  - job_name: 'omnicare-frontend-prod'
+    static_configs:
+      - targets: ['omnicare-frontend-prod:3000']
+    metrics_path: '/api/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  # PostgreSQL Database Metrics - Production
+  - job_name: 'postgres-prod'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 15s
+
+  # Redis Cache Metrics - Production
+  - job_name: 'redis-prod'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 15s
+
+  # Node Exporter for system metrics - Production
+  - job_name: 'node-exporter-prod'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+
+  # NGINX Load Balancer Metrics - Production
+  - job_name: 'nginx-prod'
+    static_configs:
+      - targets: ['omnicare-nginx-prod:9113']
+    scrape_interval: 15s
+
+  # Container Advisor (cAdvisor) for container metrics - Production
+  - job_name: 'cadvisor-prod'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 15s
+
+  # Elasticsearch for log monitoring
+  - job_name: 'elasticsearch-prod'
+    static_configs:
+      - targets: ['omnicare-elasticsearch-prod:9200']
+    scrape_interval: 30s
+    metrics_path: '/_prometheus/metrics'
+
+  # Logstash monitoring
+  - job_name: 'logstash-prod'
+    static_configs:
+      - targets: ['omnicare-logstash-prod:9600']
+    scrape_interval: 30s
+
+  # Kibana monitoring
+  - job_name: 'kibana-prod'
+    static_configs:
+      - targets: ['omnicare-kibana-prod:5601']
+    scrape_interval: 30s
+
+# Remote write configuration for long-term storage and compliance
+remote_write:
+  - url: "https://prometheus-remote-write.omnicare.com/api/v1/write"
+    basic_auth:
+      username: "omnicare-prod"
+      password_file: "/etc/prometheus/secrets/remote_write_password"
+    queue_config:
+      max_samples_per_send: 1000
+      max_shards: 200
+      capacity: 2500
+
+# Remote read configuration for querying historical data
+remote_read:
+  - url: "https://prometheus-remote-read.omnicare.com/api/v1/read"
+    basic_auth:
+      username: "omnicare-prod"
+      password_file: "/etc/prometheus/secrets/remote_read_password"

@@ -1,0 +1,1085 @@
+openapi: 3.0.3
+info:
+  title: OmniCare EMR API
+  description: |
+    Comprehensive FHIR R4-compliant API for the OmniCare Electronic Medical Record system.
+    
+    This API provides secure access to clinical and administrative data through RESTful endpoints
+    that follow HL7 FHIR R4 standards. All endpoints require proper authentication and authorization
+    using SMART on FHIR protocols.
+    
+    ## Authentication
+    The API uses OAuth 2.0 with SMART on FHIR extensions for secure authentication and authorization.
+    
+    ## Rate Limiting
+    API requests are subject to rate limiting to ensure system stability and fair usage.
+    
+    ## Support
+    For technical support, contact: api-support@omnicare.health
+  version: 1.0.0
+  contact:
+    name: OmniCare API Support
+    email: api-support@omnicare.health
+    url: https://docs.omnicare.health
+  license:
+    name: Proprietary
+    url: https://omnicare.health/license
+  termsOfService: https://omnicare.health/terms
+
+servers:
+  - url: https://api.omnicare.health/fhir/R4
+    description: Production server
+  - url: https://staging-api.omnicare.health/fhir/R4
+    description: Staging server
+  - url: https://dev-api.omnicare.health/fhir/R4
+    description: Development server
+
+security:
+  - OAuth2AuthCode: []
+  - OAuth2ClientCredentials: []
+  - BearerAuth: []
+
+paths:
+  /.well-known/smart_configuration:
+    get:
+      summary: SMART on FHIR Configuration
+      description: Returns the SMART on FHIR configuration for the server
+      tags:
+        - Authentication
+      responses:
+        '200':
+          description: SMART configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SmartConfiguration'
+
+  /oauth/authorize:
+    get:
+      summary: OAuth Authorization Endpoint
+      description: Initiates OAuth 2.0 authorization flow
+      tags:
+        - Authentication
+      parameters:
+        - name: response_type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [code]
+        - name: client_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: redirect_uri
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uri
+        - name: scope
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: aud
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to authorization endpoint
+        '400':
+          description: Invalid request parameters
+
+  /oauth/token:
+    post:
+      summary: OAuth Token Endpoint
+      description: Exchanges authorization code for access token
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/AuthorizationCodeRequest'
+                - $ref: '#/components/schemas/ClientCredentialsRequest'
+      responses:
+        '200':
+          description: Successful token response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Invalid request
+        '401':
+          description: Invalid credentials
+
+  /Patient:
+    get:
+      summary: Search Patients
+      description: Search for patients using various criteria
+      tags:
+        - Patient
+      parameters:
+        - $ref: '#/components/parameters/PatientNameParam'
+        - $ref: '#/components/parameters/PatientIdentifierParam'
+        - $ref: '#/components/parameters/PatientBirthdateParam'
+        - $ref: '#/components/parameters/PatientGenderParam'
+        - $ref: '#/components/parameters/CountParam'
+        - $ref: '#/components/parameters/OffsetParam'
+      responses:
+        '200':
+          description: Bundle of matching patients
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Bundle'
+        '400':
+          description: Invalid search parameters
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+        - OAuth2AuthCode: [patient/read]
+        - BearerAuth: []
+
+    post:
+      summary: Create Patient
+      description: Create a new patient record
+      tags:
+        - Patient
+      requestBody:
+        required: true
+        content:
+          application/fhir+json:
+            schema:
+              $ref: '#/components/schemas/Patient'
+      responses:
+        '201':
+          description: Patient created successfully
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Patient'
+        '400':
+          description: Invalid patient data
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation errors
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+      security:
+        - OAuth2AuthCode: [patient/write]
+        - BearerAuth: []
+
+  /Patient/{id}:
+    get:
+      summary: Read Patient
+      description: Retrieve a specific patient by ID
+      tags:
+        - Patient
+      parameters:
+        - $ref: '#/components/parameters/ResourceIdParam'
+      responses:
+        '200':
+          description: Patient resource
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Patient'
+        '404':
+          description: Patient not found
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+        - OAuth2AuthCode: [patient/read]
+        - BearerAuth: []
+
+    put:
+      summary: Update Patient
+      description: Update an existing patient record
+      tags:
+        - Patient
+      parameters:
+        - $ref: '#/components/parameters/ResourceIdParam'
+      requestBody:
+        required: true
+        content:
+          application/fhir+json:
+            schema:
+              $ref: '#/components/schemas/Patient'
+      responses:
+        '200':
+          description: Patient updated successfully
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Patient'
+        '400':
+          description: Invalid patient data
+        '404':
+          description: Patient not found
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation errors
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+      security:
+        - OAuth2AuthCode: [patient/write]
+        - BearerAuth: []
+
+    delete:
+      summary: Delete Patient
+      description: Delete a patient record (soft delete)
+      tags:
+        - Patient
+      parameters:
+        - $ref: '#/components/parameters/ResourceIdParam'
+      responses:
+        '204':
+          description: Patient deleted successfully
+        '404':
+          description: Patient not found
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+        - OAuth2AuthCode: [patient/write]
+        - BearerAuth: []
+
+  /Observation:
+    get:
+      summary: Search Observations
+      description: Search for observations (lab results, vital signs, etc.)
+      tags:
+        - Observation
+      parameters:
+        - $ref: '#/components/parameters/ObservationPatientParam'
+        - $ref: '#/components/parameters/ObservationCategoryParam'
+        - $ref: '#/components/parameters/ObservationCodeParam'
+        - $ref: '#/components/parameters/ObservationDateParam'
+        - $ref: '#/components/parameters/CountParam'
+        - $ref: '#/components/parameters/OffsetParam'
+      responses:
+        '200':
+          description: Bundle of matching observations
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Bundle'
+        '400':
+          description: Invalid search parameters
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+        - OAuth2AuthCode: [patient/read]
+        - BearerAuth: []
+
+    post:
+      summary: Create Observation
+      description: Create a new observation record
+      tags:
+        - Observation
+      requestBody:
+        required: true
+        content:
+          application/fhir+json:
+            schema:
+              $ref: '#/components/schemas/Observation'
+      responses:
+        '201':
+          description: Observation created successfully
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Observation'
+        '400':
+          description: Invalid observation data
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation errors
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+      security:
+        - OAuth2AuthCode: [patient/write]
+        - BearerAuth: []
+
+  /Encounter:
+    get:
+      summary: Search Encounters
+      description: Search for patient encounters
+      tags:
+        - Encounter
+      parameters:
+        - $ref: '#/components/parameters/EncounterPatientParam'
+        - $ref: '#/components/parameters/EncounterStatusParam'
+        - $ref: '#/components/parameters/EncounterDateParam'
+        - $ref: '#/components/parameters/CountParam'
+        - $ref: '#/components/parameters/OffsetParam'
+      responses:
+        '200':
+          description: Bundle of matching encounters
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Bundle'
+        '400':
+          description: Invalid search parameters
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+        - OAuth2AuthCode: [patient/read]
+        - BearerAuth: []
+
+    post:
+      summary: Create Encounter
+      description: Create a new encounter record
+      tags:
+        - Encounter
+      requestBody:
+        required: true
+        content:
+          application/fhir+json:
+            schema:
+              $ref: '#/components/schemas/Encounter'
+      responses:
+        '201':
+          description: Encounter created successfully
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Encounter'
+        '400':
+          description: Invalid encounter data
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation errors
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+      security:
+        - OAuth2AuthCode: [patient/write]
+        - BearerAuth: []
+
+  /MedicationRequest:
+    get:
+      summary: Search Medication Requests
+      description: Search for medication requests and prescriptions
+      tags:
+        - Medication
+      parameters:
+        - $ref: '#/components/parameters/MedicationPatientParam'
+        - $ref: '#/components/parameters/MedicationStatusParam'
+        - $ref: '#/components/parameters/CountParam'
+        - $ref: '#/components/parameters/OffsetParam'
+      responses:
+        '200':
+          description: Bundle of matching medication requests
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Bundle'
+        '400':
+          description: Invalid search parameters
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+        - OAuth2AuthCode: [patient/read]
+        - BearerAuth: []
+
+    post:
+      summary: Create Medication Request
+      description: Create a new medication request (prescription)
+      tags:
+        - Medication
+      requestBody:
+        required: true
+        content:
+          application/fhir+json:
+            schema:
+              $ref: '#/components/schemas/MedicationRequest'
+      responses:
+        '201':
+          description: Medication request created successfully
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/MedicationRequest'
+        '400':
+          description: Invalid medication request data
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation errors
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+      security:
+        - OAuth2AuthCode: [patient/write]
+        - BearerAuth: []
+
+components:
+  securitySchemes:
+    OAuth2AuthCode:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://api.omnicare.health/oauth/authorize
+          tokenUrl: https://api.omnicare.health/oauth/token
+          scopes:
+            patient/read: Read patient data
+            patient/write: Write patient data
+            user/read: Read user data
+            user/write: Write user data
+            system/read: System-level read access
+            system/write: System-level write access
+            launch/patient: Launch with patient context
+            launch/encounter: Launch with encounter context
+            offline_access: Request refresh token
+
+    OAuth2ClientCredentials:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.omnicare.health/oauth/token
+          scopes:
+            system/read: System-level read access
+            system/write: System-level write access
+
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    ResourceIdParam:
+      name: id
+      in: path
+      required: true
+      description: Resource ID
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9\-\.]{1,64}$'
+
+    CountParam:
+      name: _count
+      in: query
+      description: Number of resources to return
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+    OffsetParam:
+      name: _offset
+      in: query
+      description: Number of resources to skip
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+
+    PatientNameParam:
+      name: name
+      in: query
+      description: Patient name (supports partial matching)
+      schema:
+        type: string
+
+    PatientIdentifierParam:
+      name: identifier
+      in: query
+      description: Patient identifier
+      schema:
+        type: string
+
+    PatientBirthdateParam:
+      name: birthdate
+      in: query
+      description: Patient birth date (YYYY-MM-DD)
+      schema:
+        type: string
+        format: date
+
+    PatientGenderParam:
+      name: gender
+      in: query
+      description: Patient gender
+      schema:
+        type: string
+        enum: [male, female, other, unknown]
+
+    ObservationPatientParam:
+      name: patient
+      in: query
+      description: Patient reference
+      schema:
+        type: string
+        pattern: '^Patient/[A-Za-z0-9\-\.]{1,64}$'
+
+    ObservationCategoryParam:
+      name: category
+      in: query
+      description: Observation category
+      schema:
+        type: string
+        enum: [vital-signs, laboratory, survey, procedure, therapy, activity]
+
+    ObservationCodeParam:
+      name: code
+      in: query
+      description: Observation code (system|code format)
+      schema:
+        type: string
+
+    ObservationDateParam:
+      name: date
+      in: query
+      description: Observation date (supports ge, le, gt, lt prefixes)
+      schema:
+        type: string
+
+    EncounterPatientParam:
+      name: patient
+      in: query
+      description: Patient reference
+      schema:
+        type: string
+        pattern: '^Patient/[A-Za-z0-9\-\.]{1,64}$'
+
+    EncounterStatusParam:
+      name: status
+      in: query
+      description: Encounter status
+      schema:
+        type: string
+        enum: [planned, in-progress, on-hold, discharged, completed, cancelled, discontinued, entered-in-error, unknown]
+
+    EncounterDateParam:
+      name: date
+      in: query
+      description: Encounter date
+      schema:
+        type: string
+        format: date
+
+    MedicationPatientParam:
+      name: patient
+      in: query
+      description: Patient reference
+      schema:
+        type: string
+        pattern: '^Patient/[A-Za-z0-9\-\.]{1,64}$'
+
+    MedicationStatusParam:
+      name: status
+      in: query
+      description: Medication request status
+      schema:
+        type: string
+        enum: [active, on-hold, ended, stopped, completed, cancelled, entered-in-error, draft, unknown]
+
+  schemas:
+    SmartConfiguration:
+      type: object
+      properties:
+        issuer:
+          type: string
+          format: uri
+        authorization_endpoint:
+          type: string
+          format: uri
+        token_endpoint:
+          type: string
+          format: uri
+        capabilities:
+          type: array
+          items:
+            type: string
+        scopes_supported:
+          type: array
+          items:
+            type: string
+
+    AuthorizationCodeRequest:
+      type: object
+      required:
+        - grant_type
+        - code
+        - redirect_uri
+        - client_id
+      properties:
+        grant_type:
+          type: string
+          enum: [authorization_code]
+        code:
+          type: string
+        redirect_uri:
+          type: string
+          format: uri
+        client_id:
+          type: string
+        client_secret:
+          type: string
+
+    ClientCredentialsRequest:
+      type: object
+      required:
+        - grant_type
+        - client_id
+        - client_secret
+      properties:
+        grant_type:
+          type: string
+          enum: [client_credentials]
+        client_id:
+          type: string
+        client_secret:
+          type: string
+        scope:
+          type: string
+
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          enum: [Bearer]
+        expires_in:
+          type: integer
+        refresh_token:
+          type: string
+        scope:
+          type: string
+        patient:
+          type: string
+        user:
+          type: string
+
+    Bundle:
+      type: object
+      required:
+        - resourceType
+        - type
+      properties:
+        resourceType:
+          type: string
+          enum: [Bundle]
+        id:
+          type: string
+        type:
+          type: string
+          enum: [document, message, transaction, transaction-response, batch, batch-response, history, searchset, collection, subscription-notification]
+        total:
+          type: integer
+        link:
+          type: array
+          items:
+            $ref: '#/components/schemas/BundleLink'
+        entry:
+          type: array
+          items:
+            $ref: '#/components/schemas/BundleEntry'
+
+    BundleLink:
+      type: object
+      required:
+        - relation
+        - url
+      properties:
+        relation:
+          type: string
+        url:
+          type: string
+          format: uri
+
+    BundleEntry:
+      type: object
+      properties:
+        fullUrl:
+          type: string
+          format: uri
+        resource:
+          oneOf:
+            - $ref: '#/components/schemas/Patient'
+            - $ref: '#/components/schemas/Observation'
+            - $ref: '#/components/schemas/Encounter'
+            - $ref: '#/components/schemas/MedicationRequest'
+        search:
+          type: object
+          properties:
+            mode:
+              type: string
+              enum: [match, include, outcome]
+            score:
+              type: number
+
+    Patient:
+      type: object
+      required:
+        - resourceType
+      properties:
+        resourceType:
+          type: string
+          enum: [Patient]
+        id:
+          type: string
+        identifier:
+          type: array
+          items:
+            $ref: '#/components/schemas/Identifier'
+        name:
+          type: array
+          items:
+            $ref: '#/components/schemas/HumanName'
+        telecom:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContactPoint'
+        gender:
+          type: string
+          enum: [male, female, other, unknown]
+        birthDate:
+          type: string
+          format: date
+        address:
+          type: array
+          items:
+            $ref: '#/components/schemas/Address'
+
+    Observation:
+      type: object
+      required:
+        - resourceType
+        - status
+        - code
+        - subject
+      properties:
+        resourceType:
+          type: string
+          enum: [Observation]
+        id:
+          type: string
+        status:
+          type: string
+          enum: [registered, preliminary, final, amended, corrected, cancelled, entered-in-error, unknown]
+        category:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodeableConcept'
+        code:
+          $ref: '#/components/schemas/CodeableConcept'
+        subject:
+          $ref: '#/components/schemas/Reference'
+        encounter:
+          $ref: '#/components/schemas/Reference'
+        effectiveDateTime:
+          type: string
+          format: date-time
+        valueQuantity:
+          $ref: '#/components/schemas/Quantity'
+        valueString:
+          type: string
+        valueBoolean:
+          type: boolean
+        component:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                $ref: '#/components/schemas/CodeableConcept'
+              valueQuantity:
+                $ref: '#/components/schemas/Quantity'
+
+    Encounter:
+      type: object
+      required:
+        - resourceType
+        - status
+        - subject
+      properties:
+        resourceType:
+          type: string
+          enum: [Encounter]
+        id:
+          type: string
+        status:
+          type: string
+          enum: [planned, in-progress, on-hold, discharged, completed, cancelled, discontinued, entered-in-error, unknown]
+        class:
+          $ref: '#/components/schemas/Coding'
+        type:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodeableConcept'
+        subject:
+          $ref: '#/components/schemas/Reference'
+        participant:
+          type: array
+          items:
+            type: object
+            properties:
+              individual:
+                $ref: '#/components/schemas/Reference'
+        period:
+          $ref: '#/components/schemas/Period'
+        location:
+          type: array
+          items:
+            type: object
+            properties:
+              location:
+                $ref: '#/components/schemas/Reference'
+
+    MedicationRequest:
+      type: object
+      required:
+        - resourceType
+        - status
+        - intent
+        - subject
+      properties:
+        resourceType:
+          type: string
+          enum: [MedicationRequest]
+        id:
+          type: string
+        status:
+          type: string
+          enum: [active, on-hold, ended, stopped, completed, cancelled, entered-in-error, draft, unknown]
+        intent:
+          type: string
+          enum: [proposal, plan, order, original-order, reflex-order, filler-order, instance-order, option]
+        medicationCodeableConcept:
+          $ref: '#/components/schemas/CodeableConcept'
+        subject:
+          $ref: '#/components/schemas/Reference'
+        encounter:
+          $ref: '#/components/schemas/Reference'
+        requester:
+          $ref: '#/components/schemas/Reference'
+        dosageInstruction:
+          type: array
+          items:
+            type: object
+            properties:
+              text:
+                type: string
+              route:
+                $ref: '#/components/schemas/CodeableConcept'
+              doseAndRate:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    doseQuantity:
+                      $ref: '#/components/schemas/Quantity'
+
+    Identifier:
+      type: object
+      properties:
+        use:
+          type: string
+          enum: [usual, official, temp, secondary, old]
+        type:
+          $ref: '#/components/schemas/CodeableConcept'
+        system:
+          type: string
+          format: uri
+        value:
+          type: string
+
+    HumanName:
+      type: object
+      properties:
+        use:
+          type: string
+          enum: [usual, official, temp, nickname, anonymous, old, maiden]
+        family:
+          type: string
+        given:
+          type: array
+          items:
+            type: string
+        prefix:
+          type: array
+          items:
+            type: string
+        suffix:
+          type: array
+          items:
+            type: string
+
+    ContactPoint:
+      type: object
+      properties:
+        system:
+          type: string
+          enum: [phone, fax, email, pager, url, sms, other]
+        value:
+          type: string
+        use:
+          type: string
+          enum: [home, work, temp, old, mobile]
+
+    Address:
+      type: object
+      properties:
+        use:
+          type: string
+          enum: [home, work, temp, old, billing]
+        type:
+          type: string
+          enum: [postal, physical, both]
+        line:
+          type: array
+          items:
+            type: string
+        city:
+          type: string
+        state:
+          type: string
+        postalCode:
+          type: string
+        country:
+          type: string
+
+    CodeableConcept:
+      type: object
+      properties:
+        coding:
+          type: array
+          items:
+            $ref: '#/components/schemas/Coding'
+        text:
+          type: string
+
+    Coding:
+      type: object
+      properties:
+        system:
+          type: string
+          format: uri
+        code:
+          type: string
+        display:
+          type: string
+
+    Reference:
+      type: object
+      properties:
+        reference:
+          type: string
+        display:
+          type: string
+
+    Quantity:
+      type: object
+      properties:
+        value:
+          type: number
+        unit:
+          type: string
+        system:
+          type: string
+          format: uri
+        code:
+          type: string
+
+    Period:
+      type: object
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+
+    OperationOutcome:
+      type: object
+      required:
+        - resourceType
+        - issue
+      properties:
+        resourceType:
+          type: string
+          enum: [OperationOutcome]
+        issue:
+          type: array
+          items:
+            type: object
+            required:
+              - severity
+              - code
+            properties:
+              severity:
+                type: string
+                enum: [fatal, error, warning, information]
+              code:
+                type: string
+              details:
+                $ref: '#/components/schemas/CodeableConcept'
+              location:
+                type: array
+                items:
+                  type: string
+
+tags:
+  - name: Authentication
+    description: OAuth 2.0 and SMART on FHIR authentication endpoints
+  - name: Patient
+    description: Patient demographic and administrative data
+  - name: Observation
+    description: Clinical observations including vital signs and lab results
+  - name: Encounter
+    description: Clinical visits and episodes of care
+  - name: Medication
+    description: Medication orders and prescriptions

@@ -1,0 +1,440 @@
+# OmniCare EMR CI/CD Pipeline
+# Production deployment with HIPAA compliance and security scanning
+
+name: Production CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment Environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  NODE_VERSION: '18'
+  POSTGRES_VERSION: '15'
+
+jobs:
+  # Security and Code Quality Checks
+  security-scan:
+    name: Security and Compliance Scan
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd backend && npm ci
+          cd ../frontend && npm ci
+
+      - name: Run ESLint Security Scan
+        run: |
+          cd backend && npm run lint:security
+          cd ../frontend && npm run lint:security
+
+      - name: Run Dependency Vulnerability Scan
+        run: |
+          cd backend && npm audit --audit-level high
+          cd ../frontend && npm audit --audit-level high
+
+      - name: HIPAA Compliance Check
+        run: |
+          cd backend && npm run test:compliance
+          cd ../frontend && npm run test:compliance
+
+      - name: OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'OmniCare EMR'
+          path: '.'
+          format: 'SARIF'
+          args: >
+            --enableRetired
+            --enableExperimental
+            --failOnCVSS 7
+
+      - name: Upload SARIF results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: reports/dependency-check-report.sarif
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  # Unit and Integration Tests
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    needs: security-scan
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: omnicare_test
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd backend && npm ci
+          cd ../frontend && npm ci
+
+      - name: Run Database Migrations
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/omnicare_test
+        run: |
+          cd backend && npm run db:migrate
+
+      - name: Run Backend Tests
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/omnicare_test
+          REDIS_URL: redis://localhost:6379
+          NODE_ENV: test
+        run: |
+          cd backend && npm run test:coverage
+
+      - name: Run Frontend Tests
+        env:
+          NODE_ENV: test
+        run: |
+          cd frontend && npm run test:coverage
+
+      - name: Run Integration Tests
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/omnicare_test
+          REDIS_URL: redis://localhost:6379
+          NODE_ENV: test
+        run: |
+          cd backend && npm run test:integration
+
+      - name: Run E2E Tests
+        run: |
+          cd frontend && npm run test:e2e
+
+      - name: Upload Coverage Reports
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./backend/coverage/coverage-final.json,./frontend/coverage/coverage-final.json
+
+  # Build and Push Container Images
+  build:
+    name: Build Container Images
+    runs-on: ubuntu-latest
+    needs: [security-scan, test]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      backend-image: ${{ steps.backend-meta.outputs.tags }}
+      frontend-image: ${{ steps.frontend-meta.outputs.tags }}
+      database-image: ${{ steps.database-meta.outputs.tags }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Backend Image
+      - name: Extract Backend Metadata
+        id: backend-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and Push Backend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./devops/docker/backend/Dockerfile
+          push: true
+          tags: ${{ steps.backend-meta.outputs.tags }}
+          labels: ${{ steps.backend-meta.outputs.labels }}
+          target: production
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Frontend Image
+      - name: Extract Frontend Metadata
+        id: frontend-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and Push Frontend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./devops/docker/frontend/Dockerfile
+          push: true
+          tags: ${{ steps.frontend-meta.outputs.tags }}
+          labels: ${{ steps.frontend-meta.outputs.labels }}
+          target: production
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Database Image
+      - name: Extract Database Metadata
+        id: database-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/database
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and Push Database Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./devops/docker/database/Dockerfile
+          push: true
+          tags: ${{ steps.database-meta.outputs.tags }}
+          labels: ${{ steps.database-meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Scan Images for Vulnerabilities
+      - name: Scan Backend Image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.backend-meta.outputs.tags }}
+          format: 'sarif'
+          output: 'backend-trivy-results.sarif'
+
+      - name: Upload Backend Scan Results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'backend-trivy-results.sarif'
+
+  # Deploy to Staging
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
+    environment:
+      name: staging
+      url: https://staging.omnicare.example.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Kubernetes CLI
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'v3.12.0'
+
+      - name: Configure Kubernetes Context
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+
+      - name: Deploy to Staging
+        run: |
+          export KUBECONFIG=kubeconfig
+          envsubst < devops/kubernetes/namespace.yaml | kubectl apply -f -
+          envsubst < devops/kubernetes/database.yaml | kubectl apply -f -
+          envsubst < devops/kubernetes/redis.yaml | kubectl apply -f -
+          envsubst < devops/kubernetes/backend.yaml | kubectl apply -f -
+          envsubst < devops/kubernetes/frontend.yaml | kubectl apply -f -
+          envsubst < devops/kubernetes/ingress.yaml | kubectl apply -f -
+        env:
+          BACKEND_IMAGE: ${{ needs.build.outputs.backend-image }}
+          FRONTEND_IMAGE: ${{ needs.build.outputs.frontend-image }}
+          DATABASE_IMAGE: ${{ needs.build.outputs.database-image }}
+          ENVIRONMENT: staging
+
+      - name: Wait for Deployment
+        run: |
+          export KUBECONFIG=kubeconfig
+          kubectl wait --for=condition=available --timeout=600s deployment/backend -n omnicare
+          kubectl wait --for=condition=available --timeout=600s deployment/frontend -n omnicare
+
+      - name: Run Smoke Tests
+        run: |
+          curl -f https://staging.omnicare.example.com/health || exit 1
+          curl -f https://api-staging.omnicare.example.com/health || exit 1
+
+  # Production Deployment (Manual Approval Required)
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build, deploy-staging]
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production'
+    environment:
+      name: production
+      url: https://omnicare.example.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Kubernetes CLI
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'v3.12.0'
+
+      - name: Configure Kubernetes Context
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+
+      - name: Pre-deployment Security Check
+        run: |
+          export KUBECONFIG=kubeconfig
+          kubectl auth can-i create deployments --namespace omnicare
+          kubectl get pods -n omnicare
+
+      - name: Deploy to Production
+        run: |
+          export KUBECONFIG=kubeconfig
+          envsubst < devops/kubernetes/namespace.yaml | kubectl apply -f -
+          envsubst < devops/kubernetes/database.yaml | kubectl apply -f -
+          envsubst < devops/kubernetes/redis.yaml | kubectl apply -f -
+          envsubst < devops/kubernetes/backend.yaml | kubectl apply -f -
+          envsubst < devops/kubernetes/frontend.yaml | kubectl apply -f -
+          envsubst < devops/kubernetes/ingress.yaml | kubectl apply -f -
+        env:
+          BACKEND_IMAGE: ${{ needs.build.outputs.backend-image }}
+          FRONTEND_IMAGE: ${{ needs.build.outputs.frontend-image }}
+          DATABASE_IMAGE: ${{ needs.build.outputs.database-image }}
+          ENVIRONMENT: production
+
+      - name: Wait for Production Deployment
+        run: |
+          export KUBECONFIG=kubeconfig
+          kubectl wait --for=condition=available --timeout=600s deployment/backend -n omnicare
+          kubectl wait --for=condition=available --timeout=600s deployment/frontend -n omnicare
+
+      - name: Production Health Check
+        run: |
+          curl -f https://omnicare.example.com/health || exit 1
+          curl -f https://api.omnicare.example.com/health || exit 1
+
+      - name: Notify Deployment Success
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_MESSAGE: 'OmniCare EMR production deployment successful! :rocket:'
+          SLACK_TITLE: 'Production Deployment'
+          SLACK_COLOR: ${{ job.status }}
+
+  # Post-Deployment Security Monitoring
+  post-deployment-monitoring:
+    name: Post-Deployment Security Monitoring
+    runs-on: ubuntu-latest
+    needs: [deploy-production, deploy-staging]
+    if: always() && (needs.deploy-production.result == 'success' || needs.deploy-staging.result == 'success')
+    steps:
+      - name: OWASP ZAP Security Scan
+        uses: zaproxy/action-full-scan@v0.9.0
+        with:
+          target: ${{ needs.deploy-production.result == 'success' && 'https://omnicare.example.com' || 'https://staging.omnicare.example.com' }}
+          cmd_options: '-a'
+
+      - name: HIPAA Compliance Verification
+        run: |
+          # Run HIPAA compliance checks
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.COMPLIANCE_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"environment": "${{ needs.deploy-production.result == 'success' && 'production' || 'staging' }}", "check_type": "hipaa"}' \
+            https://compliance-api.omnicare.example.com/verify
+
+      - name: Performance Testing
+        run: |
+          # Run performance tests
+          docker run --rm -v $(pwd):/app -w /app \
+            grafana/k6:latest run \
+            --out influxdb=http://influxdb:8086/k6 \
+            tests/performance/load-test.js

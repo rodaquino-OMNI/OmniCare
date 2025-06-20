@@ -1,0 +1,240 @@
+# PostgreSQL Database Deployment for OmniCare EMR
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  namespace: omnicare
+  labels:
+    app: postgres
+    component: database
+data:
+  POSTGRES_DB: omnicare_emr
+  POSTGRES_USER: omnicare_user
+  PGDATA: /var/lib/postgresql/data/pgdata
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+  namespace: omnicare
+  labels:
+    app: postgres
+    component: database
+type: Opaque
+data:
+  POSTGRES_PASSWORD: b21uaWNhcmUtZGItcGFzcw== # base64 encoded: omnicare-db-pass
+  DATABASE_URL: cG9zdGdyZXNxbDovL29tbmljYXJlX3VzZXI6b21uaWNhcmUtZGItcGFzc0Bwb3N0Z3JlczozQzMyL29tbmljYXJlX2Vtcg== # Connection string
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: omnicare
+  labels:
+    app: postgres
+    component: database
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi # Adjust based on data requirements
+  storageClassName: fast-ssd # Use appropriate storage class
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-logs-pvc
+  namespace: omnicare
+  labels:
+    app: postgres
+    component: database
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: fast-ssd
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: omnicare
+  labels:
+    app: postgres
+    component: database
+    version: "15"
+spec:
+  replicas: 1 # PostgreSQL is typically not horizontally scalable
+  strategy:
+    type: Recreate # Use Recreate for stateful applications
+  selector:
+    matchLabels:
+      app: postgres
+      component: database
+  template:
+    metadata:
+      labels:
+        app: postgres
+        component: database
+        version: "15"
+    spec:
+      securityContext:
+        runAsUser: 999 # postgres user
+        runAsGroup: 999
+        fsGroup: 999
+      containers:
+      - name: postgres
+        image: omnicare/database:latest # Use your built image
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-config
+              key: POSTGRES_DB
+        - name: POSTGRES_USER
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-config
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+        - name: PGDATA
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-config
+              key: PGDATA
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        - name: postgres-logs
+          mountPath: /var/log/postgresql
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgres-pvc
+      - name: postgres-logs
+        persistentVolumeClaim:
+          claimName: postgres-logs-pvc
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: omnicare
+  labels:
+    app: postgres
+    component: database
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+    name: postgres
+  selector:
+    app: postgres
+    component: database
+---
+# Backup CronJob for PostgreSQL
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: omnicare
+  labels:
+    app: postgres
+    component: backup
+spec:
+  schedule: "0 2 * * *" # Daily at 2 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: postgres-backup
+            image: postgres:15-alpine
+            command:
+            - /bin/sh
+            - -c
+            - |
+              pg_dump -h postgres -U $POSTGRES_USER -d $POSTGRES_DB > /backups/backup-$(date +%Y%m%d-%H%M%S).sql
+              find /backups -name "backup-*.sql" -mtime +7 -delete
+            env:
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: POSTGRES_USER
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: POSTGRES_DB
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+            volumeMounts:
+            - name: backup-storage
+              mountPath: /backups
+          volumes:
+          - name: backup-storage
+            persistentVolumeClaim:
+              claimName: postgres-backup-pvc
+          restartPolicy: OnFailure
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-backup-pvc
+  namespace: omnicare
+  labels:
+    app: postgres
+    component: backup
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 200Gi # Adjust based on backup retention needs
+  storageClassName: standard # Use cheaper storage for backups

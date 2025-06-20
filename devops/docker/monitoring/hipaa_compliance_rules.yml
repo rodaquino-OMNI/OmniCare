@@ -1,0 +1,255 @@
+# HIPAA Compliance Alert Rules for OmniCare EMR
+# Monitoring rules to ensure HIPAA compliance and data protection
+
+groups:
+  # HIPAA Access Control (164.312(a))
+  - name: hipaa_access_control
+    rules:
+    - alert: HIPAAUnauthorizedAccess
+      expr: increase(http_requests_total{job="omnicare-backend-prod",status=~"401|403"}[5m]) > 5
+      for: 0s
+      labels:
+        severity: critical
+        hipaa_section: "164.312(a)"
+        compliance_category: "access_control"
+        priority: "immediate"
+      annotations:
+        summary: "HIPAA Violation: Unauthorized access attempts detected"
+        description: "{{ $value }} unauthorized access attempts in 5 minutes. Immediate investigation required."
+        remediation: "1. Review access logs 2. Check for brute force attacks 3. Verify user permissions 4. Document incident"
+
+    - alert: HIPAAPrivilegeEscalation
+      expr: increase(privilege_escalation_attempts_total[10m]) > 0
+      for: 0s
+      labels:
+        severity: critical
+        hipaa_section: "164.312(a)(2)(i)"
+        compliance_category: "access_control"
+        priority: "immediate"
+      annotations:
+        summary: "HIPAA Violation: Privilege escalation attempt detected"
+        description: "Attempt to escalate privileges detected. Potential security breach."
+        remediation: "1. Disable affected account 2. Review access logs 3. Investigate source 4. Update security policies"
+
+    - alert: HIPAAInactiveSessionTimeout
+      expr: session_duration_seconds > 1800 # 30 minutes
+      for: 0s
+      labels:
+        severity: warning
+        hipaa_section: "164.312(a)(2)(iii)"
+        compliance_category: "access_control"
+        priority: "medium"
+      annotations:
+        summary: "HIPAA Compliance: Session timeout policy violation"
+        description: "User session active for {{ $value }} seconds, exceeding 30-minute policy"
+        remediation: "1. Force session termination 2. Review session management 3. Update timeout policies"
+
+  # HIPAA Audit Controls (164.312(b))
+  - name: hipaa_audit_controls
+    rules:
+    - alert: HIPAAAuditLogFailure
+      expr: absent(rate(audit_log_entries_total[5m])) or rate(audit_log_entries_total[5m]) == 0
+      for: 2m
+      labels:
+        severity: critical
+        hipaa_section: "164.312(b)"
+        compliance_category: "audit_controls"
+        priority: "immediate"
+      annotations:
+        summary: "HIPAA Violation: Audit logging system failure"
+        description: "Audit logging system has failed or stopped generating logs"
+        remediation: "1. Restore audit logging immediately 2. Investigate cause 3. Recover missing logs 4. Implement backup logging"
+
+    - alert: HIPAAAuditLogTampering
+      expr: audit_log_integrity_check_failures_total > 0
+      for: 0s
+      labels:
+        severity: critical
+        hipaa_section: "164.312(b)"
+        compliance_category: "audit_controls"
+        priority: "immediate"
+      annotations:
+        summary: "HIPAA Violation: Audit log integrity compromised"
+        description: "Audit log integrity check failed - potential tampering detected"
+        remediation: "1. Secure audit logs 2. Investigate tampering 3. Restore from backup 4. Report incident"
+
+    - alert: HIPAAHighVolumeDataAccess
+      expr: increase(phi_access_total[10m]) > 1000
+      for: 0s
+      labels:
+        severity: warning
+        hipaa_section: "164.312(b)"
+        compliance_category: "audit_controls"
+        priority: "high"
+      annotations:
+        summary: "HIPAA Audit: High volume PHI data access detected"
+        description: "{{ $value }} PHI records accessed in 10 minutes - requires audit review"
+        remediation: "1. Review access patterns 2. Verify legitimate use 3. Document access reason 4. Monitor user activity"
+
+  # HIPAA Integrity Controls (164.312(c))
+  - name: hipaa_integrity_controls
+    rules:
+    - alert: HIPAADataIntegrityViolation
+      expr: increase(data_integrity_violations_total[5m]) > 0
+      for: 0s
+      labels:
+        severity: critical
+        hipaa_section: "164.312(c)(1)"
+        compliance_category: "integrity_controls"
+        priority: "immediate"
+      annotations:
+        summary: "HIPAA Violation: Data integrity compromised"
+        description: "{{ $value }} data integrity violations detected in 5 minutes"
+        remediation: "1. Isolate affected systems 2. Verify data integrity 3. Restore from backup 4. Investigate cause"
+
+    - alert: HIPAAUnauthorizedDataModification
+      expr: increase(unauthorized_data_modifications_total[5m]) > 0
+      for: 0s
+      labels:
+        severity: critical
+        hipaa_section: "164.312(c)(2)"
+        compliance_category: "integrity_controls"
+        priority: "immediate"
+      annotations:
+        summary: "HIPAA Violation: Unauthorized data modification detected"
+        description: "Unauthorized modification of PHI data detected - {{ $value }} incidents"
+        remediation: "1. Revert unauthorized changes 2. Investigate modification source 3. Secure data access 4. Review permissions"
+
+    - alert: HIPAADatabaseBackupFailure
+      expr: time() - database_backup_last_success_timestamp > 86400 # 24 hours
+      for: 0s
+      labels:
+        severity: critical
+        hipaa_section: "164.312(c)(1)"
+        compliance_category: "integrity_controls"
+        priority: "high"
+      annotations:
+        summary: "HIPAA Compliance: Database backup failure"
+        description: "Database backup has not succeeded in {{ $value }} seconds"
+        remediation: "1. Restore backup system 2. Verify data integrity 3. Perform manual backup 4. Update backup procedures"
+
+  # HIPAA Person or Entity Authentication (164.312(d))
+  - name: hipaa_authentication
+    rules:
+    - alert: HIPAAWeakPasswordDetected
+      expr: increase(weak_password_attempts_total[1h]) > 0
+      for: 0s
+      labels:
+        severity: warning
+        hipaa_section: "164.312(d)"
+        compliance_category: "authentication"
+        priority: "medium"
+      annotations:
+        summary: "HIPAA Compliance: Weak password policy violation"
+        description: "{{ $value }} weak password attempts detected in 1 hour"
+        remediation: "1. Enforce strong password policy 2. Require password change 3. Review authentication settings 4. User education"
+
+    - alert: HIPAAMultipleFailedLogins
+      expr: increase(failed_login_attempts_total[15m]) > 5
+      for: 0s
+      labels:
+        severity: warning
+        hipaa_section: "164.312(d)"
+        compliance_category: "authentication"
+        priority: "medium"
+      annotations:
+        summary: "HIPAA Security: Multiple failed authentication attempts"
+        description: "{{ $value }} failed login attempts in 15 minutes for user {{ $labels.user }}"
+        remediation: "1. Lock user account 2. Investigate failed attempts 3. Verify user identity 4. Check for brute force attack"
+
+    - alert: HIPAAAccountLockoutFailure
+      expr: account_lockout_policy_violations_total > 0
+      for: 0s
+      labels:
+        severity: critical
+        hipaa_section: "164.312(d)"
+        compliance_category: "authentication"
+        priority: "high"
+      annotations:
+        summary: "HIPAA Violation: Account lockout policy failure"
+        description: "Account lockout policy failed to trigger after repeated failed attempts"
+        remediation: "1. Manually lock account 2. Fix lockout mechanism 3. Review authentication system 4. Update security policies"
+
+  # HIPAA Transmission Security (164.312(e))
+  - name: hipaa_transmission_security
+    rules:
+    - alert: HIPAAUnencryptedDataTransmission
+      expr: increase(unencrypted_data_transmissions_total[5m]) > 0
+      for: 0s
+      labels:
+        severity: critical
+        hipaa_section: "164.312(e)(1)"
+        compliance_category: "transmission_security"
+        priority: "immediate"
+      annotations:
+        summary: "HIPAA Violation: Unencrypted PHI data transmission detected"
+        description: "{{ $value }} unencrypted PHI transmissions detected in 5 minutes"
+        remediation: "1. Block unencrypted connections 2. Enforce TLS/SSL 3. Investigate transmission source 4. Update security policies"
+
+    - alert: HIPAASSLCertificateExpired
+      expr: ssl_certificate_expiry_seconds - time() < 0
+      for: 0s
+      labels:
+        severity: critical
+        hipaa_section: "164.312(e)(2)(ii)"
+        compliance_category: "transmission_security"
+        priority: "immediate"
+      annotations:
+        summary: "HIPAA Violation: SSL certificate expired"
+        description: "SSL certificate has expired - secure transmission compromised"
+        remediation: "1. Install new certificate immediately 2. Verify all endpoints 3. Update certificate management 4. Implement monitoring"
+
+    - alert: HIPAAWeakSSLCiphers
+      expr: weak_ssl_cipher_usage_total > 0
+      for: 0s
+      labels:
+        severity: warning
+        hipaa_section: "164.312(e)(2)(ii)"
+        compliance_category: "transmission_security"
+        priority: "medium"
+      annotations:
+        summary: "HIPAA Compliance: Weak SSL ciphers detected"
+        description: "{{ $value }} connections using weak SSL ciphers"
+        remediation: "1. Disable weak ciphers 2. Update SSL configuration 3. Test security settings 4. Monitor cipher usage"
+
+  # HIPAA Data Breach Detection
+  - name: hipaa_breach_detection
+    rules:
+    - alert: HIPAAMassDataExport
+      expr: increase(data_export_volume_bytes[10m]) > 100000000 # 100MB
+      for: 0s
+      labels:
+        severity: critical
+        hipaa_section: "164.312"
+        compliance_category: "breach_detection"
+        priority: "immediate"
+      annotations:
+        summary: "HIPAA Breach Alert: Mass data export detected"
+        description: "{{ $value }} bytes of data exported in 10 minutes - potential breach"
+        remediation: "1. Stop data export 2. Investigate user and purpose 3. Secure exported data 4. Report potential breach"
+
+    - alert: HIPAAUnusualDataAccessPattern
+      expr: increase(phi_access_outside_hours_total[1h]) > 10
+      for: 0s
+      labels:
+        severity: warning
+        hipaa_section: "164.312"
+        compliance_category: "breach_detection"
+        priority: "high"
+      annotations:
+        summary: "HIPAA Audit: Unusual data access pattern detected"
+        description: "{{ $value }} PHI accesses outside normal business hours"
+        remediation: "1. Review access legitimacy 2. Verify user authorization 3. Document access reason 4. Monitor ongoing activity"
+
+    - alert: HIPAAGeographicAnomalyAccess
+      expr: increase(phi_access_unusual_location_total[1h]) > 0
+      for: 0s
+      labels:
+        severity: warning
+        hipaa_section: "164.312"
+        compliance_category: "breach_detection"
+        priority: "high"
+      annotations:
+        summary: "HIPAA Security: Geographic access anomaly detected"
+        description: "PHI access from unusual geographic location - {{ $labels.location }}"
+        remediation: "1. Verify user location 2. Check for compromised account 3. Implement geo-blocking if needed 4. Monitor user activity"

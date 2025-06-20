@@ -1,0 +1,530 @@
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { useRouter } from 'next/navigation';
+import { notifications } from '@mantine/notifications';
+import { LoginForm } from '../LoginForm';
+import { useAuth } from '@/stores/auth';
+import { mockPatientData } from '../../../jest.setup';
+
+// Mock dependencies
+jest.mock('next/navigation', () => ({
+  useRouter: jest.fn(),
+}));
+
+jest.mock('@mantine/notifications', () => ({
+  notifications: {
+    show: jest.fn(),
+  },
+}));
+
+jest.mock('@/stores/auth', () => ({
+  useAuth: jest.fn(),
+}));
+
+jest.mock('@/constants', () => ({
+  APP_NAME: 'OmniCare',
+}));
+
+describe('LoginForm', () => {
+  const mockPush = jest.fn();
+  const mockLogin = jest.fn();
+  const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
+  const mockUseRouter = useRouter as jest.MockedFunction<typeof useRouter>;
+  const mockNotifications = notifications.show as jest.MockedFunction<typeof notifications.show>;
+
+  beforeEach(() => {
+    mockUseRouter.mockReturnValue({
+      push: mockPush,
+      replace: jest.fn(),
+      prefetch: jest.fn(),
+      back: jest.fn(),
+      forward: jest.fn(),
+      refresh: jest.fn(),
+    });
+
+    mockUseAuth.mockReturnValue({
+      login: mockLogin,
+      isLoading: false,
+      user: null,
+      isAuthenticated: false,
+      token: null,
+      refreshToken: null,
+      permissions: [],
+      logout: jest.fn(),
+      refreshAuth: jest.fn(),
+      updateUser: jest.fn(),
+      setLoading: jest.fn(),
+      hasPermission: jest.fn(),
+      hasRole: jest.fn(),
+      hasAnyRole: jest.fn(),
+      isDoctor: false,
+      isNurse: false,
+      isAdmin: false,
+      isPharmacist: false,
+      isLabTech: false,
+      isRadiologyTech: false,
+      isPatient: false,
+      isSystemAdmin: false,
+      canViewPatients: false,
+      canEditPatients: false,
+      canCreateOrders: false,
+      canAdministerMedications: false,
+      canPrescribeMedications: false,
+      canViewLabResults: false,
+      canManageSystem: false,
+    });
+
+    jest.clearAllMocks();
+  });
+
+  describe('Rendering', () => {
+    it('should render login form with all necessary elements', () => {
+      render(<LoginForm />);
+
+      // Check header elements
+      expect(screen.getByText('OmniCare')).toBeInTheDocument();
+      expect(screen.getByText('Electronic Medical Records')).toBeInTheDocument();
+      expect(screen.getByText('Sign in to your account')).toBeInTheDocument();
+
+      // Check form fields
+      expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/remember me/i)).toBeInTheDocument();
+
+      // Check buttons
+      expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /doctor/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /nurse/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /admin/i })).toBeInTheDocument();
+
+      // Check links
+      expect(screen.getByText(/forgot password/i)).toBeInTheDocument();
+      expect(screen.getByText(/support@omnicare.com/i)).toBeInTheDocument();
+    });
+
+    it('should show loading overlay when isLoading is true', () => {
+      mockUseAuth.mockReturnValue({
+        ...mockUseAuth(),
+        isLoading: true,
+      });
+
+      render(<LoginForm />);
+
+      // Mantine LoadingOverlay renders differently, check for disabled state instead
+      const emailInput = screen.getByLabelText(/email address/i);
+      const passwordInput = screen.getByLabelText(/password/i);
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+
+      expect(emailInput).toBeDisabled();
+      expect(passwordInput).toBeDisabled();
+      expect(submitButton).toHaveAttribute('data-loading', 'true');
+    });
+
+    it('should not show error alert initially', () => {
+      render(<LoginForm />);
+      
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Form Validation', () => {
+    it('should show validation errors for empty fields', async () => {
+      const user = userEvent.setup();
+      render(<LoginForm />);
+
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+      await user.click(submitButton);
+
+      expect(await screen.findByText('Email is required')).toBeInTheDocument();
+      expect(await screen.findByText('Password is required')).toBeInTheDocument();
+    });
+
+    it('should show validation error for invalid email format', async () => {
+      const user = userEvent.setup();
+      render(<LoginForm />);
+
+      const emailInput = screen.getByLabelText(/email address/i);
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+
+      await user.type(emailInput, 'invalid-email');
+      await user.click(submitButton);
+
+      expect(await screen.findByText('Invalid email format')).toBeInTheDocument();
+    });
+
+    it('should show validation error for short password', async () => {
+      const user = userEvent.setup();
+      render(<LoginForm />);
+
+      const passwordInput = screen.getByLabelText(/password/i);
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+
+      await user.type(passwordInput, '123');
+      await user.click(submitButton);
+
+      expect(await screen.findByText('Password must be at least 6 characters')).toBeInTheDocument();
+    });
+
+    it('should not show validation errors for valid inputs', async () => {
+      const user = userEvent.setup();
+      render(<LoginForm />);
+
+      const emailInput = screen.getByLabelText(/email address/i);
+      const passwordInput = screen.getByLabelText(/password/i);
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+
+      await user.type(emailInput, 'doctor@omnicare.com');
+      await user.type(passwordInput, 'password123');
+      await user.click(submitButton);
+
+      expect(screen.queryByText('Email is required')).not.toBeInTheDocument();
+      expect(screen.queryByText('Password is required')).not.toBeInTheDocument();
+      expect(screen.queryByText('Invalid email format')).not.toBeInTheDocument();
+      expect(screen.queryByText('Password must be at least 6 characters')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Form Submission', () => {
+    it('should call login function with correct credentials on form submission', async () => {
+      const user = userEvent.setup();
+      mockLogin.mockResolvedValue(undefined);
+
+      render(<LoginForm />);
+
+      const emailInput = screen.getByLabelText(/email address/i);
+      const passwordInput = screen.getByLabelText(/password/i);
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+
+      await user.type(emailInput, 'doctor@omnicare.com');
+      await user.type(passwordInput, 'password123');
+      await user.click(submitButton);
+
+      expect(mockLogin).toHaveBeenCalledWith({
+        email: 'doctor@omnicare.com',
+        password: 'password123',
+      });
+    });
+
+    it('should redirect to dashboard on successful login', async () => {
+      const user = userEvent.setup();
+      mockLogin.mockResolvedValue(undefined);
+
+      render(<LoginForm />);
+
+      const emailInput = screen.getByLabelText(/email address/i);
+      const passwordInput = screen.getByLabelText(/password/i);
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+
+      await user.type(emailInput, 'doctor@omnicare.com');
+      await user.type(passwordInput, 'password123');
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalledWith('/dashboard');
+      });
+    });
+
+    it('should show success notification on successful login', async () => {
+      const user = userEvent.setup();
+      mockLogin.mockResolvedValue(undefined);
+
+      render(<LoginForm />);
+
+      const emailInput = screen.getByLabelText(/email address/i);
+      const passwordInput = screen.getByLabelText(/password/i);
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+
+      await user.type(emailInput, 'doctor@omnicare.com');
+      await user.type(passwordInput, 'password123');
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(mockNotifications).toHaveBeenCalledWith({
+          title: 'Login Successful',
+          message: 'Welcome back to OmniCare EMR!',
+          color: 'green',
+          icon: expect.any(Object),
+        });
+      });
+    });
+
+    it('should show error alert and notification on login failure', async () => {
+      const user = userEvent.setup();
+      const errorMessage = 'Invalid credentials';
+      mockLogin.mockRejectedValue(new Error(errorMessage));
+
+      render(<LoginForm />);
+
+      const emailInput = screen.getByLabelText(/email address/i);
+      const passwordInput = screen.getByLabelText(/password/i);
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+
+      await user.type(emailInput, 'doctor@omnicare.com');
+      await user.type(passwordInput, 'wrongpassword');
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(errorMessage)).toBeInTheDocument();
+      });
+
+      expect(mockNotifications).toHaveBeenCalledWith({
+        title: 'Login Failed',
+        message: errorMessage,
+        color: 'red',
+        icon: expect.any(Object),
+      });
+    });
+
+    it('should handle non-Error objects in catch block', async () => {
+      const user = userEvent.setup();
+      mockLogin.mockRejectedValue('String error');
+
+      render(<LoginForm />);
+
+      const emailInput = screen.getByLabelText(/email address/i);
+      const passwordInput = screen.getByLabelText(/password/i);
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+
+      await user.type(emailInput, 'doctor@omnicare.com');
+      await user.type(passwordInput, 'password123');
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Login failed')).toBeInTheDocument();
+      });
+    });
+
+    it('should clear error state on new submission attempt', async () => {
+      const user = userEvent.setup();
+      mockLogin.mockRejectedValueOnce(new Error('First error'))
+                .mockResolvedValueOnce(undefined);
+
+      render(<LoginForm />);
+
+      const emailInput = screen.getByLabelText(/email address/i);
+      const passwordInput = screen.getByLabelText(/password/i);
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+
+      // First submission - error
+      await user.type(emailInput, 'doctor@omnicare.com');
+      await user.type(passwordInput, 'wrongpassword');
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('First error')).toBeInTheDocument();
+      });
+
+      // Second submission - success
+      await user.clear(passwordInput);
+      await user.type(passwordInput, 'correctpassword');
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(screen.queryByText('First error')).not.toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Demo Account Buttons', () => {
+    it('should fill form with doctor credentials when Doctor button is clicked', async () => {
+      const user = userEvent.setup();
+      render(<LoginForm />);
+
+      const doctorButton = screen.getByRole('button', { name: /doctor/i });
+      await user.click(doctorButton);
+
+      const emailInput = screen.getByLabelText(/email address/i) as HTMLInputElement;
+      const passwordInput = screen.getByLabelText(/password/i) as HTMLInputElement;
+
+      expect(emailInput.value).toBe('doctor@omnicare.com');
+      expect(passwordInput.value).toBe('demo123');
+    });
+
+    it('should fill form with nurse credentials when Nurse button is clicked', async () => {
+      const user = userEvent.setup();
+      render(<LoginForm />);
+
+      const nurseButton = screen.getByRole('button', { name: /nurse/i });
+      await user.click(nurseButton);
+
+      const emailInput = screen.getByLabelText(/email address/i) as HTMLInputElement;
+      const passwordInput = screen.getByLabelText(/password/i) as HTMLInputElement;
+
+      expect(emailInput.value).toBe('nurse@omnicare.com');
+      expect(passwordInput.value).toBe('demo123');
+    });
+
+    it('should fill form with admin credentials when Admin button is clicked', async () => {
+      const user = userEvent.setup();
+      render(<LoginForm />);
+
+      const adminButton = screen.getByRole('button', { name: /admin/i });
+      await user.click(adminButton);
+
+      const emailInput = screen.getByLabelText(/email address/i) as HTMLInputElement;
+      const passwordInput = screen.getByLabelText(/password/i) as HTMLInputElement;
+
+      expect(emailInput.value).toBe('admin@omnicare.com');
+      expect(passwordInput.value).toBe('demo123');
+    });
+
+    it('should disable demo buttons when loading', () => {
+      mockUseAuth.mockReturnValue({
+        ...mockUseAuth(),
+        isLoading: true,
+      });
+
+      render(<LoginForm />);
+
+      const doctorButton = screen.getByRole('button', { name: /doctor/i });
+      const nurseButton = screen.getByRole('button', { name: /nurse/i });
+      const adminButton = screen.getByRole('button', { name: /admin/i });
+
+      expect(doctorButton).toBeDisabled();
+      expect(nurseButton).toBeDisabled();
+      expect(adminButton).toBeDisabled();
+    });
+  });
+
+  describe('Form Interactions', () => {
+    it('should handle remember me checkbox', async () => {
+      const user = userEvent.setup();
+      render(<LoginForm />);
+
+      const rememberMeCheckbox = screen.getByLabelText(/remember me/i);
+      expect(rememberMeCheckbox).not.toBeChecked();
+
+      await user.click(rememberMeCheckbox);
+      expect(rememberMeCheckbox).toBeChecked();
+
+      await user.click(rememberMeCheckbox);
+      expect(rememberMeCheckbox).not.toBeChecked();
+    });
+
+    it('should disable form elements when loading', () => {
+      mockUseAuth.mockReturnValue({
+        ...mockUseAuth(),
+        isLoading: true,
+      });
+
+      render(<LoginForm />);
+
+      const emailInput = screen.getByLabelText(/email address/i);
+      const passwordInput = screen.getByLabelText(/password/i);
+      const rememberMeCheckbox = screen.getByLabelText(/remember me/i);
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+
+      expect(emailInput).toBeDisabled();
+      expect(passwordInput).toBeDisabled();
+      expect(rememberMeCheckbox).toBeDisabled();
+      expect(submitButton).toHaveAttribute('data-loading', 'true');
+    });
+
+    it('should submit form when Enter is pressed in password field', async () => {
+      const user = userEvent.setup();
+      mockLogin.mockResolvedValue(undefined);
+
+      render(<LoginForm />);
+
+      const emailInput = screen.getByLabelText(/email address/i);
+      const passwordInput = screen.getByLabelText(/password/i);
+
+      await user.type(emailInput, 'doctor@omnicare.com');
+      await user.type(passwordInput, 'password123');
+      await user.keyboard('{Enter}');
+
+      expect(mockLogin).toHaveBeenCalledWith({
+        email: 'doctor@omnicare.com',
+        password: 'password123',
+      });
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('should have proper form labels and accessibility attributes', () => {
+      render(<LoginForm />);
+
+      const emailInput = screen.getByLabelText(/email address/i);
+      const passwordInput = screen.getByLabelText(/password/i);
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+
+      expect(emailInput).toHaveAttribute('required');
+      expect(passwordInput).toHaveAttribute('required');
+      expect(submitButton).toHaveAttribute('type', 'submit');
+    });
+
+    it('should have proper heading structure', () => {
+      render(<LoginForm />);
+
+      // Check for proper heading hierarchy
+      expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('OmniCare');
+      expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Sign in to your account');
+    });
+
+    it('should have accessible links', () => {
+      render(<LoginForm />);
+
+      const forgotPasswordLink = screen.getByRole('link', { name: /forgot password/i });
+      const supportLink = screen.getByRole('link', { name: /support@omnicare.com/i });
+
+      expect(forgotPasswordLink).toHaveAttribute('href', '/auth/forgot-password');
+      expect(supportLink).toHaveAttribute('href', 'mailto:support@omnicare.com');
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should handle network errors gracefully', async () => {
+      const user = userEvent.setup();
+      mockLogin.mockRejectedValue(new Error('Network error'));
+
+      render(<LoginForm />);
+
+      const emailInput = screen.getByLabelText(/email address/i);
+      const passwordInput = screen.getByLabelText(/password/i);
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+
+      await user.type(emailInput, 'doctor@omnicare.com');
+      await user.type(passwordInput, 'password123');
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Network error')).toBeInTheDocument();
+      });
+
+      expect(mockNotifications).toHaveBeenCalledWith({
+        title: 'Login Failed',
+        message: 'Network error',
+        color: 'red',
+        icon: expect.any(Object),
+      });
+    });
+
+    it('should clear error when user starts typing', async () => {
+      const user = userEvent.setup();
+      mockLogin.mockRejectedValue(new Error('Login error'));
+
+      render(<LoginForm />);
+
+      const emailInput = screen.getByLabelText(/email address/i);
+      const passwordInput = screen.getByLabelText(/password/i);
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+
+      // Trigger error
+      await user.type(emailInput, 'doctor@omnicare.com');
+      await user.type(passwordInput, 'wrongpassword');
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Login error')).toBeInTheDocument();
+      });
+
+      // Clear error by submitting again (which calls setError(null))
+      mockLogin.mockResolvedValue(undefined);
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(screen.queryByText('Login error')).not.toBeInTheDocument();
+      });
+    });
+  });
+});

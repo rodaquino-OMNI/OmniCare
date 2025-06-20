@@ -1,0 +1,49 @@
+# Grafana Dashboard Provisioning for OmniCare EMR
+# Automatically provisions dashboards for monitoring
+
+apiVersion: 1
+
+providers:
+  - name: 'OmniCare EMR Dashboards'
+    orgId: 1
+    folder: 'OmniCare'
+    folderUid: omnicare
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: false
+    options:
+      path: /etc/grafana/provisioning/dashboards/omnicare
+
+  - name: 'System Monitoring'
+    orgId: 1
+    folder: 'System'
+    folderUid: system
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: false
+    options:
+      path: /etc/grafana/provisioning/dashboards/system
+
+  - name: 'HIPAA Compliance'
+    orgId: 1
+    folder: 'Compliance'
+    folderUid: compliance
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: false
+    options:
+      path: /etc/grafana/provisioning/dashboards/compliance
+
+  - name: 'Security Monitoring'
+    orgId: 1
+    folder: 'Security'
+    folderUid: security
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: false
+    options:
+      path: /etc/grafana/provisioning/dashboards/security

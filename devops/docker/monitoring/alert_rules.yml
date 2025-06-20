@@ -1,0 +1,266 @@
+# Alert Rules for OmniCare EMR
+# Production monitoring and alerting configuration
+
+groups:
+  # Application Health Alerts
+  - name: omnicare_application
+    rules:
+    - alert: BackendServiceDown
+      expr: up{job="omnicare-backend-prod"} == 0
+      for: 30s
+      labels:
+        severity: critical
+        service: backend
+        component: api
+      annotations:
+        summary: "OmniCare Backend service is down"
+        description: "Backend API service has been down for more than 30 seconds"
+
+    - alert: FrontendServiceDown
+      expr: up{job="omnicare-frontend-prod"} == 0
+      for: 30s
+      labels:
+        severity: critical
+        service: frontend
+        component: web
+      annotations:
+        summary: "OmniCare Frontend service is down"
+        description: "Frontend web service has been down for more than 30 seconds"
+
+    - alert: HighResponseTime
+      expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="omnicare-backend-prod"}[5m])) > 2
+      for: 2m
+      labels:
+        severity: warning
+        service: backend
+        component: performance
+      annotations:
+        summary: "High response time detected"
+        description: "95th percentile response time is {{ $value }}s for more than 2 minutes"
+
+    - alert: HighErrorRate
+      expr: rate(http_requests_total{job="omnicare-backend-prod",status=~"5.."}[5m]) / rate(http_requests_total{job="omnicare-backend-prod"}[5m]) > 0.05
+      for: 2m
+      labels:
+        severity: critical
+        service: backend
+        component: errors
+      annotations:
+        summary: "High error rate detected"
+        description: "Error rate is {{ $value | humanizePercentage }} for more than 2 minutes"
+
+  # Database Health Alerts
+  - name: omnicare_database
+    rules:
+    - alert: DatabaseDown
+      expr: up{job="postgres-prod"} == 0
+      for: 30s
+      labels:
+        severity: critical
+        service: postgres
+        component: database
+      annotations:
+        summary: "PostgreSQL database is down"
+        description: "PostgreSQL database has been down for more than 30 seconds"
+
+    - alert: DatabaseConnectionsHigh
+      expr: pg_stat_database_numbackends{job="postgres-prod"} / pg_settings_max_connections * 100 > 80
+      for: 5m
+      labels:
+        severity: warning
+        service: postgres
+        component: connections
+      annotations:
+        summary: "High database connection usage"
+        description: "Database connection usage is {{ $value }}% for more than 5 minutes"
+
+    - alert: DatabaseSlowQueries
+      expr: rate(pg_stat_database_tup_fetched{job="postgres-prod"}[5m]) / rate(pg_stat_database_tup_returned{job="postgres-prod"}[5m]) > 100
+      for: 10m
+      labels:
+        severity: warning
+        service: postgres
+        component: performance
+      annotations:
+        summary: "Slow database queries detected"
+        description: "Database query performance degraded for more than 10 minutes"
+
+    - alert: DatabaseDiskSpaceHigh
+      expr: (1 - (node_filesystem_avail_bytes{mountpoint="/var/lib/postgresql/data"} / node_filesystem_size_bytes{mountpoint="/var/lib/postgresql/data"})) * 100 > 85
+      for: 5m
+      labels:
+        severity: critical
+        service: postgres
+        component: storage
+      annotations:
+        summary: "Database disk space running low"
+        description: "Database disk usage is {{ $value }}% for more than 5 minutes"
+
+  # Infrastructure Health Alerts
+  - name: omnicare_infrastructure
+    rules:
+    - alert: HighCpuUsage
+      expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+      for: 5m
+      labels:
+        severity: warning
+        component: infrastructure
+        resource: cpu
+      annotations:
+        summary: "High CPU usage detected"
+        description: "CPU usage is {{ $value }}% on {{ $labels.instance }} for more than 5 minutes"
+
+    - alert: HighMemoryUsage
+      expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+      for: 5m
+      labels:
+        severity: critical
+        component: infrastructure
+        resource: memory
+      annotations:
+        summary: "High memory usage detected"
+        description: "Memory usage is {{ $value }}% on {{ $labels.instance }} for more than 5 minutes"
+
+    - alert: DiskSpaceHigh
+      expr: (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100 > 85
+      for: 5m
+      labels:
+        severity: warning
+        component: infrastructure
+        resource: storage
+      annotations:
+        summary: "High disk usage detected"
+        description: "Disk usage is {{ $value }}% on {{ $labels.instance }} for more than 5 minutes"
+
+  # HIPAA Compliance Alerts
+  - name: omnicare_hipaa_compliance
+    rules:
+    - alert: UnauthorizedDataAccess
+      expr: increase(http_requests_total{job="omnicare-backend-prod",status="403"}[5m]) > 10
+      for: 0s
+      labels:
+        severity: critical
+        compliance: hipaa
+        component: security
+      annotations:
+        summary: "Potential unauthorized access attempt"
+        description: "{{ $value }} unauthorized access attempts detected in the last 5 minutes"
+
+    - alert: PHIDataExposure
+      expr: increase(http_requests_total{job="omnicare-backend-prod",endpoint=~"/fhir/Patient.*",status=~"2.."}[1m]) > 100
+      for: 1m
+      labels:
+        severity: critical
+        compliance: hipaa
+        component: data_protection
+      annotations:
+        summary: "High volume PHI data access"
+        description: "{{ $value }} PHI data accesses in the last minute - potential data breach"
+
+    - alert: FailedAuthentication
+      expr: increase(http_requests_total{job="omnicare-backend-prod",endpoint="/auth/login",status="401"}[5m]) > 20
+      for: 0s
+      labels:
+        severity: warning
+        compliance: hipaa
+        component: authentication
+      annotations:
+        summary: "Multiple failed authentication attempts"
+        description: "{{ $value }} failed authentication attempts in the last 5 minutes"
+
+    - alert: AuditLogMissing
+      expr: absent(rate(audit_log_entries_total[5m]))
+      for: 1m
+      labels:
+        severity: critical
+        compliance: hipaa
+        component: audit
+      annotations:
+        summary: "Audit logging not functioning"
+        description: "No audit log entries detected for more than 1 minute"
+
+  # Cache and Session Alerts
+  - name: omnicare_cache
+    rules:
+    - alert: RedisDown
+      expr: up{job="redis-prod"} == 0
+      for: 30s
+      labels:
+        severity: critical
+        service: redis
+        component: cache
+      annotations:
+        summary: "Redis cache service is down"
+        description: "Redis cache has been down for more than 30 seconds"
+
+    - alert: RedisMemoryHigh
+      expr: redis_memory_used_bytes{job="redis-prod"} / redis_memory_max_bytes * 100 > 90
+      for: 5m
+      labels:
+        severity: warning
+        service: redis
+        component: memory
+      annotations:
+        summary: "Redis memory usage high"
+        description: "Redis memory usage is {{ $value }}% for more than 5 minutes"
+
+    - alert: RedisConnectionsHigh
+      expr: redis_connected_clients{job="redis-prod"} > 100
+      for: 5m
+      labels:
+        severity: warning
+        service: redis
+        component: connections
+      annotations:
+        summary: "High Redis connection count"
+        description: "Redis has {{ $value }} active connections for more than 5 minutes"
+
+  # SSL Certificate Alerts
+  - name: omnicare_ssl
+    rules:
+    - alert: SSLCertificateExpiringSoon
+      expr: (ssl_certificate_expiry_seconds - time()) / 86400 < 30
+      for: 1h
+      labels:
+        severity: warning
+        component: ssl
+        compliance: hipaa
+      annotations:
+        summary: "SSL certificate expiring soon"
+        description: "SSL certificate for {{ $labels.instance }} expires in {{ $value }} days"
+
+    - alert: SSLCertificateExpired
+      expr: ssl_certificate_expiry_seconds - time() < 0
+      for: 0s
+      labels:
+        severity: critical
+        component: ssl
+        compliance: hipaa
+      annotations:
+        summary: "SSL certificate has expired"
+        description: "SSL certificate for {{ $labels.instance }} has expired"
+
+  # Business Logic Alerts
+  - name: omnicare_business
+    rules:
+    - alert: UnusualPatientRegistrations
+      expr: increase(patient_registrations_total[1h]) > 50
+      for: 0s
+      labels:
+        severity: warning
+        component: business
+        type: anomaly
+      annotations:
+        summary: "Unusual patient registration volume"
+        description: "{{ $value }} patient registrations in the last hour - above normal threshold"
+
+    - alert: CriticalSystemAlert
+      expr: increase(critical_alerts_total[5m]) > 0
+      for: 0s
+      labels:
+        severity: critical
+        component: system
+        escalation: immediate
+      annotations:
+        summary: "Critical system alert triggered"
+        description: "{{ $value }} critical system alerts in the last 5 minutes"

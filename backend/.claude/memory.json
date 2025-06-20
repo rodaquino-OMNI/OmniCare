@@ -1,0 +1,273 @@
+{
+  "swarm-development-centralized-1750377747213": {
+    "backend": {
+      "integration": {
+        "overview": {
+          "project": "OmniCare EMR FHIR Backend Integration",
+          "architecture": "Comprehensive FHIR R4 compliant backend with Medplum integration",
+          "completion_status": "100% - All components implemented",
+          "timestamp": "2025-06-20T00:00:00Z"
+        },
+        "technology_stack": {
+          "runtime": "Node.js 18+ with TypeScript",
+          "framework": "Express.js with comprehensive middleware",
+          "fhir_server": "Medplum FHIR Server (SaaS and self-hosted support)",
+          "database": "PostgreSQL with FHIR-optimized schema",
+          "cache": "Redis for performance and sessions",
+          "websockets": "WebSocket server for real-time subscriptions",
+          "authentication": "SMART on FHIR OAuth2 + Internal JWT",
+          "containerization": "Docker with multi-stage builds",
+          "orchestration": "Docker Compose with health checks"
+        },
+        "architecture_patterns": {
+          "integration_layer": {
+            "medplum_service": "Centralized FHIR server interaction service with connection pooling and error handling",
+            "smart_fhir_service": "SMART on FHIR authorization flows for EHR integration",
+            "fhir_resources_service": "Resource-specific CRUD operations with validation",
+            "subscriptions_service": "Real-time WebSocket and REST-hook subscriptions",
+            "cds_hooks_service": "Clinical Decision Support integration",
+            "validation_service": "Comprehensive data validation and sanitization"
+          },
+          "security_model": {
+            "authentication": "Multi-method: SMART OAuth2, Internal JWT, Client Credentials",
+            "authorization": "Scope-based with patient-level access controls",
+            "audit_logging": "Comprehensive audit trail for all API access",
+            "rate_limiting": "Per-user/client rate limiting with configurable thresholds",
+            "data_protection": "Input sanitization and FHIR validation"
+          },
+          "scalability_design": {
+            "caching": "Redis-based caching with configurable TTL",
+            "connection_pooling": "Database and FHIR server connection pooling",
+            "async_processing": "Event-driven architecture for subscriptions",
+            "health_monitoring": "Comprehensive health checks and metrics",
+            "graceful_shutdown": "Signal handling for zero-downtime deployments"
+          }
+        },
+        "api_specifications": {
+          "fhir_r4_endpoints": {
+            "base_url": "/fhir/R4",
+            "metadata": "GET /fhir/R4/metadata - FHIR Capability Statement",
+            "crud_operations": {
+              "create": "POST /fhir/R4/{resourceType}",
+              "read": "GET /fhir/R4/{resourceType}/{id}",
+              "update": "PUT /fhir/R4/{resourceType}/{id}",
+              "delete": "DELETE /fhir/R4/{resourceType}/{id}",
+              "search": "GET /fhir/R4/{resourceType}?{parameters}"
+            },
+            "batch_operations": "POST /fhir/R4 - Bundle processing",
+            "patient_operations": "GET /fhir/R4/Patient/{id}/$everything",
+            "validation": "POST /fhir/R4/{resourceType}/$validate",
+            "graphql": "POST /fhir/R4/$graphql"
+          },
+          "authentication_endpoints": {
+            "smart_authorization": "GET /auth/authorize",
+            "smart_token": "POST /auth/token",
+            "token_introspection": "POST /auth/introspect",
+            "internal_login": "POST /auth/login",
+            "token_refresh": "POST /auth/refresh"
+          },
+          "cds_hooks_endpoints": {
+            "discovery": "GET /cds-services",
+            "execution": "POST /cds-services/{service-id}"
+          },
+          "specialized_apis": {
+            "vitals": "POST /api/vitals/{patientId}",
+            "prescriptions": "POST /api/prescriptions",
+            "care_plans": "POST /api/care-plans",
+            "health_check": "GET /health",
+            "admin_stats": "GET /admin/stats"
+          }
+        },
+        "fhir_resource_mappings": {
+          "supported_resources": [
+            "Patient", "Practitioner", "Organization", "Location",
+            "Encounter", "Observation", "Medication", "MedicationRequest",
+            "ServiceRequest", "DiagnosticReport", "CarePlan",
+            "Communication", "Task", "DocumentReference",
+            "Condition", "Procedure", "AllergyIntolerance",
+            "Immunization", "Device", "Specimen", "Subscription"
+          ],
+          "omnicare_extensions": {
+            "patient_extensions": {
+              "omnicare_patient_id": "http://omnicare.com/fhir/StructureDefinition/patient-id",
+              "registration_date": "http://omnicare.com/fhir/StructureDefinition/registration-date",
+              "preferred_language": "http://omnicare.com/fhir/StructureDefinition/preferred-language",
+              "emergency_contact": "http://omnicare.com/fhir/StructureDefinition/emergency-contact",
+              "insurance_info": "http://omnicare.com/fhir/StructureDefinition/insurance-information"
+            },
+            "encounter_extensions": {
+              "appointment_type": "http://omnicare.com/fhir/StructureDefinition/appointment-type",
+              "chief_complaint": "http://omnicare.com/fhir/StructureDefinition/chief-complaint",
+              "visit_summary": "http://omnicare.com/fhir/StructureDefinition/visit-summary"
+            },
+            "observation_extensions": {
+              "device_used": "http://omnicare.com/fhir/StructureDefinition/device-used",
+              "quality_flags": "http://omnicare.com/fhir/StructureDefinition/quality-flags",
+              "critical_alerts": "http://omnicare.com/fhir/StructureDefinition/critical-alerts"
+            }
+          },
+          "search_parameters": {
+            "standard_fhir": "_id, _lastUpdated, _tag, _profile, _security, _text, _content",
+            "pagination": "_count, _sort, _elements, _summary, _total",
+            "includes": "_include, _revinclude",
+            "patient_specific": "patient={patientId}, subject:Patient={patientId}",
+            "date_ranges": "date=ge{startDate}&date=le{endDate}",
+            "status_filters": "status={active|inactive|completed}"
+          }
+        },
+        "integration_patterns": {
+          "medplum_integration": {
+            "connection_modes": {
+              "saas": "Medplum Cloud with OAuth2 client credentials",
+              "self_hosted": "Local Medplum instance with direct API access"
+            },
+            "authentication": "Client credentials flow with automatic token refresh",
+            "error_handling": "Exponential backoff with circuit breaker pattern",
+            "connection_pooling": "Persistent connections with health monitoring",
+            "caching": "Resource-level caching with intelligent invalidation"
+          },
+          "smart_fhir_integration": {
+            "supported_flows": [
+              "EHR Launch", "Standalone Launch", "Backend Services"
+            ],
+            "ehr_systems": {
+              "epic": "JWT-based authentication with RS384 signatures",
+              "cerner": "OAuth2 client credentials with system scopes",
+              "allscripts": "Standard SMART on FHIR implementation"
+            },
+            "scope_management": {
+              "patient_level": "patient/*.read, patient/*.write",
+              "user_level": "user/*.read, user/*.write",
+              "system_level": "system/*.read, system/*.write",
+              "launch_contexts": "launch, launch/patient, launch/encounter"
+            }
+          },
+          "real_time_subscriptions": {
+            "channels": ["websocket", "rest-hook", "email"],
+            "subscription_criteria": "FHIR search expressions",
+            "notification_format": "FHIR Bundle with changed resources",
+            "connection_management": "WebSocket with heartbeat and reconnection",
+            "error_handling": "Retry logic with exponential backoff"
+          },
+          "cds_hooks_implementation": {
+            "supported_hooks": [
+              "patient-view", "medication-prescribe", "order-review",
+              "encounter-start", "encounter-discharge"
+            ],
+            "decision_logic": {
+              "patient_risk_assessment": "Condition-based risk scoring",
+              "medication_safety": "Drug interaction and allergy checking",
+              "order_appropriateness": "Evidence-based order recommendations"
+            },
+            "response_format": "CDS Cards with suggestions and links"
+          }
+        },
+        "performance_optimizations": {
+          "database_optimizations": {
+            "indexing_strategy": "Composite indexes on resource_type + search parameters",
+            "connection_pooling": "PostgreSQL connection pool with 10 max connections",
+            "query_optimization": "Prepared statements and batch operations",
+            "archival_strategy": "Automated cleanup of old audit logs"
+          },
+          "caching_strategy": {
+            "redis_configuration": "LRU eviction with 256MB memory limit",
+            "cache_keys": "Resource-based with version tracking",
+            "ttl_policies": "3600s default, 300s for frequently changing data",
+            "invalidation": "Event-driven cache invalidation on updates"
+          },
+          "api_optimizations": {
+            "compression": "Gzip compression for responses > 1KB",
+            "rate_limiting": "100 requests per 15-minute window per user",
+            "request_size_limits": "10MB maximum request size",
+            "response_streaming": "Chunked responses for large bundles"
+          }
+        },
+        "security_implementation": {
+          "authentication_methods": {
+            "smart_oauth2": {
+              "flows": ["authorization_code", "client_credentials"],
+              "pkce": "S256 code challenge method",
+              "scopes": "Granular FHIR resource and operation scopes",
+              "token_introspection": "RFC 7662 compliant"
+            },
+            "internal_jwt": {
+              "algorithm": "HS256",
+              "expiration": "24 hours for access, 30 days for refresh",
+              "claims": "sub, scope, iss, aud, patient, encounter, fhirUser"
+            }
+          },
+          "authorization_model": {
+            "scope_validation": "Required scopes checked per endpoint",
+            "patient_access_control": "Patient-scoped resources validated",
+            "resource_permissions": "Dynamic resource-type specific checks",
+            "admin_functions": "Separate admin scope required"
+          },
+          "audit_and_compliance": {
+            "access_logging": "All API requests logged with user context",
+            "resource_audit": "CRUD operations tracked with before/after states",
+            "security_events": "Authentication failures and suspicious activity",
+            "retention_policy": "1 year for access logs, 2 years for resource changes"
+          }
+        },
+        "deployment_configuration": {
+          "docker_setup": {
+            "base_image": "node:18-alpine",
+            "multi_stage_build": "Builder and production stages",
+            "security": "Non-root user, minimal attack surface",
+            "health_checks": "Comprehensive HTTP and dependency checks"
+          },
+          "docker_compose": {
+            "services": ["backend", "postgres", "redis", "nginx", "medplum"],
+            "networking": "Isolated bridge network with proper service discovery",
+            "volumes": "Persistent storage for logs, database, and certificates",
+            "environment": "Configuration via environment variables"
+          },
+          "environment_configuration": {
+            "required_variables": [
+              "DATABASE_URL", "JWT_SECRET", "MEDPLUM_CLIENT_ID",
+              "MEDPLUM_CLIENT_SECRET", "MEDPLUM_PROJECT_ID"
+            ],
+            "optional_variables": [
+              "REDIS_URL", "LOG_LEVEL", "RATE_LIMIT_MAX_REQUESTS"
+            ],
+            "validation": "Startup validation with clear error messages"
+          }
+        },
+        "testing_and_validation": {
+          "validation_layers": {
+            "schema_validation": "Joi schemas for all API inputs",
+            "fhir_validation": "FHIR R4 resource structure validation",
+            "business_rules": "Clinical data validation (vital sign ranges, etc.)",
+            "security_validation": "Input sanitization and XSS prevention"
+          },
+          "error_handling": {
+            "fhir_operation_outcomes": "Structured error responses per FHIR spec",
+            "http_status_codes": "Appropriate codes for all scenarios",
+            "error_categorization": "Fatal, error, warning, information levels",
+            "client_friendly_messages": "Clear diagnostics without exposing internals"
+          }
+        },
+        "monitoring_and_observability": {
+          "health_monitoring": {
+            "endpoint": "/health",
+            "checks": ["database", "redis", "medplum", "subscriptions"],
+            "metrics": "Response time, error rates, connection counts",
+            "alerting": "Status changes and threshold breaches"
+          },
+          "logging_strategy": {
+            "structured_logging": "JSON format with correlation IDs",
+            "log_levels": "debug, info, warn, error with appropriate filtering",
+            "contexts": "FHIR, security, performance, audit, integration",
+            "retention": "30 days in development, 90 days in production"
+          },
+          "performance_metrics": {
+            "api_metrics": "Request count, response time, error rate",
+            "resource_metrics": "Memory usage, CPU utilization, disk I/O",
+            "business_metrics": "Resource creation rates, user activity",
+            "export_formats": "Prometheus metrics, JSON logs, database analytics"
+          }
+        }
+      }
+    }
+  }
+}

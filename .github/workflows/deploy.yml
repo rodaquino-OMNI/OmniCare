@@ -1,0 +1,369 @@
+# Production Deployment Workflow for OmniCare EMR
+name: Production Deploy
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+        - production
+        - staging
+      image_tag:
+        description: 'Docker image tag to deploy'
+        required: true
+        default: 'latest'
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Pre-deployment checks
+  pre-deployment-checks:
+    name: Pre-deployment Checks
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'production' }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Verify image exists
+      run: |
+        IMAGE_TAG=${{ github.event.inputs.image_tag || github.event.release.tag_name || 'latest' }}
+        echo "Verifying images exist for tag: $IMAGE_TAG"
+        
+        # Check if all required images exist
+        for service in backend frontend database; do
+          docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-$service:$IMAGE_TAG
+        done
+        
+    - name: Run security scan on production images
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend:${{ github.event.inputs.image_tag || github.event.release.tag_name || "latest" }}'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        severity: 'CRITICAL,HIGH'
+        exit-code: '1'
+        
+    - name: Validate Kubernetes manifests
+      run: |
+        # Install kubeval for manifest validation
+        curl -L https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz | tar xz
+        sudo mv kubeval /usr/local/bin
+        
+        # Validate all Kubernetes manifests
+        kubeval devops/kubernetes/*.yaml
+        
+    - name: Check infrastructure health
+      run: |
+        # Add infrastructure health checks here
+        echo "Infrastructure health checks would run here"
+        # Examples:
+        # - Check database connectivity
+        # - Verify backup systems
+        # - Check monitoring systems
+        # - Validate SSL certificates
+
+  # Blue-Green Deployment to Production
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: pre-deployment-checks
+    environment: production
+    if: github.event.inputs.environment == 'production' || github.event_name == 'release'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Configure kubectl for production
+      uses: azure/k8s-set-context@v3
+      with:
+        method: kubeconfig
+        kubeconfig: ${{ secrets.KUBE_CONFIG_PRODUCTION }}
+        
+    - name: Create backup before deployment
+      run: |
+        # Create database backup
+        kubectl create job --from=cronjob/postgres-backup postgres-backup-pre-deploy-$(date +%s) -n omnicare
+        
+        # Wait for backup to complete
+        kubectl wait --for=condition=complete job/postgres-backup-pre-deploy-* -n omnicare --timeout=300s
+        
+    - name: Deploy new version (Blue-Green)
+      run: |
+        IMAGE_TAG=${{ github.event.inputs.image_tag || github.event.release.tag_name || 'latest' }}
+        
+        # Update image tags in manifests
+        sed -i "s|image: omnicare/backend:latest|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend:$IMAGE_TAG|g" devops/kubernetes/backend.yaml
+        sed -i "s|image: omnicare/frontend:latest|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:$IMAGE_TAG|g" devops/kubernetes/frontend.yaml
+        sed -i "s|image: omnicare/database:latest|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-database:$IMAGE_TAG|g" devops/kubernetes/database.yaml
+        
+        # Deploy to production namespace
+        kubectl apply -f devops/kubernetes/namespace.yaml
+        kubectl apply -f devops/kubernetes/database.yaml
+        kubectl apply -f devops/kubernetes/redis.yaml
+        kubectl apply -f devops/kubernetes/backend.yaml
+        kubectl apply -f devops/kubernetes/frontend.yaml
+        
+        # Wait for deployments to be ready
+        kubectl rollout status deployment/backend -n omnicare --timeout=600s
+        kubectl rollout status deployment/frontend -n omnicare --timeout=600s
+        
+        # Update ingress (traffic switch)
+        kubectl apply -f devops/kubernetes/ingress.yaml
+        
+    - name: Run post-deployment health checks
+      id: health_checks
+      run: |
+        # Wait for services to stabilize
+        sleep 120
+        
+        # Health check functions
+        check_service() {
+          local service=$1
+          local port=$2
+          local path=$3
+          
+          echo "Checking $service health..."
+          for i in {1..10}; do
+            if kubectl exec -n omnicare deployment/$service -- curl -f http://localhost:$port$path; then
+              echo "$service is healthy"
+              return 0
+            fi
+            echo "Attempt $i failed, retrying in 30s..."
+            sleep 30
+          done
+          echo "$service health check failed"
+          return 1
+        }
+        
+        # Run health checks
+        check_service backend 3001 /health
+        check_service frontend 3000 /api/health
+        
+        # Check database connectivity
+        kubectl exec -n omnicare deployment/postgres -- pg_isready -U omnicare_user -d omnicare_emr
+        
+        # Check Redis connectivity
+        kubectl exec -n omnicare deployment/redis -- redis-cli ping
+        
+        # External health checks
+        curl -f https://omnicare.example.com/api/health
+        curl -f https://api.omnicare.example.com/health
+        
+        echo "All health checks passed"
+        
+    - name: Run smoke tests
+      run: |
+        # Run critical path smoke tests
+        echo "Running smoke tests..."
+        
+        # Example smoke tests (implement based on your application)
+        # - Test user authentication
+        # - Test database connections
+        # - Test FHIR server integration
+        # - Test critical APIs
+        
+        # Placeholder for actual smoke tests
+        kubectl exec -n omnicare deployment/backend -- npm run test:smoke || true
+        
+    - name: Rollback on failure
+      if: failure()
+      run: |
+        echo "Deployment failed, rolling back..."
+        
+        # Get previous successful deployment
+        PREVIOUS_IMAGE=$(kubectl get deployment backend -n omnicare -o jsonpath='{.spec.template.spec.containers[0].image}' | sed 's/.*://')
+        
+        # Rollback to previous version
+        kubectl rollout undo deployment/backend -n omnicare
+        kubectl rollout undo deployment/frontend -n omnicare
+        
+        # Wait for rollback to complete
+        kubectl rollout status deployment/backend -n omnicare --timeout=300s
+        kubectl rollout status deployment/frontend -n omnicare --timeout=300s
+        
+        # Verify rollback
+        kubectl exec -n omnicare deployment/backend -- curl -f http://localhost:3001/health
+        kubectl exec -n omnicare deployment/frontend -- curl -f http://localhost:3000/api/health
+        
+    - name: Update deployment status
+      if: always()
+      run: |
+        DEPLOYMENT_STATUS=${{ job.status }}
+        IMAGE_TAG=${{ github.event.inputs.image_tag || github.event.release.tag_name || 'latest' }}
+        
+        # Create deployment record
+        kubectl create configmap deployment-record-$(date +%s) \
+          --from-literal=status=$DEPLOYMENT_STATUS \
+          --from-literal=image-tag=$IMAGE_TAG \
+          --from-literal=deployed-at=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+          --from-literal=deployed-by=${{ github.actor }} \
+          -n omnicare
+
+  # Load Testing
+  load-testing:
+    name: Load Testing
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: success() && (github.event.inputs.environment == 'production' || github.event_name == 'release')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run load tests with K6
+      uses: grafana/k6-action@v0.3.0
+      with:
+        filename: devops/testing/load-test.js
+      env:
+        BASE_URL: https://omnicare.example.com
+        API_URL: https://api.omnicare.example.com
+        
+    - name: Upload load test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: load-test-results
+        path: k6-report.html
+
+  # Monitoring Setup
+  setup-monitoring:
+    name: Setup Monitoring
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: success()
+    
+    steps:
+    - name: Configure kubectl
+      uses: azure/k8s-set-context@v3
+      with:
+        method: kubeconfig
+        kubeconfig: ${{ secrets.KUBE_CONFIG_PRODUCTION }}
+        
+    - name: Deploy monitoring stack
+      run: |
+        # Deploy Prometheus
+        kubectl apply -f devops/kubernetes/monitoring/prometheus.yaml
+        
+        # Deploy Grafana
+        kubectl apply -f devops/kubernetes/monitoring/grafana.yaml
+        
+        # Deploy ELK stack
+        kubectl apply -f devops/kubernetes/monitoring/elasticsearch.yaml
+        kubectl apply -f devops/kubernetes/monitoring/logstash.yaml
+        kubectl apply -f devops/kubernetes/monitoring/kibana.yaml
+        
+        # Wait for monitoring services
+        kubectl rollout status deployment/prometheus -n omnicare --timeout=300s
+        kubectl rollout status deployment/grafana -n omnicare --timeout=300s
+        
+    - name: Configure alerts
+      run: |
+        # Configure Prometheus alerts
+        kubectl apply -f devops/kubernetes/monitoring/alerts.yaml
+        
+        # Test alert manager
+        kubectl exec -n omnicare deployment/prometheus -- curl -f http://localhost:9093/api/v1/alerts
+
+  # Notification
+  notify-deployment:
+    name: Notify Deployment
+    runs-on: ubuntu-latest
+    needs: [deploy-production, load-testing, setup-monitoring]
+    if: always()
+    
+    steps:
+    - name: Notify Slack
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ needs.deploy-production.result }}
+        channel: '#deployments'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        fields: repo,message,commit,author,action,eventName,ref,workflow
+        custom_payload: |
+          {
+            "attachments": [{
+              "color": "${{ needs.deploy-production.result == 'success' && 'good' || 'danger' }}",
+              "fields": [{
+                "title": "Deployment Status",
+                "value": "${{ needs.deploy-production.result }}",
+                "short": true
+              }, {
+                "title": "Environment",
+                "value": "${{ github.event.inputs.environment || 'production' }}",
+                "short": true
+              }, {
+                "title": "Image Tag",
+                "value": "${{ github.event.inputs.image_tag || github.event.release.tag_name || 'latest' }}",
+                "short": true
+              }, {
+                "title": "Deployed By",
+                "value": "${{ github.actor }}",
+                "short": true
+              }]
+            }]
+          }
+          
+    - name: Notify email
+      if: failure()
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: ${{ secrets.SMTP_SERVER }}
+        server_port: 587
+        username: ${{ secrets.SMTP_USERNAME }}
+        password: ${{ secrets.SMTP_PASSWORD }}
+        subject: "🚨 OmniCare Production Deployment Failed"
+        to: ${{ secrets.DEPLOYMENT_NOTIFICATION_EMAIL }}
+        from: "OmniCare CI/CD <noreply@omnicare.example.com>"
+        body: |
+          Production deployment failed for OmniCare EMR.
+          
+          Details:
+          - Environment: ${{ github.event.inputs.environment || 'production' }}
+          - Image Tag: ${{ github.event.inputs.image_tag || github.event.release.tag_name || 'latest' }}
+          - Deployed By: ${{ github.actor }}
+          - Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          
+          Please check the logs and take necessary action.
+          
+    - name: Create incident ticket
+      if: failure()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: `🚨 Production Deployment Failed - ${new Date().toISOString()}`,
+            body: `
+              ## Production Deployment Failure
+              
+              **Environment:** ${{ github.event.inputs.environment || 'production' }}
+              **Image Tag:** ${{ github.event.inputs.image_tag || github.event.release.tag_name || 'latest' }}
+              **Deployed By:** ${{ github.actor }}
+              **Workflow:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+              
+              ## Actions Required
+              - [ ] Investigate deployment failure
+              - [ ] Verify system health
+              - [ ] Implement fix
+              - [ ] Test fix
+              - [ ] Redeploy if necessary
+              
+              ## Stakeholders
+              @devops-team @engineering-team
+            `,
+            labels: ['incident', 'production', 'deployment', 'high-priority'],
+            assignees: ['devops-lead', 'engineering-lead']
+          })

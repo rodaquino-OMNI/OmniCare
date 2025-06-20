@@ -1,0 +1,153 @@
+version: '3.8'
+
+services:
+  # OmniCare FHIR Backend API
+  omnicare-backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: omnicare-fhir-backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"  # HTTP API
+      - "8081:8081"  # WebSocket subscriptions
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      - HOST=0.0.0.0
+      - DATABASE_URL=postgresql://omnicare:omnicare_password@postgres:5432/omnicare_fhir
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your_super_secure_jwt_secret_change_in_production
+      - MEDPLUM_BASE_URL=https://api.medplum.com/
+      - MEDPLUM_CLIENT_ID=${MEDPLUM_CLIENT_ID}
+      - MEDPLUM_CLIENT_SECRET=${MEDPLUM_CLIENT_SECRET}
+      - MEDPLUM_PROJECT_ID=${MEDPLUM_PROJECT_ID}
+      - FHIR_BASE_URL=http://localhost:8080/fhir/R4
+      - LOG_LEVEL=info
+    volumes:
+      - omnicare_logs:/app/logs
+      - omnicare_certs:/app/certs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - omnicare_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: omnicare-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=omnicare_fhir
+      - POSTGRES_USER=omnicare
+      - POSTGRES_PASSWORD=omnicare_password
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - omnicare_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U omnicare -d omnicare_fhir"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: omnicare-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - omnicare_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Nginx Reverse Proxy (Optional)
+  nginx:
+    image: nginx:alpine
+    container_name: omnicare-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - omnicare-backend
+    networks:
+      - omnicare_network
+    profiles:
+      - with-proxy
+
+  # Self-hosted Medplum FHIR Server (Optional)
+  medplum:
+    image: medplum/medplum-server:latest
+    container_name: omnicare-medplum
+    restart: unless-stopped
+    ports:
+      - "8103:8103"
+    environment:
+      - NODE_ENV=production
+      - PORT=8103
+      - DATABASE_URL=postgresql://medplum:medplum_password@postgres:5432/medplum
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your_medplum_jwt_secret
+      - MEDPLUM_BASE_URL=http://localhost:8103/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - omnicare_network
+    profiles:
+      - self-hosted-medplum
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8103/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  omnicare_logs:
+    driver: local
+  omnicare_certs:
+    driver: local
+  nginx_logs:
+    driver: local
+
+networks:
+  omnicare_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

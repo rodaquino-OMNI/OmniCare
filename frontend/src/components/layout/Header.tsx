@@ -1,0 +1,349 @@
+'use client';
+
+import { useState } from 'react';
+import {
+  Group,
+  Text,
+  ActionIcon,
+  Menu,
+  Avatar,
+  UnstyledButton,
+  Spotlight,
+  Breadcrumbs,
+  Anchor,
+  Badge,
+  Indicator,
+  TextInput,
+  Paper,
+  Stack,
+  Divider,
+  Button,
+  ScrollArea,
+} from '@mantine/core';
+import {
+  IconSearch,
+  IconBell,
+  IconSettings,
+  IconLogout,
+  IconUser,
+  IconChevronDown,
+  IconMenu2,
+  IconShield,
+  IconClock,
+  IconMessageCircle,
+  IconAlertTriangle,
+} from '@tabler/icons-react';
+import { spotlight } from '@mantine/spotlight';
+import { usePathname } from 'next/navigation';
+import Link from 'next/link';
+import { useAuth } from '@/stores/auth';
+import { useSidebar } from '@/stores/ui';
+import { useNotifications } from '@/stores/ui';
+import { formatTime } from '@/utils';
+
+interface HeaderProps {
+  title?: string;
+  subtitle?: string;
+  breadcrumbs?: Array<{
+    title: string;
+    href?: string;
+  }>;
+}
+
+export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
+  const pathname = usePathname();
+  const { user, logout } = useAuth();
+  const { toggle: toggleSidebar } = useSidebar();
+  const { notifications } = useNotifications();
+  const [searchValue, setSearchValue] = useState('');
+
+  const unreadNotifications = notifications.filter(n => !n.autoClose);
+
+  const handleSpotlightOpen = () => {
+    spotlight.open();
+  };
+
+  const handleLogout = () => {
+    logout();
+  };
+
+  return (
+    <Paper shadow="sm" className="sticky top-0 z-20 border-b border-gray-200">
+      <div className="px-6 py-3">
+        <Group justify="space-between" align="center">
+          {/* Left side - Menu, Breadcrumbs, Title */}
+          <Group gap="md" className="flex-1 min-w-0">
+            <ActionIcon
+              variant="subtle"
+              onClick={toggleSidebar}
+              className="md:hidden"
+            >
+              <IconMenu2 size={20} />
+            </ActionIcon>
+
+            <div className="flex-1 min-w-0">
+              {breadcrumbs.length > 0 && (
+                <Breadcrumbs size="sm" className="mb-1">
+                  {breadcrumbs.map((item, index) => (
+                    <Anchor
+                      key={index}
+                      component={item.href ? Link : 'span'}
+                      href={item.href}
+                      size="sm"
+                      c={index === breadcrumbs.length - 1 ? 'dimmed' : 'primary'}
+                    >
+                      {item.title}
+                    </Anchor>
+                  ))}
+                </Breadcrumbs>
+              )}
+              
+              {title && (
+                <div>
+                  <Text fw={600} size="lg" className="text-gray-800" truncate>
+                    {title}
+                  </Text>
+                  {subtitle && (
+                    <Text size="sm" c="dimmed" truncate>
+                      {subtitle}
+                    </Text>
+                  )}
+                </div>
+              )}
+            </div>
+          </Group>
+
+          {/* Center - Search */}
+          <div className="hidden md:block flex-1 max-w-md">
+            <TextInput
+              placeholder="Search patients, orders, results..."
+              leftSection={<IconSearch size={16} />}
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.currentTarget.value)}
+              onFocus={handleSpotlightOpen}
+              className="w-full"
+              size="sm"
+            />
+          </div>
+
+          {/* Right side - Actions and User Menu */}
+          <Group gap="sm">
+            {/* Mobile Search */}
+            <ActionIcon
+              variant="subtle"
+              onClick={handleSpotlightOpen}
+              className="md:hidden"
+            >
+              <IconSearch size={20} />
+            </ActionIcon>
+
+            {/* Notifications */}
+            <Menu shadow="md" width={320} position="bottom-end">
+              <Menu.Target>
+                <ActionIcon variant="subtle" size="lg">
+                  <Indicator
+                    size={16}
+                    offset={7}
+                    disabled={unreadNotifications.length === 0}
+                    color="red"
+                    label={unreadNotifications.length}
+                  >
+                    <IconBell size={20} />
+                  </Indicator>
+                </ActionIcon>
+              </Menu.Target>
+
+              <Menu.Dropdown>
+                <Menu.Label>
+                  <Group justify="space-between">
+                    <Text>Notifications</Text>
+                    <Badge size="xs" color="red">
+                      {unreadNotifications.length}
+                    </Badge>
+                  </Group>
+                </Menu.Label>
+
+                <ScrollArea h={300}>
+                  {notifications.length === 0 ? (
+                    <div className="p-4 text-center">
+                      <Text c="dimmed" size="sm">
+                        No notifications
+                      </Text>
+                    </div>
+                  ) : (
+                    <Stack gap="xs" p="xs">
+                      {notifications.slice(0, 5).map((notification) => (
+                        <Paper
+                          key={notification.id}
+                          p="sm"
+                          className="border border-gray-100 hover:bg-gray-50 cursor-pointer"
+                          radius="sm"
+                        >
+                          <Group gap="sm" align="flex-start">
+                            <div className={`p-1 rounded-full ${
+                              notification.type === 'error' ? 'bg-red-100' :
+                              notification.type === 'warning' ? 'bg-yellow-100' :
+                              notification.type === 'success' ? 'bg-green-100' :
+                              'bg-blue-100'
+                            }`}>
+                              {notification.type === 'error' && <IconAlertTriangle size={14} className="text-red-600" />}
+                              {notification.type === 'warning' && <IconAlertTriangle size={14} className="text-yellow-600" />}
+                              {notification.type === 'success' && <IconShield size={14} className="text-green-600" />}
+                              {notification.type === 'info' && <IconMessageCircle size={14} className="text-blue-600" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <Text size="sm" fw={500} truncate>
+                                {notification.title}
+                              </Text>
+                              {notification.message && (
+                                <Text size="xs" c="dimmed" truncate>
+                                  {notification.message}
+                                </Text>
+                              )}
+                              <Text size="xs" c="dimmed" className="flex items-center gap-1 mt-1">
+                                <IconClock size={10} />
+                                {formatTime(new Date())}
+                              </Text>
+                            </div>
+                          </Group>
+                        </Paper>
+                      ))}
+                    </Stack>
+                  )}
+                </ScrollArea>
+
+                {notifications.length > 5 && (
+                  <>
+                    <Divider />
+                    <div className="p-2">
+                      <Button variant="subtle" size="xs" fullWidth>
+                        View all notifications
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </Menu.Dropdown>
+            </Menu>
+
+            {/* User Menu */}
+            {user && (
+              <Menu shadow="md" width={240} position="bottom-end">
+                <Menu.Target>
+                  <UnstyledButton className="p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                    <Group gap="sm">
+                      <Avatar
+                        src={user.avatar}
+                        alt={`${user.firstName} ${user.lastName}`}
+                        size="sm"
+                        color="primary"
+                      >
+                        {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                      </Avatar>
+                      
+                      <div className="hidden sm:block text-left">
+                        <Text size="sm" fw={500} className="text-gray-800">
+                          {user.firstName} {user.lastName}
+                        </Text>
+                        <Text size="xs" c="dimmed">
+                          {user.role.replace('_', ' ')}
+                        </Text>
+                      </div>
+                      
+                      <IconChevronDown size={14} className="text-gray-400" />
+                    </Group>
+                  </UnstyledButton>
+                </Menu.Target>
+
+                <Menu.Dropdown>
+                  <Menu.Label>
+                    <div>
+                      <Text size="sm" fw={500}>
+                        {user.firstName} {user.lastName}
+                      </Text>
+                      <Text size="xs" c="dimmed">
+                        {user.email}
+                      </Text>
+                    </div>
+                  </Menu.Label>
+
+                  <Menu.Item
+                    leftSection={<IconUser size={16} />}
+                    component={Link}
+                    href="/profile"
+                  >
+                    Profile
+                  </Menu.Item>
+
+                  <Menu.Item
+                    leftSection={<IconSettings size={16} />}
+                    component={Link}
+                    href="/settings"
+                  >
+                    Settings
+                  </Menu.Item>
+
+                  <Menu.Divider />
+
+                  <Menu.Item
+                    leftSection={<IconShield size={16} />}
+                    component={Link}
+                    href="/help"
+                  >
+                    Help & Support
+                  </Menu.Item>
+
+                  <Menu.Divider />
+
+                  <Menu.Item
+                    leftSection={<IconLogout size={16} />}
+                    color="red"
+                    onClick={handleLogout}
+                  >
+                    Sign Out
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
+            )}
+          </Group>
+        </Group>
+      </div>
+
+      {/* Global Search Spotlight */}
+      <Spotlight
+        actions={[
+          {
+            id: 'patient-search',
+            label: 'Search Patients',
+            description: 'Find patients by name, MRN, or phone',
+            onClick: () => console.log('Patient search'),
+            leftSection: <IconUser size={18} />,
+          },
+          {
+            id: 'order-search',
+            label: 'Search Orders',
+            description: 'Find lab orders, prescriptions, and procedures',
+            onClick: () => console.log('Order search'),
+            leftSection: <IconSearch size={18} />,
+          },
+          {
+            id: 'result-search',
+            label: 'Search Results',
+            description: 'Find lab results and imaging reports',
+            onClick: () => console.log('Result search'),
+            leftSection: <IconSearch size={18} />,
+          },
+        ]}
+        searchProps={{
+          leftSection: <IconSearch size={20} />,
+          placeholder: 'Search patients, orders, results...',
+        }}
+        nothingFound="Nothing found..."
+        highlightQuery
+        maxHeight={400}
+        limit={7}
+      />
+    </Paper>
+  );
+}
+
+export default Header;
