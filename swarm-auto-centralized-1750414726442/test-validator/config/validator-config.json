@@ -1,0 +1,90 @@
+{
+  "validator": {
+    "name": "OmniCare Test Validator",
+    "version": "1.0.0",
+    "description": "Comprehensive testing system for monitoring agent commits and running tests",
+    "enabled": true
+  },
+  "monitoring": {
+    "pollInterval": 10000,
+    "memoryPath": "memory",
+    "watchForPatterns": [
+      "completed",
+      "implementation", 
+      "development",
+      "feature",
+      "component",
+      "module",
+      "system",
+      "workflow"
+    ]
+  },
+  "testing": {
+    "commands": [
+      {
+        "name": "test",
+        "command": "npm run test",
+        "timeout": 300000,
+        "description": "Run Jest test suite",
+        "critical": true
+      },
+      {
+        "name": "lint",
+        "command": "npm run lint", 
+        "timeout": 60000,
+        "description": "Run ESLint code quality checks",
+        "critical": true
+      },
+      {
+        "name": "typecheck",
+        "command": "npm run typecheck",
+        "timeout": 120000,
+        "description": "Run TypeScript type checking",
+        "critical": true
+      }
+    ],
+    "failOnFirstError": false,
+    "retryFailedTests": false,
+    "retryCount": 1
+  },
+  "storage": {
+    "resultsPath": "swarm-auto-centralized-1750414726442/test-validator/results",
+    "logsPath": "swarm-auto-centralized-1750414726442/test-validator/logs",
+    "maxResultsToKeep": 100,
+    "maxLogFiles": 30
+  },
+  "notifications": {
+    "enableAgentAlerts": true,
+    "alertOnFailure": true,
+    "alertOnSuccess": false,
+    "includeDetailedResults": true,
+    "createMemoryEntries": true
+  },
+  "agents": {
+    "recognizedAgents": [
+      "security",
+      "admin", 
+      "architect",
+      "frontend",
+      "backend",
+      "database",
+      "integration",
+      "testing",
+      "deployment"
+    ],
+    "alertAllAgentsOnFailure": true,
+    "agentSpecificRules": {}
+  },
+  "performance": {
+    "maxBufferSize": "10MB",
+    "enableResultsCaching": true,
+    "compressionEnabled": true,
+    "parallelTestExecution": false
+  },
+  "security": {
+    "enableAuditLogging": true,
+    "logLevel": "info",
+    "sanitizeOutputs": true,
+    "maxLogEntrySize": 1000000
+  }
+}
