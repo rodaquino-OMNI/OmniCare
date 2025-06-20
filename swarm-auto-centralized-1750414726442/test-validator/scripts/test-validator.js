@@ -239,8 +239,17 @@ class TestValidator {
   extractCommitDescription(value) {
     if (typeof value === 'string') {
       return value.substring(0, 100) + (value.length > 100 ? '...' : '');
-    } else if (typeof value === 'object' && value.summary) {
-      return value.summary.substring(0, 100) + (value.summary.length > 100 ? '...' : '');
+    } else if (typeof value === 'object' && value !== null) {
+      // Handle object values
+      if (value.summary) {
+        return value.summary.substring(0, 100) + (value.summary.length > 100 ? '...' : '');
+      } else if (value.message) {
+        return value.message.substring(0, 100) + (value.message.length > 100 ? '...' : '');
+      } else {
+        // Fallback to JSON string
+        const jsonStr = JSON.stringify(value);
+        return jsonStr.substring(0, 100) + (jsonStr.length > 100 ? '...' : '');
+      }
     }
     return 'Agent development activity';
   }

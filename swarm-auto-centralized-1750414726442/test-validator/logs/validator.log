@@ -1,13 +1,40 @@
 🚀 Starting Test Validator System...
-🔍 New Memory activity detected: backup-2025-06-20T10-25-05-439Z.json
-❌ Failed to analyze memory backup: TypeError: (entry.value || "").toLowerCase is not a function
-    at TestValidator.isCommitEntry (/Users/rodrigo/claude-projects/OmniCare/swarm-auto-centralized-1750414726442/test-validator/scripts/test-validator.js:210:39)
-    at TestValidator.analyzeMemoryBackup (/Users/rodrigo/claude-projects/OmniCare/swarm-auto-centralized-1750414726442/test-validator/scripts/test-validator.js:175:18)
-    at TestValidator.checkForNewCommits (/Users/rodrigo/claude-projects/OmniCare/swarm-auto-centralized-1750414726442/test-validator/scripts/test-validator.js:153:34)
-    at TestValidator.monitorLoop (/Users/rodrigo/claude-projects/OmniCare/swarm-auto-centralized-1750414726442/test-validator/scripts/test-validator.js:114:20)
-    at TestValidator.start (/Users/rodrigo/claude-projects/OmniCare/swarm-auto-centralized-1750414726442/test-validator/scripts/test-validator.js:49:10)
-    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+📄 Loaded previous state - Last checked: 2025-06-20T10:25:05.442Z
 ✅ Test Validator System started successfully
 📊 Monitoring Memory at: /Users/rodrigo/claude-projects/OmniCare/memory
 📁 Results stored at: /Users/rodrigo/claude-projects/OmniCare/swarm-auto-centralized-1750414726442/test-validator/results
 🔄 Polling every 10 seconds
+🔍 New Memory activity detected: backup-2025-06-20T10-27-55-809Z.json
+📝 Found 34 new commits to validate
+🧪 Starting test run: test-run-1750415276686
+📋 Testing 34 commits from agents: security, architect, admin, cds, design, clinical, testing, integration, devops, documentation, orchestrator, backend-dev, frontend-lead, workflow-engineer, integration-lead, database-engineer, security-engineer, devops-engineer, fhir-specialist, mobile-dev, test-engineer, commit-expert, unknown, change-analyzer, auth-specialist, ui-manager
+🔄 Running test...
+❌ test failed
+🔄 Running lint...
+❌ lint failed
+🔄 Running typecheck...
+❌ typecheck failed
+💾 Test results saved: /Users/rodrigo/claude-projects/OmniCare/swarm-auto-centralized-1750414726442/test-validator/results/test-run-1750415276686.json
+📢 Notifying agents of test failures...
+🚨 Alert created for agents: security, architect, admin, cds, design, clinical, testing, integration, devops, documentation, orchestrator, backend-dev, frontend-lead, workflow-engineer, integration-lead, database-engineer, security-engineer, devops-engineer, fhir-specialist, mobile-dev, test-engineer, commit-expert, unknown, change-analyzer, auth-specialist, ui-manager
+📁 Notification saved: /Users/rodrigo/claude-projects/OmniCare/swarm-auto-centralized-1750414726442/test-validator/results/notification-test-run-1750415276686.json
+🏁 Test run completed: FAILED
+📊 Results: 0 passed, 3 failed, 0 errors
+⏱️  Duration: 3s
+🔍 New Memory activity detected: backup-2025-06-20T10-30-15-123Z.json
+📝 Found 3 new commits to validate
+🧪 Starting test run: test-run-1750415309892
+📋 Testing 3 commits from agents: security, frontend
+🔄 Running test...
+❌ test failed
+🔄 Running lint...
+❌ lint failed
+🔄 Running typecheck...
+❌ typecheck failed
+💾 Test results saved: /Users/rodrigo/claude-projects/OmniCare/swarm-auto-centralized-1750414726442/test-validator/results/test-run-1750415309892.json
+📢 Notifying agents of test failures...
+🚨 Alert created for agents: security, frontend
+📁 Notification saved: /Users/rodrigo/claude-projects/OmniCare/swarm-auto-centralized-1750414726442/test-validator/results/notification-test-run-1750415309892.json
+🏁 Test run completed: FAILED
+📊 Results: 0 passed, 3 failed, 0 errors
+⏱️  Duration: 3s
