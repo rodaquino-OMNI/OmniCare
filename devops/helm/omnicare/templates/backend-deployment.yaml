@@ -1,0 +1,141 @@
+{{- if .Values.backend.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "omnicare.backend.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "omnicare.backend.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.backend.autoscaling.enabled }}
+  replicas: {{ .Values.backend.replicaCount }}
+  {{- end }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      {{- include "omnicare.backend.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/backend-configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/backend-secret.yaml") . | sha256sum }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.backend.service.port }}"
+        prometheus.io/path: "/metrics"
+      labels:
+        {{- include "omnicare.backend.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- include "omnicare.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "omnicare.serviceAccountName" . }}
+      securityContext:
+        runAsNonRoot: {{ .Values.security.securityContext.runAsNonRoot }}
+        runAsUser: {{ .Values.security.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.security.securityContext.runAsGroup }}
+        fsGroup: {{ .Values.security.securityContext.fsGroup }}
+      containers:
+      - name: backend
+        image: "{{ .Values.global.imageRegistry }}/{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.backend.service.port }}
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: {{ .Values.backend.env.NODE_ENV | quote }}
+        - name: PORT
+          value: {{ .Values.backend.env.PORT | quote }}
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "omnicare.backend.fullname" . }}-secret
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "omnicare.backend.fullname" . }}-secret
+              key: REDIS_URL
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "omnicare.backend.fullname" . }}-secret
+              key: JWT_SECRET
+        - name: MEDPLUM_BASE_URL
+          value: {{ .Values.backend.env.MEDPLUM_BASE_URL | default "https://api.medplum.com" | quote }}
+        - name: MEDPLUM_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "omnicare.backend.fullname" . }}-secret
+              key: MEDPLUM_CLIENT_ID
+        - name: MEDPLUM_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "omnicare.backend.fullname" . }}-secret
+              key: MEDPLUM_CLIENT_SECRET
+        - name: LOG_LEVEL
+          value: {{ .Values.backend.env.LOG_LEVEL | quote }}
+        - name: CORS_ORIGIN
+          value: {{ .Values.backend.env.CORS_ORIGIN | quote }}
+        - name: RATE_LIMIT_WINDOW_MS
+          value: {{ .Values.backend.env.RATE_LIMIT_WINDOW_MS | quote }}
+        - name: RATE_LIMIT_MAX_REQUESTS
+          value: {{ .Values.backend.env.RATE_LIMIT_MAX_REQUESTS | quote }}
+        volumeMounts:
+        - name: logs
+          mountPath: /app/logs
+        - name: tmp
+          mountPath: /tmp
+        resources:
+          {{- toYaml .Values.backend.resources | nindent 10 }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+          successThreshold: 1
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 30
+          successThreshold: 1
+      volumes:
+      - name: logs
+        emptyDir: {}
+      - name: tmp
+        emptyDir: {}
+      {{- with .Values.backend.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.backend.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.backend.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

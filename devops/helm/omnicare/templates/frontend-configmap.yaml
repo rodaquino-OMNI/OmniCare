@@ -1,0 +1,18 @@
+{{- if .Values.frontend.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "omnicare.frontend.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "omnicare.frontend.labels" . | nindent 4 }}
+data:
+  NODE_ENV: {{ .Values.frontend.env.NODE_ENV | quote }}
+  PORT: {{ .Values.frontend.env.PORT | quote }}
+  HOSTNAME: {{ .Values.frontend.env.HOSTNAME | quote }}
+  NEXT_TELEMETRY_DISABLED: {{ .Values.frontend.env.NEXT_TELEMETRY_DISABLED | quote }}
+  NEXT_PUBLIC_API_URL: {{ .Values.frontend.env.NEXT_PUBLIC_API_URL | quote }}
+  NEXT_PUBLIC_MEDPLUM_BASE_URL: {{ .Values.frontend.env.NEXT_PUBLIC_MEDPLUM_BASE_URL | quote }}
+  NEXT_PUBLIC_APP_NAME: {{ .Values.frontend.env.NEXT_PUBLIC_APP_NAME | quote }}
+  NEXT_PUBLIC_APP_VERSION: {{ .Values.frontend.env.NEXT_PUBLIC_APP_VERSION | quote }}
+{{- end }}

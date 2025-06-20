@@ -1,0 +1,17 @@
+{{- if .Values.backend.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "omnicare.backend.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "omnicare.backend.labels" . | nindent 4 }}
+data:
+  NODE_ENV: {{ .Values.backend.env.NODE_ENV | quote }}
+  PORT: {{ .Values.backend.env.PORT | quote }}
+  MEDPLUM_BASE_URL: {{ .Values.backend.env.MEDPLUM_BASE_URL | default "https://api.medplum.com" | quote }}
+  LOG_LEVEL: {{ .Values.backend.env.LOG_LEVEL | quote }}
+  CORS_ORIGIN: {{ .Values.backend.env.CORS_ORIGIN | quote }}
+  RATE_LIMIT_WINDOW_MS: {{ .Values.backend.env.RATE_LIMIT_WINDOW_MS | quote }}
+  RATE_LIMIT_MAX_REQUESTS: {{ .Values.backend.env.RATE_LIMIT_MAX_REQUESTS | quote }}
+{{- end }}
