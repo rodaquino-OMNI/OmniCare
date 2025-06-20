@@ -1,10 +1,28 @@
-import '@testing-library/jest-dom';
-import 'jest-axe/extend-expect';
-import { TextEncoder, TextDecoder } from 'util';
+require('@testing-library/jest-dom');
+require('jest-axe/extend-expect');
+const { TextEncoder, TextDecoder } = require('util');
+const React = require('react');
+const { render } = require('@testing-library/react');
+const { MantineProvider } = require('@mantine/core');
 
 // Polyfill for Node.js environment
 global.TextEncoder = TextEncoder;
 global.TextDecoder = TextDecoder;
+
+// Mock window.matchMedia for Mantine components
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: jest.fn().mockImplementation(query => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: jest.fn(), // deprecated
+    removeListener: jest.fn(), // deprecated
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
+  })),
+});
 
 // Mock Next.js router
 jest.mock('next/router', () => ({
@@ -155,7 +173,7 @@ afterEach(() => {
 });
 
 // Test utilities
-export const mockPatientData = {
+const mockPatientData = {
   id: 'test-patient-1',
   name: [{ given: ['John'], family: 'Doe' }],
   birthDate: '1990-01-01',
@@ -190,7 +208,7 @@ export const mockPatientData = {
   ],
 };
 
-export const mockPractitionerData = {
+const mockPractitionerData = {
   id: 'test-practitioner-1',
   name: [{ given: ['Jane'], family: 'Smith', prefix: ['Dr.'] }],
   identifier: [
@@ -226,7 +244,7 @@ export const mockPractitionerData = {
   ],
 };
 
-export const mockEncounterData = {
+const mockEncounterData = {
   id: 'test-encounter-1',
   status: 'in-progress',
   class: {
@@ -250,4 +268,24 @@ export const mockEncounterData = {
   serviceProvider: {
     reference: 'Organization/test-organization-1',
   },
+};
+
+// Custom render function with MantineProvider
+const renderWithProviders = (ui, options = {}) => {
+  const AllTheProviders = ({ children }) => {
+    return React.createElement(MantineProvider, null, children);
+  };
+
+  return render(ui, { wrapper: AllTheProviders, ...options });
+};
+
+// Override the default render method
+global.renderWithMantine = renderWithProviders;
+
+// Export test utilities
+module.exports = {
+  mockPatientData,
+  mockPractitionerData,
+  mockEncounterData,
+  renderWithProviders,
 };

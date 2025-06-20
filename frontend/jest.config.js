@@ -40,7 +40,17 @@ const customJestConfig = {
     '^@types/(.*)$': '<rootDir>/src/types/$1',
   },
   transform: {
-    '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
+    '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { 
+      presets: [
+        ['next/babel', { 
+          'preset-typescript': { 
+            allowDeclareFields: true,
+            allowNamespaces: true,
+            allowConstEnumeration: true
+          }
+        }]
+      ]
+    }],
   },
   transformIgnorePatterns: [
     '/node_modules/',
@@ -58,11 +68,6 @@ const customJestConfig = {
   verbose: true,
   bail: false,
   maxWorkers: '50%',
-  globals: {
-    'ts-jest': {
-      tsconfig: 'tsconfig.json',
-    },
-  },
 };
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

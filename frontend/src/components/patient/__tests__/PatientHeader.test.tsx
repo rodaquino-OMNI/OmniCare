@@ -1,4 +1,5 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { renderWithProviders } from '../../../../jest.setup';
 import userEvent from '@testing-library/user-event';
 import { PatientHeader } from '../PatientHeader';
 import { Patient, AllergyIntolerance, Condition } from '@medplum/fhirtypes';
@@ -204,7 +205,7 @@ describe('PatientHeader', () => {
 
   describe('Rendering - Full View', () => {
     it('should render patient information in full view', async () => {
-      render(<PatientHeader patient={mockPatient} />);
+      renderWithProviders(<PatientHeader patient={mockPatient} />);
 
       // Check patient name and basic info
       expect(screen.getByText('John Doe')).toBeInTheDocument();
@@ -233,7 +234,7 @@ describe('PatientHeader', () => {
     });
 
     it('should render with different gender colors', () => {
-      const femalePatient = { ...mockPatient, gender: 'female' as const };
+      const femalePatient = { ...mockPatient, gender: 'female' };
       const { rerender } = render(<PatientHeader patient={femalePatient} />);
 
       let genderBadge = screen.getByText('FEMALE');
@@ -390,7 +391,7 @@ describe('PatientHeader', () => {
 
   describe('Data Loading', () => {
     it('should load allergies and conditions on mount', async () => {
-      render(<PatientHeader patient={mockPatient} />);
+      renderWithProviders(<PatientHeader patient={mockPatient} />);
 
       await waitFor(() => {
         expect(mockPatientHelpers.getAllergies).toHaveBeenCalledWith('patient-123');
@@ -399,7 +400,7 @@ describe('PatientHeader', () => {
     });
 
     it('should filter active conditions only', async () => {
-      render(<PatientHeader patient={mockPatient} />);
+      renderWithProviders(<PatientHeader patient={mockPatient} />);
 
       await waitFor(() => {
         expect(screen.getByText('Type 2 Diabetes')).toBeInTheDocument();
@@ -413,7 +414,7 @@ describe('PatientHeader', () => {
       mockPatientHelpers.getAllergies.mockRejectedValue(new Error('API Error'));
       mockPatientHelpers.getConditions.mockRejectedValue(new Error('API Error'));
 
-      render(<PatientHeader patient={mockPatient} />);
+      renderWithProviders(<PatientHeader patient={mockPatient} />);
 
       await waitFor(() => {
         expect(consoleErrorSpy).toHaveBeenCalledWith(
@@ -439,7 +440,7 @@ describe('PatientHeader', () => {
 
   describe('Allergies and Conditions Display', () => {
     it('should show high priority allergy alert', async () => {
-      render(<PatientHeader patient={mockPatient} />);
+      renderWithProviders(<PatientHeader patient={mockPatient} />);
 
       await waitFor(() => {
         expect(screen.getByText('High Priority Allergies')).toBeInTheDocument();
@@ -451,7 +452,7 @@ describe('PatientHeader', () => {
       const lowPriorityAllergies = mockAllergies.filter(a => a.criticality === 'low');
       mockPatientHelpers.getAllergies.mockResolvedValue(lowPriorityAllergies);
 
-      render(<PatientHeader patient={mockPatient} />);
+      renderWithProviders(<PatientHeader patient={mockPatient} />);
 
       await waitFor(() => {
         expect(screen.queryByText('High Priority Allergies')).not.toBeInTheDocument();
@@ -459,7 +460,7 @@ describe('PatientHeader', () => {
     });
 
     it('should show active conditions', async () => {
-      render(<PatientHeader patient={mockPatient} />);
+      renderWithProviders(<PatientHeader patient={mockPatient} />);
 
       await waitFor(() => {
         expect(screen.getByText('Active Conditions')).toBeInTheDocument();
@@ -484,7 +485,7 @@ describe('PatientHeader', () => {
       mockPatientHelpers.getAllergies.mockResolvedValue(manyAllergies);
       mockPatientHelpers.getConditions.mockResolvedValue(manyConditions);
 
-      render(<PatientHeader patient={mockPatient} />);
+      renderWithProviders(<PatientHeader patient={mockPatient} />);
 
       await waitFor(() => {
         // Should show "+X more" for allergies (shows max 3)
@@ -524,7 +525,7 @@ describe('PatientHeader', () => {
       mockPatientHelpers.getAllergies.mockResolvedValue([allergyWithoutText]);
       mockPatientHelpers.getConditions.mockResolvedValue([conditionWithoutText]);
 
-      render(<PatientHeader patient={mockPatient} />);
+      renderWithProviders(<PatientHeader patient={mockPatient} />);
 
       await waitFor(() => {
         expect(screen.getByText('Penicillin Coding Display')).toBeInTheDocument();
@@ -541,7 +542,7 @@ describe('PatientHeader', () => {
         address: null,
       });
 
-      render(<PatientHeader patient={mockPatient} />);
+      renderWithProviders(<PatientHeader patient={mockPatient} />);
 
       expect(screen.queryByText('PHONE')).not.toBeInTheDocument();
       expect(screen.queryByText('EMAIL')).not.toBeInTheDocument();
@@ -555,7 +556,7 @@ describe('PatientHeader', () => {
         address: null,
       });
 
-      render(<PatientHeader patient={mockPatient} />);
+      renderWithProviders(<PatientHeader patient={mockPatient} />);
 
       expect(screen.getByText('555-0123')).toBeInTheDocument();
       expect(screen.queryByText('EMAIL')).not.toBeInTheDocument();
@@ -575,7 +576,7 @@ describe('PatientHeader', () => {
         },
       });
 
-      render(<PatientHeader patient={mockPatient} />);
+      renderWithProviders(<PatientHeader patient={mockPatient} />);
 
       expect(screen.getByText('123 Main St')).toBeInTheDocument();
       expect(screen.queryByText('Anytown, NY 12345')).not.toBeInTheDocument();
@@ -584,7 +585,7 @@ describe('PatientHeader', () => {
 
   describe('Helper Function Calls', () => {
     it('should call all helper functions with correct parameters', () => {
-      render(<PatientHeader patient={mockPatient} />);
+      renderWithProviders(<PatientHeader patient={mockPatient} />);
 
       expect(mockPatientHelpers.getFullName).toHaveBeenCalledWith(mockPatient);
       expect(mockPatientHelpers.getAge).toHaveBeenCalledWith(mockPatient);
@@ -593,7 +594,7 @@ describe('PatientHeader', () => {
     });
 
     it('should call formatDate with birth date', () => {
-      render(<PatientHeader patient={mockPatient} />);
+      renderWithProviders(<PatientHeader patient={mockPatient} />);
 
       expect(mockFormatDate).toHaveBeenCalledWith('1990-01-15');
     });
@@ -625,7 +626,7 @@ describe('PatientHeader', () => {
     });
 
     it('should have proper color contrast for status badges', () => {
-      render(<PatientHeader patient={mockPatient} />);
+      renderWithProviders(<PatientHeader patient={mockPatient} />);
 
       const statusBadge = screen.getByText('ACTIVE');
       expect(statusBadge).toBeInTheDocument();

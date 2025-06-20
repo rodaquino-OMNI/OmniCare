@@ -44,15 +44,18 @@ describe('Auth Store', () => {
 
   describe('Login', () => {
     const mockAuthResponse = {
+      success: true,
       user: {
         id: 'user-1',
         email: 'doctor@omnicare.com',
         name: 'Dr. Jane Smith',
-        role: 'physician' as const,
+        role: 'physician',
         practitionerId: 'practitioner-1',
       },
-      token: 'mock-access-token',
-      refreshToken: 'mock-refresh-token',
+      tokens: {
+        accessToken: 'mock-access-token',
+        refreshToken: 'mock-refresh-token',
+      },
       permissions: ['patient.read', 'patient.write', 'encounter.read'],
     };
 
@@ -72,15 +75,19 @@ describe('Auth Store', () => {
       });
 
       expect(result.current.user).toEqual(mockAuthResponse.user);
-      expect(result.current.token).toBe(mockAuthResponse.token);
-      expect(result.current.refreshToken).toBe(mockAuthResponse.refreshToken);
+      expect(result.current.tokens?.accessToken).toBe(mockAuthResponse.tokens.accessToken);
+      expect(result.current.tokens?.refreshToken).toBe(mockAuthResponse.tokens.refreshToken);
       expect(result.current.permissions).toEqual(mockAuthResponse.permissions);
       expect(result.current.isAuthenticated).toBe(true);
       expect(result.current.isLoading).toBe(false);
 
       expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
-        'auth_token',
-        mockAuthResponse.token
+        'omnicare_access_token',
+        mockAuthResponse.tokens.accessToken
+      );
+      expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
+        'omnicare_refresh_token',
+        mockAuthResponse.tokens.refreshToken
       );
     });
 
@@ -229,7 +236,7 @@ describe('Auth Store', () => {
         id: 'user-1',
         email: 'doctor@omnicare.com',
         name: 'Dr. Jane Smith',
-        role: 'physician' as const,
+        role: 'physician',
         practitionerId: 'practitioner-1',
       },
       token: 'new-access-token',

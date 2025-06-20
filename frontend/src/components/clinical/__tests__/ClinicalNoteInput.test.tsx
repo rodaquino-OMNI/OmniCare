@@ -46,8 +46,8 @@ describe('ClinicalNoteInput', () => {
     jest.clearAllMocks();
     
     // Setup store mocks
-    (useAuthStore as unknown as jest.Mock).mockReturnValue({ user: mockAuthUser });
-    (usePatientStore as unknown as jest.Mock).mockReturnValue({ 
+    (useAuthStore as jest.MockedFunction<typeof useAuthStore>).mockReturnValue({ user: mockAuthUser });
+    (usePatientStore as jest.MockedFunction<typeof usePatientStore>).mockReturnValue({ 
       currentPatient: mockPatient,
       currentEncounter: mockEncounter 
     });

@@ -12,18 +12,23 @@ export interface User {
 }
 
 export type UserRole = 
+  | 'admin'
   | 'physician'
   | 'nurse'
-  | 'admin'
+  | 'patient'
+  | 'billing'
+  | 'receptionist'
   | 'pharmacist'
   | 'lab_tech'
   | 'radiology_tech'
-  | 'patient'
   | 'system_admin';
 
 export interface Permission {
+  id: string;
+  name: string;
+  description: string;
   resource: string;
-  action: 'create' | 'read' | 'update' | 'delete' | 'execute';
+  action: string;
   conditions?: Record<string, any>;
 }
 

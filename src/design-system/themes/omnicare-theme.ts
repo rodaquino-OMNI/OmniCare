@@ -387,7 +387,7 @@ export const omnicareTheme = createTheme({
               return {
                 backgroundColor: colors.neutral[100],
                 color: colors.neutral[700],
-                border: `1px solid ${colors.neutral[300}`,
+                border: `1px solid ${colors.neutral[300]}`,
               };
           }
         };

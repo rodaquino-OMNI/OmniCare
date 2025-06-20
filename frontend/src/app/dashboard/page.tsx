@@ -1,7 +1,7 @@
 'use client';
 
 import { Grid, Card, Text, Group, Badge, Stack, SimpleGrid, Progress, Paper, Center, RingProgress } from '@mantine/core';
-import { IconUsers, IconStethoscope, IconPill, IconTestPipe, IconChartLine, IconCalendar, IconAlertTriangle, IconCheckCircle } from '@tabler/icons-react';
+import { IconUsers, IconStethoscope, IconPill, IconTestPipe, IconChartLine, IconCalendar, IconAlertTriangle, IconCheck } from '@tabler/icons-react';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import AppLayout from '@/components/layout/AppLayout';
 import { useAuth } from '@/stores/auth';
@@ -180,7 +180,7 @@ function DashboardContent() {
                       activity.type === 'warning' ? 'bg-yellow-100' :
                       'bg-blue-100'
                     }`}>
-                      {activity.type === 'success' && <IconCheckCircle size={14} className="text-green-600" />}
+                      {activity.type === 'success' && <IconCheck size={14} className="text-green-600" />}
                       {activity.type === 'warning' && <IconAlertTriangle size={14} className="text-yellow-600" />}
                       {activity.type === 'info' && <IconStethoscope size={14} className="text-blue-600" />}
                     </div>

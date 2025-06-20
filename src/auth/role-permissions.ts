@@ -285,11 +285,16 @@ export function hasPermission(role: UserRole, permission: Permission): boolean {
  */
 export function getRoleInfo(role: UserRole): Omit<RolePermissions, 'permissions'> {
   const roleData = ROLE_PERMISSIONS[role];
-  return {
+  const result: Omit<RolePermissions, 'permissions'> = {
     role: roleData.role,
-    description: roleData.description,
-    restrictions: roleData.restrictions
+    description: roleData.description
   };
+  
+  if (roleData.restrictions !== undefined) {
+    result.restrictions = roleData.restrictions;
+  }
+  
+  return result;
 }
 
 /**

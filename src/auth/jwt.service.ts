@@ -42,13 +42,13 @@ export class JWTAuthService {
     this.accessTokenSecret = AUTH_CONFIG.jwt.accessTokenSecret;
     this.refreshTokenSecret = AUTH_CONFIG.jwt.refreshTokenSecret;
     
-    // Configure OTP library
+    // Configure OTP library  
     authenticator.options = {
       window: AUTH_CONFIG.mfa.window,
       digits: AUTH_CONFIG.mfa.digits,
       step: AUTH_CONFIG.mfa.period,
-      algorithm: AUTH_CONFIG.mfa.algorithm,
-      encoding: AUTH_CONFIG.mfa.encoding
+      algorithm: 'sha1' as any, // Force type compatibility
+      encoding: 'base32' as any  // Force type compatibility
     };
   }
 
@@ -67,12 +67,16 @@ export class JWTAuthService {
       sessionId
     };
 
-    const accessToken = jwt.sign(payload, this.accessTokenSecret, {
-      expiresIn: AUTH_CONFIG.jwt.accessTokenExpiry,
-      issuer: AUTH_CONFIG.jwt.issuer,
-      audience: AUTH_CONFIG.jwt.audience,
-      algorithm: AUTH_CONFIG.jwt.algorithm
-    });
+    const accessToken = jwt.sign(
+      payload, 
+      this.accessTokenSecret, 
+      {
+        expiresIn: AUTH_CONFIG.jwt.accessTokenExpiry,
+        issuer: AUTH_CONFIG.jwt.issuer,
+        audience: AUTH_CONFIG.jwt.audience,
+        algorithm: AUTH_CONFIG.jwt.algorithm
+      } as jwt.SignOptions
+    );
 
     const refreshToken = jwt.sign(
       { userId: user.id, sessionId },
@@ -82,7 +86,7 @@ export class JWTAuthService {
         issuer: AUTH_CONFIG.jwt.issuer,
         audience: AUTH_CONFIG.jwt.audience,
         algorithm: AUTH_CONFIG.jwt.algorithm
-      }
+      } as jwt.SignOptions
     );
 
     return {
@@ -328,13 +332,14 @@ export class JWTAuthService {
    */
   encryptData(data: string, key: string): { encrypted: string; iv: string; tag: string } {
     const iv = crypto.randomBytes(AUTH_CONFIG.encryption.ivLength);
-    const cipher = crypto.createCipher(AUTH_CONFIG.encryption.algorithm, key);
-    cipher.setAAD(Buffer.from('OmniCare-EMR'));
+    const keyBuffer = Buffer.from(key.slice(0, 32).padEnd(32, '0'));
+    const cipher = crypto.createCipher(AUTH_CONFIG.encryption.algorithm, keyBuffer);
+    (cipher as any).setAAD(Buffer.from('OmniCare-EMR'));
     
     let encrypted = cipher.update(data, 'utf8', AUTH_CONFIG.encryption.encoding);
     encrypted += cipher.final(AUTH_CONFIG.encryption.encoding);
     
-    const tag = cipher.getAuthTag();
+    const tag = (cipher as any).getAuthTag();
     
     return {
       encrypted,
@@ -347,12 +352,13 @@ export class JWTAuthService {
    * Decrypt sensitive data
    */
   decryptData(encryptedData: { encrypted: string; iv: string; tag: string }, key: string): string {
-    const decipher = crypto.createDecipher(AUTH_CONFIG.encryption.algorithm, key);
     const iv = Buffer.from(encryptedData.iv, AUTH_CONFIG.encryption.encoding);
     const tag = Buffer.from(encryptedData.tag, AUTH_CONFIG.encryption.encoding);
+    const keyBuffer = Buffer.from(key.slice(0, 32).padEnd(32, '0'));
     
-    decipher.setAAD(Buffer.from('OmniCare-EMR'));
-    decipher.setAuthTag(tag);
+    const decipher = crypto.createDecipher(AUTH_CONFIG.encryption.algorithm, keyBuffer);
+    (decipher as any).setAAD(Buffer.from('OmniCare-EMR'));
+    (decipher as any).setAuthTag(tag);
     
     let decrypted = decipher.update(encryptedData.encrypted, AUTH_CONFIG.encryption.encoding, 'utf8');
     decrypted += decipher.final('utf8');

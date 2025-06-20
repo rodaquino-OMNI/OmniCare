@@ -1,0 +1,13 @@
+{
+  "objective": "run tests and fix dependencies and typescript errors",
+  "strategy": "auto",
+  "mode": "centralized",
+  "maxAgents": 10,
+  "timeout": 60,
+  "parallel": true,
+  "monitor": true,
+  "output": "json",
+  "outputDir": "./reports",
+  "timestamp": "2025-06-20T11:53:54.502Z",
+  "id": "swarm-auto-centralized-1750420434502"
+}

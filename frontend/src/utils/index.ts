@@ -214,13 +214,15 @@ export const canUserAccessResource = (userRole: UserRole, requiredRoles: UserRol
 
 export const getRoleDisplayName = (role: UserRole): string => {
   const roleNames: Record<UserRole, string> = {
+    admin: 'Administrator',
     physician: 'Physician',
     nurse: 'Nurse',
-    admin: 'Administrator',
+    patient: 'Patient',
+    billing: 'Billing Staff',
+    receptionist: 'Receptionist',
     pharmacist: 'Pharmacist',
     lab_tech: 'Lab Technician',
     radiology_tech: 'Radiology Technician',
-    patient: 'Patient',
     system_admin: 'System Administrator',
   };
   return roleNames[role] || role;

@@ -1,10 +1,10 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useRouter } from 'next/navigation';
 import { notifications } from '@mantine/notifications';
 import { LoginForm } from '../LoginForm';
 import { useAuth } from '@/stores/auth';
-import { mockPatientData } from '../../../jest.setup';
+import { mockPatientData, renderWithProviders } from '../../../../jest.setup';
 
 // Mock dependencies
 jest.mock('next/navigation', () => ({
@@ -79,7 +79,7 @@ describe('LoginForm', () => {
 
   describe('Rendering', () => {
     it('should render login form with all necessary elements', () => {
-      render(<LoginForm />);
+      renderWithProviders(<LoginForm />);
 
       // Check header elements
       expect(screen.getByText('OmniCare')).toBeInTheDocument();
@@ -108,7 +108,7 @@ describe('LoginForm', () => {
         isLoading: true,
       });
 
-      render(<LoginForm />);
+      renderWithProviders(<LoginForm />);
 
       // Mantine LoadingOverlay renders differently, check for disabled state instead
       const emailInput = screen.getByLabelText(/email address/i);
@@ -121,7 +121,7 @@ describe('LoginForm', () => {
     });
 
     it('should not show error alert initially', () => {
-      render(<LoginForm />);
+      renderWithProviders(<LoginForm />);
       
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
@@ -130,7 +130,7 @@ describe('LoginForm', () => {
   describe('Form Validation', () => {
     it('should show validation errors for empty fields', async () => {
       const user = userEvent.setup();
-      render(<LoginForm />);
+      renderWithProviders(<LoginForm />);
 
       const submitButton = screen.getByRole('button', { name: /sign in/i });
       await user.click(submitButton);
@@ -141,7 +141,7 @@ describe('LoginForm', () => {
 
     it('should show validation error for invalid email format', async () => {
       const user = userEvent.setup();
-      render(<LoginForm />);
+      renderWithProviders(<LoginForm />);
 
       const emailInput = screen.getByLabelText(/email address/i);
       const submitButton = screen.getByRole('button', { name: /sign in/i });
@@ -154,7 +154,7 @@ describe('LoginForm', () => {
 
     it('should show validation error for short password', async () => {
       const user = userEvent.setup();
-      render(<LoginForm />);
+      renderWithProviders(<LoginForm />);
 
       const passwordInput = screen.getByLabelText(/password/i);
       const submitButton = screen.getByRole('button', { name: /sign in/i });
@@ -167,7 +167,7 @@ describe('LoginForm', () => {
 
     it('should not show validation errors for valid inputs', async () => {
       const user = userEvent.setup();
-      render(<LoginForm />);
+      renderWithProviders(<LoginForm />);
 
       const emailInput = screen.getByLabelText(/email address/i);
       const passwordInput = screen.getByLabelText(/password/i);
@@ -189,7 +189,7 @@ describe('LoginForm', () => {
       const user = userEvent.setup();
       mockLogin.mockResolvedValue(undefined);
 
-      render(<LoginForm />);
+      renderWithProviders(<LoginForm />);
 
       const emailInput = screen.getByLabelText(/email address/i);
       const passwordInput = screen.getByLabelText(/password/i);
@@ -209,7 +209,7 @@ describe('LoginForm', () => {
       const user = userEvent.setup();
       mockLogin.mockResolvedValue(undefined);
 
-      render(<LoginForm />);
+      renderWithProviders(<LoginForm />);
 
       const emailInput = screen.getByLabelText(/email address/i);
       const passwordInput = screen.getByLabelText(/password/i);
@@ -228,7 +228,7 @@ describe('LoginForm', () => {
       const user = userEvent.setup();
       mockLogin.mockResolvedValue(undefined);
 
-      render(<LoginForm />);
+      renderWithProviders(<LoginForm />);
 
       const emailInput = screen.getByLabelText(/email address/i);
       const passwordInput = screen.getByLabelText(/password/i);
@@ -253,7 +253,7 @@ describe('LoginForm', () => {
       const errorMessage = 'Invalid credentials';
       mockLogin.mockRejectedValue(new Error(errorMessage));
 
-      render(<LoginForm />);
+      renderWithProviders(<LoginForm />);
 
       const emailInput = screen.getByLabelText(/email address/i);
       const passwordInput = screen.getByLabelText(/password/i);
@@ -279,7 +279,7 @@ describe('LoginForm', () => {
       const user = userEvent.setup();
       mockLogin.mockRejectedValue('String error');
 
-      render(<LoginForm />);
+      renderWithProviders(<LoginForm />);
 
       const emailInput = screen.getByLabelText(/email address/i);
       const passwordInput = screen.getByLabelText(/password/i);
@@ -299,7 +299,7 @@ describe('LoginForm', () => {
       mockLogin.mockRejectedValueOnce(new Error('First error'))
                 .mockResolvedValueOnce(undefined);
 
-      render(<LoginForm />);
+      renderWithProviders(<LoginForm />);
 
       const emailInput = screen.getByLabelText(/email address/i);
       const passwordInput = screen.getByLabelText(/password/i);
@@ -328,7 +328,7 @@ describe('LoginForm', () => {
   describe('Demo Account Buttons', () => {
     it('should fill form with doctor credentials when Doctor button is clicked', async () => {
       const user = userEvent.setup();
-      render(<LoginForm />);
+      renderWithProviders(<LoginForm />);
 
       const doctorButton = screen.getByRole('button', { name: /doctor/i });
       await user.click(doctorButton);
@@ -342,7 +342,7 @@ describe('LoginForm', () => {
 
     it('should fill form with nurse credentials when Nurse button is clicked', async () => {
       const user = userEvent.setup();
-      render(<LoginForm />);
+      renderWithProviders(<LoginForm />);
 
       const nurseButton = screen.getByRole('button', { name: /nurse/i });
       await user.click(nurseButton);
@@ -356,7 +356,7 @@ describe('LoginForm', () => {
 
     it('should fill form with admin credentials when Admin button is clicked', async () => {
       const user = userEvent.setup();
-      render(<LoginForm />);
+      renderWithProviders(<LoginForm />);
 
       const adminButton = screen.getByRole('button', { name: /admin/i });
       await user.click(adminButton);
@@ -374,7 +374,7 @@ describe('LoginForm', () => {
         isLoading: true,
       });
 
-      render(<LoginForm />);
+      renderWithProviders(<LoginForm />);
 
       const doctorButton = screen.getByRole('button', { name: /doctor/i });
       const nurseButton = screen.getByRole('button', { name: /nurse/i });
@@ -389,7 +389,7 @@ describe('LoginForm', () => {
   describe('Form Interactions', () => {
     it('should handle remember me checkbox', async () => {
       const user = userEvent.setup();
-      render(<LoginForm />);
+      renderWithProviders(<LoginForm />);
 
       const rememberMeCheckbox = screen.getByLabelText(/remember me/i);
       expect(rememberMeCheckbox).not.toBeChecked();
@@ -407,7 +407,7 @@ describe('LoginForm', () => {
         isLoading: true,
       });
 
-      render(<LoginForm />);
+      renderWithProviders(<LoginForm />);
 
       const emailInput = screen.getByLabelText(/email address/i);
       const passwordInput = screen.getByLabelText(/password/i);
@@ -424,7 +424,7 @@ describe('LoginForm', () => {
       const user = userEvent.setup();
       mockLogin.mockResolvedValue(undefined);
 
-      render(<LoginForm />);
+      renderWithProviders(<LoginForm />);
 
       const emailInput = screen.getByLabelText(/email address/i);
       const passwordInput = screen.getByLabelText(/password/i);
@@ -442,7 +442,7 @@ describe('LoginForm', () => {
 
   describe('Accessibility', () => {
     it('should have proper form labels and accessibility attributes', () => {
-      render(<LoginForm />);
+      renderWithProviders(<LoginForm />);
 
       const emailInput = screen.getByLabelText(/email address/i);
       const passwordInput = screen.getByLabelText(/password/i);
@@ -454,7 +454,7 @@ describe('LoginForm', () => {
     });
 
     it('should have proper heading structure', () => {
-      render(<LoginForm />);
+      renderWithProviders(<LoginForm />);
 
       // Check for proper heading hierarchy
       expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('OmniCare');
@@ -462,7 +462,7 @@ describe('LoginForm', () => {
     });
 
     it('should have accessible links', () => {
-      render(<LoginForm />);
+      renderWithProviders(<LoginForm />);
 
       const forgotPasswordLink = screen.getByRole('link', { name: /forgot password/i });
       const supportLink = screen.getByRole('link', { name: /support@omnicare.com/i });
@@ -477,7 +477,7 @@ describe('LoginForm', () => {
       const user = userEvent.setup();
       mockLogin.mockRejectedValue(new Error('Network error'));
 
-      render(<LoginForm />);
+      renderWithProviders(<LoginForm />);
 
       const emailInput = screen.getByLabelText(/email address/i);
       const passwordInput = screen.getByLabelText(/password/i);
@@ -503,7 +503,7 @@ describe('LoginForm', () => {
       const user = userEvent.setup();
       mockLogin.mockRejectedValue(new Error('Login error'));
 
-      render(<LoginForm />);
+      renderWithProviders(<LoginForm />);
 
       const emailInput = screen.getByLabelText(/email address/i);
       const passwordInput = screen.getByLabelText(/password/i);

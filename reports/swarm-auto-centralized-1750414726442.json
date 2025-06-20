@@ -1,0 +1,13 @@
+{
+  "objective": "stage and comit changes, grouping by Feature/Functionality (eg.: Authentication changes, UI/Components updates, Database/API changes, Configuration updates, and others). Group related changes: Commit files that logically belong together. Use descriptive commit messages: Make each commit meaningful. Test between commits: Ensure each commit leaves the code in a working state. Consider using branches: For large feature sets, use feature branches",
+  "strategy": "auto",
+  "mode": "centralized",
+  "maxAgents": 10,
+  "timeout": 60,
+  "parallel": true,
+  "monitor": true,
+  "output": "json",
+  "outputDir": "./reports",
+  "timestamp": "2025-06-20T10:18:46.442Z",
+  "id": "swarm-auto-centralized-1750414726442"
+}

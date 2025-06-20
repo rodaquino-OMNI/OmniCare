@@ -13,6 +13,7 @@ A comprehensive Electronic Medical Record (EMR) system focused on administrative
 ### Core Administrative Modules
 
 #### 📋 Patient Registration & Management
+
 - **Multi-step Registration Wizard**: Streamlined patient onboarding process
 - **Duplicate Detection**: Advanced fuzzy matching to prevent duplicate records
 - **Insurance Verification**: Real-time eligibility checking and benefit verification
@@ -21,6 +22,7 @@ A comprehensive Electronic Medical Record (EMR) system focused on administrative
 - **Emergency Contact Management**: Comprehensive contact information tracking
 
 #### 📅 Appointment Management
+
 - **Interactive Calendar**: Multiple view options (day, week, month) with drag-and-drop scheduling
 - **Provider Availability**: Real-time availability checking and conflict prevention
 - **Automated Reminders**: SMS, email, and phone reminder system
@@ -29,6 +31,7 @@ A comprehensive Electronic Medical Record (EMR) system focused on administrative
 - **No-Show Tracking**: Analytics and follow-up automation
 
 #### 💰 Billing & Revenue Cycle
+
 - **Claims Management**: Automated claim creation, submission, and tracking
 - **Code Validation**: ICD-10 and CPT code verification and suggestion
 - **Insurance Processing**: Authorization tracking and benefit verification
@@ -37,6 +40,7 @@ A comprehensive Electronic Medical Record (EMR) system focused on administrative
 - **Denial Management**: Automated appeals and resubmission workflows
 
 #### 📊 Reporting & Analytics
+
 - **Real-time Dashboards**: Key performance indicators and operational metrics
 - **Compliance Monitoring**: Automated alerts for regulatory requirements
 - **Custom Reports**: Flexible report generation in multiple formats (PDF, Excel, CSV)
@@ -47,18 +51,21 @@ A comprehensive Electronic Medical Record (EMR) system focused on administrative
 ### 🔧 Administrative Tools
 
 #### 👥 User Management
+
 - **Role-based Access Control**: Granular permissions and security
 - **Staff Scheduling**: Automated scheduling with conflict resolution
 - **Performance Tracking**: Individual and departmental metrics
 - **Audit Logging**: Comprehensive activity tracking for compliance
 
 #### 📁 Document Management
+
 - **Digital Storage**: Secure document upload and organization
 - **Release of Information**: Automated ROI request processing
 - **Retention Policies**: Automated archiving and deletion
 - **Version Control**: Document history and change tracking
 
 #### 📦 Inventory Management
+
 - **Supply Tracking**: Real-time inventory levels and usage
 - **Automated Ordering**: Reorder point notifications and purchase orders
 - **Vendor Management**: Supplier relationship and contract tracking
@@ -67,6 +74,7 @@ A comprehensive Electronic Medical Record (EMR) system focused on administrative
 ## 🚀 Technology Stack
 
 ### Frontend
+
 - **Next.js 14**: React framework with App Router for optimal performance
 - **TypeScript**: Full type safety and enhanced developer experience
 - **Tailwind CSS**: Utility-first CSS framework with custom healthcare theme
@@ -76,6 +84,7 @@ A comprehensive Electronic Medical Record (EMR) system focused on administrative
 - **Heroicons**: Consistent and accessible icon library
 
 ### Architecture
+
 - **Component-based Design**: Modular and reusable UI components
 - **Service Layer**: Comprehensive API abstraction and business logic
 - **Utility Functions**: Extensive helper functions for all workflows
@@ -83,6 +92,7 @@ A comprehensive Electronic Medical Record (EMR) system focused on administrative
 - **Responsive Design**: Mobile-first approach with accessibility
 
 ### Development Tools
+
 - **ESLint**: Code quality and consistency
 - **Prettier**: Code formatting
 - **Yup**: Schema validation for forms
@@ -91,7 +101,7 @@ A comprehensive Electronic Medical Record (EMR) system focused on administrative
 
 ## 🏗️ Project Structure
 
-```
+```text
 src/
 ├── components/           # React components
 │   ├── AdminDashboard.tsx       # Main administrative dashboard
@@ -121,19 +131,22 @@ src/
 ## 📖 Getting Started
 
 ### Prerequisites
-- Node.js 18+ 
+
+- Node.js 18+
 - npm or yarn package manager
 - Modern web browser
 
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone <repository-url>
    cd OmniCare
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    # or
@@ -141,6 +154,7 @@ src/
    ```
 
 3. **Start the development server**
+
    ```bash
    npm run dev
    # or
@@ -148,6 +162,7 @@ src/
    ```
 
 4. **Open your browser**
+
    Navigate to [http://localhost:3000](http://localhost:3000)
 
 ### Available Scripts
@@ -163,6 +178,7 @@ npm run typecheck    # Run TypeScript type checking
 ## 🔐 Security & Compliance
 
 ### HIPAA Compliance Features
+
 - **Data Encryption**: All sensitive data encrypted in transit and at rest
 - **Access Controls**: Role-based permissions and audit logging
 - **Patient Consent**: Digital consent management and tracking
@@ -170,6 +186,7 @@ npm run typecheck    # Run TypeScript type checking
 - **Audit Trails**: Comprehensive logging for compliance reporting
 
 ### Security Headers
+
 - Content Security Policy (CSP)
 - X-Frame-Options
 - X-Content-Type-Options
@@ -179,18 +196,21 @@ npm run typecheck    # Run TypeScript type checking
 ## 🎯 Business Impact
 
 ### Efficiency Improvements
+
 - **60% reduction** in manual administrative tasks
 - **Automated workflows** for patient registration and scheduling
 - **Real-time data** for immediate decision making
 - **Streamlined billing** processes reducing claim processing time
 
 ### Compliance Benefits
+
 - **Automated monitoring** for regulatory requirements
 - **Standardized workflows** ensuring consistent processes
 - **Audit-ready documentation** with comprehensive logging
 - **Risk reduction** through systematic quality controls
 
 ### Revenue Optimization
+
 - **Faster claim submission** reducing days in AR
 - **Automated insurance verification** preventing denials
 - **Performance analytics** identifying revenue opportunities
@@ -199,6 +219,7 @@ npm run typecheck    # Run TypeScript type checking
 ## 🔧 Configuration
 
 ### Environment Variables
+
 Create a `.env.local` file in the root directory:
 
 ```bash
@@ -218,7 +239,9 @@ EMAIL_API_KEY=your-email-api-key
 ```
 
 ### Tailwind Configuration
+
 The project includes a comprehensive Tailwind configuration with:
+
 - Healthcare-specific color palette
 - Custom components for medical workflows
 - Responsive breakpoints optimized for clinical use
@@ -227,6 +250,7 @@ The project includes a comprehensive Tailwind configuration with:
 ## 🧪 Testing
 
 ### Component Testing
+
 ```bash
 npm run test:components   # Run component tests
 npm run test:utils        # Run utility function tests
@@ -234,6 +258,7 @@ npm run test:services     # Run service layer tests
 ```
 
 ### End-to-End Testing
+
 ```bash
 npm run test:e2e          # Run full workflow tests
 ```
@@ -241,6 +266,7 @@ npm run test:e2e          # Run full workflow tests
 ## 📱 Responsive Design
 
 The application is fully responsive and optimized for:
+
 - **Desktop**: Full-featured administrative workstations
 - **Tablet**: Mobile cart and bedside use
 - **Mobile**: Quick access and emergency situations
@@ -255,18 +281,21 @@ The application is fully responsive and optimized for:
 ## 🚀 Deployment
 
 ### Production Build
+
 ```bash
 npm run build
 npm run start
 ```
 
 ### Docker Deployment
+
 ```bash
 docker build -t omnicare-emr .
 docker run -p 3000:3000 omnicare-emr
 ```
 
 ### Vercel Deployment
+
 ```bash
 vercel --prod
 ```
@@ -274,18 +303,21 @@ vercel --prod
 ## 🔮 Roadmap
 
 ### Phase 2: Backend Integration
+
 - [ ] REST API development with Node.js
 - [ ] PostgreSQL database implementation
 - [ ] Authentication and authorization system
 - [ ] Real-time notifications with WebSocket
 
 ### Phase 3: Advanced Features
+
 - [ ] HL7 FHIR integration for interoperability
 - [ ] AI-powered clinical decision support
 - [ ] Advanced analytics and machine learning
 - [ ] Mobile application development
 
 ### Phase 4: Enterprise Features
+
 - [ ] Multi-facility support
 - [ ] Advanced reporting suite
 - [ ] Integration marketplace
@@ -296,6 +328,7 @@ vercel --prod
 We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
 
 ### Development Workflow
+
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/amazing-feature`
 3. Commit your changes: `git commit -m 'Add amazing feature'`
@@ -309,21 +342,25 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🆘 Support
 
 ### Documentation
+
 - [API Documentation](docs/api.md)
 - [User Guide](docs/user-guide.md)
 - [Developer Guide](docs/developer-guide.md)
 - [Deployment Guide](docs/deployment.md)
 
 ### Community
+
 - [Discussion Forum](https://github.com/omnicare/discussions)
 - [Issue Tracker](https://github.com/omnicare/issues)
 - [Slack Community](https://omnicare-emr.slack.com)
 
 ### Professional Support
+
 For enterprise support and custom development:
-- Email: support@omnicare-emr.com
+
+- Email: [support@omnicare-emr.com](mailto:support@omnicare-emr.com)
 - Phone: 1-800-OMNICARE
-- Website: [www.omnicare-emr.com](https://www.omnicare-emr.com)
+- Website: <https://www.omnicare-emr.com>
 
 ## 🙏 Acknowledgments
 
@@ -334,6 +371,6 @@ For enterprise support and custom development:
 
 ---
 
-**Built with ❤️ for Healthcare Providers**
+### Built with ❤️ for Healthcare Providers
 
-*Improving patient care through better technology*
+#### Improving patient care through better technology

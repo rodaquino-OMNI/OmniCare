@@ -612,12 +612,3 @@ export class ComplianceUtils {
   }
 }
 
-export {
-  PatientUtils,
-  AppointmentUtils,
-  BillingUtils,
-  DocumentUtils,
-  ReportingUtils,
-  ValidationUtils,
-  ComplianceUtils
-};

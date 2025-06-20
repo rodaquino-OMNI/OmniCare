@@ -22,7 +22,7 @@ import {
 } from '@mantine/core';
 import { 
   IconNotes,
-  IconSave,
+  IconDeviceFloppy,
   IconTemplate,
   IconClock,
   IconUser,
@@ -31,7 +31,7 @@ import {
   IconEdit,
   IconTrash,
   IconCopy,
-  IconPrint,
+  IconPrinter,
   IconShare,
   IconHistory,
   IconAlertCircle,
@@ -492,7 +492,7 @@ export function ClinicalNoteInput({
                   
                   <Group gap="sm">
                     <ActionIcon variant="light" onClick={() => window.print()}>
-                      <IconPrint size={16} />
+                      <IconPrinter size={16} />
                     </ActionIcon>
                     <ActionIcon variant="light">
                       <IconShare size={16} />
@@ -583,7 +583,7 @@ export function ClinicalNoteInput({
         
         <Group gap="sm">
           <Button
-            leftSection={<IconSave size={16} />}
+            leftSection={<IconDeviceFloppy size={16} />}
             variant="light"
             onClick={() => saveNote('draft')}
             loading={loading}
