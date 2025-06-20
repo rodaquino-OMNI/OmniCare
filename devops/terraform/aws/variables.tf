@@ -401,9 +401,58 @@ variable "enable_jenkins" {
   default     = false
 }
 
+variable "enable_sso" {
+  description = "Enable Single Sign-On"
+  type        = bool
+  default     = false
+}
+
 # Tags
 variable "additional_tags" {
   description = "Additional tags to apply to resources"
   type        = map(string)
   default     = {}
+}
+
+# Third-party Integration Keys
+variable "medplum_client_id" {
+  description = "Medplum client ID"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "medplum_client_secret" {
+  description = "Medplum client secret"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "smtp_password" {
+  description = "SMTP password for email notifications"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "pagerduty_service_key" {
+  description = "PagerDuty service key"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "datadog_api_key" {
+  description = "Datadog API key"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "sentry_dsn" {
+  description = "Sentry DSN for error tracking"
+  type        = string
+  sensitive   = true
+  default     = ""
 }

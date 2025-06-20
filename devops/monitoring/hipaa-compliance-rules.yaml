@@ -1,0 +1,252 @@
+# HIPAA Compliance Monitoring Rules for OmniCare EMR
+# These rules ensure compliance with HIPAA security requirements
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: hipaa-compliance-rules
+  namespace: monitoring
+  labels:
+    prometheus: kube-prometheus
+    role: alert-rules
+    compliance: hipaa
+spec:
+  groups:
+  - name: hipaa.access_control
+    interval: 30s
+    rules:
+    # Unauthorized access attempts
+    - alert: UnauthorizedAccessAttempt
+      expr: |
+        sum(rate(nginx_ingress_controller_requests_total{status=~"401|403"}[5m])) by (namespace, ingress) > 10
+      for: 5m
+      labels:
+        severity: warning
+        compliance: hipaa
+        category: access_control
+      annotations:
+        summary: "High rate of unauthorized access attempts"
+        description: "{{ $labels.namespace }}/{{ $labels.ingress }} is experiencing {{ $value }} unauthorized access attempts per second"
+
+    # Failed login attempts
+    - alert: ExcessiveFailedLogins
+      expr: |
+        sum(rate(authentication_failures_total[5m])) by (namespace, service) > 5
+      for: 5m
+      labels:
+        severity: critical
+        compliance: hipaa
+        category: access_control
+      annotations:
+        summary: "Excessive failed login attempts detected"
+        description: "{{ $labels.namespace }}/{{ $labels.service }} has {{ $value }} failed login attempts per second"
+
+    # Privilege escalation attempts
+    - alert: PrivilegeEscalationAttempt
+      expr: |
+        sum(kube_pod_container_status_restarts_total) by (namespace, pod) > 5
+      for: 10m
+      labels:
+        severity: critical
+        compliance: hipaa
+        category: access_control
+      annotations:
+        summary: "Potential privilege escalation attempt"
+        description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} has restarted {{ $value }} times"
+
+  - name: hipaa.data_integrity
+    interval: 30s
+    rules:
+    # Database connection failures
+    - alert: DatabaseConnectionFailure
+      expr: |
+        up{job="postgresql"} == 0
+      for: 1m
+      labels:
+        severity: critical
+        compliance: hipaa
+        category: data_integrity
+      annotations:
+        summary: "Database connection lost"
+        description: "PostgreSQL database is unreachable"
+
+    # Data backup failures
+    - alert: BackupFailure
+      expr: |
+        time() - backup_last_success_timestamp > 86400
+      for: 1h
+      labels:
+        severity: critical
+        compliance: hipaa
+        category: data_integrity
+      annotations:
+        summary: "Database backup has not completed in 24 hours"
+        description: "Last successful backup was {{ $value | humanizeDuration }} ago"
+
+    # Disk space issues
+    - alert: LowDiskSpace
+      expr: |
+        (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.1
+      for: 5m
+      labels:
+        severity: warning
+        compliance: hipaa
+        category: data_integrity
+      annotations:
+        summary: "Low disk space on node"
+        description: "Node {{ $labels.instance }} has less than 10% disk space remaining"
+
+  - name: hipaa.encryption
+    interval: 30s
+    rules:
+    # Unencrypted traffic
+    - alert: UnencryptedTraffic
+      expr: |
+        sum(rate(nginx_ingress_controller_requests_total{scheme="http"}[5m])) by (namespace, ingress) > 0
+      for: 5m
+      labels:
+        severity: critical
+        compliance: hipaa
+        category: encryption
+      annotations:
+        summary: "Unencrypted HTTP traffic detected"
+        description: "{{ $labels.namespace }}/{{ $labels.ingress }} is receiving unencrypted HTTP traffic"
+
+    # Certificate expiration
+    - alert: CertificateExpiringSoon
+      expr: |
+        certmanager_certificate_expiration_timestamp_seconds - time() < 7 * 86400
+      for: 1h
+      labels:
+        severity: warning
+        compliance: hipaa
+        category: encryption
+      annotations:
+        summary: "SSL certificate expiring soon"
+        description: "Certificate {{ $labels.name }} in namespace {{ $labels.namespace }} expires in {{ $value | humanizeDuration }}"
+
+  - name: hipaa.audit_logging
+    interval: 30s
+    rules:
+    # Audit log volume
+    - alert: AuditLogVolumeHigh
+      expr: |
+        sum(rate(log_messages_total{level="audit"}[5m])) > 1000
+      for: 5m
+      labels:
+        severity: warning
+        compliance: hipaa
+        category: audit_logging
+      annotations:
+        summary: "High volume of audit logs"
+        description: "Audit log rate is {{ $value }} messages per second"
+
+    # Log storage space
+    - alert: LogStorageSpaceLow
+      expr: |
+        elasticsearch_filesystem_data_available_bytes / elasticsearch_filesystem_data_size_bytes < 0.1
+      for: 5m
+      labels:
+        severity: critical
+        compliance: hipaa
+        category: audit_logging
+      annotations:
+        summary: "Log storage space critically low"
+        description: "Elasticsearch has less than 10% storage space remaining"
+
+    # Log shipping failures
+    - alert: LogShippingFailure
+      expr: |
+        sum(rate(fluentbit_output_errors_total[5m])) > 0
+      for: 5m
+      labels:
+        severity: warning
+        compliance: hipaa
+        category: audit_logging
+      annotations:
+        summary: "Log shipping errors detected"
+        description: "Fluent Bit is experiencing {{ $value }} errors per second shipping logs"
+
+  - name: hipaa.availability
+    interval: 30s
+    rules:
+    # Service availability
+    - alert: ServiceUnavailable
+      expr: |
+        up{job=~"backend|frontend|postgresql|redis"} == 0
+      for: 1m
+      labels:
+        severity: critical
+        compliance: hipaa
+        category: availability
+      annotations:
+        summary: "Critical service unavailable"
+        description: "Service {{ $labels.job }} is down"
+
+    # High response time
+    - alert: HighResponseTime
+      expr: |
+        histogram_quantile(0.95, sum(rate(nginx_ingress_controller_request_duration_seconds_bucket[5m])) by (le, namespace, ingress)) > 2
+      for: 5m
+      labels:
+        severity: warning
+        compliance: hipaa
+        category: availability
+      annotations:
+        summary: "High response time detected"
+        description: "95th percentile response time for {{ $labels.namespace }}/{{ $labels.ingress }} is {{ $value }}s"
+
+    # Pod crashes
+    - alert: PodCrashLooping
+      expr: |
+        rate(kube_pod_container_status_restarts_total[15m]) > 0
+      for: 5m
+      labels:
+        severity: critical
+        compliance: hipaa
+        category: availability
+      annotations:
+        summary: "Pod crash looping"
+        description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is crash looping"
+
+  - name: hipaa.resource_usage
+    interval: 30s
+    rules:
+    # High CPU usage
+    - alert: HighCPUUsage
+      expr: |
+        (sum(rate(container_cpu_usage_seconds_total[5m])) by (namespace, pod) / sum(container_spec_cpu_quota/container_spec_cpu_period) by (namespace, pod)) > 0.9
+      for: 10m
+      labels:
+        severity: warning
+        compliance: hipaa
+        category: resource_usage
+      annotations:
+        summary: "High CPU usage detected"
+        description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} CPU usage is {{ $value | humanizePercentage }}"
+
+    # High memory usage
+    - alert: HighMemoryUsage
+      expr: |
+        (sum(container_memory_working_set_bytes) by (namespace, pod) / sum(container_spec_memory_limit_bytes) by (namespace, pod)) > 0.9
+      for: 10m
+      labels:
+        severity: warning
+        compliance: hipaa
+        category: resource_usage
+      annotations:
+        summary: "High memory usage detected"
+        description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} memory usage is {{ $value | humanizePercentage }}"
+
+    # Database connection pool exhaustion
+    - alert: DatabaseConnectionPoolExhausted
+      expr: |
+        pg_stat_database_numbackends / pg_settings_max_connections > 0.8
+      for: 5m
+      labels:
+        severity: warning
+        compliance: hipaa
+        category: resource_usage
+      annotations:
+        summary: "Database connection pool near exhaustion"
+        description: "PostgreSQL is using {{ $value | humanizePercentage }} of available connections"

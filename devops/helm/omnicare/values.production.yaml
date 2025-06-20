@@ -1,0 +1,220 @@
+# Production-specific values for omnicare-emr
+# Override these values for production deployment
+
+global:
+  environment: production
+  domain: omnicare-health.com  # Replace with actual production domain
+  imageRegistry: "123456789012.dkr.ecr.us-east-1.amazonaws.com"  # Replace with actual ECR registry
+  imagePullSecrets:
+    - name: ecr-registry-secret
+
+# Backend Production Settings
+backend:
+  replicaCount: 5
+  image:
+    tag: "v1.0.0"  # Use specific version tags in production
+  
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: "2000m"
+  
+  autoscaling:
+    minReplicas: 5
+    maxReplicas: 20
+  
+  env:
+    CORS_ORIGIN: https://omnicare-health.com
+    RATE_LIMIT_MAX_REQUESTS: "50"  # More restrictive in production
+  
+  secrets:
+    JWT_SECRET: "vault:secret/data/omnicare/backend#JWT_SECRET"  # Use Vault or Secrets Manager
+    MEDPLUM_CLIENT_ID: "vault:secret/data/omnicare/backend#MEDPLUM_CLIENT_ID"
+    MEDPLUM_CLIENT_SECRET: "vault:secret/data/omnicare/backend#MEDPLUM_CLIENT_SECRET"
+
+# Frontend Production Settings
+frontend:
+  replicaCount: 5
+  image:
+    tag: "v1.0.0"
+  
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+  
+  autoscaling:
+    minReplicas: 5
+    maxReplicas: 25
+  
+  env:
+    NEXT_PUBLIC_API_URL: https://api.omnicare-health.com
+
+# PostgreSQL Production Settings
+postgresql:
+  auth:
+    postgresPassword: "vault:secret/data/omnicare/database#POSTGRES_PASSWORD"
+    password: "vault:secret/data/omnicare/database#USER_PASSWORD"
+  
+  primary:
+    persistence:
+      size: 500Gi
+    
+    resources:
+      requests:
+        memory: "4Gi"
+        cpu: "2000m"
+      limits:
+        memory: "8Gi"
+        cpu: "4000m"
+  
+  replication:
+    enabled: true
+    readReplicas: 2
+  
+  backup:
+    cronjob:
+      schedule: "0 1,13 * * *"  # Twice daily
+    storage:
+      size: 1000Gi
+
+# Redis Production Settings
+redis:
+  architecture: replication
+  auth:
+    password: "vault:secret/data/omnicare/redis#PASSWORD"
+  
+  master:
+    persistence:
+      size: 50Gi
+    
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+  
+  replica:
+    replicaCount: 2
+    persistence:
+      enabled: true
+      size: 50Gi
+    
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+
+# Ingress Production Settings
+ingress:
+  annotations:
+    nginx.ingress.kubernetes.io/rate-limit: "50"  # More restrictive
+    nginx.ingress.kubernetes.io/whitelist-source-range: ""  # Add IP whitelist if needed
+    nginx.ingress.kubernetes.io/ssl-ciphers: "ECDHE-ECDSA-AES128-GCM-SHA256,ECDHE-RSA-AES128-GCM-SHA256,ECDHE-ECDSA-AES256-GCM-SHA384,ECDHE-RSA-AES256-GCM-SHA384"
+  
+  hosts:
+    - host: omnicare-health.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+    - host: api.omnicare-health.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: backend
+    - host: www.omnicare-health.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+  
+  tls:
+    - secretName: omnicare-prod-tls
+      hosts:
+        - omnicare-health.com
+        - api.omnicare-health.com
+        - www.omnicare-health.com
+
+# Monitoring Production Settings
+prometheus:
+  server:
+    retention: "90d"  # 3 months retention
+    persistentVolume:
+      size: 500Gi
+    
+    resources:
+      requests:
+        memory: "4Gi"
+        cpu: "2000m"
+      limits:
+        memory: "8Gi"
+        cpu: "4000m"
+
+grafana:
+  adminPassword: "vault:secret/data/omnicare/grafana#ADMIN_PASSWORD"
+  
+  persistence:
+    size: 50Gi
+  
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+
+# Elasticsearch Production Settings
+elasticsearch:
+  replicas: 5
+  minimumMasterNodes: 3
+  
+  resources:
+    requests:
+      cpu: "2000m"
+      memory: "8Gi"
+    limits:
+      cpu: "4000m"
+      memory: "16Gi"
+  
+  volumeClaimTemplate:
+    resources:
+      requests:
+        storage: 500Gi
+
+# HIPAA Compliance Production Settings
+hipaaCompliance:
+  auditLogging:
+    retentionDays: 2555  # 7 years as required
+  accessControl:
+    mfa: true  # Enable MFA in production
+  dataBackup:
+    frequency: hourly  # More frequent backups
+    retention: 90  # 3 months
+
+# Production Backup Settings
+backup:
+  schedule: "0 */6 * * *"  # Every 6 hours
+  retention: 90  # 3 months
+  storageLocation: s3://omnicare-prod-backups
+  snapshotLocation: s3://omnicare-prod-snapshots
+
+# Cost Optimization - Production
+costOptimization:
+  spotInstances:
+    enabled: true
+    percentage: 20  # Lower percentage for production stability
+  scheduledScaling:
+    enabled: false  # Disabled for production

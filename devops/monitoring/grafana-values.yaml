@@ -1,0 +1,231 @@
+# Grafana Values for OmniCare EMR
+# HIPAA-compliant configuration
+
+# Admin credentials
+adminUser: admin
+# adminPassword: set via --set flag
+
+# Persistence
+persistence:
+  enabled: true
+  type: pvc
+  storageClassName: fast-ssd
+  accessModes:
+    - ReadWriteOnce
+  size: 10Gi
+
+# Resources
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 500m
+    memory: 1Gi
+
+# Security
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 472
+  runAsGroup: 472
+  fsGroup: 472
+
+# Service
+service:
+  type: ClusterIP
+  port: 80
+
+# Ingress
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  hosts:
+    - monitoring.omnicare.example.com
+  path: /grafana
+  tls:
+    - secretName: grafana-tls
+      hosts:
+        - monitoring.omnicare.example.com
+
+# Data sources
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        url: http://kube-prometheus-stack-prometheus:9090
+        access: proxy
+        isDefault: true
+        jsonData:
+          timeInterval: 30s
+      - name: Elasticsearch
+        type: elasticsearch
+        url: http://elasticsearch-master:9200
+        access: proxy
+        jsonData:
+          timeField: "@timestamp"
+          esVersion: "8.0.0"
+          interval: Daily
+          logMessageField: message
+          logLevelField: level
+      - name: CloudWatch
+        type: cloudwatch
+        jsonData:
+          authType: default
+          defaultRegion: us-east-1
+
+# Dashboard providers
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/default
+      - name: 'kubernetes'
+        orgId: 1
+        folder: 'Kubernetes'
+        type: file
+        disableDeletion: true
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/kubernetes
+      - name: 'omnicare'
+        orgId: 1
+        folder: 'OmniCare'
+        type: file
+        disableDeletion: true
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/omnicare
+
+# Pre-installed dashboards
+dashboards:
+  default:
+    node-exporter:
+      gnetId: 1860
+      revision: 27
+      datasource: Prometheus
+    kubernetes-cluster:
+      gnetId: 7249
+      revision: 1
+      datasource: Prometheus
+    postgres-database:
+      gnetId: 9628
+      revision: 7
+      datasource: Prometheus
+    redis-dashboard:
+      gnetId: 11835
+      revision: 1
+      datasource: Prometheus
+    nginx-ingress:
+      gnetId: 9614
+      revision: 1
+      datasource: Prometheus
+
+# Grafana configuration
+grafana.ini:
+  server:
+    root_url: https://monitoring.omnicare.example.com/grafana
+    serve_from_sub_path: true
+  
+  # Security
+  security:
+    admin_user: admin
+    disable_gravatar: true
+    cookie_secure: true
+    cookie_samesite: strict
+    strict_transport_security: true
+    strict_transport_security_max_age_seconds: 31536000
+    strict_transport_security_preload: true
+    strict_transport_security_subdomains: true
+    content_security_policy: true
+  
+  # Auth
+  auth:
+    disable_login_form: false
+    disable_signout_menu: false
+  
+  auth.anonymous:
+    enabled: false
+  
+  # Users
+  users:
+    allow_sign_up: false
+    allow_org_create: false
+    auto_assign_org: true
+    auto_assign_org_role: Viewer
+  
+  # Logging
+  log:
+    mode: console
+    level: info
+  
+  # Alerting
+  alerting:
+    enabled: true
+    execute_alerts: true
+  
+  # SMTP Configuration (for alerts)
+  smtp:
+    enabled: true
+    host: smtp.gmail.com:587
+    user: alerts@omnicare.example.com
+    password: $__env{SMTP_PASSWORD}
+    from_address: alerts@omnicare.example.com
+    from_name: OmniCare Monitoring
+  
+  # Database (using persistent volume)
+  database:
+    type: sqlite3
+    path: /var/lib/grafana/grafana.db
+  
+  # Session
+  session:
+    provider: file
+    provider_config: sessions
+  
+  # Analytics
+  analytics:
+    reporting_enabled: false
+    check_for_updates: false
+
+# Environment variables
+env:
+  GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource,grafana-piechart-panel
+
+# Additional volumes for dashboards
+extraVolumes:
+  - name: omnicare-dashboards
+    configMap:
+      name: omnicare-dashboards
+
+extraVolumeMounts:
+  - name: omnicare-dashboards
+    mountPath: /var/lib/grafana/dashboards/omnicare
+    readOnly: true
+
+# Service account
+serviceAccount:
+  create: true
+  name: grafana
+
+# RBAC
+rbac:
+  create: true
+  pspEnabled: false
+
+# Labels
+labels:
+  app: grafana
+  compliance: hipaa

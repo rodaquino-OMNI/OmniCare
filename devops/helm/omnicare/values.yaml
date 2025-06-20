@@ -1,0 +1,354 @@
+# Default values for omnicare-emr.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Global settings
+global:
+  environment: production
+  domain: omnicare.example.com
+  compliance: hipaa
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: "fast-ssd"
+
+# Backend API Configuration
+backend:
+  enabled: true
+  replicaCount: 3
+  image:
+    repository: omnicare/backend
+    tag: latest
+    pullPolicy: Always
+  
+  service:
+    type: ClusterIP
+    port: 3001
+  
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  env:
+    NODE_ENV: production
+    PORT: "3001"
+    LOG_LEVEL: info
+    CORS_ORIGIN: https://omnicare.example.com
+    RATE_LIMIT_WINDOW_MS: "900000"
+    RATE_LIMIT_MAX_REQUESTS: "100"
+  
+  secrets:
+    JWT_SECRET: ""
+    MEDPLUM_CLIENT_ID: ""
+    MEDPLUM_CLIENT_SECRET: ""
+
+# Frontend Configuration
+frontend:
+  enabled: true
+  replicaCount: 3
+  image:
+    repository: omnicare/frontend
+    tag: latest
+    pullPolicy: Always
+  
+  service:
+    type: ClusterIP
+    port: 3000
+  
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 15
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  env:
+    NODE_ENV: production
+    PORT: "3000"
+    HOSTNAME: "0.0.0.0"
+    NEXT_TELEMETRY_DISABLED: "1"
+    NEXT_PUBLIC_API_URL: https://api.omnicare.example.com
+    NEXT_PUBLIC_MEDPLUM_BASE_URL: https://api.medplum.com
+    NEXT_PUBLIC_APP_NAME: "OmniCare EMR"
+    NEXT_PUBLIC_APP_VERSION: "1.0.0"
+
+# PostgreSQL Configuration
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: "change-in-production"
+    username: omnicare_user
+    password: "change-in-production"
+    database: omnicare_emr
+  
+  primary:
+    persistence:
+      enabled: true
+      size: 100Gi
+      storageClass: fast-ssd
+    
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+  
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+  
+  backup:
+    enabled: true
+    cronjob:
+      schedule: "0 2 * * *"
+      storage:
+        size: 200Gi
+        storageClass: standard
+
+# Redis Configuration
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: true
+    password: "change-in-production"
+  
+  master:
+    persistence:
+      enabled: true
+      size: 10Gi
+      storageClass: fast-ssd
+    
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+  
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+# Ingress Configuration
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/ssl-protocols: "TLSv1.2 TLSv1.3"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/enable-compression: "true"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+  
+  hosts:
+    - host: omnicare.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+    - host: api.omnicare.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: backend
+    - host: www.omnicare.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+  
+  tls:
+    - secretName: omnicare-tls
+      hosts:
+        - omnicare.example.com
+        - api.omnicare.example.com
+        - www.omnicare.example.com
+
+# Security settings
+security:
+  podSecurityPolicy:
+    enabled: true
+  networkPolicy:
+    enabled: true
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1001
+    runAsGroup: 1001
+    fsGroup: 1001
+
+# Monitoring Configuration
+prometheus:
+  enabled: true
+  alertmanager:
+    enabled: true
+    config:
+      global:
+        resolve_timeout: 5m
+      route:
+        group_by: ['alertname', 'cluster', 'service']
+        group_wait: 10s
+        group_interval: 10s
+        repeat_interval: 12h
+        receiver: 'default'
+      receivers:
+        - name: 'default'
+          webhook_configs:
+            - url: 'http://alertmanager-webhook:5001/webhook'
+  
+  server:
+    retention: "30d"
+    persistentVolume:
+      enabled: true
+      size: 100Gi
+      storageClass: fast-ssd
+    
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+
+grafana:
+  enabled: true
+  adminUser: admin
+  adminPassword: "change-in-production"
+  
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: fast-ssd
+  
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          url: http://prometheus-server
+          access: proxy
+          isDefault: true
+  
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: 'default'
+          orgId: 1
+          folder: ''
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/default
+
+# Elasticsearch for logging
+elasticsearch:
+  enabled: true
+  replicas: 3
+  minimumMasterNodes: 2
+  
+  resources:
+    requests:
+      cpu: "1000m"
+      memory: "2Gi"
+    limits:
+      cpu: "2000m"
+      memory: "4Gi"
+  
+  volumeClaimTemplate:
+    accessModes: ["ReadWriteOnce"]
+    resources:
+      requests:
+        storage: 100Gi
+    storageClassName: fast-ssd
+  
+  esConfig:
+    elasticsearch.yml: |
+      cluster.name: "omnicare-logs"
+      network.host: 0.0.0.0
+      xpack.security.enabled: true
+      xpack.security.transport.ssl.enabled: true
+      xpack.security.transport.ssl.verification_mode: certificate
+      xpack.security.transport.ssl.keystore.path: /usr/share/elasticsearch/config/certs/elastic-certificates.p12
+      xpack.security.transport.ssl.truststore.path: /usr/share/elasticsearch/config/certs/elastic-certificates.p12
+
+kibana:
+  enabled: true
+  elasticsearchHosts: "http://elasticsearch:9200"
+  
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
+
+# HIPAA Compliance Settings
+hipaaCompliance:
+  enabled: true
+  auditLogging:
+    enabled: true
+    retentionDays: 2555  # 7 years
+  encryption:
+    atRest: true
+    inTransit: true
+  accessControl:
+    rbac: true
+    mfa: false  # Enable in production with proper MFA provider
+  dataBackup:
+    enabled: true
+    frequency: daily
+    retention: 35
+
+# Backup Configuration
+backup:
+  enabled: true
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  retention: 35  # days
+  storageLocation: s3://omnicare-backups
+
+# Cost Optimization
+costOptimization:
+  spotInstances:
+    enabled: true
+    percentage: 30
+  scheduledScaling:
+    enabled: false  # Enable for non-production
+    scaleDown:
+      schedule: "0 20 * * 1-5"  # 8 PM weekdays
+      replicas: 1
+    scaleUp:
+      schedule: "0 8 * * 1-5"  # 8 AM weekdays
+      replicas: 3
