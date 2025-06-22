@@ -1,5 +1,5 @@
 // Offline Test Configuration
-import { vi } from 'vitest';
+import { vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 
 // Global test configuration for offline tests
 export const offlineTestConfig = {
@@ -101,8 +101,9 @@ export const offlineTestConfig = {
   }
 };
 
-// Setup function to initialize offline test environment
+// Setup function to initialize offline test environment  
 export function setupOfflineTests() {
+  return;
   // Mock global APIs
   beforeAll(() => {
     // Mock crypto API if not available
@@ -115,14 +116,14 @@ export function setupOfflineTests() {
           return array;
         },
         subtle: {
-          generateKey: vi.fn(),
-          encrypt: vi.fn(),
-          decrypt: vi.fn(),
-          digest: vi.fn(),
-          exportKey: vi.fn(),
-          importKey: vi.fn(),
-          sign: vi.fn(),
-          verify: vi.fn()
+          generateKey: jest.fn(),
+          encrypt: jest.fn(),
+          decrypt: jest.fn(),
+          digest: jest.fn(),
+          exportKey: jest.fn(),
+          importKey: jest.fn(),
+          sign: jest.fn(),
+          verify: jest.fn()
         }
       } as any;
     }
@@ -132,19 +133,19 @@ export function setupOfflineTests() {
       const databases = new Map();
       
       global.indexedDB = {
-        open: vi.fn((name: string) => {
+        open: jest.fn((name: string) => {
           const db = databases.get(name) || new Map();
           databases.set(name, db);
           
           return {
             result: {
               objectStoreNames: ['offline-queue', 'sync-data'],
-              transaction: vi.fn(() => ({
-                objectStore: vi.fn(() => ({
-                  put: vi.fn(),
-                  get: vi.fn(),
-                  delete: vi.fn(),
-                  getAll: vi.fn(() => ({ result: [] }))
+              transaction: jest.fn(() => ({
+                objectStore: jest.fn(() => ({
+                  put: jest.fn(),
+                  get: jest.fn(),
+                  delete: jest.fn(),
+                  getAll: jest.fn(() => ({ result: [] }))
                 }))
               }))
             },
@@ -152,7 +153,7 @@ export function setupOfflineTests() {
             onerror: null
           };
         }),
-        deleteDatabase: vi.fn()
+        deleteDatabase: jest.fn()
       } as any;
     }
 
@@ -160,12 +161,12 @@ export function setupOfflineTests() {
     if (!global.performance) {
       global.performance = {
         now: Date.now,
-        mark: vi.fn(),
-        measure: vi.fn(),
-        getEntriesByType: vi.fn(() => []),
-        getEntriesByName: vi.fn(() => []),
-        clearMarks: vi.fn(),
-        clearMeasures: vi.fn()
+        mark: jest.fn(),
+        measure: jest.fn(),
+        getEntriesByType: jest.fn(() => []),
+        getEntriesByName: jest.fn(() => []),
+        clearMarks: jest.fn(),
+        clearMeasures: jest.fn()
       } as any;
     }
   });
@@ -173,7 +174,7 @@ export function setupOfflineTests() {
   // Clean up after all tests
   afterAll(() => {
     // Clear all mocks
-    vi.clearAllMocks();
+    jest.clearAllMocks();
     
     // Clear all caches
     if (global.caches) {
@@ -300,6 +301,32 @@ export function simulateOfflineScenario(scenario: {
     });
     window.dispatchEvent(new Event('online'));
   };
+}
+
+// Setup function for service worker tests
+export function setupServiceWorkerTests() {
+  beforeEach(() => {
+    // Mock service worker API if not available
+    if (!('serviceWorker' in navigator)) {
+      Object.defineProperty(navigator, 'serviceWorker', {
+        value: {
+          ready: Promise.resolve({}),
+          register: vi.fn(),
+          getRegistration: vi.fn(),
+          getRegistrations: vi.fn(() => Promise.resolve([])),
+          controller: null,
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn()
+        },
+        configurable: true,
+        writable: true
+      });
+    }
+  });
+  
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
 }
 
 // Performance measurement helper

@@ -739,6 +739,287 @@ export interface CriticalValueRange {
 }
 
 /**
+ * Lab Test Category
+ */
+export enum LabTestCategory {
+  HEMATOLOGY = 'hematology',
+  CHEMISTRY = 'chemistry',
+  MICROBIOLOGY = 'microbiology',
+  IMMUNOLOGY = 'immunology',
+  PATHOLOGY = 'pathology',
+  MOLECULAR = 'molecular',
+  GENETICS = 'genetics',
+  TOXICOLOGY = 'toxicology',
+  URINALYSIS = 'urinalysis',
+  COAGULATION = 'coagulation',
+  ENDOCRINOLOGY = 'endocrinology',
+  SEROLOGY = 'serology',
+  CYTOLOGY = 'cytology',
+  BLOOD_BANK = 'blood-bank',
+  OTHER = 'other'
+}
+
+/**
+ * Result Flag
+ */
+export enum ResultFlag {
+  ABNORMAL = 'abnormal',
+  CRITICAL = 'critical',
+  HIGH = 'high',
+  LOW = 'low',
+  PANIC = 'panic',
+  DELTA_CHECK = 'delta-check',
+  OUTSIDE_REFERENCE_RANGE = 'outside-reference-range',
+  PENDING = 'pending',
+  CORRECTED = 'corrected',
+  AMENDED = 'amended',
+  CANCELLED = 'cancelled'
+}
+
+/**
+ * Result Interpretation
+ */
+export interface ResultInterpretation {
+  id: string;
+  resultId: string;
+  interpretationCode: InterpretationCode;
+  interpretationText: string;
+  interpretedBy: ProviderReference;
+  interpretedDateTime: Date;
+  clinicalSignificance?: string;
+  recommendations?: string[];
+  flags?: ResultFlag[];
+  comments?: string;
+  validated: boolean;
+  validatedBy?: ProviderReference;
+  validatedDateTime?: Date;
+}
+
+/**
+ * Specimen Type
+ */
+export interface SpecimenType {
+  id: string;
+  code: string;
+  display: string;
+  category: 'blood' | 'urine' | 'tissue' | 'fluid' | 'swab' | 'other';
+  collection: {
+    method: CollectionMethod[];
+    containerType: ContainerType[];
+    volume?: Quantity;
+    additives?: string[];
+  };
+  handling: {
+    temperature: 'room' | 'refrigerated' | 'frozen' | 'ultra-frozen';
+    transportTime?: Duration;
+    storageTime?: Duration;
+    specialInstructions?: string;
+  };
+  processing: {
+    centrifugation?: boolean;
+    aliquoting?: boolean;
+    preservatives?: string[];
+  };
+  suitableFor: LabTestCategory[];
+  active: boolean;
+}
+
+/**
+ * Lab Interface
+ */
+export interface LabInterface {
+  id: string;
+  name: string;
+  type: 'inbound' | 'outbound' | 'bidirectional';
+  protocol: 'HL7v2' | 'HL7v3' | 'FHIR' | 'ASTM' | 'LIS2A2' | 'Custom';
+  version: string;
+  endpoint: {
+    type: 'TCP/IP' | 'FILE' | 'HTTP' | 'HTTPS' | 'FTP' | 'SFTP' | 'MLLP';
+    host?: string;
+    port?: number;
+    path?: string;
+    directory?: string;
+  };
+  authentication?: {
+    type: 'none' | 'basic' | 'oauth2' | 'api-key' | 'certificate';
+    credentials?: Record<string, string>;
+  };
+  messageTypes: string[];
+  encoding: 'UTF-8' | 'ASCII' | 'ISO-8859-1';
+  acknowledgmentMode: 'auto' | 'manual' | 'none';
+  retryPolicy: {
+    maxAttempts: number;
+    retryInterval: number;
+    backoffMultiplier?: number;
+  };
+  errorHandling: {
+    onError: 'reject' | 'queue' | 'ignore';
+    errorQueue?: string;
+  };
+  active: boolean;
+  lastConnection?: Date;
+  statistics?: {
+    messagesReceived: number;
+    messagesSent: number;
+    errors: number;
+    lastError?: string;
+  };
+}
+
+/**
+ * Lab Routing
+ */
+export interface LabRouting {
+  id: string;
+  name: string;
+  description?: string;
+  sourceInterface: string;
+  destinationInterfaces: string[];
+  routingRules: RoutingRule[];
+  transformations?: TransformationRule[];
+  priority: number;
+  active: boolean;
+}
+
+/**
+ * Routing Rule
+ */
+export interface RoutingRule {
+  id: string;
+  field: string;
+  operator: 'equals' | 'contains' | 'startsWith' | 'endsWith' | 'regex' | 'in' | 'notIn';
+  value: string | string[];
+  destination?: string;
+  action: 'route' | 'copy' | 'filter' | 'transform';
+}
+
+/**
+ * Transformation Rule
+ */
+export interface TransformationRule {
+  id: string;
+  type: 'field-mapping' | 'value-mapping' | 'format' | 'custom';
+  source: string;
+  target: string;
+  mapping?: Record<string, string>;
+  format?: string;
+  script?: string;
+}
+
+/**
+ * Result Delivery
+ */
+export interface ResultDelivery {
+  id: string;
+  resultId: string;
+  deliveryMethod: 'interface' | 'fax' | 'email' | 'portal' | 'print' | 'sms';
+  recipient: {
+    type: 'provider' | 'patient' | 'facility' | 'payer';
+    id: string;
+    name: string;
+    contactInfo: {
+      fax?: string;
+      email?: string;
+      phone?: string;
+      address?: Address;
+    };
+  };
+  deliveryStatus: 'pending' | 'in-progress' | 'delivered' | 'failed' | 'cancelled';
+  priority: PriorityCode;
+  scheduledTime?: Date;
+  attemptedTime?: Date;
+  deliveredTime?: Date;
+  attempts: number;
+  errorMessage?: string;
+  confirmation?: {
+    method: 'auto' | 'manual' | 'signature';
+    confirmedBy?: string;
+    confirmedTime?: Date;
+    confirmationId?: string;
+  };
+  attachments?: Attachment[];
+}
+
+/**
+ * Lab Accession
+ */
+export interface LabAccession {
+  id: string;
+  accessionNumber: string;
+  accessionDateTime: Date;
+  accessionedBy: string;
+  location: string;
+  orderId: string;
+  specimens: SpecimenAccession[];
+  priority: PriorityCode;
+  clinicalInfo?: string;
+  diagnosis?: CodeableConcept[];
+  comments?: string;
+  workflow: {
+    currentStep: string;
+    completedSteps: WorkflowStep[];
+    pendingSteps: WorkflowStep[];
+  };
+  billing?: {
+    insuranceVerified: boolean;
+    authorizationNumber?: string;
+    estimatedCost?: number;
+  };
+  compliance: {
+    consentObtained: boolean;
+    abn?: boolean; // Advance Beneficiary Notice
+    specialHandling?: string[];
+  };
+}
+
+/**
+ * Specimen Accession
+ */
+export interface SpecimenAccession {
+  specimenId: string;
+  containerBarcode: string;
+  specimenType: string;
+  volume?: Quantity;
+  condition: 'satisfactory' | 'unsatisfactory' | 'quantity-not-sufficient';
+  comments?: string;
+}
+
+/**
+ * Workflow Step
+ */
+export interface WorkflowStep {
+  name: string;
+  status: 'pending' | 'in-progress' | 'completed' | 'skipped';
+  startTime?: Date;
+  endTime?: Date;
+  performer?: string;
+  location?: string;
+  notes?: string;
+}
+
+/**
+ * Lab Comment
+ */
+export interface LabComment {
+  id: string;
+  entityType: 'order' | 'specimen' | 'result' | 'panel' | 'report';
+  entityId: string;
+  commentType: 'general' | 'clinical' | 'technical' | 'billing' | 'quality';
+  text: string;
+  author: ProviderReference;
+  timestamp: Date;
+  visibility: 'internal' | 'provider' | 'patient' | 'all';
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
+  relatedComments?: string[];
+  attachments?: Attachment[];
+  acknowledged?: {
+    by: string;
+    timestamp: Date;
+  };
+  tags?: string[];
+}
+
+/**
  * Lab Workflow Step
  */
 export interface LabWorkflowStep {

@@ -121,6 +121,132 @@ export enum PlanType {
 }
 
 /**
+ * X12 Version
+ */
+export enum X12Version {
+  VERSION_4010 = '004010',
+  VERSION_5010 = '005010',
+  VERSION_5010_X12 = '005010X12',
+  VERSION_5010_X217 = '005010X217',
+  VERSION_5010_X218 = '005010X218',
+  VERSION_5010_X220 = '005010X220',
+  VERSION_5010_X221 = '005010X221',
+  VERSION_5010_X222 = '005010X222',
+  VERSION_5010_X223 = '005010X223',
+  VERSION_5010_X224 = '005010X224',
+  VERSION_5010_X279 = '005010X279',
+  VERSION_6020 = '006020',
+  VERSION_7030 = '007030'
+}
+
+/**
+ * Insurance Request Type
+ */
+export enum InsuranceRequestType {
+  ELIGIBILITY = 'eligibility',
+  BENEFITS = 'benefits',
+  CLAIM = 'claim',
+  PRIOR_AUTH = 'prior-authorization',
+  CLAIM_STATUS = 'claim-status',
+  REFERRAL = 'referral',
+  ENROLLMENT = 'enrollment',
+  PREMIUM_PAYMENT = 'premium-payment',
+  COORDINATION_OF_BENEFITS = 'coordination-of-benefits'
+}
+
+/**
+ * Claim Type
+ */
+export enum ClaimType {
+  PROFESSIONAL = 'professional',
+  INSTITUTIONAL = 'institutional',
+  DENTAL = 'dental',
+  PHARMACY = 'pharmacy',
+  VISION = 'vision',
+  DME = 'dme',
+  HOME_HEALTH = 'home-health',
+  HOSPICE = 'hospice',
+  AMBULANCE = 'ambulance',
+  OUTPATIENT = 'outpatient',
+  INPATIENT = 'inpatient'
+}
+
+/**
+ * Payer Type
+ */
+export enum PayerType {
+  COMMERCIAL = 'commercial',
+  MEDICARE = 'medicare',
+  MEDICAID = 'medicaid',
+  TRICARE = 'tricare',
+  CHAMPVA = 'champva',
+  WORKERS_COMP = 'workers-compensation',
+  AUTO_INSURANCE = 'auto-insurance',
+  SELF_PAY = 'self-pay',
+  OTHER_GOVERNMENT = 'other-government',
+  CHARITY = 'charity',
+  LIABILITY = 'liability'
+}
+
+/**
+ * Network Status
+ */
+export enum NetworkStatus {
+  IN_NETWORK = 'in-network',
+  OUT_OF_NETWORK = 'out-of-network',
+  TIER_1 = 'tier-1',
+  TIER_2 = 'tier-2',
+  TIER_3 = 'tier-3',
+  NOT_APPLICABLE = 'not-applicable',
+  UNKNOWN = 'unknown'
+}
+
+/**
+ * Place of Service
+ */
+export enum PlaceOfService {
+  OFFICE = '11',
+  HOME = '12',
+  ASSISTED_LIVING = '13',
+  GROUP_HOME = '14',
+  MOBILE_UNIT = '15',
+  TEMPORARY_LODGING = '16',
+  WALK_IN_RETAIL = '17',
+  PLACE_OF_EMPLOYMENT = '18',
+  OFF_CAMPUS_OUTPATIENT = '19',
+  URGENT_CARE = '20',
+  INPATIENT_HOSPITAL = '21',
+  OUTPATIENT_HOSPITAL = '22',
+  EMERGENCY_ROOM_HOSPITAL = '23',
+  AMBULATORY_SURGICAL_CENTER = '24',
+  BIRTHING_CENTER = '25',
+  MILITARY_TREATMENT_FACILITY = '26',
+  SKILLED_NURSING_FACILITY = '31',
+  NURSING_FACILITY = '32',
+  CUSTODIAL_CARE_FACILITY = '33',
+  HOSPICE = '34',
+  AMBULANCE_LAND = '41',
+  AMBULANCE_AIR_WATER = '42',
+  INDEPENDENT_CLINIC = '49',
+  FEDERALLY_QUALIFIED_HEALTH_CENTER = '50',
+  INPATIENT_PSYCHIATRIC_FACILITY = '51',
+  PSYCHIATRIC_FACILITY_PARTIAL_HOSPITALIZATION = '52',
+  COMMUNITY_MENTAL_HEALTH_CENTER = '53',
+  INTERMEDIATE_CARE_FACILITY = '54',
+  RESIDENTIAL_SUBSTANCE_ABUSE_TREATMENT = '55',
+  PSYCHIATRIC_RESIDENTIAL_TREATMENT_CENTER = '56',
+  NON_RESIDENTIAL_SUBSTANCE_ABUSE_TREATMENT = '57',
+  MASS_IMMUNIZATION_CENTER = '60',
+  COMPREHENSIVE_INPATIENT_REHABILITATION = '61',
+  COMPREHENSIVE_OUTPATIENT_REHABILITATION = '62',
+  END_STAGE_RENAL_DISEASE_TREATMENT = '65',
+  STATE_OR_LOCAL_PUBLIC_HEALTH_CLINIC = '71',
+  RURAL_HEALTH_CLINIC = '72',
+  INDEPENDENT_LABORATORY = '81',
+  OTHER = '99'
+}
+
+/**
  * Insurance Company/Payer
  */
 export interface Payer {
@@ -888,6 +1014,30 @@ export interface EDISegment {
 }
 
 /**
+ * X12 Segment (Alias for EDI Segment)
+ */
+export interface X12Segment extends EDISegment {
+  segmentName?: string;
+  segmentPosition?: number;
+  segmentUsage?: 'mandatory' | 'optional' | 'conditional';
+  maxUse?: number;
+  loopId?: string;
+}
+
+/**
+ * X12 Loop
+ */
+export interface X12Loop {
+  loopId: string;
+  loopName?: string;
+  loopRepeat?: number;
+  segments: X12Segment[];
+  childLoops?: X12Loop[];
+  parentLoopId?: string;
+  usage?: 'mandatory' | 'optional' | 'conditional';
+}
+
+/**
  * EDI Composite
  */
 export interface EDIComposite {
@@ -1177,6 +1327,312 @@ export interface StateComplianceStatus {
   compliant: boolean;
   requirements: string[];
   lastReview: Date;
+}
+
+/**
+ * Billing Provider
+ */
+export interface BillingProvider {
+  providerId: string;
+  npi: string;
+  taxId: string;
+  name: string;
+  type: 'individual' | 'organization';
+  taxonomy?: string;
+  address: Address;
+  phone: string;
+  contactPerson?: string;
+}
+
+/**
+ * Rendering Provider
+ */
+export interface RenderingProvider extends ProviderReference {
+  taxonomy?: string;
+  signature?: string;
+  signatureDate?: Date;
+  credentials?: string[];
+}
+
+/**
+ * Insurance Card Information
+ */
+export interface InsuranceCard {
+  memberId: string;
+  groupNumber?: string;
+  planName: string;
+  effectiveDate: Date;
+  expirationDate?: Date;
+  copays?: CardCopayInfo[];
+  deductible?: Money;
+  outOfPocketMax?: Money;
+  cardIssueDate?: Date;
+  rxBin?: string;
+  rxPcn?: string;
+  rxGroup?: string;
+}
+
+/**
+ * Card Copay Information
+ */
+export interface CardCopayInfo {
+  serviceType: string;
+  amount: Money;
+  afterDeductible?: boolean;
+}
+
+/**
+ * Coordination of Benefits
+ */
+export interface CoordinationOfBenefits {
+  sequence: number;
+  payerType: 'primary' | 'secondary' | 'tertiary';
+  payer: Payer;
+  coverageId: string;
+  coveragePeriod: Period;
+  relationshipToSubscriber: RelationshipCode;
+}
+
+/**
+ * Authorization Request Status
+ */
+export enum AuthorizationRequestStatus {
+  DRAFT = 'draft',
+  PENDING = 'pending',
+  UNDER_REVIEW = 'under-review',
+  APPROVED = 'approved',
+  PARTIAL_APPROVED = 'partial-approved',
+  DENIED = 'denied',
+  CANCELLED = 'cancelled',
+  EXPIRED = 'expired',
+  REVOKED = 'revoked'
+}
+
+/**
+ * Benefit Period Type
+ */
+export enum BenefitPeriodType {
+  CALENDAR_YEAR = 'calendar-year',
+  PLAN_YEAR = 'plan-year',
+  LIFETIME = 'lifetime',
+  EPISODE = 'episode',
+  ADMISSION = 'admission',
+  VISIT = 'visit'
+}
+
+/**
+ * Claim Attachment
+ */
+export interface ClaimAttachment {
+  attachmentId: string;
+  type: AttachmentType;
+  format: 'pdf' | 'image' | 'text' | 'x12' | 'hl7' | 'other';
+  description?: string;
+  data?: string; // Base64 encoded
+  url?: string;
+  size?: number;
+  pageCount?: number;
+  submittedDate: Date;
+}
+
+/**
+ * Attachment Type
+ */
+export enum AttachmentType {
+  REFERRAL = 'referral',
+  LAB_RESULTS = 'lab-results',
+  OPERATIVE_REPORT = 'operative-report',
+  DISCHARGE_SUMMARY = 'discharge-summary',
+  CONSULTATION = 'consultation',
+  DIAGNOSTIC_REPORT = 'diagnostic-report',
+  AMBULANCE_RUN_SHEET = 'ambulance-run-sheet',
+  PROOF_OF_DELIVERY = 'proof-of-delivery',
+  MEDICAL_RECORDS = 'medical-records',
+  OTHER = 'other'
+}
+
+/**
+ * Revenue Code
+ */
+export interface RevenueCode {
+  code: string;
+  description: string;
+  category?: string;
+}
+
+/**
+ * DRG (Diagnosis Related Group)
+ */
+export interface DRG {
+  code: string;
+  description: string;
+  weight?: number;
+  mdcCode?: string; // Major Diagnostic Category
+  type?: 'MS-DRG' | 'AP-DRG' | 'APR-DRG';
+}
+
+/**
+ * Modifier Code
+ */
+export interface ModifierCode {
+  code: string;
+  description: string;
+  type?: 'pricing' | 'payment' | 'informational';
+}
+
+/**
+ * Insurance Verification Result
+ */
+export interface InsuranceVerificationResult {
+  verificationId: string;
+  verificationDate: Date;
+  coverage: Coverage;
+  eligibilityDetails: EligibilityDetails;
+  benefitSummary: BenefitSummary;
+  authRequirements?: AuthorizationRequirement[];
+  verified: boolean;
+  verificationMethod: 'realtime' | 'batch' | 'phone' | 'portal';
+  nextVerificationDate?: Date;
+}
+
+/**
+ * Benefit Summary
+ */
+export interface BenefitSummary {
+  planName: string;
+  planType: PlanType;
+  coverageLevel: 'individual' | 'family';
+  inNetworkBenefits: NetworkBenefits;
+  outOfNetworkBenefits?: NetworkBenefits;
+  exclusions?: string[];
+  limitations?: string[];
+}
+
+/**
+ * Network Benefits
+ */
+export interface NetworkBenefits {
+  deductible: DeductibleInfo;
+  outOfPocketMax: OutOfPocketInfo;
+  coinsurance?: number;
+  copays: ServiceCopay[];
+}
+
+/**
+ * Deductible Information
+ */
+export interface DeductibleInfo {
+  individual: Money;
+  family?: Money;
+  met: Money;
+  remaining: Money;
+}
+
+/**
+ * Out of Pocket Information
+ */
+export interface OutOfPocketInfo {
+  individual: Money;
+  family?: Money;
+  met: Money;
+  remaining: Money;
+}
+
+/**
+ * Service Copay
+ */
+export interface ServiceCopay {
+  serviceType: string;
+  copayAmount: Money;
+  afterDeductible: boolean;
+}
+
+/**
+ * Authorization Requirement
+ */
+export interface AuthorizationRequirement {
+  serviceType: string;
+  requiresAuth: boolean;
+  authType: 'prior' | 'concurrent' | 'retrospective';
+  validityPeriod?: number; // days
+  documentationRequired?: string[];
+}
+
+/**
+ * Payment Posting
+ */
+export interface PaymentPosting {
+  postingId: string;
+  postingDate: Date;
+  paymentMethod: 'check' | 'eft' | 'credit-card' | 'cash' | 'other';
+  paymentAmount: Money;
+  appliedAmount: Money;
+  unappliedAmount: Money;
+  postedBy: string;
+  claims: PaymentClaimDetail[];
+  batchNumber?: string;
+  depositDate?: Date;
+}
+
+/**
+ * Payment Claim Detail
+ */
+export interface PaymentClaimDetail {
+  claimId: string;
+  patientName: string;
+  serviceDate: Date;
+  billedAmount: Money;
+  allowedAmount: Money;
+  paidAmount: Money;
+  adjustmentAmount: Money;
+  patientResponsibility: Money;
+  adjustmentCodes: AdjustmentCode[];
+}
+
+/**
+ * Adjustment Code
+ */
+export interface AdjustmentCode {
+  groupCode: string;
+  reasonCode: string;
+  amount: Money;
+  description?: string;
+}
+
+/**
+ * ERA (Electronic Remittance Advice) Processing Result
+ */
+export interface ERAProcessingResult {
+  processingId: string;
+  processingDate: Date;
+  fileName: string;
+  totalClaims: number;
+  successfulClaims: number;
+  failedClaims: number;
+  totalPaymentAmount: Money;
+  errors?: ERAProcessingError[];
+  remittanceAdvices: RemittanceAdvice[];
+}
+
+/**
+ * ERA Processing Error
+ */
+export interface ERAProcessingError {
+  claimNumber?: string;
+  errorCode: string;
+  errorDescription: string;
+  segment?: string;
+  element?: string;
+}
+
+/**
+ * Timely Filing Limit
+ */
+export interface TimelyFilingLimit {
+  payer: Payer;
+  limitDays: number;
+  limitType: 'from-service-date' | 'from-discharge-date' | 'from-statement-date';
+  exceptions?: string[];
 }
 
 /**

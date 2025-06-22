@@ -68,6 +68,83 @@ export enum DrugSchedule {
 }
 
 /**
+ * Prescription Type
+ */
+export enum PrescriptionType {
+  NEW = 'new',
+  REFILL = 'refill',
+  TRANSFER = 'transfer',
+  RENEWAL = 'renewal',
+  CHANGE = 'change',
+  CANCEL = 'cancel',
+  CONTINUATION = 'continuation',
+  EMERGENCY = 'emergency',
+  COMPOUNDED = 'compounded',
+  CONTROLLED = 'controlled'
+}
+
+/**
+ * Refill Status
+ */
+export enum RefillStatus {
+  AVAILABLE = 'available',
+  NOT_AVAILABLE = 'not-available',
+  TOO_SOON = 'too-soon',
+  PRIOR_AUTH_REQUIRED = 'prior-auth-required',
+  EXPIRED = 'expired',
+  TRANSFERRED = 'transferred',
+  ON_HOLD = 'on-hold',
+  PROCESSING = 'processing',
+  APPROVED = 'approved',
+  DENIED = 'denied'
+}
+
+/**
+ * Drug Database Type
+ */
+export enum DrugDatabaseType {
+  RXNORM = 'rxnorm',
+  NDC = 'ndc',
+  SNOMED = 'snomed',
+  GPI = 'gpi',
+  MEDI_SPAN = 'medi-span',
+  FIRST_DATABANK = 'first-databank',
+  GOLD_STANDARD = 'gold-standard',
+  CUSTOM = 'custom'
+}
+
+/**
+ * Formulary Status
+ */
+export enum FormularyStatus {
+  ON_FORMULARY = 'on-formulary',
+  OFF_FORMULARY = 'off-formulary',
+  RESTRICTED = 'restricted',
+  PREFERRED = 'preferred',
+  NON_PREFERRED = 'non-preferred',
+  SPECIALTY = 'specialty',
+  NOT_COVERED = 'not-covered',
+  PRIOR_AUTH_REQUIRED = 'prior-auth-required',
+  STEP_THERAPY_REQUIRED = 'step-therapy-required'
+}
+
+/**
+ * Pharmacy System Type
+ */
+export enum PharmacySystem {
+  RETAIL = 'retail',
+  MAIL_ORDER = 'mail-order',
+  SPECIALTY = 'specialty',
+  COMPOUNDING = 'compounding',
+  LONG_TERM_CARE = 'long-term-care',
+  HOSPITAL = 'hospital',
+  CLINIC = 'clinic',
+  INSTITUTIONAL = 'institutional',
+  NUCLEAR = 'nuclear',
+  GOVERNMENT = 'government'
+}
+
+/**
  * Core Pharmacy Information
  */
 export interface Pharmacy {
@@ -400,6 +477,20 @@ export interface NCPDPScriptMessage {
 }
 
 /**
+ * NCPDP Message (Base)
+ */
+export interface NCPDPMessage {
+  messageId: string;
+  timestamp: Date;
+  sender: NCPDPParty;
+  receiver: NCPDPParty;
+  testMode: boolean;
+  acknowledgmentRequested: boolean;
+  priority?: 'normal' | 'high' | 'urgent';
+  expirationTime?: Date;
+}
+
+/**
  * NCPDP Message Types
  */
 export enum NCPDPMessageType {
@@ -483,6 +574,304 @@ export interface NCPDPError {
   description: string;
   fieldPath?: string;
   suggestedAction?: string;
+}
+
+/**
+ * Pharmacy Integration Result
+ */
+export interface PharmacyIntegrationResult<T = any> extends IntegrationResult<T> {
+  ncpdpTransactionId?: string;
+  pharmacyId?: string;
+  prescriptionNumber?: string;
+  fillNumber?: number;
+  processingTime?: number;
+  validationErrors?: PharmacyValidationError[];
+}
+
+/**
+ * Pharmacy Validation Error
+ */
+export interface PharmacyValidationError {
+  field: string;
+  code: string;
+  message: string;
+  severity: 'error' | 'warning';
+  suggestion?: string;
+}
+
+/**
+ * Refill Request
+ */
+export interface RefillRequest {
+  requestId: string;
+  prescriptionId: string;
+  prescriptionNumber: string;
+  patient: PatientReference;
+  pharmacy: PharmacyReference;
+  requestDate: Date;
+  requestedRefillDate?: Date;
+  quantity?: Quantity;
+  daysSupply?: number;
+  urgency?: 'routine' | 'urgent' | 'emergency';
+  patientComments?: string;
+  preferredContactMethod?: 'phone' | 'email' | 'text' | 'app';
+  authorizationStatus?: RefillAuthorizationStatus;
+}
+
+/**
+ * Refill Authorization Status
+ */
+export interface RefillAuthorizationStatus {
+  authorized: boolean;
+  authorizationDate?: Date;
+  authorizedBy?: PrescriberReference;
+  denialReason?: string;
+  alternativeOffered?: boolean;
+}
+
+/**
+ * Refill Response
+ */
+export interface RefillResponse {
+  responseId: string;
+  requestId: string;
+  status: RefillStatus;
+  approvedQuantity?: Quantity;
+  approvedDaysSupply?: number;
+  readyDate?: Date;
+  expirationDate?: Date;
+  copayAmount?: Money;
+  insuranceCoverage?: InsuranceCoverageInfo;
+  alternativeMedication?: Medication;
+  pharmacistNote?: string;
+  nextRefillDate?: Date;
+  refillsRemaining?: number;
+}
+
+/**
+ * Insurance Coverage Info
+ */
+export interface InsuranceCoverageInfo {
+  covered: boolean;
+  copay?: Money;
+  deductibleApplied?: Money;
+  priorAuthRequired?: boolean;
+  daysSupplyLimit?: number;
+}
+
+/**
+ * Money Type
+ */
+export interface Money {
+  value: number;
+  currency: string;
+}
+
+/**
+ * Pharmacy Clinical Service
+ */
+export interface PharmacyClinicalService {
+  serviceType: PharmacyClinicalServiceType;
+  available: boolean;
+  appointmentRequired: boolean;
+  walkInAvailable: boolean;
+  certification?: string[];
+  languages?: string[];
+}
+
+/**
+ * Pharmacy Clinical Service Type
+ */
+export enum PharmacyClinicalServiceType {
+  IMMUNIZATION = 'immunization',
+  MTM = 'medication-therapy-management',
+  HEALTH_SCREENING = 'health-screening',
+  DISEASE_MANAGEMENT = 'disease-management',
+  SMOKING_CESSATION = 'smoking-cessation',
+  WEIGHT_MANAGEMENT = 'weight-management',
+  DIABETES_EDUCATION = 'diabetes-education',
+  TRAVEL_HEALTH = 'travel-health',
+  POINT_OF_CARE_TESTING = 'point-of-care-testing',
+  MEDICATION_SYNCHRONIZATION = 'medication-synchronization'
+}
+
+/**
+ * Drug Interaction Check Request
+ */
+export interface DrugInteractionCheckRequest {
+  patientId: string;
+  medications: Medication[];
+  includeOTC?: boolean;
+  includeHerbal?: boolean;
+  includeFoodInteractions?: boolean;
+  severity?: InteractionSeverity[];
+}
+
+/**
+ * Interaction Severity
+ */
+export enum InteractionSeverity {
+  CONTRAINDICATED = 'contraindicated',
+  SEVERE = 'severe',
+  MODERATE = 'moderate',
+  MINOR = 'minor',
+  UNKNOWN = 'unknown'
+}
+
+/**
+ * Drug Interaction Result
+ */
+export interface DrugInteractionResult {
+  interactions: DrugInteraction[];
+  checkedDate: Date;
+  databaseVersion: string;
+  totalInteractions: number;
+}
+
+/**
+ * Drug Interaction
+ */
+export interface DrugInteraction {
+  drug1: Medication;
+  drug2: Medication;
+  severity: InteractionSeverity;
+  description: string;
+  clinicalSignificance: string;
+  managementStrategy: string;
+  documentation: 'excellent' | 'good' | 'fair' | 'poor';
+  references?: string[];
+}
+
+/**
+ * Medication Adherence Data
+ */
+export interface MedicationAdherenceData {
+  patientId: string;
+  medication: Medication;
+  prescriptionId: string;
+  measurementPeriod: Period;
+  pdc?: number; // Proportion of Days Covered
+  mpr?: number; // Medication Possession Ratio
+  gaps?: AdherenceGap[];
+  refillTimeliness: RefillTimeliness;
+  persistenceRate?: number;
+}
+
+/**
+ * Period Type
+ */
+export interface Period {
+  start: Date;
+  end?: Date;
+}
+
+/**
+ * Adherence Gap
+ */
+export interface AdherenceGap {
+  startDate: Date;
+  endDate: Date;
+  daysWithoutMedication: number;
+  reason?: string;
+}
+
+/**
+ * Refill Timeliness
+ */
+export enum RefillTimeliness {
+  ON_TIME = 'on-time',
+  EARLY = 'early',
+  LATE = 'late',
+  VERY_LATE = 'very-late',
+  NOT_REFILLED = 'not-refilled'
+}
+
+/**
+ * Compound Prescription
+ */
+export interface CompoundPrescription extends Prescription {
+  compoundType: 'cream' | 'ointment' | 'solution' | 'suspension' | 'capsule' | 'other';
+  ingredients: CompoundIngredient[];
+  instructions: CompoundingInstructions;
+  beyondUseDate: Date;
+  specialRequirements?: string[];
+}
+
+/**
+ * Compound Ingredient
+ */
+export interface CompoundIngredient {
+  ingredient: Medication;
+  quantity: Quantity;
+  role: 'active' | 'base' | 'preservative' | 'flavoring' | 'other';
+  lotNumber?: string;
+  expirationDate?: Date;
+}
+
+/**
+ * Compounding Instructions
+ */
+export interface CompoundingInstructions {
+  method: string;
+  equipment?: string[];
+  qualityControl?: string[];
+  storageRequirements: string;
+  stabilityData?: string;
+}
+
+/**
+ * Pharmacy Inventory Item
+ */
+export interface PharmacyInventoryItem {
+  medication: Medication;
+  quantityOnHand: number;
+  quantityAllocated: number;
+  quantityAvailable: number;
+  reorderPoint: number;
+  reorderQuantity: number;
+  lotNumbers: LotInfo[];
+  lastUpdated: Date;
+  location?: string;
+}
+
+/**
+ * Lot Information
+ */
+export interface LotInfo {
+  lotNumber: string;
+  expirationDate: Date;
+  quantity: number;
+  manufacturer?: string;
+}
+
+/**
+ * Controlled Substance Report
+ */
+export interface ControlledSubstanceReport {
+  reportId: string;
+  reportingPeriod: Period;
+  pharmacy: PharmacyReference;
+  reportType: 'daily' | 'monthly' | 'quarterly' | 'annual' | 'on-demand';
+  substances: ControlledSubstanceEntry[];
+  submittedDate: Date;
+  submittedBy: string;
+  status: 'draft' | 'submitted' | 'accepted' | 'rejected';
+}
+
+/**
+ * Controlled Substance Entry
+ */
+export interface ControlledSubstanceEntry {
+  medication: Medication;
+  schedule: DrugSchedule;
+  beginningInventory: number;
+  received: number;
+  dispensed: number;
+  destroyed: number;
+  lost: number;
+  endingInventory: number;
+  discrepancy?: number;
+  explanation?: string;
 }
 
 /**
@@ -699,3 +1088,4 @@ export type {
   IntegrationMessage,
   PharmacyService as IPharmacyService
 };
+
