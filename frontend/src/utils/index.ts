@@ -1,6 +1,20 @@
-import { format, parseISO, isValid, differenceInYears, differenceInDays, addDays, subDays } from 'date-fns';
+import { format, parseISO, isValid, differenceInYears, differenceInDays } from 'date-fns';
 import { UserRole, Patient, VitalSigns } from '@/types';
 import { VALIDATION_PATTERNS, DATE_FORMATS } from '@/constants';
+import { getErrorMessage } from '@/utils/error.utils';
+
+// Formatting utilities
+export const formatBytes = (bytes: number, decimals = 2): string => {
+  if (bytes === 0) return '0 Bytes';
+
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+};
 
 // Date and time utilities
 export const formatDate = (date: string | Date, formatString: string = DATE_FORMATS.display): string => {
@@ -312,7 +326,7 @@ export const setStorageItem = (key: string, value: any): void => {
       localStorage.setItem(key, JSON.stringify(value));
     }
   } catch (error) {
-    console.error('Error setting localStorage item:', error);
+    console.error('Error setting localStorage item:', getErrorMessage(error));
   }
 };
 
@@ -324,7 +338,7 @@ export const getStorageItem = <T>(key: string, defaultValue: T): T => {
     }
     return defaultValue;
   } catch (error) {
-    console.error('Error getting localStorage item:', error);
+    console.error('Error getting localStorage item:', getErrorMessage(error));
     return defaultValue;
   }
 };
@@ -335,7 +349,7 @@ export const removeStorageItem = (key: string): void => {
       localStorage.removeItem(key);
     }
   } catch (error) {
-    console.error('Error removing localStorage item:', error);
+    console.error('Error removing localStorage item:', getErrorMessage(error));
   }
 };
 
@@ -384,21 +398,14 @@ export const deepClone = <T>(obj: T): T => {
 };
 
 // Error handling utilities
-export const getErrorMessage = (error: unknown): string => {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  if (typeof error === 'string') {
-    return error;
-  }
-  return 'An unknown error occurred';
-};
+export { getErrorMessage } from '@/utils/error.utils';
 
 export const isNetworkError = (error: unknown): boolean => {
-  return error instanceof Error && (
-    error.message.includes('fetch') ||
-    error.message.includes('network') ||
-    error.message.includes('Network')
+  const message = getErrorMessage(error);
+  return (
+    message.includes('fetch') ||
+    message.includes('network') ||
+    message.includes('Network')
   );
 };
 

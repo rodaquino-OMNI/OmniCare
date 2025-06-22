@@ -144,9 +144,9 @@ export const BloodPressure: Story = {
 // All Vital Signs
 export const AllVitalSigns: Story = {
   render: () => (
-    <Stack spacing="xl">
-      <Text size="xl" weight={700}>Patient Vital Signs Dashboard</Text>
-      <SimpleGrid cols={3} spacing="md" breakpoints={[
+    <Stack gap="xl">
+      <Text size="xl" fw={700}>Patient Vital Signs Dashboard</Text>
+      <SimpleGrid cols={3} gap="md" breakpoints={[
         { maxWidth: 'md', cols: 2 },
         { maxWidth: 'sm', cols: 1 },
       ]}>
@@ -164,9 +164,9 @@ export const AllVitalSigns: Story = {
 // Status Variations
 export const StatusVariations: Story = {
   render: () => (
-    <Stack spacing="md">
-      <Text size="lg" weight={600}>Status Variations</Text>
-      <SimpleGrid cols={2} spacing="md">
+    <Stack gap="md">
+      <Text size="lg" fw={600}>Status Variations</Text>
+      <SimpleGrid cols={2} gap="md">
         <VitalSignCard 
           data={{
             ...sampleVitals.heartRate,
@@ -208,9 +208,9 @@ export const StatusVariations: Story = {
 // Trend Indicators
 export const TrendIndicators: Story = {
   render: () => (
-    <Stack spacing="md">
-      <Text size="lg" weight={600}>Trend Indicators</Text>
-      <SimpleGrid cols={3} spacing="md">
+    <Stack gap="md">
+      <Text size="lg" fw={600}>Trend Indicators</Text>
+      <SimpleGrid cols={3} gap="md">
         <VitalSignCard 
           data={{
             ...sampleVitals.temperature,
@@ -243,9 +243,9 @@ export const TrendIndicators: Story = {
 // Compact Layout
 export const CompactLayout: Story = {
   render: () => (
-    <Stack spacing="md">
-      <Text size="lg" weight={600}>Compact Layout for Mobile/Sidebar</Text>
-      <SimpleGrid cols={2} spacing="sm">
+    <Stack gap="md">
+      <Text size="lg" fw={600}>Compact Layout for Mobile/Sidebar</Text>
+      <SimpleGrid cols={2} gap="sm">
         <VitalSignCard data={sampleVitals.bloodPressure} compact />
         <VitalSignCard data={sampleVitals.heartRate} compact />
         <VitalSignCard data={sampleVitals.temperature} compact />
@@ -258,12 +258,12 @@ export const CompactLayout: Story = {
 // Critical Values
 export const CriticalValues: Story = {
   render: () => (
-    <Stack spacing="md">
-      <Text size="lg" weight={600}>Critical Values Alert</Text>
+    <Stack gap="md">
+      <Text size="lg" fw={600}>Critical Values Alert</Text>
       <Text size="sm" color="dimmed">
         These vital signs require immediate attention and trigger clinical alerts.
       </Text>
-      <SimpleGrid cols={2} spacing="md">
+      <SimpleGrid cols={2} gap="md">
         <VitalSignCard 
           data={{
             type: 'temperature',
@@ -323,9 +323,9 @@ export const Interactive: Story = {
     };
 
     return (
-      <Stack spacing="md">
-        <Text size="lg" weight={600}>Interactive Vital Signs (Click to View Details)</Text>
-        <SimpleGrid cols={3} spacing="md">
+      <Stack gap="md">
+        <Text size="lg" fw={600}>Interactive Vital Signs (Click to View Details)</Text>
+        <SimpleGrid cols={3} gap="md">
           <VitalSignCard 
             data={sampleVitals.bloodPressure} 
             onClick={() => handleCardClick('Blood Pressure')}
@@ -352,8 +352,8 @@ export const MobileResponsive: Story = {
     },
   },
   render: () => (
-    <Stack spacing="sm">
-      <Text size="lg" weight={600}>Mobile View</Text>
+    <Stack gap="sm">
+      <Text size="lg" fw={600}>Mobile View</Text>
       <VitalSignCard data={sampleVitals.bloodPressure} compact />
       <VitalSignCard data={sampleVitals.heartRate} compact />
       <VitalSignCard data={sampleVitals.temperature} compact />

@@ -29,7 +29,7 @@ export class ClinicalGuidelinesService {
   private externalGuidelineService?: string;
 
   constructor(externalGuidelineService?: string) {
-    this.externalGuidelineService = externalGuidelineService;
+    this.externalGuidelineService = externalGuidelineService || '';
     this.guidelineRepository = {
       guidelines: new Map(),
       conditionGuidelines: new Map(),

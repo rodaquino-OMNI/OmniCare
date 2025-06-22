@@ -3,13 +3,14 @@
  * HIPAA-Compliant Password Management and Enforcement
  */
 
-import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { EventEmitter } from 'events';
 
+import bcrypt from 'bcrypt';
+
 import { PASSWORD_POLICY, AUTH_CONFIG } from '@/config/auth.config';
-import { PasswordPolicy, User, SecurityEvent } from '@/types/auth.types';
 import { AuditService } from '@/services/audit.service';
+import { User } from '@/types/auth.types';
 
 export interface PasswordValidation {
   isValid: boolean;
@@ -95,10 +96,10 @@ export class PasswordService extends EventEmitter {
       validation.score += 10;
     }
 
-    if (PASSWORD_POLICY.requireSpecialChars && !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    if (PASSWORD_POLICY.requireSpecialChars && !/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
       validation.errors.push('Password must contain at least one special character');
       validation.isValid = false;
-    } else if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    } else if (/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
       validation.score += 15;
     }
 
@@ -210,8 +211,13 @@ export class PasswordService extends EventEmitter {
       password += characterSet[crypto.randomInt(characterSet.length)];
     }
 
-    // Shuffle the password
-    return password.split('').sort(() => 0.5 - Math.random()).join('');
+    // Shuffle the password using cryptographically secure randomization
+    const passwordArray = password.split('');
+    for (let i = passwordArray.length - 1; i > 0; i--) {
+      const j = crypto.randomInt(0, i + 1);
+      [passwordArray[i], passwordArray[j]] = [passwordArray[j], passwordArray[i]];
+    }
+    return passwordArray.join('');
   }
 
   /**
@@ -293,7 +299,19 @@ export class PasswordService extends EventEmitter {
    * Validate password reset token
    */
   validatePasswordResetToken(token: string, storedToken: string, expires: Date): boolean {
-    return token === storedToken && new Date() < expires;
+    // Use timing-safe comparison to prevent timing attacks
+    const tokenBuffer = Buffer.from(token, 'hex');
+    const storedTokenBuffer = Buffer.from(storedToken, 'hex');
+    
+    // Ensure both tokens are the same length
+    if (tokenBuffer.length !== storedTokenBuffer.length) {
+      return false;
+    }
+    
+    const isTokenValid = crypto.timingSafeEqual(tokenBuffer, storedTokenBuffer);
+    const isNotExpired = new Date() < expires;
+    
+    return isTokenValid && isNotExpired;
   }
 
   /**
@@ -376,7 +394,7 @@ export class PasswordService extends EventEmitter {
     const hasLower = /[a-z]/.test(password);
     const hasUpper = /[A-Z]/.test(password);
     const hasNumbers = /\d/.test(password);
-    const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+    const hasSpecial = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password);
     
     complexity += (hasLower ? 1 : 0) + (hasUpper ? 1 : 0) + (hasNumbers ? 1 : 0) + (hasSpecial ? 1 : 0);
     complexity *= 5; // Up to 20 points for character diversity
@@ -418,7 +436,7 @@ export class PasswordService extends EventEmitter {
       suggestions.push('Add numbers');
     }
 
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
       suggestions.push('Add special characters');
     }
 

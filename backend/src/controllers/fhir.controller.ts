@@ -1,10 +1,13 @@
 import { Request, Response } from 'express';
-import { medplumService } from '@/services/medplum.service';
-import { fhirResourcesService } from '@/services/fhir-resources.service';
+
 import { cdsHooksService } from '@/services/cds-hooks.service';
+import { fhirResourcesService } from '@/services/fhir-resources.service';
+import { medplumService } from '@/services/medplum.service';
 import { subscriptionsService } from '@/services/subscriptions.service';
 import { FHIRSearchParams, CDSHookRequest, BundleRequest } from '@/types/fhir';
 import logger from '@/utils/logger';
+import { getErrorMessage, hasMessage } from '@/utils/error.utils';
+import { validateResourceType } from '@/utils/fhir-validation.utils';
 
 /**
  * FHIR API Controller
@@ -60,8 +63,10 @@ export class FHIRController {
         hasId: !!resource.id,
       });
 
+      const validatedResourceType = validateResourceType(resourceType);
+
       // Validate resource type
-      if (resource.resourceType !== resourceType) {
+      if (resource.resourceType !== validatedResourceType) {
         res.status(400).json({
           resourceType: 'OperationOutcome',
           issue: [{
@@ -82,8 +87,8 @@ export class FHIRController {
 
       // Notify subscriptions
       await subscriptionsService.processResourceChange(
-        resourceType,
-        createdResource.id!,
+        validatedResourceType,
+        createdResource.id ?? '',
         'create',
         createdResource
       );
@@ -117,13 +122,27 @@ export class FHIRController {
         userId: req.user?.id,
       });
 
-      const resource = await medplumService.readResource(resourceType, id);
+      // Validate parameters
+      if (!resourceType || !id) {
+        res.status(400).json({
+          resourceType: 'OperationOutcome',
+          issue: [{
+            severity: 'error',
+            code: 'required',
+            diagnostics: 'Resource type and ID are required',
+          }],
+        });
+        return;
+      }
+
+      const validatedResourceType = validateResourceType(resourceType);
+      const resource = await medplumService.readResource(validatedResourceType, id);
       
       res.json(resource);
-    } catch (error: any) {
+    } catch (error) {
       logger.error('Failed to read resource:', error);
       
-      if (error.message?.includes('not found') || error.status === 404) {
+      if ((hasMessage(error) && error.message.includes('not found')) || (error as any).status === 404) {
         res.status(404).json({
           resourceType: 'OperationOutcome',
           issue: [{
@@ -159,8 +178,23 @@ export class FHIRController {
         userId: req.user?.id,
       });
 
+      // Validate parameters
+      if (!resourceType || !id) {
+        res.status(400).json({
+          resourceType: 'OperationOutcome',
+          issue: [{
+            severity: 'error',
+            code: 'required',
+            diagnostics: 'Resource type and ID are required',
+          }],
+        });
+        return;
+      }
+
+      const validatedResourceType = validateResourceType(resourceType);
+
       // Validate resource type and ID
-      if (resource.resourceType !== resourceType) {
+      if (resource.resourceType !== validatedResourceType) {
         res.status(400).json({
           resourceType: 'OperationOutcome',
           issue: [{
@@ -191,17 +225,17 @@ export class FHIRController {
 
       // Notify subscriptions
       await subscriptionsService.processResourceChange(
-        resourceType,
+        validatedResourceType,
         id,
         'update',
         updatedResource
       );
 
       res.json(updatedResource);
-    } catch (error: any) {
+    } catch (error) {
       logger.error('Failed to update resource:', error);
       
-      if (error.message?.includes('not found') || error.status === 404) {
+      if ((hasMessage(error) && error.message.includes('not found')) || (error as any).status === 404) {
         res.status(404).json({
           resourceType: 'OperationOutcome',
           issue: [{
@@ -236,20 +270,34 @@ export class FHIRController {
         userId: req.user?.id,
       });
 
-      await medplumService.deleteResource(resourceType, id);
+      // Validate parameters
+      if (!resourceType || !id) {
+        res.status(400).json({
+          resourceType: 'OperationOutcome',
+          issue: [{
+            severity: 'error',
+            code: 'required',
+            diagnostics: 'Resource type and ID are required',
+          }],
+        });
+        return;
+      }
+
+      const validatedResourceType = validateResourceType(resourceType);
+      await medplumService.deleteResource(validatedResourceType, id);
 
       // Notify subscriptions
       await subscriptionsService.processResourceChange(
-        resourceType,
+        validatedResourceType,
         id,
         'delete'
       );
 
       res.status(204).send();
-    } catch (error: any) {
+    } catch (error) {
       logger.error('Failed to delete resource:', error);
       
-      if (error.message?.includes('not found') || error.status === 404) {
+      if ((hasMessage(error) && error.message.includes('not found')) || (error as any).status === 404) {
         res.status(404).json({
           resourceType: 'OperationOutcome',
           issue: [{
@@ -289,7 +337,21 @@ export class FHIRController {
         userId: req.user?.id,
       });
 
-      const searchResults = await medplumService.searchResources(resourceType, searchParams);
+      // Validate parameters
+      if (!resourceType) {
+        res.status(400).json({
+          resourceType: 'OperationOutcome',
+          issue: [{
+            severity: 'error',
+            code: 'required',
+            diagnostics: 'Resource type is required',
+          }],
+        });
+        return;
+      }
+
+      const validatedResourceType = validateResourceType(resourceType);
+      const searchResults = await medplumService.searchResources(validatedResourceType, searchParams);
       
       res.json(searchResults);
     } catch (error) {
@@ -385,7 +447,7 @@ export class FHIRController {
         userId: req.user?.id,
       });
 
-      const result = await fhirResourcesService.getPatientEverything(id);
+      const result = await fhirResourcesService.getPatientEverything(id ?? '');
       
       res.json(result);
     } catch (error) {

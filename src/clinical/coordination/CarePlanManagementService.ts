@@ -11,9 +11,14 @@ import {
   RequestGroup,
   Communication,
   DocumentReference,
-  Encounter
+  Encounter,
+  Reference,
+  Device,
+  Group,
+  Location
 } from '@medplum/fhirtypes';
 import { v4 as uuidv4 } from 'uuid';
+import { createFlexibleReference, toFlexibleReference, isReferenceToType } from '../../utils/fhir-reference-utils';
 
 export interface CarePlanTemplate {
   id: string;
@@ -63,7 +68,7 @@ export interface CarePlanActivity {
   id: string;
   description: string;
   category: 'assessment' | 'procedure' | 'medication' | 'education' | 'communication';
-  status: 'not-started' | 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
+  status: 'draft' | 'requested' | 'ready' | 'in-progress' | 'completed' | 'cancelled';
   scheduledDate?: Date;
   completedDate?: Date;
   performer?: string;
@@ -105,8 +110,8 @@ export class CarePlanManagementService {
     }
   ): Promise<CarePlan> {
     const template = await this.getCarePlanTemplate(templateId);
-    const patient = await this.medplum.readResource<Patient>('Patient', patientId);
-    const careTeam = await this.medplum.readResource<CareTeam>('CareTeam', careTeamId);
+    const patient = await this.medplum.readResource('Patient', patientId) as Patient;
+    const careTeam = await this.medplum.readResource('CareTeam', careTeamId) as CareTeam;
 
     // Create the care plan
     const carePlan = await this.medplum.createResource<CarePlan>({
@@ -273,7 +278,7 @@ export class CarePlanManagementService {
     achievementStatus?: Goal['achievementStatus'],
     notes?: string
   ): Promise<Goal> {
-    const goal = await this.medplum.readResource<Goal>('Goal', goalId);
+    const goal = await this.medplum.readResource('Goal', goalId) as Goal;
     
     if (!goal) {
       throw new Error('Goal not found');
@@ -281,20 +286,24 @@ export class CarePlanManagementService {
 
     // Create observation for tracking
     if (typeof currentValue === 'number' && goal.target?.[0]?.detailQuantity) {
-      await this.medplum.createResource<Observation>({
-        resourceType: 'Observation',
-        status: 'final',
-        code: {
-          text: goal.description.text
-        },
-        subject: goal.subject,
-        effectiveDateTime: new Date().toISOString(),
-        valueQuantity: {
-          value: currentValue,
-          unit: goal.target[0].detailQuantity.unit
-        },
-        note: notes ? [{ text: notes }] : undefined
-      });
+      // Check if subject is compatible with Observation (not Organization)
+      const subjectRef = goal.subject.reference;
+      if (subjectRef && !subjectRef.startsWith('Organization/')) {
+        await this.medplum.createResource<Observation>({
+          resourceType: 'Observation',
+          status: 'final',
+          code: {
+            text: goal.description.text
+          },
+          subject: goal.subject as Reference<Patient | Group | Device | Location>,
+          effectiveDateTime: new Date().toISOString(),
+          valueQuantity: {
+            value: currentValue,
+            unit: goal.target[0].detailQuantity.unit
+          },
+          note: notes ? [{ text: notes }] : undefined
+        });
+      }
     }
 
     // Update goal
@@ -322,7 +331,7 @@ export class CarePlanManagementService {
   ): Promise<Task> {
     return await this.medplum.createResource<Task>({
       resourceType: 'Task',
-      status: activityData.status || 'requested',
+      status: this.mapActivityStatusToTaskStatus(activityData.status) || 'requested',
       intent: 'plan',
       priority: 'routine',
       code: {
@@ -348,7 +357,7 @@ export class CarePlanManagementService {
    * Monitor care plan progress
    */
   async assessCarePlanProgress(carePlanId: string): Promise<CarePlanProgress> {
-    const carePlan = await this.medplum.readResource<CarePlan>('CarePlan', carePlanId);
+    const carePlan = await this.medplum.readResource('CarePlan', carePlanId);
     
     if (!carePlan) {
       throw new Error('Care plan not found');
@@ -358,7 +367,7 @@ export class CarePlanManagementService {
     const goals = await Promise.all(
       (carePlan.goal || []).map(async (goalRef) => {
         const goalId = goalRef.reference?.split('/')[1];
-        return goalId ? await this.medplum.readResource<Goal>('Goal', goalId) : null;
+        return goalId ? await this.medplum.readResource('Goal', goalId) : null;
       })
     );
 
@@ -366,7 +375,7 @@ export class CarePlanManagementService {
     const tasks = await Promise.all(
       (carePlan.activity || []).map(async (activity) => {
         const taskId = activity.reference?.reference?.split('/')[1];
-        return taskId ? await this.medplum.readResource<Task>('Task', taskId) : null;
+        return taskId ? await this.medplum.readResource('Task', taskId) : null;
       })
     );
 
@@ -415,7 +424,7 @@ export class CarePlanManagementService {
     practitionerId: string,
     role: string
   ): Promise<void> {
-    const carePlan = await this.medplum.readResource<CarePlan>('CarePlan', carePlanId);
+    const carePlan = await this.medplum.readResource('CarePlan', carePlanId);
     
     if (!carePlan || !carePlan.careTeam?.[0]) {
       throw new Error('Care plan or care team not found');
@@ -424,7 +433,7 @@ export class CarePlanManagementService {
     const careTeamId = carePlan.careTeam[0].reference?.split('/')[1];
     if (!careTeamId) return;
 
-    const careTeam = await this.medplum.readResource<CareTeam>('CareTeam', careTeamId);
+    const careTeam = await this.medplum.readResource('CareTeam', careTeamId) as CareTeam;
     
     if (careTeam) {
       await this.medplum.updateResource<CareTeam>({
@@ -478,7 +487,7 @@ export class CarePlanManagementService {
       statusChange?: CarePlan['status'];
     }
   ): Promise<CarePlan> {
-    const carePlan = await this.medplum.readResource<CarePlan>('CarePlan', carePlanId);
+    const carePlan = await this.medplum.readResource('CarePlan', carePlanId);
     
     if (!carePlan) {
       throw new Error('Care plan not found');
@@ -669,7 +678,7 @@ export class CarePlanManagementService {
       const task = await this.createCarePlanTask(carePlanId, patientId, {
         description: activity.description,
         category: this.mapActivityKindToCategory(activity.kind),
-        status: 'not-started',
+        status: 'draft',
         performer: activity.performer
       });
       tasks.push(task);
@@ -691,5 +700,23 @@ export class CarePlanManagementService {
       'education': 'education'
     };
     return mapping[kind] || 'assessment';
+  }
+
+  /**
+   * Map activity status to FHIR Task status
+   */
+  private mapActivityStatusToTaskStatus(status?: CarePlanActivity['status']): Task['status'] | undefined {
+    if (!status) return undefined;
+    
+    const mapping: Record<CarePlanActivity['status'], Task['status']> = {
+      'draft': 'draft',
+      'requested': 'requested',
+      'ready': 'ready',
+      'in-progress': 'in-progress',
+      'completed': 'completed',
+      'cancelled': 'cancelled'
+    };
+    
+    return mapping[status] || 'draft';
   }
 }

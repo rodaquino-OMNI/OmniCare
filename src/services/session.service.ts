@@ -3,13 +3,14 @@
  * HIPAA-Compliant Session Handling with Security Controls
  */
 
-import { v4 as uuidv4 } from 'uuid';
-import Redis from 'ioredis';
 import { EventEmitter } from 'events';
 
+import Redis from 'ioredis';
+import { v4 as uuidv4 } from 'uuid';
+
 import { AUTH_CONFIG, ROLE_SESSION_TIMEOUTS } from '@/config/auth.config';
-import { SessionInfo, User, UserRole, SecurityEvent } from '@/types/auth.types';
 import { AuditService } from '@/services/audit.service';
+import { SessionInfo, User, UserRole } from '@/types/auth.types';
 
 export interface SessionStore {
   get(sessionId: string): Promise<SessionInfo | null>;
@@ -154,7 +155,7 @@ export class InMemorySessionStore implements SessionStore {
     return this.sessions.get(sessionId) || null;
   }
 
-  async set(sessionId: string, session: SessionInfo, ttl?: number): Promise<void> {
+  async set(sessionId: string, session: SessionInfo, _ttl?: number): Promise<void> {
     this.sessions.set(sessionId, session);
     
     // Add to user index

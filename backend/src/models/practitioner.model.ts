@@ -1,4 +1,5 @@
 import { Practitioner as FHIRPractitioner } from '@medplum/fhirtypes';
+
 import { 
   FHIRResource, 
   Identifier, 
@@ -41,7 +42,7 @@ export interface OmniCarePractitioner extends FHIRResource {
   preferences?: PractitionerPreferences;
   performanceMetrics?: PerformanceMetrics;
   professionalReferences?: ProfessionalReference[];
-  emergencyContact?: EmergencyContact[];
+  emergencyContact?: PractitionerEmergencyContact[];
   complianceInfo?: ComplianceInformation;
 }
 
@@ -236,7 +237,7 @@ export interface ProfessionalReference {
   canContactForEmployment: boolean;
 }
 
-export interface EmergencyContact {
+export interface PractitionerEmergencyContact {
   name: HumanName;
   relationship: string;
   contactInfo: ContactPoint[];

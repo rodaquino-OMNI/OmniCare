@@ -157,8 +157,8 @@ export const AllergyAlert: Story = {
 // All Alert Types
 export const AllAlertTypes: Story = {
   render: () => (
-    <Stack spacing="lg" style={{ maxWidth: '800px' }}>
-      <Text size="xl" weight={700}>Clinical Alert Types</Text>
+    <Stack gap="lg" style={{ maxWidth: '800px' }}>
+      <Text size="xl" fw={700}>Clinical Alert Types</Text>
       
       <ClinicalAlert
         type="info"
@@ -232,8 +232,8 @@ export const AllAlertTypes: Story = {
 // Priority Levels
 export const PriorityLevels: Story = {
   render: () => (
-    <Stack spacing="lg" style={{ maxWidth: '800px' }}>
-      <Text size="xl" weight={700}>Priority Levels</Text>
+    <Stack gap="lg" style={{ maxWidth: '800px' }}>
+      <Text size="xl" fw={700}>Priority Levels</Text>
       
       <ClinicalAlert
         type="info"
@@ -292,8 +292,8 @@ export const InteractiveExamples: Story = {
     };
 
     return (
-      <Stack spacing="lg" style={{ maxWidth: '800px' }}>
-        <Text size="xl" weight={700}>Interactive Alerts</Text>
+      <Stack gap="lg" style={{ maxWidth: '800px' }}>
+        <Text size="xl" fw={700}>Interactive Alerts</Text>
         
         <ClinicalAlert
           type="drug-interaction"
@@ -383,8 +383,8 @@ export const AutoDismissExample: Story = {
 // Accessibility Features
 export const AccessibilityFeatures: Story = {
   render: () => (
-    <Stack spacing="lg" style={{ maxWidth: '800px' }}>
-      <Text size="xl" weight={700}>Accessibility Features</Text>
+    <Stack gap="lg" style={{ maxWidth: '800px' }}>
+      <Text size="xl" fw={700}>Accessibility Features</Text>
       <Text size="sm" color="dimmed" mb="md">
         These alerts include proper ARIA labels, roles, and screen reader support.
         Critical alerts use assertive aria-live regions for immediate attention.

@@ -29,8 +29,7 @@ import {
   IconMessage,
   IconAlertTriangle
 } from '@tabler/icons-react';
-import { DashboardMetrics, SystemAlert } from '@/types/administrative';
-import { useAuth } from '@/stores/auth';
+import { DashboardMetrics } from '@/types/administrative';
 
 interface AdminDashboardProps {
   userRole: string;

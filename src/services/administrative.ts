@@ -5,7 +5,7 @@ import {
   Appointment, 
   Billing, 
   User, 
-  OperationalReport, 
+ 
   InsuranceInfo,
   SupplyItem,
   SupplyOrder,
@@ -14,6 +14,64 @@ import {
   ApiResponse,
   SearchFilters
 } from '@/types/administrative';
+
+// Type definitions for replacing any types
+interface InsuranceBenefits {
+  coverage: string;
+  coveragePercentage: number;
+  annualLimit: number;
+  serviceTypes: string[];
+  networkProviders: string[];
+  exclusions: string[];
+}
+
+interface RemittanceAdvice {
+  paymentDate: string;
+  paymentAmount: number;
+  claimNumbers: string[];
+  adjustments: Array<{
+    type: string;
+    amount: number;
+    reason: string;
+  }>;
+}
+
+interface RecipientInfo {
+  name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  notificationPreferences: string[];
+}
+
+interface ReportParameters {
+  startDate?: string;
+  endDate?: string;
+  department?: string;
+  provider?: string;
+  category?: string;
+  format?: 'pdf' | 'csv' | 'excel';
+}
+
+interface UserPermission {
+  resource: string;
+  actions: string[];
+  scope: string;
+}
+
+interface AnalyticsTrend {
+  period: string;
+  value: number;
+  change: number;
+  changeType: 'increase' | 'decrease' | 'stable';
+}
+
+interface TargetAudience {
+  roles: string[];
+  departments: string[];
+  locations: string[];
+  criteria: Record<string, string>;
+}
 
 /**
  * Base API Service Class
@@ -56,7 +114,7 @@ class BaseApiService {
     }
   }
 
-  protected buildQueryString(params: Record<string, any>): string {
+  protected buildQueryString(params: Record<string, unknown>): string {
     const query = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
@@ -121,7 +179,7 @@ export class PatientService extends BaseApiService {
    */
   async verifyInsurance(insuranceInfo: InsuranceInfo): Promise<ApiResponse<{
     isEligible: boolean;
-    benefits: any;
+    benefits: InsuranceBenefits;
     copay: number;
     deductible: number;
     authorizationRequired: boolean;
@@ -265,7 +323,7 @@ export class BillingService extends BaseApiService {
     status: string;
     paymentAmount?: number;
     denialReason?: string;
-    remittanceAdvice?: any;
+    remittanceAdvice?: RemittanceAdvice;
   }>> {
     return this.request(`/billing/claims/${claimId}/status`);
   }
@@ -358,7 +416,7 @@ export class DocumentService extends BaseApiService {
     purpose: string;
     documentsRequested: string[];
     dateRange: { from: Date; to: Date };
-    recipientInfo: any;
+    recipientInfo: RecipientInfo;
     authorizationFormId: string;
   }): Promise<ApiResponse<{ requestId: string }>> {
     return this.request('/documents/roi', {
@@ -375,7 +433,7 @@ export class DocumentService extends BaseApiService {
     category?: string;
     dateFrom?: Date;
     dateTo?: Date;
-  }): Promise<ApiResponse<any[]>> {
+  }): Promise<ApiResponse<Record<string, unknown>[]>> {
     const queryString = filters ? this.buildQueryString({
       ...filters,
       dateFrom: filters.dateFrom?.toISOString(),
@@ -442,7 +500,7 @@ export class ReportingService extends BaseApiService {
    */
   async generateReport(reportConfig: {
     type: string;
-    parameters: any;
+    parameters: ReportParameters;
     dateRange: { from: Date; to: Date };
     format: 'PDF' | 'Excel' | 'CSV';
   }): Promise<ApiResponse<{ reportId: string; filePath: string }>> {
@@ -464,8 +522,8 @@ export class ReportingService extends BaseApiService {
   async getDashboardMetrics(facilityId?: string, dateRange?: {
     from: Date;
     to: Date;
-  }): Promise<ApiResponse<any>> {
-    const params: any = {};
+  }): Promise<ApiResponse<Record<string, unknown>>> {
+    const params: Record<string, unknown> = {};
     if (facilityId) params.facilityId = facilityId;
     if (dateRange) {
       params.dateFrom = dateRange.from.toISOString();
@@ -479,7 +537,7 @@ export class ReportingService extends BaseApiService {
   /**
    * Gets performance analytics
    */
-  async getPerformanceAnalytics(type: string, filters?: any): Promise<ApiResponse<any>> {
+  async getPerformanceAnalytics(type: string, filters?: Record<string, unknown>): Promise<ApiResponse<Record<string, unknown>>> {
     const queryString = this.buildQueryString({ type, ...filters });
     return this.request(`/reports/analytics?${queryString}`);
   }
@@ -502,7 +560,7 @@ export class AdminService extends BaseApiService {
   /**
    * Updates user permissions
    */
-  async updateUserPermissions(userId: string, permissions: any[]): Promise<ApiResponse<User>> {
+  async updateUserPermissions(userId: string, permissions: UserPermission[]): Promise<ApiResponse<User>> {
     return this.request<User>(`/admin/users/${userId}/permissions`, {
       method: 'PUT',
       body: JSON.stringify({ permissions }),
@@ -535,7 +593,7 @@ export class AdminService extends BaseApiService {
     resource?: string;
     dateFrom?: Date;
     dateTo?: Date;
-  }): Promise<ApiResponse<any[]>> {
+  }): Promise<ApiResponse<Record<string, unknown>[]>> {
     const queryString = this.buildQueryString({
       ...filters,
       dateFrom: filters.dateFrom?.toISOString(),
@@ -571,7 +629,7 @@ export class PatientExperienceService extends BaseApiService {
     averageRating: number;
     responseRate: number;
     categoryBreakdown: Record<string, number>;
-    trends: any[];
+    trends: AnalyticsTrend[];
   }>> {
     const queryString = filters ? this.buildQueryString({
       ...filters,
@@ -588,7 +646,7 @@ export class PatientExperienceService extends BaseApiService {
     title: string;
     message: string;
     type: 'Email' | 'SMS' | 'Portal';
-    targetAudience: any;
+    targetAudience: TargetAudience;
     scheduledDate?: Date;
   }): Promise<ApiResponse<{ communicationId: string; recipientCount: number }>> {
     return this.request('/patient-experience/mass-communication', {

@@ -1,6 +1,8 @@
 import Joi from 'joi';
+
 import { ValidationResult, ValidationError, ValidationWarning } from '@/types/fhir';
 import logger from '@/utils/logger';
+import { getErrorMessage } from '@/utils/error.utils';
 
 /**
  * Data Validation and Sanitization Service
@@ -784,7 +786,7 @@ export class ValidationService {
     } catch (error) {
       return {
         status: 'DOWN',
-        details: { error: error instanceof Error ? error.message : String(error) },
+        details: { error: getErrorMessage(error) },
       };
     }
   }

@@ -1,0 +1,283 @@
+{
+  "swarmId": "swarm-auto-centralized-1750552280318",
+  "analyzer": "test-analyzer", 
+  "timestamp": "2025-06-22T00:40:00.000Z",
+  "summary": {
+    "status": "CRITICAL_FAILURES_IDENTIFIED",
+    "totalTestFiles": 85,
+    "failingTestSuites": 12,
+    "missingDependencies": 18,
+    "configurationIssues": 8,
+    "productionReadiness": "NOT_READY"
+  },
+  "criticalIssues": {
+    "dependencyFailures": {
+      "frontend": {
+        "missing": [
+          "jest-junit@^16.0.0",
+          "jest-html-reporter@^3.10.2", 
+          "@faker-js/faker@^8.4.1",
+          "@medplum/mock@^4.1.10",
+          "@types/crypto-js@^4.2.2",
+          "crypto-js@^4.2.0",
+          "eslint-plugin-security@^1.7.1",
+          "fake-indexeddb@^5.0.2"
+        ],
+        "impact": "BLOCKS_ALL_TESTS",
+        "description": "Jest configuration references missing reporters that prevent test execution"
+      },
+      "backend": {
+        "missing": [
+          "jest-junit@^16.0.0", 
+          "jest-html-reporter@^3.10.2",
+          "artillery@^2.0.0",
+          "autocannon@^7.12.0",
+          "clinic@^12.0.0",
+          "eslint-plugin-security@^1.7.1",
+          "express-validator@^7.0.1",
+          "pidusage@^3.0.2",
+          "pino@^8.16.2",
+          "zod@^3.25.67"
+        ],
+        "impact": "BLOCKS_PRODUCTION_TESTS",
+        "description": "Missing dependencies for security, validation, logging, and performance testing"
+      }
+    },
+    "missingServiceFiles": {
+      "complianceService": {
+        "file": "backend/src/services/compliance.service.ts",
+        "status": "NOT_FOUND",
+        "impact": "HIPAA_COMPLIANCE_TESTS_FAIL",
+        "referencedBy": [
+          "backend/tests/compliance/hipaa-compliance.test.ts"
+        ]
+      }
+    },
+    "configurationErrors": {
+      "smartFhirConfig": {
+        "issue": "config.smart.scopes is undefined",
+        "location": "backend/src/services/smart-fhir.service.ts:20",
+        "impact": "AUTH_MIDDLEWARE_TESTS_FAIL",
+        "fixRequired": "Environment variable SMART_SCOPES must be set or config defaults improved"
+      },
+      "cryptoServiceMocking": {
+        "issue": "crypto.randomBytes returning undefined.toString()",
+        "location": "backend/src/services/audit.service.ts:279",
+        "impact": "AUDIT_SERVICE_TESTS_FAIL",
+        "fixRequired": "Improve crypto mocking in test setup"
+      }
+    }
+  },
+  "testSuiteAnalysis": {
+    "frontend": {
+      "totalFiles": 18,
+      "categories": {
+        "componentTests": {
+          "count": 11,
+          "status": "CANNOT_RUN",
+          "reason": "Missing test dependencies and jest configuration issues"
+        },
+        "offlineTests": {
+          "count": 5,
+          "status": "COMPLEX_SETUP_REQUIRED",
+          "reason": "Requires IndexedDB mocking and service worker setup"
+        },
+        "e2eTests": {
+          "count": 7,
+          "status": "COMPREHENSIVE_BUT_UNTESTED",
+          "reason": "E2E tests look well-structured but dependencies prevent execution"
+        }
+      },
+      "coverageThresholds": {
+        "global": {
+          "branches": 75,
+          "functions": 75,
+          "lines": 75,
+          "statements": 75
+        },
+        "components": {
+          "branches": 80,
+          "functions": 80,
+          "lines": 80,
+          "statements": 80
+        },
+        "services": {
+          "branches": 85,
+          "functions": 85,
+          "lines": 85,
+          "statements": 85
+        }
+      }
+    },
+    "backend": {
+      "totalFiles": 33,
+      "failingTests": {
+        "integration": {
+          "ehrConnectivity": {
+            "file": "tests/integration/ehr-connectivity.integration.test.ts",
+            "failures": [
+              "should retrieve Epic patient data via FHIR API - TypeError: this.medplum.validateResource is not a function",
+              "should handle EHR-launched SMART app flow - AxiosError: Request failed with status code 404"
+            ]
+          },
+          "authController": {
+            "file": "tests/integration/auth.controller.integration.test.ts", 
+            "failures": [
+              "Multiple auth tests failing due to configuration and service setup issues"
+            ]
+          }
+        },
+        "unit": {
+          "auditService": {
+            "file": "tests/unit/services/audit.service.test.ts",
+            "failures": [
+              "Cannot read properties of undefined (reading 'toString') - crypto mocking issue"
+            ]
+          },
+          "authMiddleware": {
+            "file": "tests/unit/middleware/auth.middleware.test.ts",
+            "failures": [
+              "TypeError: Cannot read properties of undefined (reading 'scopes') - config.smart.scopes undefined"
+            ]
+          }
+        },
+        "compliance": {
+          "hipaaCompliance": {
+            "file": "tests/compliance/hipaa-compliance.test.ts",
+            "failures": [
+              "Cannot find module '../../src/services/compliance.service' - missing service file"
+            ]
+          }
+        }
+      },
+      "coverageThresholds": {
+        "global": {
+          "branches": 80,
+          "functions": 80,
+          "lines": 80,
+          "statements": 80
+        },
+        "services": {
+          "branches": 85,
+          "functions": 85,
+          "lines": 85,
+          "statements": 85
+        }
+      }
+    }
+  },
+  "infrastructureGaps": {
+    "testEnvironmentSetup": {
+      "database": "PostgreSQL test database setup exists but has connection issues",
+      "redis": "Redis connection for testing needs configuration",
+      "medplum": "Medplum service mocking is incomplete",
+      "externalAPIs": "EHR system API mocking needs improvement"
+    },
+    "cicdIntegration": {
+      "reporters": "Missing jest-junit for CI/CD XML reports",
+      "coverage": "Missing coverage reporters for automated analysis",
+      "performance": "Performance testing framework exists but missing dependencies"
+    }
+  },
+  "prioritizedFixes": [
+    {
+      "priority": "CRITICAL",
+      "category": "Dependencies",
+      "task": "Install missing jest reporters and test dependencies",
+      "commands": [
+        "cd frontend && npm install jest-junit@^16.0.0 jest-html-reporter@^3.10.2 @faker-js/faker@^8.4.1 @medplum/mock@^4.1.10 crypto-js@^4.2.0 fake-indexeddb@^5.0.2",
+        "cd backend && npm install jest-junit@^16.0.0 jest-html-reporter@^3.10.2 express-validator@^7.0.1 pino@^8.16.2 zod@^3.25.67"
+      ],
+      "estimatedTime": "30 minutes"
+    },
+    {
+      "priority": "CRITICAL", 
+      "category": "Missing Services",
+      "task": "Create missing ComplianceService for HIPAA tests",
+      "file": "backend/src/services/compliance.service.ts",
+      "estimatedTime": "45 minutes"
+    },
+    {
+      "priority": "HIGH",
+      "category": "Configuration",
+      "task": "Fix SMART FHIR configuration and crypto mocking",
+      "details": [
+        "Add default SMART_SCOPES environment variable",
+        "Improve crypto service mocking in tests",
+        "Fix Medplum service validateResource mock"
+      ],
+      "estimatedTime": "60 minutes"
+    },
+    {
+      "priority": "HIGH",
+      "category": "Test Infrastructure", 
+      "task": "Fix test environment setup and external service mocking",
+      "details": [
+        "Improve database test setup",
+        "Fix EHR API endpoint mocking",
+        "Enhance audit service test mocking"
+      ],
+      "estimatedTime": "90 minutes"
+    },
+    {
+      "priority": "MEDIUM",
+      "category": "Performance Testing",
+      "task": "Install performance testing dependencies and configure load testing",
+      "commands": [
+        "cd backend && npm install artillery@^2.0.0 autocannon@^7.12.0 clinic@^12.0.0 pidusage@^3.0.2"
+      ],
+      "estimatedTime": "45 minutes"
+    }
+  ],
+  "testCoverageAnalysis": {
+    "currentStatus": "CANNOT_ASSESS",
+    "reason": "Tests cannot run due to dependency and configuration issues",
+    "estimatedCoverage": {
+      "frontend": "Unknown - tests blocked",
+      "backend": "Partial - some unit tests pass, integration tests fail"
+    },
+    "targetCoverage": {
+      "frontend": "75-85% across all modules",
+      "backend": "80-85% across all modules"
+    }
+  },
+  "securityTestingGaps": {
+    "authentication": "Auth middleware tests exist but fail due to config issues",
+    "authorization": "Permission and role tests exist but service dependencies missing",
+    "dataProtection": "HIPAA compliance tests exist but missing ComplianceService", 
+    "apiSecurity": "Security plugin missing from dependencies",
+    "auditLogging": "Audit service tests fail due to crypto mocking issues"
+  },
+  "recommendations": {
+    "immediate": [
+      "Install all missing npm dependencies",
+      "Create missing ComplianceService",
+      "Fix SMART FHIR configuration",
+      "Improve test mocking setup"
+    ],
+    "shortTerm": [
+      "Enhance external API mocking",
+      "Improve test database setup",
+      "Fix performance testing infrastructure",
+      "Enable proper coverage reporting"
+    ],
+    "longTerm": [
+      "Implement comprehensive E2E test automation",
+      "Add security testing automation",
+      "Improve test parallelization",
+      "Add visual regression testing"
+    ]
+  },
+  "estimatedFixTime": {
+    "critical": "3-4 hours",
+    "allIssues": "8-12 hours",
+    "fullTestSuite": "2-3 days"
+  },
+  "nextSteps": [
+    "Install missing dependencies using provided npm commands",
+    "Create ComplianceService stub with basic HIPAA compliance methods",
+    "Fix configuration issues in SMART FHIR and crypto services",
+    "Re-run tests to validate fixes",
+    "Generate comprehensive coverage report"
+  ]
+}

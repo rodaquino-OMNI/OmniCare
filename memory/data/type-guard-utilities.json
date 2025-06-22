@@ -1,0 +1,176 @@
+{
+  "key": "swarm-development-centralized-1750513345894/type-guards/utilities",
+  "timestamp": "2025-06-21T10:00:00.000Z",
+  "description": "Comprehensive TypeScript type guard utilities for the OmniCare EMR project",
+  "metadata": {
+    "purpose": "Runtime type checking and TypeScript type narrowing",
+    "benefits": [
+      "Eliminates type errors at runtime",
+      "Provides type-safe runtime validation",
+      "Improves code reliability and maintainability",
+      "Reduces need for type assertions"
+    ],
+    "categories": [
+      "Primitive type guards",
+      "Null/undefined guards",
+      "Object type guards",
+      "Array type guards",
+      "FHIR resource type guards",
+      "Reference type guards",
+      "User and auth type guards",
+      "Error type guards",
+      "Date type guards",
+      "Functional type guards",
+      "Record type guards",
+      "Complex type guards",
+      "Type assertions",
+      "Safe property access",
+      "Type coercion utilities"
+    ]
+  },
+  "utilities": {
+    "primitives": {
+      "isString": "Checks if value is a string",
+      "isNumber": "Checks if value is a number (excludes NaN)",
+      "isBoolean": "Checks if value is a boolean",
+      "isFunction": "Checks if value is a function",
+      "isSymbol": "Checks if value is a symbol",
+      "isBigInt": "Checks if value is a bigint"
+    },
+    "nullUndefined": {
+      "isNull": "Checks if value is null",
+      "isUndefined": "Checks if value is undefined",
+      "isNullOrUndefined": "Checks if value is null or undefined",
+      "isDefined": "Checks if value is not null or undefined",
+      "isNotNull": "Checks if value is not null",
+      "isNotUndefined": "Checks if value is not undefined"
+    },
+    "objects": {
+      "isObject": "Checks if value is a non-null object (excludes arrays)",
+      "isPlainObject": "Checks if value is a plain object",
+      "hasProperty": "Checks if object has a specific property",
+      "hasProperties": "Checks if object has multiple properties",
+      "hasDefinedProperty": "Checks if object has a defined property with optional type check"
+    },
+    "arrays": {
+      "isArray": "Checks if value is an array",
+      "isArrayOf": "Checks if value is an array of specific type",
+      "isNonEmptyArray": "Checks if array has at least one element",
+      "isStringArray": "Checks if value is an array of strings",
+      "isNumberArray": "Checks if value is an array of numbers"
+    },
+    "fhir": {
+      "isFHIRResource": "Checks if value is a FHIR resource",
+      "isFHIRResourceType": "Checks if value is a specific FHIR resource type",
+      "isPatientResource": "Checks if value is a Patient resource",
+      "isPractitionerResource": "Checks if value is a Practitioner resource",
+      "isOrganizationResource": "Checks if value is an Organization resource",
+      "isReference": "Checks if value is a FHIR Reference",
+      "isReferenceToType": "Checks if Reference points to specific resource type"
+    },
+    "auth": {
+      "hasPasswordHash": "Checks if user object has passwordHash property",
+      "hasSessionId": "Checks if token has sessionId property",
+      "hasMFAProperties": "Checks if user has MFA-related properties"
+    },
+    "errors": {
+      "isError": "Checks if value is an Error instance",
+      "isErrorWithCode": "Checks if error has a code property",
+      "isErrorWithStatus": "Checks if error has a status property"
+    },
+    "dates": {
+      "isDate": "Checks if value is a valid Date",
+      "isValidDateString": "Checks if string is a valid date string"
+    },
+    "functional": {
+      "isPromise": "Checks if value is a Promise",
+      "isAsyncFunction": "Checks if value is an async function"
+    },
+    "records": {
+      "isRecordWithIndexSignature": "Checks if value can have index signature",
+      "toRecordWithIndexSignature": "Converts typed object to Record<string, unknown>"
+    },
+    "complex": {
+      "isOneOf": "Checks if value matches any of the provided guards",
+      "isAllOf": "Checks if value matches all of the provided guards"
+    },
+    "assertions": {
+      "assertDefined": "Throws if value is null or undefined",
+      "assertString": "Throws if value is not a string",
+      "assertNumber": "Throws if value is not a number",
+      "assertObject": "Throws if value is not an object"
+    },
+    "safeAccess": {
+      "getProperty": "Safely gets property with optional default",
+      "getDefinedProperty": "Gets property with required default if undefined"
+    },
+    "coercion": {
+      "ensureArray": "Ensures value is an array",
+      "ensureString": "Ensures value is a string with default",
+      "ensureNumber": "Ensures value is a number with default",
+      "ensureBoolean": "Ensures value is a boolean with default"
+    }
+  },
+  "usage": {
+    "import": "import { isDefined, hasProperty, isString, TypeGuards } from '@/utils/type-guards';",
+    "examples": [
+      {
+        "name": "Check user has password",
+        "code": "if (hasPasswordHash(user)) { /* user.passwordHash is now typed */ }"
+      },
+      {
+        "name": "Narrow FHIR reference",
+        "code": "if (isReferenceToType(ref, 'Patient')) { /* ref points to Patient */ }"
+      },
+      {
+        "name": "Safe property access",
+        "code": "const name = getProperty(user, 'name', 'Unknown');"
+      },
+      {
+        "name": "Type assertion",
+        "code": "assertDefined(config, 'Configuration is required');"
+      },
+      {
+        "name": "Array type check",
+        "code": "if (isStringArray(values)) { /* values is string[] */ }"
+      }
+    ]
+  },
+  "implementation": {
+    "filePath": "/Users/rodrigo/claude-projects/OmniCare/src/utils/type-guards.ts",
+    "exports": "All utilities exported individually and as TypeGuards namespace",
+    "dependencies": "None - pure TypeScript implementation",
+    "performance": "All checks are O(1) except array checks which are O(n)"
+  },
+  "appliedFixes": [
+    {
+      "file": "src/controllers/auth.controller.ts",
+      "fixes": [
+        "Added type guard for user.passwordHash checks",
+        "Added type guard for token.sessionId checks",
+        "Added type guard for user MFA properties",
+        "Added toRecordWithIndexSignature for session data"
+      ]
+    },
+    {
+      "file": "src/auth/sso-integration.ts",
+      "fixes": [
+        "Added type imports for proper SAML/OIDC type handling"
+      ]
+    },
+    {
+      "file": "src/clinical/referrals/ReferralManagementService.ts",
+      "fixes": [
+        "Added Reference type guards for FHIR resources",
+        "Added type narrowing for patient/provider references"
+      ]
+    },
+    {
+      "file": "src/clinical/telemedicine/TelemedicineWorkflowService.ts",
+      "fixes": [
+        "Added type guards for appointment participants",
+        "Added reference type narrowing for subjects and individuals"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "namespace": "swarm-auto-centralized-1750462849518/test-fixer",
+  "results": {
+    "status": "in-progress",
+    "testsFixed": [
+      "Updated imports to use act from @testing-library/react",
+      "Replaced react-toastify with @mantine/notifications",
+      "Added window.matchMedia mock in beforeAll",
+      "Added proper act() wrappers for async operations",
+      "Created mock files for @mantine/core and @tabler/icons-react",
+      "Fixed test assertions to use waitFor for async operations"
+    ],
+    "remainingIssues": [
+      "Component rendering shows undefined element type error",
+      "Possible issue with use client directive or module resolution",
+      "Tests are failing with Element type is invalid error"
+    ],
+    "filesModified": [
+      "frontend/src/components/clinical/__tests__/ClinicalNoteInput.test.tsx",
+      "frontend/__mocks__/@mantine/core.js",
+      "frontend/__mocks__/@tabler/icons-react.js"
+    ]
+  }
+}

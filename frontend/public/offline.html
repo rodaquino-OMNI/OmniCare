@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline - OmniCare EMR</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f7f9fc;
+            color: #1a202c;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .offline-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+            padding: 48px;
+            max-width: 480px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .offline-icon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 32px;
+            position: relative;
+        }
+        
+        .offline-icon svg {
+            width: 100%;
+            height: 100%;
+        }
+        
+        h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #0091FF;
+        }
+        
+        p {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #4a5568;
+            margin-bottom: 32px;
+        }
+        
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background-color: #f3f4f6;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #ef4444;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        .status-dot.online {
+            background-color: #10b981;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+        
+        .actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background-color: #0091FF;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #0077cc;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 145, 255, 0.3);
+        }
+        
+        .btn-secondary {
+            background-color: #e5e7eb;
+            color: #374151;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #d1d5db;
+        }
+        
+        .cached-info {
+            margin-top: 48px;
+            padding-top: 32px;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .cached-info h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #374151;
+        }
+        
+        .cached-list {
+            text-align: left;
+            background-color: #f9fafb;
+            border-radius: 8px;
+            padding: 16px;
+        }
+        
+        .cached-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 0;
+            font-size: 14px;
+            color: #6b7280;
+        }
+        
+        .cached-item:not(:last-child) {
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .check-icon {
+            width: 16px;
+            height: 16px;
+            color: #10b981;
+        }
+        
+        @media (max-width: 640px) {
+            .offline-container {
+                padding: 32px 24px;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+            
+            .actions {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="#e5e7eb"/>
+                <path d="M12 20c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z" fill="#9ca3af"/>
+                <line x1="4" y1="4" x2="20" y2="20" stroke="#ef4444" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </div>
+        
+        <h1>You're Offline</h1>
+        
+        <div class="status-indicator">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">No internet connection</span>
+        </div>
+        
+        <p>
+            Don't worry! OmniCare works offline. You can still access cached patient data and continue working. Your changes will be synchronized when you're back online.
+        </p>
+        
+        <div class="actions">
+            <button class="btn btn-primary" onclick="tryReload()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
+                </svg>
+                Try Again
+            </button>
+            <button class="btn btn-secondary" onclick="goBack()">
+                Go Back
+            </button>
+        </div>
+        
+        <div class="cached-info">
+            <h2>Available Offline</h2>
+            <div class="cached-list">
+                <div class="cached-item">
+                    <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Recent patient records
+                </div>
+                <div class="cached-item">
+                    <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Medication catalogs
+                </div>
+                <div class="cached-item">
+                    <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Lab test references
+                </div>
+                <div class="cached-item">
+                    <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Clinical guidelines
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Check online status
+        function updateOnlineStatus() {
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            
+            if (navigator.onLine) {
+                statusDot.classList.add('online');
+                statusText.textContent = 'Connection restored';
+                
+                // Auto-reload after a short delay
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                statusDot.classList.remove('online');
+                statusText.textContent = 'No internet connection';
+            }
+        }
+        
+        // Try to reload the page
+        function tryReload() {
+            window.location.reload();
+        }
+        
+        // Go back to previous page
+        function goBack() {
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = '/';
+            }
+        }
+        
+        // Listen for online/offline events
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        
+        // Check status on load
+        updateOnlineStatus();
+        
+        // Periodically check connection
+        setInterval(updateOnlineStatus, 5000);
+    </script>
+</body>
+</html>

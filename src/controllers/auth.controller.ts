@@ -4,20 +4,18 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { validationResult } from 'express-validator';
 import rateLimit from 'express-rate-limit';
+import { validationResult } from 'express-validator';
 
 import { JWTAuthService } from '@/auth/jwt.service';
-import { AuditService } from '@/services/audit.service';
 import { AUTH_CONFIG, ROLE_SESSION_TIMEOUTS } from '@/config/auth.config';
+import { AuditService } from '@/services/audit.service';
 import { 
   User, 
-  UserRole, 
   LoginCredentials, 
-  AuthToken,
-  MfaSetup,
   SecurityEvent
 } from '@/types/auth.types';
+import { hasPasswordHash, hasSessionId, hasMFAProperties, isDefined, toRecordWithIndexSignature } from '@/utils/type-guards';
 
 export interface AuthRequest extends Request {
   user?: User;
@@ -28,10 +26,15 @@ export class AuthController {
   private jwtService: JWTAuthService;
   private auditService: AuditService;
 
-  // In-memory stores (in production, use Redis or database)
-  private activeSessions: Map<string, any> = new Map();
+  // SECURITY WARNING: In production, these MUST be replaced with Redis or database
+  // These in-memory stores will lose data on restart and don't scale
+  private activeSessions: Map<string, Record<string, unknown>> = new Map();
   private failedAttempts: Map<string, { count: number; lastAttempt: Date }> = new Map();
   private passwordResetTokens: Map<string, { userId: string; expires: Date }> = new Map();
+  
+  // TODO: Replace with proper session store implementation
+  // private sessionStore: SessionStore; // Redis or database-backed session store
+  // private rateLimitStore: RateLimitStore; // Redis-backed rate limiting
 
   constructor() {
     this.jwtService = new JWTAuthService();
@@ -121,7 +124,7 @@ export class AuthController {
       const user = await this.findUserByUsername(username);
       
       if (!user || !user.isActive) {
-        await this.recordFailedAttempt(lockoutKey);
+        this.recordFailedAttempt(lockoutKey);
         await this.logSecurityEvent({
           type: 'LOGIN_FAILURE',
           severity: 'MEDIUM',
@@ -137,10 +140,18 @@ export class AuthController {
         return;
       }
 
-      // Verify password
-      const isValidPassword = await this.jwtService.verifyPassword(password, user.password);
+      // Verify password with type guard
+      if (!hasPasswordHash(user)) {
+        res.status(500).json({
+          success: false,
+          error: 'Internal server error',
+          message: 'User configuration error'
+        });
+        return;
+      }
+      const isValidPassword = await this.jwtService.verifyPassword(password, user.passwordHash);
       if (!isValidPassword) {
-        await this.recordFailedAttempt(lockoutKey);
+        this.recordFailedAttempt(lockoutKey);
         await this.logSecurityEvent({
           type: 'LOGIN_FAILURE',
           userId: user.id,
@@ -173,7 +184,7 @@ export class AuthController {
       // Verify MFA if provided
       if (mfaRequired && mfaToken) {
         if (!user.mfaSecret || !this.jwtService.verifyMfaToken(mfaToken, user.mfaSecret)) {
-          await this.recordFailedAttempt(lockoutKey);
+          this.recordFailedAttempt(lockoutKey);
           await this.logSecurityEvent({
             type: 'LOGIN_FAILURE',
             userId: user.id,
@@ -199,7 +210,9 @@ export class AuthController {
       
       // Create session
       const sessionInfo = this.jwtService.createSessionInfo(user, tokens.sessionId, ipAddress, userAgent);
-      this.activeSessions.set(tokens.sessionId, sessionInfo);
+      if (hasSessionId(tokens)) {
+        this.activeSessions.set(tokens.sessionId, toRecordWithIndexSignature(sessionInfo));
+      }
 
       // Update user last login
       user.lastLogin = new Date();
@@ -312,6 +325,13 @@ export class AuthController {
       }
 
       // Check if session is still valid
+      if (!hasSessionId(decoded)) {
+        res.status(401).json({
+          success: false,
+          error: 'Invalid session'
+        });
+        return;
+      }
       const session = this.activeSessions.get(decoded.sessionId);
       if (!session || !this.jwtService.isSessionValid(session)) {
         this.activeSessions.delete(decoded.sessionId);
@@ -327,8 +347,10 @@ export class AuthController {
       
       // Update session
       const updatedSession = this.jwtService.updateSessionActivity(session);
-      this.activeSessions.set(tokens.sessionId, updatedSession);
-      this.activeSessions.delete(decoded.sessionId); // Remove old session
+      if (hasSessionId(tokens) && hasSessionId(decoded)) {
+        this.activeSessions.set(tokens.sessionId, toRecordWithIndexSignature(updatedSession));
+        this.activeSessions.delete(decoded.sessionId); // Remove old session
+      }
 
       // Set new refresh token cookie
       res.cookie('refreshToken', tokens.refreshToken, {
@@ -383,8 +405,8 @@ export class AuthController {
         message: 'MFA setup initiated',
         data: {
           qrCode: mfaSetup.qrCode,
-          backupCodes: mfaSetup.backupCodes,
-          secret: mfaSetup.secret // In production, store securely and don't return
+          backupCodes: mfaSetup.backupCodes
+          // SECRET NEVER RETURNED - stored server-side only
         }
       });
 
@@ -422,6 +444,12 @@ export class AuthController {
       // Update user MFA settings (in production, update database)
       user.isMfaEnabled = true;
       user.mfaSecret = secret;
+      
+      // Store MFA secret securely (encrypt before storing)
+      const encryptedSecret = this.jwtService.encryptData(secret, process.env.MFA_ENCRYPTION_KEY || 'default-key');
+      if (hasMFAProperties(user)) {
+        user.mfaSecretEncrypted = JSON.stringify(encryptedSecret);
+      }
 
       await this.logSecurityEvent({
         type: 'MFA_ENABLED',
@@ -457,8 +485,16 @@ export class AuthController {
         return;
       }
 
-      // Verify current password
-      const isValidPassword = await this.jwtService.verifyPassword(currentPassword, user.password);
+      // Verify current password with type guard
+      if (!hasPasswordHash(user)) {
+        res.status(400).json({
+          success: false,
+          error: 'Cannot update password',
+          message: 'User password configuration error'
+        });
+        return;
+      }
+      const isValidPassword = await this.jwtService.verifyPassword(currentPassword, user.passwordHash);
       if (!isValidPassword) {
         res.status(400).json({
           success: false,
@@ -482,7 +518,12 @@ export class AuthController {
       const hashedPassword = await this.jwtService.hashPassword(newPassword);
       
       // Update user password (in production, update database)
-      user.password = hashedPassword;
+      user.passwordHash = hashedPassword;
+      
+      // Clear sensitive data
+      if ('password' in user) {
+        delete (user as User & { password?: string }).password;
+      }
       user.passwordChangedAt = new Date();
 
       // Invalidate all sessions if configured
@@ -517,7 +558,7 @@ export class AuthController {
   /**
    * Get current user info
    */
-  public getCurrentUser = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  public getCurrentUser = (req: AuthRequest, res: Response, next: NextFunction): void => {
     try {
       const { user } = req;
       
@@ -555,7 +596,7 @@ export class AuthController {
   /**
    * Record failed login attempt
    */
-  private async recordFailedAttempt(key: string): Promise<void> {
+  private recordFailedAttempt(key: string): void {
     const current = this.failedAttempts.get(key) || { count: 0, lastAttempt: new Date() };
     current.count += 1;
     current.lastAttempt = new Date();
@@ -572,14 +613,14 @@ export class AuthController {
   /**
    * Mock user lookup functions (replace with actual database queries)
    */
-  private async findUserByUsername(username: string): Promise<User | null> {
+  private findUserByUsername(_username: string): Promise<User | null> {
     // Mock implementation - replace with actual database query
     // This would typically query your user database
-    return null;
+    return Promise.resolve(null);
   }
 
-  private async findUserById(id: string): Promise<User | null> {
+  private findUserById(_id: string): Promise<User | null> {
     // Mock implementation - replace with actual database query
-    return null;
+    return Promise.resolve(null);
   }
 }

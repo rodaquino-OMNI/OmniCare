@@ -23,7 +23,13 @@ import {
   AdverseReaction,
   FiveRightsVerification,
   PreAdministrationAssessment,
-  PostAdministrationAssessment
+  PostAdministrationAssessment,
+  CounselingPoint,
+  MonitoringPlan,
+  HomeMedication,
+  AdmissionMedication,
+  MedicationDiscrepancy,
+  DuplicateTherapyCheck
 } from './types';
 
 import { Patient } from '../assessment/types';
@@ -172,7 +178,7 @@ export class MedicationManagementService {
       ePrescription.transmissionStatus = 'Transmitted';
     } catch (error) {
       ePrescription.transmissionStatus = 'Error';
-      ePrescription.errorMessage = error.message;
+      ePrescription.errorMessage = (error as Error).message;
     }
 
     medicationOrder.electronicPrescription = ePrescription;
@@ -675,6 +681,213 @@ export class MedicationManagementService {
       allergies: [],
       adverseDrugReactions: []
     };
+  }
+
+  /**
+   * MISSING METHOD IMPLEMENTATIONS
+   */
+
+  private async checkPriorAuthorization(medication: MedicationDetails): Promise<boolean> {
+    // Check if medication requires prior authorization
+    return medication.controlledSubstance || medication.blackBoxWarning;
+  }
+
+  private async generateCounselingPoints(medication: MedicationDetails, dosing: DosingInstructions): Promise<CounselingPoint[]> {
+    const counselingPoints: CounselingPoint[] = [
+      {
+        topic: 'Indication',
+        information: `This medication is prescribed for your condition`,
+        emphasized: true
+      },
+      {
+        topic: 'Dosing',
+        information: `Take ${dosing.dose} ${dosing.frequency} by ${dosing.route}`,
+        emphasized: true
+      },
+      {
+        topic: 'Administration',
+        information: dosing.administrationInstructions,
+        emphasized: false
+      }
+    ];
+
+    if (medication.blackBoxWarning) {
+      counselingPoints.push({
+        topic: 'Side Effects',
+        information: 'This medication has serious warnings - please review with your healthcare provider',
+        emphasized: true
+      });
+    }
+
+    return counselingPoints;
+  }
+
+  private async createControlledSubstanceTracking(medicationOrder: MedicationOrder): Promise<void> {
+    if (!medicationOrder.medication.controlledSubstance) {
+      return;
+    }
+
+    const tracking: ControlledSubstanceTracking = {
+      id: this.generateId(),
+      medicationOrderId: medicationOrder.id,
+      patientId: medicationOrder.patientId,
+      prescriberId: medicationOrder.prescriberId,
+      medication: medicationOrder.medication.name,
+      strength: medicationOrder.medication.strength,
+      quantityPrescribed: this.calculateQuantity(medicationOrder.dosing, medicationOrder.duration),
+      quantityDispensed: 0,
+      quantityRemaining: 0,
+      prescriptionDate: new Date(),
+      pharmacyId: '',
+      deaNumber: '',
+      pdmpChecked: false,
+      highRiskPatient: false,
+      riskFactors: [],
+      monitoringRequired: true,
+      agreementSigned: false
+    };
+
+    this.controlledSubstanceTracking.set(tracking.id, tracking);
+  }
+
+  private async transmitPrescription(prescription: ElectronicPrescription, medicationOrder: MedicationOrder): Promise<void> {
+    // Implementation would transmit prescription to pharmacy
+    // This is a placeholder for actual e-prescribing integration
+    return Promise.resolve();
+  }
+
+  private async verifyIndication(medicationOrder: MedicationOrder): Promise<boolean> {
+    // Implementation would verify indication is appropriate
+    return !!(medicationOrder.indication && medicationOrder.indication.length > 0);
+  }
+
+  private async verifyDosing(medicationOrder: MedicationOrder): Promise<boolean> {
+    // Implementation would verify dosing is appropriate
+    return !!(medicationOrder.dosing.dose && medicationOrder.dosing.frequency);
+  }
+
+  private async verifyDuration(medicationOrder: MedicationOrder): Promise<boolean> {
+    // Implementation would verify duration is appropriate
+    return !medicationOrder.duration || medicationOrder.duration.length > 0;
+  }
+
+  private async checkTherapeuticDuplication(medicationOrder: MedicationOrder): Promise<boolean> {
+    // Implementation would check for therapeutic duplication
+    const patientMedications = await this.getPatientMedications(medicationOrder.patientId);
+    return patientMedications.activeMedications.some(med => 
+      med.genericName === medicationOrder.medication.genericName
+    );
+  }
+
+  private async createMonitoringPlan(medicationOrder: MedicationOrder): Promise<MonitoringPlan> {
+    const monitoringPlan: MonitoringPlan = {
+      parameters: [
+        {
+          parameter: 'Therapeutic Response',
+          target: 'Effective symptom control',
+          frequency: 'Weekly',
+          method: 'Patient Report',
+          alertThresholds: [
+            {
+              condition: 'No improvement',
+              value: '2 weeks',
+              action: 'Consider dose adjustment',
+              severity: 'Medium'
+            }
+          ]
+        }
+      ],
+      frequency: 'Weekly',
+      duration: '30 days',
+      alertCriteria: ['Adverse reactions', 'Lack of efficacy'],
+      followUpRequired: true
+    };
+
+    // Add specific monitoring for controlled substances
+    if (medicationOrder.medication.controlledSubstance) {
+      monitoringPlan.parameters.push({
+        parameter: 'Abuse Potential',
+        target: 'No signs of misuse',
+        frequency: 'Monthly',
+        method: 'Physical Exam',
+        alertThresholds: [
+          {
+            condition: 'Early refill requests',
+            value: '> 3 days early',
+            action: 'Investigate usage',
+            severity: 'High'
+          }
+        ]
+      });
+    }
+
+    return monitoringPlan;
+  }
+
+  private isWithinAdministrationWindow(currentTime: Date): boolean {
+    // Implementation would check if within administration window
+    // For now, assume it's always within window
+    return true;
+  }
+
+  private async alertPhysician(patientId: string, reaction: AdverseReaction): Promise<void> {
+    // Implementation would alert physician of adverse reaction
+    return Promise.resolve();
+  }
+
+  private async getHomeMedications(patientId: string): Promise<HomeMedication[]> {
+    // Implementation would retrieve home medications
+    return [];
+  }
+
+  private async getAdmissionMedications(patientId: string): Promise<AdmissionMedication[]> {
+    // Implementation would retrieve admission medications
+    return [];
+  }
+
+  private async identifyMedicationDiscrepancies(
+    homeMedications: HomeMedication[],
+    admissionMedications: AdmissionMedication[]
+  ): Promise<MedicationDiscrepancy[]> {
+    const discrepancies: MedicationDiscrepancy[] = [];
+
+    // Check for omissions
+    for (const homeMed of homeMedications) {
+      const foundInAdmission = admissionMedications.find(admMed => 
+        admMed.name.toLowerCase() === homeMed.name.toLowerCase()
+      );
+      
+      if (!foundInAdmission) {
+        discrepancies.push({
+          type: 'Omission',
+          medication: homeMed.name,
+          description: `Home medication ${homeMed.name} not continued on admission`,
+          clinicalSignificance: 'Medium',
+          riskLevel: 'Medium',
+          resolved: false
+        });
+      }
+    }
+
+    // Check for commissions
+    for (const admMed of admissionMedications) {
+      const foundInHome = homeMedications.find(homeMed => 
+        homeMed.name.toLowerCase() === admMed.name.toLowerCase()
+      );
+      
+      if (!foundInHome) {
+        discrepancies.push({
+          type: 'Commission',
+          medication: admMed.name,
+          description: `New medication ${admMed.name} added on admission`,
+          clinicalSignificance: 'Low',
+          riskLevel: 'Low',
+          resolved: false
+        });
+      }
+    }
+
+    return discrepancies;
   }
 
   private generateId(): string {

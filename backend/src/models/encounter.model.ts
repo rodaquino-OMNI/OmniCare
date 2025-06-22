@@ -1,4 +1,5 @@
 import { Encounter as FHIREncounter } from '@medplum/fhirtypes';
+
 import { 
   FHIRResource, 
   Identifier, 
@@ -148,71 +149,8 @@ export interface EncounterQualityMetrics {
   patientEducationProvided?: boolean;
 }
 
-/**
- * Appointment Model (extends Encounter for scheduling)
- */
-export interface OmniCareAppointment extends FHIRResource {
-  resourceType: 'Appointment';
-  
-  // Core FHIR Appointment fields
-  identifier?: Identifier[];
-  status: 'proposed' | 'pending' | 'booked' | 'arrived' | 'fulfilled' | 'cancelled' | 'noshow' | 'entered-in-error' | 'checked-in' | 'waitlist';
-  cancelationReason?: CodeableConcept;
-  serviceCategory?: CodeableConcept[];
-  serviceType?: CodeableConcept[];
-  specialty?: CodeableConcept[];
-  appointmentType?: CodeableConcept;
-  reasonCode?: CodeableConcept[];
-  reasonReference?: Reference[];
-  priority?: number;
-  description?: string;
-  supportingInformation?: Reference[];
-  start?: string;
-  end?: string;
-  minutesDuration?: number;
-  slot?: Reference[];
-  created?: string;
-  comment?: string;
-  patientInstruction?: string;
-  basedOn?: Reference[];
-  participant: AppointmentParticipant[];
-  requestedPeriod?: Period[];
-
-  // OmniCare-specific extensions
-  omnicareAppointmentId?: string;
-  appointmentSource?: 'online' | 'phone' | 'walk-in' | 'referral' | 'system';
-  confirmationStatus?: 'confirmed' | 'unconfirmed' | 'cancelled-by-patient' | 'cancelled-by-provider';
-  remindersSent?: AppointmentReminder[];
-  waitlistPosition?: number;
-  estimatedWaitTime?: number; // minutes
-  checkInInstructions?: string;
-  preVisitForms?: Reference[];
-  insuranceVerification?: {
-    verified: boolean;
-    verifiedDate?: string;
-    eligibleForServices: boolean;
-    copayAmount?: number;
-    authorizationRequired?: boolean;
-    notes?: string;
-  };
-  telemedicineInfo?: TelemedicineInfo;
-}
-
-export interface AppointmentParticipant {
-  type?: CodeableConcept[];
-  actor?: Reference; // Patient, Practitioner, PractitionerRole, RelatedPerson, Device, HealthcareService, Location
-  required?: 'required' | 'optional' | 'information-only';
-  status: 'accepted' | 'declined' | 'tentative' | 'needs-action';
-  period?: Period;
-}
-
-export interface AppointmentReminder {
-  type: 'email' | 'sms' | 'phone' | 'app-notification';
-  sentDate: string;
-  status: 'sent' | 'delivered' | 'failed' | 'opened' | 'responded';
-  scheduledFor: string; // how many days/hours before appointment
-}
-
+// Note: Appointment-related interfaces have been moved to appointment.model.ts
+// Telemedicine info interface remains here as it's used by encounters as well
 export interface TelemedicineInfo {
   platform: string;
   meetingUrl?: string;
@@ -256,56 +194,7 @@ export interface EncounterSearchParams {
   _revinclude?: string[];
 }
 
-/**
- * Appointment Search Parameters
- */
-export interface AppointmentSearchParams {
-  _id?: string;
-  patient?: string;
-  practitioner?: string;
-  location?: string;
-  status?: string;
-  date?: string;
-  'service-type'?: string;
-  specialty?: string;
-  'appointment-type'?: string;
-  identifier?: string;
-  
-  // OmniCare-specific search parameters
-  'omnicare-id'?: string;
-  'appointment-source'?: string;
-  'confirmation-status'?: string;
-  'upcoming'?: boolean;
-  'date-range'?: string;
-  
-  // Common search modifiers
-  _count?: number;
-  _offset?: number;
-  _sort?: string;
-  _include?: string[];
-  _revinclude?: string[];
-}
-
-/**
- * Appointment Scheduling Request
- */
-export interface AppointmentSchedulingRequest {
-  patient: Reference;
-  practitioner?: Reference;
-  serviceType: CodeableConcept;
-  appointmentType?: CodeableConcept;
-  preferredDates: string[];
-  preferredTimes: string[];
-  duration: number; // minutes
-  reason: string;
-  priority: 'routine' | 'urgent' | 'emergency';
-  isTelemedicine?: boolean;
-  notes?: string;
-  insurance?: {
-    primary: Reference;
-    secondary?: Reference;
-  };
-}
+// Note: Appointment search and scheduling interfaces have been moved to appointment.model.ts
 
 /**
  * Encounter Statistics

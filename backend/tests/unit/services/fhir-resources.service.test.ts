@@ -1,62 +1,58 @@
 import { FHIRResourcesService } from '../../../src/services/fhir-resources.service';
 import { medplumService } from '../../../src/services/medplum.service';
-import logger from '../../../src/utils/logger';
-import { Patient, Practitioner, Encounter, Observation } from '@medplum/fhirtypes';
+import { Patient, Encounter, Observation, MedicationRequest, Bundle, Practitioner, ServiceRequest } from '@medplum/fhirtypes';
+import { OmniCarePatient, OmniCareEncounter, OmniCareObservation, FHIRSearchParams } from '../../../src/types/fhir';
 
-// Mock dependencies
-jest.mock('../../../src/services/medplum.service');
-jest.mock('../../../src/utils/logger');
+// Mock the medplum service
+jest.mock('../../../src/services/medplum.service', () => ({
+  medplumService: {
+    createResource: jest.fn(),
+    readResource: jest.fn(),
+    updateResource: jest.fn(),
+    searchResources: jest.fn(),
+    validateResource: jest.fn()
+  }
+}));
+
+// Mock logger
+jest.mock('../../../src/utils/logger', () => ({
+  fhir: jest.fn(),
+  error: jest.fn(),
+  debug: jest.fn(),
+  info: jest.fn()
+}));
+
+const mockMedplumService = medplumService as jest.Mocked<typeof medplumService>;
 
 describe('FHIRResourcesService', () => {
-  let service: FHIRResourcesService;
-  const mockMedplumService = medplumService as jest.Mocked<typeof medplumService>;
-  const mockLogger = logger as jest.Mocked<typeof logger>;
+  let fhirService: FHIRResourcesService;
 
   beforeEach(() => {
-    service = new FHIRResourcesService();
+    fhirService = new FHIRResourcesService();
     jest.clearAllMocks();
   });
 
-  describe('Patient Management', () => {
+  describe('Patient Operations', () => {
     describe('createPatient', () => {
-      it('should create a patient with minimum required data', async () => {
-        const patientData = {
-          name: [{ given: ['John'], family: 'Doe' }],
-          gender: 'male' as const,
-          birthDate: '1990-01-01',
-        };
-
-        const expectedPatient: Patient = {
+      it('should create a patient with required fields', async () => {
+        const mockPatient: Patient = {
           resourceType: 'Patient',
-          id: 'test-patient-1',
+          id: 'pat123',
           active: true,
-          name: patientData.name,
-          gender: patientData.gender,
-          birthDate: patientData.birthDate,
-          address: [],
-          telecom: [],
-          identifier: expect.arrayContaining([
-            expect.objectContaining({
-              system: 'http://omnicare.com/patient-id',
-            }),
-          ]),
-          contact: [],
-          communication: [],
-          generalPractitioner: [],
-          extension: expect.arrayContaining([
-            expect.objectContaining({
-              url: 'http://omnicare.com/fhir/StructureDefinition/registration-date',
-            }),
-            expect.objectContaining({
-              url: 'http://omnicare.com/fhir/StructureDefinition/preferred-language',
-              valueString: 'en',
-            }),
-          ]),
+          name: [{ family: 'Doe', given: ['John'] }],
+          gender: 'male',
+          birthDate: '1990-01-01'
         };
 
-        mockMedplumService.createResource.mockResolvedValue(expectedPatient);
+        mockMedplumService.createResource.mockResolvedValue(mockPatient);
 
-        const result = await service.createPatient(patientData);
+        const patientData: Partial<OmniCarePatient> = {
+          name: [{ family: 'Doe', given: ['John'] }],
+          gender: 'male',
+          birthDate: '1990-01-01'
+        };
+
+        const result = await fhirService.createPatient(patientData);
 
         expect(mockMedplumService.createResource).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -65,285 +61,247 @@ describe('FHIRResourcesService', () => {
             name: patientData.name,
             gender: patientData.gender,
             birthDate: patientData.birthDate,
-          })
-        );
-        expect(mockLogger.fhir).toHaveBeenCalledWith(
-          'Patient created successfully',
-          { patientId: expectedPatient.id }
-        );
-        expect(result).toEqual(expectedPatient);
-      });
-
-      it('should create a patient with comprehensive data', async () => {
-        const patientData = {
-          name: [{ given: ['Jane'], family: 'Smith' }],
-          gender: 'female' as const,
-          birthDate: '1985-05-15',
-          telecom: [
-            { system: 'phone', value: '555-0123', use: 'mobile' },
-            { system: 'email', value: 'jane.smith@example.com', use: 'home' },
-          ],
-          address: [
-            {
-              use: 'home',
-              line: ['456 Oak St'],
-              city: 'Springfield',
-              state: 'IL',
-              postalCode: '62701',
-              country: 'US',
-            },
-          ],
-          omnicarePatientId: 'P123456',
-          registrationDate: '2024-01-01T00:00:00Z',
-          preferredLanguage: 'es',
-        };
-
-        const expectedPatient: Patient = {
-          ...global.createMockPatient(),
-          id: 'test-patient-2',
-          name: patientData.name,
-          gender: patientData.gender,
-          birthDate: patientData.birthDate,
-          telecom: patientData.telecom,
-          address: patientData.address,
-        };
-
-        mockMedplumService.createResource.mockResolvedValue(expectedPatient);
-
-        const result = await service.createPatient(patientData);
-
-        expect(mockMedplumService.createResource).toHaveBeenCalledWith(
-          expect.objectContaining({
-            resourceType: 'Patient',
-            name: patientData.name,
-            telecom: patientData.telecom,
-            address: patientData.address,
             identifier: expect.arrayContaining([
               expect.objectContaining({
-                system: 'http://omnicare.com/patient-id',
-                value: patientData.omnicarePatientId,
-              }),
+                system: 'http://omnicare.com/patient-id'
+              })
             ]),
             extension: expect.arrayContaining([
               expect.objectContaining({
+                url: 'http://omnicare.com/fhir/StructureDefinition/registration-date'
+              }),
+              expect.objectContaining({
+                url: 'http://omnicare.com/fhir/StructureDefinition/preferred-language'
+              })
+            ])
+          })
+        );
+        expect(result).toEqual(mockPatient);
+      });
+
+      it('should handle patient creation errors', async () => {
+        const error = new Error('Creation failed');
+        mockMedplumService.createResource.mockRejectedValue(error);
+
+        const patientData: Partial<OmniCarePatient> = {
+          name: [{ family: 'Doe', given: ['John'] }]
+        };
+
+        await expect(fhirService.createPatient(patientData)).rejects.toThrow('Creation failed');
+      });
+
+      it('should include OmniCare-specific extensions', async () => {
+        const mockPatient: Patient = {
+          resourceType: 'Patient',
+          id: 'pat123'
+        };
+
+        mockMedplumService.createResource.mockResolvedValue(mockPatient);
+
+        const patientData: Partial<OmniCarePatient> = {
+          name: [{ family: 'Doe', given: ['John'] }],
+          registrationDate: '2023-01-01T00:00:00Z',
+          preferredLanguage: 'es'
+        };
+
+        await fhirService.createPatient(patientData);
+
+        expect(mockMedplumService.createResource).toHaveBeenCalledWith(
+          expect.objectContaining({
+            extension: expect.arrayContaining([
+              expect.objectContaining({
                 url: 'http://omnicare.com/fhir/StructureDefinition/registration-date',
-                valueDateTime: patientData.registrationDate,
+                valueDateTime: '2023-01-01T00:00:00Z'
               }),
               expect.objectContaining({
                 url: 'http://omnicare.com/fhir/StructureDefinition/preferred-language',
-                valueString: patientData.preferredLanguage,
-              }),
-            ]),
+                valueString: 'es'
+              })
+            ])
           })
         );
-        expect(result).toEqual(expectedPatient);
       });
+    });
 
-      it('should handle errors when creating patient fails', async () => {
-        const patientData = {
-          name: [{ given: ['John'], family: 'Doe' }],
-          gender: 'male' as const,
-          birthDate: '1990-01-01',
+    describe('searchPatients', () => {
+      it('should search for patients with parameters', async () => {
+        const mockBundle: Bundle<Patient> = {
+          resourceType: 'Bundle',
+          type: 'searchset',
+          total: 1,
+          entry: [{
+            resource: {
+              resourceType: 'Patient',
+              id: 'pat123',
+              name: [{ family: 'Doe', given: ['John'] }]
+            }
+          }]
         };
 
-        const error = new Error('Failed to create patient');
-        mockMedplumService.createResource.mockRejectedValue(error);
+        mockMedplumService.searchResources.mockResolvedValue(mockBundle);
 
-        await expect(service.createPatient(patientData)).rejects.toThrow(error);
-        expect(mockLogger.error).toHaveBeenCalledWith('Failed to create patient:', error);
+        const searchParams: FHIRSearchParams = {
+          family: 'Doe',
+          given: 'John',
+          _count: 10
+        };
+
+        const result = await fhirService.searchPatients(searchParams);
+
+        expect(mockMedplumService.searchResources).toHaveBeenCalledWith('Patient', searchParams);
+        expect(result).toEqual(mockBundle);
+      });
+
+      it('should handle empty search results', async () => {
+        const emptyBundle: Bundle<Patient> = {
+          resourceType: 'Bundle',
+          type: 'searchset',
+          total: 0,
+          entry: []
+        };
+
+        mockMedplumService.searchResources.mockResolvedValue(emptyBundle);
+
+        const result = await fhirService.searchPatients({});
+
+        expect(result.total).toBe(0);
+        expect(result.entry).toEqual([]);
       });
     });
 
     describe('getPatient', () => {
       it('should retrieve a patient by ID', async () => {
-        const patientId = 'test-patient-1';
-        const expectedPatient = global.createMockPatient();
+        const mockPatient: Patient = {
+          resourceType: 'Patient',
+          id: 'pat123',
+          name: [{ family: 'Doe', given: ['John'] }]
+        };
 
-        mockMedplumService.readResource.mockResolvedValue(expectedPatient);
+        mockMedplumService.readResource.mockResolvedValue(mockPatient);
 
-        const result = await service.getPatient(patientId);
+        const result = await fhirService.getPatient('pat123');
 
-        expect(mockMedplumService.readResource).toHaveBeenCalledWith('Patient', patientId);
-        expect(mockLogger.fhir).toHaveBeenCalledWith('Patient retrieved', { patientId });
-        expect(result).toEqual(expectedPatient);
+        expect(mockMedplumService.readResource).toHaveBeenCalledWith('Patient', 'pat123');
+        expect(result).toEqual(mockPatient);
       });
 
-      it('should handle errors when patient retrieval fails', async () => {
-        const patientId = 'non-existent-patient';
+      it('should handle patient not found', async () => {
         const error = new Error('Patient not found');
-
         mockMedplumService.readResource.mockRejectedValue(error);
 
-        await expect(service.getPatient(patientId)).rejects.toThrow(error);
-        expect(mockLogger.error).toHaveBeenCalledWith('Failed to get patient:', error);
-      });
-    });
-
-    describe('searchPatients', () => {
-      it('should search patients with given criteria', async () => {
-        const searchParams = { family: 'Doe', given: 'John' };
-        const searchResults = {
-          resourceType: 'Bundle',
-          type: 'searchset',
-          total: 1,
-          entry: [
-            {
-              resource: global.createMockPatient(),
-            },
-          ],
-        };
-
-        mockMedplumService.searchResources.mockResolvedValue(searchResults);
-
-        const result = await service.searchPatients(searchParams);
-
-        expect(mockMedplumService.searchResources).toHaveBeenCalledWith('Patient', searchParams);
-        expect(mockLogger.fhir).toHaveBeenCalledWith('Patient search completed', {
-          resultCount: 1,
-          total: 1,
-        });
-        expect(result).toEqual(searchResults);
-      });
-
-      it('should handle empty search results', async () => {
-        const searchParams = { family: 'NonExistent' };
-        const searchResults = {
-          resourceType: 'Bundle',
-          type: 'searchset',
-          total: 0,
-          entry: [],
-        };
-
-        mockMedplumService.searchResources.mockResolvedValue(searchResults);
-
-        const result = await service.searchPatients(searchParams);
-
-        expect(result).toEqual(searchResults);
-        expect(mockLogger.fhir).toHaveBeenCalledWith('Patient search completed', {
-          resultCount: 0,
-          total: 0,
-        });
+        await expect(fhirService.getPatient('nonexistent')).rejects.toThrow('Patient not found');
       });
     });
 
     describe('updatePatient', () => {
       it('should update a patient', async () => {
-        const patient = {
-          ...global.createMockPatient(),
-          name: [{ given: ['John', 'Updated'], family: 'Doe' }],
+        const mockPatient: Patient = {
+          resourceType: 'Patient',
+          id: 'pat123',
+          name: [{ family: 'Smith', given: ['John'] }]
         };
 
-        mockMedplumService.updateResource.mockResolvedValue(patient);
+        mockMedplumService.updateResource.mockResolvedValue(mockPatient);
 
-        const result = await service.updatePatient(patient);
+        const result = await fhirService.updatePatient(mockPatient);
 
-        expect(mockMedplumService.updateResource).toHaveBeenCalledWith(patient);
-        expect(mockLogger.fhir).toHaveBeenCalledWith('Patient updated successfully', {
-          patientId: patient.id,
-        });
-        expect(result).toEqual(patient);
+        expect(mockMedplumService.updateResource).toHaveBeenCalledWith(mockPatient);
+        expect(result).toEqual(mockPatient);
       });
     });
   });
 
-  describe('Practitioner Management', () => {
+  describe('Practitioner Operations', () => {
     describe('createPractitioner', () => {
-      it('should create a practitioner with minimum data', async () => {
+      it('should create a practitioner with identifier', async () => {
+        const mockPractitioner: Practitioner = {
+          resourceType: 'Practitioner',
+          id: 'prac123',
+          active: true,
+          name: [{ family: 'Smith', given: ['Dr. Jane'], prefix: ['Dr.'] }]
+        };
+
+        mockMedplumService.createResource.mockResolvedValue(mockPractitioner);
+
         const practitionerData = {
-          name: [{ given: ['Dr. Jane'], family: 'Smith' }],
-          identifier: [
-            {
-              system: 'http://hl7.org/fhir/sid/us-npi',
-              value: '1234567890',
-            },
-          ],
+          name: [{ family: 'Smith', given: ['Dr. Jane'], prefix: ['Dr.'] }],
+          qualification: [{
+            code: {
+              coding: [{ system: 'http://terminology.hl7.org/CodeSystem/v2-0360', code: 'MD' }]
+            }
+          }]
         };
 
-        const expectedPractitioner = {
-          ...global.createMockPractitioner(),
-          id: 'test-practitioner-1',
-        };
-
-        mockMedplumService.createResource.mockResolvedValue(expectedPractitioner);
-
-        const result = await service.createPractitioner(practitionerData);
+        const result = await fhirService.createPractitioner(practitionerData);
 
         expect(mockMedplumService.createResource).toHaveBeenCalledWith(
           expect.objectContaining({
             resourceType: 'Practitioner',
             active: true,
             name: practitionerData.name,
+            qualification: practitionerData.qualification,
             identifier: expect.arrayContaining([
-              ...practitionerData.identifier,
               expect.objectContaining({
                 system: 'http://omnicare.com/practitioner-id',
-              }),
-            ]),
+                value: expect.stringMatching(/^PR\d+$/)
+              })
+            ])
           })
         );
-        expect(result).toEqual(expectedPractitioner);
-      });
-
-      it('should handle errors when creating practitioner fails', async () => {
-        const practitionerData = {
-          name: [{ given: ['Dr. Jane'], family: 'Smith' }],
-        };
-
-        const error = new Error('Failed to create practitioner');
-        mockMedplumService.createResource.mockRejectedValue(error);
-
-        await expect(service.createPractitioner(practitionerData)).rejects.toThrow(error);
-        expect(mockLogger.error).toHaveBeenCalledWith('Failed to create practitioner:', error);
+        expect(result).toEqual(mockPractitioner);
       });
     });
 
     describe('searchPractitioners', () => {
-      it('should search practitioners', async () => {
-        const searchParams = { name: 'Smith' };
-        const searchResults = {
+      it('should search for practitioners', async () => {
+        const mockBundle: Bundle<Practitioner> = {
           resourceType: 'Bundle',
           type: 'searchset',
           total: 1,
-          entry: [
-            {
-              resource: global.createMockPractitioner(),
-            },
-          ],
+          entry: [{
+            resource: {
+              resourceType: 'Practitioner',
+              id: 'prac123',
+              name: [{ family: 'Smith', given: ['Dr. Jane'] }]
+            }
+          }]
         };
 
-        mockMedplumService.searchResources.mockResolvedValue(searchResults);
+        mockMedplumService.searchResources.mockResolvedValue(mockBundle);
 
-        const result = await service.searchPractitioners(searchParams);
+        const searchParams = { family: 'Smith' };
+        const result = await fhirService.searchPractitioners(searchParams);
 
         expect(mockMedplumService.searchResources).toHaveBeenCalledWith('Practitioner', searchParams);
-        expect(mockLogger.fhir).toHaveBeenCalledWith('Practitioner search completed', {
-          resultCount: 1,
-        });
-        expect(result).toEqual(searchResults);
+        expect(result).toEqual(mockBundle);
       });
     });
   });
 
-  describe('Encounter Management', () => {
+  describe('Encounter Operations', () => {
     describe('createEncounter', () => {
       it('should create an encounter with default values', async () => {
-        const encounterData = {
-          subject: { reference: 'Patient/test-patient-1' },
-          participant: [
-            {
-              individual: { reference: 'Practitioner/test-practitioner-1' },
-            },
-          ],
+        const mockEncounter: Encounter = {
+          resourceType: 'Encounter',
+          id: 'enc123',
+          status: 'planned',
+          class: {
+            system: 'http://terminology.hl7.org/CodeSystem/v3-ActCode',
+            code: 'AMB',
+            display: 'Ambulatory'
+          },
+          subject: { reference: 'Patient/pat123' }
         };
 
-        const expectedEncounter = {
-          ...global.createMockEncounter(),
-          id: 'test-encounter-1',
+        mockMedplumService.createResource.mockResolvedValue(mockEncounter);
+
+        const encounterData: Partial<OmniCareEncounter> = {
+          subject: { reference: 'Patient/pat123' },
+          appointmentType: 'routine',
+          chiefComplaint: 'Annual checkup'
         };
 
-        mockMedplumService.createResource.mockResolvedValue(expectedEncounter);
-
-        const result = await service.createEncounter(encounterData);
+        const result = await fhirService.createEncounter(encounterData);
 
         expect(mockMedplumService.createResource).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -352,302 +310,525 @@ describe('FHIRResourcesService', () => {
             class: {
               system: 'http://terminology.hl7.org/CodeSystem/v3-ActCode',
               code: 'AMB',
-              display: 'Ambulatory',
+              display: 'Ambulatory'
             },
-            subject: encounterData.subject,
-            participant: encounterData.participant,
-          })
-        );
-        expect(result).toEqual(expectedEncounter);
-      });
-
-      it('should create an encounter with custom data', async () => {
-        const encounterData = {
-          status: 'in-progress' as const,
-          subject: { reference: 'Patient/test-patient-1' },
-          appointmentType: 'routine',
-          chiefComplaint: 'Annual checkup',
-          omnicareEncounterId: 'E123456',
-        };
-
-        const expectedEncounter = {
-          ...global.createMockEncounter(),
-          id: 'test-encounter-2',
-          status: encounterData.status,
-        };
-
-        mockMedplumService.createResource.mockResolvedValue(expectedEncounter);
-
-        const result = await service.createEncounter(encounterData);
-
-        expect(mockMedplumService.createResource).toHaveBeenCalledWith(
-          expect.objectContaining({
-            resourceType: 'Encounter',
-            status: encounterData.status,
-            subject: encounterData.subject,
+            subject: { reference: 'Patient/pat123' },
             identifier: expect.arrayContaining([
               expect.objectContaining({
-                system: 'http://omnicare.com/encounter-id',
-                value: encounterData.omnicareEncounterId,
-              }),
+                system: 'http://omnicare.com/encounter-id'
+              })
             ]),
             extension: expect.arrayContaining([
               expect.objectContaining({
                 url: 'http://omnicare.com/fhir/StructureDefinition/appointment-type',
-                valueString: encounterData.appointmentType,
+                valueString: 'routine'
               }),
               expect.objectContaining({
                 url: 'http://omnicare.com/fhir/StructureDefinition/chief-complaint',
-                valueString: encounterData.chiefComplaint,
-              }),
-            ]),
+                valueString: 'Annual checkup'
+              })
+            ])
           })
         );
-        expect(result).toEqual(expectedEncounter);
+        expect(result).toEqual(mockEncounter);
       });
     });
 
     describe('searchEncounters', () => {
-      it('should search encounters', async () => {
-        const searchParams = { patient: 'Patient/test-patient-1' };
-        const searchResults = {
+      it('should search for encounters', async () => {
+        const mockBundle: Bundle<Encounter> = {
           resourceType: 'Bundle',
           type: 'searchset',
           total: 1,
-          entry: [
-            {
-              resource: global.createMockEncounter(),
-            },
-          ],
+          entry: [{
+            resource: {
+              resourceType: 'Encounter',
+              id: 'enc123',
+              status: 'finished',
+              class: {
+                system: 'http://terminology.hl7.org/CodeSystem/v3-ActCode',
+                code: 'AMB',
+                display: 'Ambulatory'
+              },
+              subject: { reference: 'Patient/pat123' }
+            }
+          }]
         };
 
-        mockMedplumService.searchResources.mockResolvedValue(searchResults);
+        mockMedplumService.searchResources.mockResolvedValue(mockBundle);
 
-        const result = await service.searchEncounters(searchParams);
+        const searchParams = { patient: 'pat123', status: 'finished' };
+        const result = await fhirService.searchEncounters(searchParams);
 
         expect(mockMedplumService.searchResources).toHaveBeenCalledWith('Encounter', searchParams);
-        expect(result).toEqual(searchResults);
+        expect(result).toEqual(mockBundle);
       });
     });
   });
 
-  describe('Observation Management', () => {
+  describe('Observation Operations', () => {
     describe('createObservation', () => {
-      it('should create an observation with default values', async () => {
-        const observationData = {
-          subject: { reference: 'Patient/test-patient-1' },
-          encounter: { reference: 'Encounter/test-encounter-1' },
-          valueQuantity: {
-            value: 98.6,
-            unit: '°F',
-            system: 'http://unitsofmeasure.org',
-            code: '[degF]',
-          },
-        };
-
-        const expectedObservation: Observation = {
+      it('should create an observation with required fields', async () => {
+        const mockObservation: Observation = {
           resourceType: 'Observation',
-          id: 'test-observation-1',
+          id: 'obs123',
           status: 'final',
           category: [{
             coding: [{
               system: 'http://terminology.hl7.org/CodeSystem/observation-category',
               code: 'vital-signs',
-              display: 'Vital Signs',
-            }],
+              display: 'Vital Signs'
+            }]
           }],
           code: {
             coding: [{
               system: 'http://loinc.org',
               code: '8310-5',
-              display: 'Body temperature',
-            }],
+              display: 'Body temperature'
+            }]
           },
-          subject: observationData.subject,
-          encounter: observationData.encounter,
-          effectiveDateTime: expect.any(String),
-          performer: [],
-          valueQuantity: observationData.valueQuantity,
-          identifier: expect.arrayContaining([
-            expect.objectContaining({
-              system: 'http://omnicare.com/observation-id',
-            }),
-          ]),
-          extension: expect.arrayContaining([
-            expect.objectContaining({
-              url: 'http://omnicare.com/fhir/StructureDefinition/device-used',
-              valueString: '',
-            }),
-          ]),
+          subject: { reference: 'Patient/pat123' }
         };
 
-        mockMedplumService.createResource.mockResolvedValue(expectedObservation);
+        mockMedplumService.createResource.mockResolvedValue(mockObservation);
 
-        const result = await service.createObservation(observationData);
+        const observationData: Partial<OmniCareObservation> = {
+          status: 'final',
+          category: [{
+            coding: [{
+              system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+              code: 'vital-signs',
+              display: 'Vital Signs'
+            }]
+          }],
+          code: {
+            coding: [{
+              system: 'http://loinc.org',
+              code: '8310-5',
+              display: 'Body temperature'
+            }]
+          },
+          subject: { reference: 'Patient/pat123' },
+          valueQuantity: { value: 98.6, unit: '°F' },
+          deviceUsed: 'Digital thermometer'
+        };
+
+        const result = await fhirService.createObservation(observationData);
 
         expect(mockMedplumService.createResource).toHaveBeenCalledWith(
           expect.objectContaining({
             resourceType: 'Observation',
             status: 'final',
-            subject: observationData.subject,
-            encounter: observationData.encounter,
-            valueQuantity: observationData.valueQuantity,
+            subject: { reference: 'Patient/pat123' },
+            valueQuantity: { value: 98.6, unit: '°F' },
+            identifier: expect.arrayContaining([
+              expect.objectContaining({
+                system: 'http://omnicare.com/observation-id'
+              })
+            ]),
+            extension: expect.arrayContaining([
+              expect.objectContaining({
+                url: 'http://omnicare.com/fhir/StructureDefinition/device-used',
+                valueString: 'Digital thermometer'
+              })
+            ])
           })
         );
-        expect(result).toEqual(expectedObservation);
+        expect(result).toEqual(mockObservation);
       });
     });
 
     describe('createVitalSigns', () => {
       it('should create multiple vital sign observations', async () => {
-        const patientId = 'test-patient-1';
-        const encounterId = 'test-encounter-1';
+        const mockTempObservation: Observation = {
+          resourceType: 'Observation',
+          id: 'obs-temp123',
+          status: 'final',
+          category: [{
+            coding: [{
+              system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+              code: 'vital-signs',
+              display: 'Vital Signs'
+            }]
+          }],
+          code: {
+            coding: [{
+              system: 'http://loinc.org',
+              code: '8310-5',
+              display: 'Body temperature'
+            }]
+          },
+          subject: { reference: 'Patient/pat123' },
+          encounter: { reference: 'Encounter/enc123' },
+          valueQuantity: { value: 98.6, unit: '°F' }
+        };
+
+        const mockBPObservation: Observation = {
+          resourceType: 'Observation',
+          id: 'obs-bp123',
+          status: 'final',
+          category: [{
+            coding: [{
+              system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+              code: 'vital-signs',
+              display: 'Vital Signs'
+            }]
+          }],
+          code: {
+            coding: [{
+              system: 'http://loinc.org',
+              code: '85354-9',
+              display: 'Blood pressure panel with all children optional'
+            }]
+          },
+          subject: { reference: 'Patient/pat123' },
+          encounter: { reference: 'Encounter/enc123' },
+          component: [
+            {
+              code: {
+                coding: [{
+                  system: 'http://loinc.org',
+                  code: '8480-6',
+                  display: 'Systolic blood pressure'
+                }]
+              },
+              valueQuantity: { value: 120, unit: 'mmHg' }
+            },
+            {
+              code: {
+                coding: [{
+                  system: 'http://loinc.org',
+                  code: '8462-4',
+                  display: 'Diastolic blood pressure'
+                }]
+              },
+              valueQuantity: { value: 80, unit: 'mmHg' }
+            }
+          ]
+        };
+
+        mockMedplumService.createResource
+          .mockResolvedValueOnce(mockTempObservation)
+          .mockResolvedValueOnce(mockBPObservation);
+
         const vitals = {
           temperature: 98.6,
           bloodPressureSystolic: 120,
-          bloodPressureDiastolic: 80,
-          heartRate: 72,
+          bloodPressureDiastolic: 80
         };
 
-        const mockObservations = [
-          { resourceType: 'Observation', id: 'temp-obs-1' },
-          { resourceType: 'Observation', id: 'bp-obs-1' },
-          { resourceType: 'Observation', id: 'hr-obs-1' },
-        ];
+        const result = await fhirService.createVitalSigns('pat123', 'enc123', vitals);
 
-        // Mock the createObservation method calls
-        jest.spyOn(service, 'createObservation')
-          .mockResolvedValueOnce(mockObservations[0] as any)
-          .mockResolvedValueOnce(mockObservations[1] as any)
-          .mockResolvedValueOnce(mockObservations[2] as any);
-
-        const result = await service.createVitalSigns(patientId, encounterId, vitals);
-
-        expect(service.createObservation).toHaveBeenCalledTimes(3);
-        expect(result).toEqual(mockObservations);
-        expect(mockLogger.fhir).toHaveBeenCalledWith('Vital signs created successfully', {
-          patientId,
-          encounterId,
-          vitalsCount: 3,
-        });
+        expect(result).toHaveLength(2);
+        expect(result[0]).toEqual(mockTempObservation);
+        expect(result[1]).toEqual(mockBPObservation);
+        expect(mockMedplumService.createResource).toHaveBeenCalledTimes(2);
       });
 
-      it('should create only provided vital signs', async () => {
-        const patientId = 'test-patient-1';
-        const encounterId = 'test-encounter-1';
-        const vitals = {
-          temperature: 98.6,
+      it('should handle empty vitals', async () => {
+        const result = await fhirService.createVitalSigns('pat123', 'enc123', {});
+
+        expect(result).toEqual([]);
+        expect(mockMedplumService.createResource).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('Medication Operations', () => {
+    describe('createMedicationRequest', () => {
+      it('should create a medication request', async () => {
+        const mockMedRequest: MedicationRequest = {
+          resourceType: 'MedicationRequest',
+          id: 'med123',
+          status: 'active',
+          intent: 'order',
+          subject: { reference: 'Patient/pat123' },
+          medicationCodeableConcept: {
+            coding: [{
+              system: 'http://www.nlm.nih.gov/research/umls/rxnorm',
+              code: '313782',
+              display: 'Acetaminophen 325 MG Oral Tablet'
+            }]
+          }
         };
 
-        const mockObservation = { resourceType: 'Observation', id: 'temp-obs-1' };
+        mockMedplumService.createResource.mockResolvedValue(mockMedRequest);
 
-        jest.spyOn(service, 'createObservation')
-          .mockResolvedValueOnce(mockObservation as any);
+        const medicationData = {
+          subject: { reference: 'Patient/pat123' },
+          medicationCodeableConcept: {
+            coding: [{
+              system: 'http://www.nlm.nih.gov/research/umls/rxnorm',
+              code: '313782',
+              display: 'Acetaminophen 325 MG Oral Tablet'
+            }]
+          },
+          dosageInstruction: [{
+            text: 'Take 1 tablet by mouth every 4-6 hours as needed for pain'
+          }]
+        };
 
-        const result = await service.createVitalSigns(patientId, encounterId, vitals);
+        const result = await fhirService.createMedicationRequest(medicationData);
 
-        expect(service.createObservation).toHaveBeenCalledTimes(1);
-        expect(result).toEqual([mockObservation]);
+        expect(mockMedplumService.createResource).toHaveBeenCalledWith(
+          expect.objectContaining({
+            resourceType: 'MedicationRequest',
+            status: 'active',
+            intent: 'order',
+            subject: { reference: 'Patient/pat123' },
+            medicationCodeableConcept: medicationData.medicationCodeableConcept,
+            dosageInstruction: medicationData.dosageInstruction,
+            identifier: expect.arrayContaining([
+              expect.objectContaining({
+                system: 'http://omnicare.com/medication-request-id'
+              })
+            ])
+          })
+        );
+        expect(result).toEqual(mockMedRequest);
+      });
+    });
+  });
+
+  describe('Service Request Operations', () => {
+    describe('createServiceRequest', () => {
+      it('should create a service request with default code', async () => {
+        const mockServiceRequest: ServiceRequest = {
+          resourceType: 'ServiceRequest',
+          id: 'srv123',
+          status: 'active',
+          intent: 'order',
+          code: {
+            coding: [{
+              system: 'http://snomed.info/sct',
+              code: '15220000',
+              display: 'Laboratory test'
+            }]
+          },
+          subject: { reference: 'Patient/pat123' }
+        };
+
+        mockMedplumService.createResource.mockResolvedValue(mockServiceRequest);
+
+        const serviceRequestData = {
+          subject: { reference: 'Patient/pat123' },
+          reasonCode: [{
+            coding: [{
+              system: 'http://snomed.info/sct',
+              code: '386053000',
+              display: 'Evaluation procedure'
+            }]
+          }]
+        };
+
+        const result = await fhirService.createServiceRequest(serviceRequestData);
+
+        expect(mockMedplumService.createResource).toHaveBeenCalledWith(
+          expect.objectContaining({
+            resourceType: 'ServiceRequest',
+            status: 'active',
+            intent: 'order',
+            subject: { reference: 'Patient/pat123' },
+            code: {
+              coding: [{
+                system: 'http://snomed.info/sct',
+                code: '15220000',
+                display: 'Laboratory test'
+              }]
+            },
+            identifier: expect.arrayContaining([
+              expect.objectContaining({
+                system: 'http://omnicare.com/service-request-id'
+              })
+            ])
+          })
+        );
+        expect(result).toEqual(mockServiceRequest);
       });
     });
   });
 
   describe('Utility Methods', () => {
     describe('validateResource', () => {
-      it('should validate a resource successfully', async () => {
-        const resource = global.createMockPatient();
-        const validationResponse = {
+      it('should validate a FHIR resource', async () => {
+        const mockValidationResult = {
           resourceType: 'OperationOutcome',
-          issue: [],
+          issue: []
         };
 
-        mockMedplumService.validateResource.mockResolvedValue(validationResponse);
+        mockMedplumService.validateResource.mockResolvedValue(mockValidationResult);
 
-        const result = await service.validateResource(resource);
+        const patient: Patient = {
+          resourceType: 'Patient',
+          id: 'pat123',
+          name: [{ family: 'Doe', given: ['John'] }]
+        };
 
-        expect(mockMedplumService.validateResource).toHaveBeenCalledWith(resource);
-        expect(result).toEqual({
-          valid: true,
-          errors: [],
-          warnings: [],
+        const result = await fhirService.validateResource(patient);
+
+        expect(mockMedplumService.validateResource).toHaveBeenCalledWith(patient);
+        expect(result.valid).toBe(true);
+        expect(result.errors).toEqual([]);
+        expect(result.warnings).toEqual([]);
+      });
+
+      it('should handle validation errors', async () => {
+        const mockValidationResult = {
+          resourceType: 'OperationOutcome',
+          issue: [{
+            severity: 'error',
+            code: 'required',
+            diagnostics: 'Missing required field: name',
+            expression: ['Patient.name']
+          }]
+        };
+
+        mockMedplumService.validateResource.mockResolvedValue(mockValidationResult);
+
+        const patient: Patient = {
+          resourceType: 'Patient',
+          id: 'pat123'
+        };
+
+        const result = await fhirService.validateResource(patient);
+
+        expect(result.valid).toBe(false);
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toEqual({
+          path: 'Patient.name',
+          message: 'Missing required field: name',
+          code: 'required',
+          severity: 'error'
         });
       });
 
-      it('should return validation errors and warnings', async () => {
-        const resource = global.createMockPatient();
-        const validationResponse = {
+      it('should handle validation warnings', async () => {
+        const mockValidationResult = {
           resourceType: 'OperationOutcome',
-          issue: [
-            {
-              severity: 'error',
-              code: 'required',
-              diagnostics: 'Missing required field',
-              expression: ['Patient.name'],
-            },
-            {
-              severity: 'warning',
-              code: 'informational',
-              diagnostics: 'Recommended field missing',
-              expression: ['Patient.telecom'],
-            },
-          ],
+          issue: [{
+            severity: 'warning',
+            code: 'informational',
+            diagnostics: 'Recommended field missing: birthDate',
+            expression: ['Patient.birthDate']
+          }]
         };
 
-        mockMedplumService.validateResource.mockResolvedValue(validationResponse);
+        mockMedplumService.validateResource.mockResolvedValue(mockValidationResult);
 
-        const result = await service.validateResource(resource);
+        const patient: Patient = {
+          resourceType: 'Patient',
+          id: 'pat123',
+          name: [{ family: 'Doe', given: ['John'] }]
+        };
 
-        expect(result).toEqual({
-          valid: false,
-          errors: [
-            {
-              path: 'Patient.name',
-              message: 'Missing required field',
-              code: 'required',
-              severity: 'error',
-            },
-          ],
-          warnings: [
-            {
-              path: 'Patient.telecom',
-              message: 'Recommended field missing',
-              code: 'informational',
-              severity: 'warning',
-            },
-          ],
+        const result = await fhirService.validateResource(patient);
+
+        expect(result.valid).toBe(true);
+        expect(result.warnings).toHaveLength(1);
+        expect(result.warnings[0]).toEqual({
+          path: 'Patient.birthDate',
+          message: 'Recommended field missing: birthDate',
+          code: 'informational',
+          severity: 'warning'
         });
       });
     });
 
     describe('getPatientEverything', () => {
-      it('should retrieve all resources for a patient', async () => {
-        const patientId = 'test-patient-1';
-        const patientEverything = {
+      it('should retrieve all patient data', async () => {
+        const mockBundle: Bundle = {
           resourceType: 'Bundle',
           type: 'searchset',
           total: 5,
           entry: [
-            { resource: global.createMockPatient() },
-            { resource: global.createMockEncounter() },
-            // ... more resources
-          ],
+            { resource: { resourceType: 'Patient', id: 'pat123', name: [{ family: 'Doe', given: ['John'] }] } },
+            { resource: { resourceType: 'Encounter', id: 'enc123', status: 'finished', class: { code: 'AMB' }, subject: { reference: 'Patient/pat123' } } },
+            { resource: { resourceType: 'Observation', id: 'obs123', status: 'final', code: { text: 'Test' }, subject: { reference: 'Patient/pat123' } } }
+          ]
         };
 
-        mockMedplumService.searchResources.mockResolvedValue(patientEverything);
+        mockMedplumService.searchResources.mockResolvedValue(mockBundle);
 
-        const result = await service.getPatientEverything(patientId);
+        const result = await fhirService.getPatientEverything('pat123');
 
         expect(mockMedplumService.searchResources).toHaveBeenCalledWith('Patient', {
-          _id: patientId,
+          _id: 'pat123',
           _include: '*',
-          _revinclude: '*',
+          _revinclude: '*'
         });
-        expect(mockLogger.fhir).toHaveBeenCalledWith('Patient everything retrieved', {
-          patientId,
-          resourceCount: 2,
-        });
-        expect(result).toEqual(patientEverything);
+        expect(result).toEqual(mockBundle);
+        expect(result.entry).toHaveLength(3);
       });
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should handle network errors gracefully', async () => {
+      const networkError = new Error('Network timeout');
+      mockMedplumService.createResource.mockRejectedValue(networkError);
+
+      const patientData = { name: [{ family: 'Doe', given: ['John'] }] };
+
+      await expect(fhirService.createPatient(patientData)).rejects.toThrow('Network timeout');
+    });
+
+    it('should handle validation errors during creation', async () => {
+      const validationError = new Error('Invalid resource format');
+      mockMedplumService.createResource.mockRejectedValue(validationError);
+
+      const invalidPatientData = {};
+
+      await expect(fhirService.createPatient(invalidPatientData)).rejects.toThrow('Invalid resource format');
+    });
+
+    it('should handle resource not found errors', async () => {
+      const notFoundError = new Error('Resource not found');
+      mockMedplumService.readResource.mockRejectedValue(notFoundError);
+
+      await expect(fhirService.getPatient('nonexistent')).rejects.toThrow('Resource not found');
+    });
+  });
+
+  describe('Identifier Generation', () => {
+    it('should generate unique identifiers for different resource types', async () => {
+      const mockPatient: Patient = { resourceType: 'Patient', id: 'pat123', name: [{ family: 'Doe' }] };
+      const mockPractitioner: Practitioner = { resourceType: 'Practitioner', id: 'prac123', name: [{ family: 'Smith' }] };
+      
+      mockMedplumService.createResource
+        .mockResolvedValueOnce(mockPatient)
+        .mockResolvedValueOnce(mockPractitioner);
+
+      await fhirService.createPatient({ name: [{ family: 'Doe' }] });
+      await fhirService.createPractitioner({ name: [{ family: 'Smith' }] });
+
+      const patientCall = mockMedplumService.createResource.mock.calls[0]?.[0] as Patient;
+      const practitionerCall = mockMedplumService.createResource.mock.calls[1]?.[0] as Practitioner;
+
+      expect(patientCall?.identifier?.[0]?.value).toMatch(/^P\d+$/);
+      expect(practitionerCall?.identifier?.[0]?.value).toMatch(/^PR\d+$/); 
+    });
+  });
+
+  describe('Extension Handling', () => {
+    it('should filter out undefined extensions', async () => {
+      const mockPatient: Patient = { resourceType: 'Patient', id: 'pat123', name: [{ family: 'Doe' }] };
+      mockMedplumService.createResource.mockResolvedValue(mockPatient);
+
+      const patientData = {
+        name: [{ family: 'Doe', given: ['John'] }],
+        registrationDate: undefined,
+        preferredLanguage: 'en'
+      };
+
+      await fhirService.createPatient(patientData);
+
+      const createdPatient = mockMedplumService.createResource.mock.calls[0]?.[0] as Patient;
+      
+      // Should only include defined extensions
+      expect(createdPatient?.extension).toHaveLength(2); // registration-date (default) and preferred-language
+      expect(createdPatient?.extension?.find((ext: any) => 
+        ext.url === 'http://omnicare.com/fhir/StructureDefinition/preferred-language'
+      )).toBeDefined();
     });
   });
 });

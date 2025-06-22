@@ -1,5 +1,8 @@
 import { create } from 'zustand';
 import { Patient, VitalSigns, ClinicalNote, Encounter, MedicationOrder, LabResult } from '@/types';
+import { getErrorMessage } from '@/utils/error.utils';
+import { patientCacheService } from '@/services/patient-cache.service';
+import { patientSyncService } from '@/services/patient-sync.service';
 
 interface PatientState {
   // Current patient context
@@ -281,7 +284,7 @@ export const usePatientStore = create<PatientState>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // This would typically call your API
+      // Use cache service for optimized loading
       const response = await fetch('/api/patients');
       
       if (!response.ok) {
@@ -290,12 +293,23 @@ export const usePatientStore = create<PatientState>((set, get) => ({
       
       const patients: Patient[] = await response.json();
       
+      // Warm up cache with frequently accessed patients
+      const frequentPatientIds = patients
+        .filter(p => p.lastVisit && new Date(p.lastVisit) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+        .slice(0, 10)
+        .map(p => p.id);
+      
+      if (frequentPatientIds.length > 0) {
+        patientCacheService.warmupCache(frequentPatientIds);
+      }
+      
       set({ patients, isLoading: false });
       get().applyFilters();
-    } catch (error) {
-      console.error('Error loading patients:', error);
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error);
+      console.error('Error loading patients:', errorMessage, error);
       set({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
         isLoading: false,
       });
     }
@@ -330,10 +344,11 @@ export const usePatientStore = create<PatientState>((set, get) => ({
         patientLabResults: labResults,
         isLoading: false,
       });
-    } catch (error) {
-      console.error('Error loading patient details:', error);
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error);
+      console.error('Error loading patient details:', errorMessage, error);
       set({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
         isLoading: false,
       });
     }

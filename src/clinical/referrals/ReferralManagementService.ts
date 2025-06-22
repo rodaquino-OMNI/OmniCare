@@ -10,9 +10,18 @@ import {
   DocumentReference,
   Coverage,
   Claim,
-  ClaimResponse
+  ClaimResponse,
+  Reference,
+  Group,
+  Device,
+  HealthcareService,
+  RelatedPerson,
+  Location
 } from '@medplum/fhirtypes';
 import { v4 as uuidv4 } from 'uuid';
+import { isReferenceToType, isFHIRResourceType, isDefined, assertDefined } from '../../utils/type-guards';
+import { TypeSafeFHIRSearch } from '../../utils/fhir-search.utils';
+import { createFlexibleReference, toFlexibleReference } from '../../utils/fhir-reference-utils';
 
 export interface ReferralRequest {
   patientId: string;
@@ -31,7 +40,7 @@ export interface ReferralRequest {
 
 export interface ReferralStatus {
   referralId: string;
-  status: 'draft' | 'active' | 'on-hold' | 'completed' | 'cancelled' | 'entered-in-error';
+  status: 'draft' | 'active' | 'on-hold' | 'completed' | 'revoked' | 'entered-in-error' | 'unknown';
   subStatus?: 'pending-authorization' | 'authorization-obtained' | 'appointment-scheduled' | 'seen' | 'report-available';
   lastUpdated: Date;
   updatedBy: string;
@@ -62,7 +71,11 @@ export interface ReferralCommunication {
 }
 
 export class ReferralManagementService {
-  constructor(private medplum: MedplumClient) {}
+  private typeSafeSearch: TypeSafeFHIRSearch;
+  
+  constructor(private medplum: MedplumClient) {
+    this.typeSafeSearch = new TypeSafeFHIRSearch(medplum);
+  }
 
   /**
    * Create a new referral
@@ -153,8 +166,8 @@ export class ReferralManagementService {
     referralId: string,
     coverageId: string
   ): Promise<Claim> {
-    const referral = await this.medplum.readResource<ServiceRequest>('ServiceRequest', referralId);
-    const coverage = await this.medplum.readResource<Coverage>('Coverage', coverageId);
+    const referral = await this.medplum.readResource('ServiceRequest', referralId);
+    const coverage = await this.medplum.readResource('Coverage', coverageId);
 
     const claim = await this.medplum.createResource<Claim>({
       resourceType: 'Claim',
@@ -167,13 +180,13 @@ export class ReferralManagementService {
         }]
       },
       use: 'preauthorization',
-      patient: referral!.subject!,
+      patient: referral?.subject ? referral.subject as Reference<Patient> : { reference: 'Patient/unknown' },
       created: new Date().toISOString(),
-      provider: referral!.requester!,
+      provider: referral?.requester ? referral.requester as Reference<Organization | Practitioner | PractitionerRole> : { reference: 'Organization/unknown' },
       priority: {
         coding: [{
           system: 'http://terminology.hl7.org/CodeSystem/processpriority',
-          code: referral!.priority || 'normal'
+          code: referral?.priority ?? 'normal'
         }]
       },
       insurance: [{
@@ -185,7 +198,7 @@ export class ReferralManagementService {
       diagnosis: [{
         sequence: 1,
         diagnosisCodeableConcept: {
-          text: referral!.reasonCode?.[0]?.text
+          text: referral?.reasonCode?.[0]?.text
         }
       }],
       item: [{
@@ -218,7 +231,7 @@ export class ReferralManagementService {
     subStatus?: ReferralStatus['subStatus'],
     notes?: string
   ): Promise<ServiceRequest> {
-    const referral = await this.medplum.readResource<ServiceRequest>('ServiceRequest', referralId);
+    const referral = await this.medplum.readResource('ServiceRequest', referralId);
     
     if (!referral) {
       throw new Error('Referral not found');
@@ -227,7 +240,7 @@ export class ReferralManagementService {
     // Update ServiceRequest
     const updatedReferral = await this.medplum.updateResource<ServiceRequest>({
       ...referral,
-      status,
+      status: status as ServiceRequest['status'],
       extension: [
         ...(referral.extension || []).filter(ext => ext.url !== 'http://omnicare.com/referral-substatus'),
         {
@@ -238,18 +251,20 @@ export class ReferralManagementService {
     });
 
     // Update associated Task
-    const tasks = await this.medplum.searchResources<Task>('Task', {
+    const taskResults = await this.typeSafeSearch.searchTasks({
       focus: `ServiceRequest/${referralId}`
     });
+    const tasks = taskResults.resources;
 
     if (tasks.length > 0) {
+      const task = tasks[0];
       await this.medplum.updateResource<Task>({
-        ...tasks[0],
-        status: this.mapServiceRequestStatusToTaskStatus(status),
+        ...task,
+        status: status === 'revoked' ? 'cancelled' : this.mapServiceRequestStatusToTaskStatus(status),
         businessStatus: {
           text: subStatus || status
         },
-        note: notes ? [...(tasks[0].note || []), { text: notes }] : tasks[0].note
+        note: notes ? [...(task.note || []), { text: notes }] : task.note
       });
     }
 
@@ -274,7 +289,7 @@ export class ReferralManagementService {
     appointmentDate: Date,
     duration: number
   ): Promise<void> {
-    const referral = await this.medplum.readResource<ServiceRequest>('ServiceRequest', referralId);
+    const referral = await this.medplum.readResource('ServiceRequest', referralId);
     
     if (!referral) {
       throw new Error('Referral not found');
@@ -299,7 +314,7 @@ export class ReferralManagementService {
       end: new Date(appointmentDate.getTime() + duration * 60000).toISOString(),
       participant: [
         {
-          actor: referral.subject,
+          actor: referral.subject as Reference<Patient | Device | HealthcareService | Location | Practitioner | PractitionerRole | RelatedPerson>,
           required: 'required',
           status: 'accepted'
         },
@@ -326,7 +341,7 @@ export class ReferralManagementService {
     recommendations: string,
     followUpRequired: boolean
   ): Promise<DocumentReference> {
-    const referral = await this.medplum.readResource<ServiceRequest>('ServiceRequest', referralId);
+    const referral = await this.medplum.readResource('ServiceRequest', referralId);
     
     if (!referral) {
       throw new Error('Referral not found');
@@ -350,7 +365,7 @@ export class ReferralManagementService {
           display: 'Clinical Note'
         }]
       }],
-      subject: referral.subject,
+      subject: referral.subject as Reference<Patient | Device | Group | Practitioner>,
       author: [{ reference: `Practitioner/${consultProviderId}` }],
       context: {
         related: [{ reference: `ServiceRequest/${referralId}` }]
@@ -402,7 +417,8 @@ export class ReferralManagementService {
         : `le${endDate.toISOString()}`;
     }
 
-    return await this.medplum.searchResources<ServiceRequest>('ServiceRequest', searchParams);
+    const results = await this.typeSafeSearch.searchServiceRequests(searchParams);
+    return results.resources;
   }
 
   /**
@@ -458,9 +474,10 @@ export class ReferralManagementService {
     details: Partial<ReferralAuthorization>
   ): Promise<void> {
     // Find the claim
-    const claims = await this.medplum.searchResources<Claim>('Claim', {
+    const claimsBundle = await this.typeSafeSearch.searchResources('Claim', {
       referral: `ServiceRequest/${referralId}`
     });
+    const claims = claimsBundle.entry?.map(entry => entry.resource).filter(Boolean) || [];
 
     if (claims.length === 0) {
       throw new Error('No authorization request found for this referral');
@@ -477,10 +494,10 @@ export class ReferralManagementService {
         }]
       },
       use: 'preauthorization',
-      patient: claims[0].patient,
+      patient: (claims[0] as Claim).patient,
       created: new Date().toISOString(),
-      insurer: claims[0].insurance[0].coverage,
-      request: { reference: `Claim/${claims[0].id}` },
+      insurer: (claims[0] as Claim).insurance?.[0]?.coverage ? { reference: (claims[0] as Claim).insurance![0].coverage!.reference?.replace('Coverage/', 'Organization/') || 'Organization/unknown' } : { reference: 'Organization/unknown' },
+      request: { reference: `Claim/${(claims[0] as Claim).id}` },
       outcome: status === 'approved' ? 'complete' : 'error',
       disposition: status === 'approved' 
         ? `Approved - Auth #${authorizationNumber}`
@@ -518,10 +535,11 @@ export class ReferralManagementService {
     reportsToReview: ServiceRequest[];
   }> {
     // Get all active referrals for provider
-    const referrals = await this.medplum.searchResources<ServiceRequest>('ServiceRequest', {
+    const referralsResult = await this.typeSafeSearch.searchServiceRequests({
       requester: `Practitioner/${providerId}`,
       status: 'active,on-hold'
     });
+    const referrals = referralsResult.resources;
 
     const pendingAuthorization: ServiceRequest[] = [];
     const awaitingScheduling: ServiceRequest[] = [];

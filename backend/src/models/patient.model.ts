@@ -1,4 +1,5 @@
 import { Patient as FHIRPatient } from '@medplum/fhirtypes';
+
 import { 
   FHIRResource, 
   Identifier, 
@@ -7,7 +8,8 @@ import {
   ContactPoint, 
   Reference, 
   CodeableConcept,
-  Attachment
+  Attachment,
+  ValidationResult
 } from './base.model';
 
 /**
@@ -41,7 +43,7 @@ export interface OmniCarePatient extends FHIRResource {
   omnicarePatientId?: string;
   registrationDate?: string;
   preferredLanguage?: string;
-  emergencyContact?: EmergencyContact[];
+  emergencyContact?: PatientEmergencyContact[];
   insurance?: InsuranceInformation[];
   demographics?: PatientDemographics;
   preferences?: PatientPreferences;
@@ -74,7 +76,7 @@ export interface PatientLink {
   type: 'replaced-by' | 'replaces' | 'refer' | 'seealso';
 }
 
-export interface EmergencyContact {
+export interface PatientEmergencyContact {
   id?: string;
   relationship: string;
   name: HumanName;
@@ -294,7 +296,7 @@ export interface PatientRegistrationRequest {
     maritalStatus?: CodeableConcept;
   };
   identifiers?: Identifier[];
-  emergencyContacts?: EmergencyContact[];
+  emergencyContacts?: PatientEmergencyContact[];
   insurance?: InsuranceInformation[];
   preferences?: PatientPreferences;
   primaryCareProvider?: Reference;
@@ -317,9 +319,152 @@ export interface PatientUpdateRequest {
     telecom: ContactPoint[];
     maritalStatus: CodeableConcept;
   }>;
-  emergencyContacts?: EmergencyContact[];
+  emergencyContacts?: PatientEmergencyContact[];
   insurance?: InsuranceInformation[];
   preferences?: Partial<PatientPreferences>;
   accessibilityNeeds?: Partial<AccessibilityNeeds>;
   alerts?: PatientAlert[];
+}
+
+/**
+ * Patient Social History Interface  
+ */
+export interface PatientSocialHistory {
+  smokingStatus?: 'never' | 'former' | 'current' | 'unknown';
+  alcoholUse?: 'never' | 'light' | 'moderate' | 'heavy' | 'unknown';
+  substanceUse?: string[];
+  occupation?: string;
+  socialSupportSystem?: string;
+  livingArrangement?: string;
+  exerciseHabits?: string;
+  dietaryHabits?: string;
+}
+
+/**
+ * Validation Functions
+ */
+export function validateOmniCarePatient(patient: Partial<OmniCarePatient>): ValidationResult {
+  const errors: string[] = [];
+  
+  if (!patient.resourceType || patient.resourceType !== 'Patient') {
+    errors.push('resourceType must be "Patient"');
+  }
+  
+  if (!patient.name || patient.name.length === 0) {
+    errors.push('Patient name is required');
+  }
+  
+  if (!(patient as any).omnicarePatientId) {
+    errors.push('omnicarePatientId is required');
+  }
+  
+  if (patient.birthDate) {
+    const birthDate = new Date(patient.birthDate);
+    if (birthDate > new Date()) {
+      errors.push('Birth date cannot be in the future');
+    }
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+export function validateEmergencyContact(contact: Partial<PatientEmergencyContact>): ValidationResult {
+  const errors: string[] = [];
+  
+  if (!contact.name) {
+    errors.push('Emergency contact name is required');
+  }
+  
+  if (!contact.relationship) {
+    errors.push('Emergency contact relationship is required');
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+export function validateInsurance(insurance: Partial<InsuranceInformation>): ValidationResult {
+  const errors: string[] = [];
+  
+  if (!insurance.payorName) {
+    errors.push('Insurance payor name is required');
+  }
+  
+  if (!insurance.planName) {
+    errors.push('Insurance plan name is required');
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+export function validatePatientAlert(alert: Partial<PatientAlert>): ValidationResult {
+  const errors: string[] = [];
+  
+  if (!alert.type) {
+    errors.push('Alert type is required');
+  }
+  
+  if (!alert.severity) {
+    errors.push('Alert severity is required');
+  }
+  
+  if (!alert.title) {
+    errors.push('Alert title is required');
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+/**
+ * Utility Functions
+ */
+export function formatPatientName(nameOrPatient: HumanName | OmniCarePatient): string {
+  // If it's a patient object, get the first name
+  if ('resourceType' in nameOrPatient && nameOrPatient.resourceType === 'Patient') {
+    const patient = nameOrPatient as OmniCarePatient;
+    if (!patient.name || patient.name.length === 0) {
+      return '';
+    }
+    const name = patient.name[0];
+    if (!name) return '';
+    const given = name.given?.join(' ') || '';
+    const family = name.family || '';
+    return `${given} ${family}`.trim();
+  }
+  
+  // If it's a HumanName object
+  const name = nameOrPatient as HumanName;
+  const given = name.given?.join(' ') || '';
+  const family = name.family || '';
+  return `${given} ${family}`.trim();
+}
+
+export function calculateAge(birthDate: string): number {
+  const birth = new Date(birthDate);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+}
+
+export function getActiveInsurance(insurance: InsuranceInformation[]): InsuranceInformation | undefined {
+  return insurance.find(ins => ins.active && ins.priority === 1);
+}
+
+export function hasActiveAlerts(alerts: PatientAlert[]): boolean {
+  return alerts.some(alert => alert.active);
 }

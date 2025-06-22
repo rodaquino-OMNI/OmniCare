@@ -1,0 +1,130 @@
+{
+  "timestamp": "2025-06-20T11:10:00Z",
+  "buildStatus": "failed",
+  "totalErrors": 345,
+  "categories": {
+    "duplicate_functions": {
+      "count": 18,
+      "priority": "critical",
+      "files": {
+        "src/clinical/emergency/EmergencyCareService.ts": [
+          "activateSTEMIProtocol (TS2393)",
+          "isTraumaPresentation (TS2393)", 
+          "performTraumaAssessment (TS2393)",
+          "isMentalHealthPresentation (TS2393)",
+          "performMentalHealthScreening (TS2393)",
+          "generateStandingOrders (TS2393)",
+          "determineImmediateInterventions (TS2393)",
+          "isModerateComplexity (TS2393)",
+          "isLowComplexity (TS2393)",
+          "getTriageLevelDescription (TS2393)",
+          "getMaxWaitTime (TS2393)",
+          "getResourceRequirements (TS2393)",
+          "getMonitoringFrequency (TS2393)",
+          "getTreatmentArea (TS2393)",
+          "isSTEMIPresentation (TS2393)",
+          "isStrokePresentation (TS2393)",
+          "isSepsisPresentation (TS2393)",
+          "isPediatricResuscitation (TS2393)"
+        ]
+      },
+      "description": "Duplicate function implementations causing build failure"
+    },
+    "missing_methods": {
+      "count": 30,
+      "priority": "high",
+      "files": {
+        "src/clinical/emergency/EmergencyCareService.ts": [
+          "isTraumaPresentation",
+          "performTraumaAssessment",
+          "isMentalHealthPresentation",
+          "performMentalHealthScreening",
+          "generateStandingOrders",
+          "determineImmediateInterventions",
+          "isModerateComplexity",
+          "isLowComplexity",
+          "getTriageLevelDescription",
+          "getMaxWaitTime",
+          "getResourceRequirements",
+          "getMonitoringFrequency",
+          "getTreatmentArea",
+          "isSTEMIPresentation",
+          "isStrokePresentation",
+          "isSepsisPresentation",
+          "isPediatricResuscitation",
+          "determineOrderPriority",
+          "activateSTATOrder",
+          "verifyEmergencyMedication"
+        ],
+        "src/clinical/hospital/HospitalAdmissionService.ts": [
+          "performFunctionalAssessment"
+        ]
+      },
+      "description": "Methods referenced but not implemented in service classes"
+    },
+    "type_mismatches": {
+      "count": 3,
+      "priority": "high",
+      "issues": [
+        {
+          "file": "src/clinical/coordination/CarePlanManagementService.ts",
+          "line": 290,
+          "error": "Reference<Patient | Group | Organization> not assignable to Reference<Patient | Device | Group | Location>"
+        },
+        {
+          "file": "src/clinical/coordination/CarePlanManagementService.ts",
+          "line": 325,
+          "error": "Status 'not-started' not valid for FHIR activity status"
+        },
+        {
+          "file": "src/clinical/emergency/EmergencyCareService.ts",
+          "line": 374,
+          "error": "Disposition 'Observation' not assignable to valid disposition types"
+        }
+      ],
+      "description": "FHIR type incompatibilities and status enum mismatches"
+    },
+    "mantine_component_props": {
+      "count": 211,
+      "priority": "medium",
+      "files": [
+        "src/stories/VitalSignCard.stories.tsx"
+      ],
+      "invalidProps": {
+        "Stack": ["spacing"],
+        "Text": ["weight", "size", "mb", "color"],
+        "Group": ["spacing"],
+        "SimpleGrid": ["cols", "spacing", "breakpoints"]
+      },
+      "description": "Invalid props on Mantine components - API has changed"
+    }
+  },
+  "eslint": {
+    "status": "has_errors",
+    "errors": 27,
+    "warnings": 62,
+    "errorTypes": {
+      "no-unused-vars": 12,
+      "no-require-imports": 1,
+      "no-useless-escape": 8,
+      "no-unused-imports": 6
+    }
+  },
+  "recommendations": [
+    "CRITICAL: Remove duplicate function implementations in EmergencyCareService",
+    "Fix missing method implementations across multiple services (30+ methods)",
+    "Update Mantine component props (spacing -> gap, weight -> fw, size -> fz)",
+    "Fix FHIR type mismatches and reference types",
+    "Prefix unused variables with underscore or remove them",
+    "Replace require() with ES6 imports",
+    "Fix regex escape characters"
+  ],
+  "errorSummary": {
+    "duplicate_implementations": 18,
+    "missing_properties": 211,
+    "type_mismatches": 89,
+    "missing_methods": 30,
+    "other_errors": 17
+  },
+  "nextCheck": "2025-06-20T11:05:00Z"
+}

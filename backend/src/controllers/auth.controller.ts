@@ -1,14 +1,14 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
-import { smartFHIRService } from '@/services/smart-fhir.service';
-import config from '@/config';
-import logger from '@/utils/logger';
+
 import { JWTAuthService } from '@/auth/jwt.service';
-import { SessionManager } from '@/services/session.service';
+import config from '@/config';
 import { AuditService } from '@/services/audit.service';
-import { User, UserRole, LoginCredentials, AuthToken, MfaSetup } from '@/types/auth.types';
-import { AUTH_CONFIG } from '@/config/auth.config';
+import { SessionManager } from '@/services/session.service';
+import { smartFHIRService } from '@/services/smart-fhir.service';
+import { User, UserRole, UserRoles, LoginCredentials } from '@/types/auth.types';
+import logger from '@/utils/logger';
+import { getErrorMessage } from '@/utils/error.utils';
 
 /**
  * Authentication Controller
@@ -514,7 +514,7 @@ export class AuthController {
           return;
         }
 
-        if (!this.jwtService.verifyMfaToken(mfaToken, user.mfaSecret!)) {
+        if (!user.mfaSecret || !this.jwtService.verifyMfaToken(mfaToken, user.mfaSecret)) {
           await this.auditService.logSecurityEvent({
             type: 'LOGIN_FAILURE',
             userId: user.id,
@@ -582,7 +582,7 @@ export class AuthController {
         type: 'LOGIN_FAILURE',
         severity: 'HIGH',
         description: 'Login system error',
-        metadata: { error: error.message, ipAddress: req.ip }
+        metadata: { error: getErrorMessage(error), ipAddress: req.ip }
       });
 
       res.status(500).json({
@@ -649,7 +649,7 @@ export class AuthController {
         type: 'LOGIN_FAILURE',
         severity: 'MEDIUM',
         description: 'Token refresh failed',
-        metadata: { error: error.message, ipAddress: req.ip }
+        metadata: { error: getErrorMessage(error), ipAddress: req.ip }
       });
 
       res.status(401).json({
@@ -691,7 +691,7 @@ export class AuthController {
           });
         } catch (error) {
           // Token might be invalid, but that's okay for logout
-          logger.warn('Token verification failed during logout:', error.message);
+          logger.warn('Token verification failed during logout:', getErrorMessage(error));
         }
       }
 
@@ -963,7 +963,7 @@ export class AuthController {
           email: 'admin@omnicare.com',
           firstName: 'System',
           lastName: 'Administrator',
-          role: UserRole.SYSTEM_ADMINISTRATOR,
+          role: UserRoles.SYSTEM_ADMINISTRATOR,
           department: 'IT',
           isActive: true,
           isMfaEnabled: true,
@@ -979,7 +979,7 @@ export class AuthController {
           email: 'doctor@omnicare.com',
           firstName: 'Dr. Jane',
           lastName: 'Smith',
-          role: UserRole.PHYSICIAN,
+          role: UserRoles.PHYSICIAN,
           department: 'Cardiology',
           licenseNumber: 'MD123456',
           npiNumber: '1234567890',
@@ -997,7 +997,7 @@ export class AuthController {
           email: 'nurse@omnicare.com',
           firstName: 'Sarah',
           lastName: 'Johnson',
-          role: UserRole.NURSING_STAFF,
+          role: UserRoles.NURSING_STAFF,
           department: 'Emergency',
           licenseNumber: 'RN789012',
           isActive: true,
@@ -1030,7 +1030,7 @@ export class AuthController {
           email: 'admin@omnicare.com',
           firstName: 'System',
           lastName: 'Administrator',
-          role: UserRole.SYSTEM_ADMINISTRATOR,
+          role: UserRoles.SYSTEM_ADMINISTRATOR,
           department: 'IT',
           isActive: true,
           isMfaEnabled: true,
@@ -1046,7 +1046,7 @@ export class AuthController {
           email: 'doctor@omnicare.com',
           firstName: 'Dr. Jane',
           lastName: 'Smith',
-          role: UserRole.PHYSICIAN,
+          role: UserRoles.PHYSICIAN,
           department: 'Cardiology',
           licenseNumber: 'MD123456',
           npiNumber: '1234567890',
@@ -1064,7 +1064,7 @@ export class AuthController {
           email: 'nurse@omnicare.com',
           firstName: 'Sarah',
           lastName: 'Johnson',
-          role: UserRole.NURSING_STAFF,
+          role: UserRoles.NURSING_STAFF,
           department: 'Emergency',
           licenseNumber: 'RN789012',
           isActive: true,

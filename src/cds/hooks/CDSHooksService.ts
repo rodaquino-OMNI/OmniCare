@@ -387,18 +387,29 @@ export class CDSHooksService {
 
   private async getPatientData(patientId: string): Promise<Patient> {
     // This would integrate with your patient data service
-    // For now, return a mock patient
+    // For now, return a mock patient with comprehensive data
     return {
       patientId,
       demographics: {
         age: 45,
-        gender: 'F',
+        gender: 'F' as const,
         weight: 70,
-        height: 165
+        height: 165,
+        bmi: 25.7
       },
       allergies: [],
       currentMedications: [],
-      medicalHistory: []
+      medicalHistory: [],
+      labResults: [],
+      vitalSigns: {
+        bloodPressure: { systolic: 120, diastolic: 80 },
+        heartRate: 72,
+        timestamp: new Date()
+      },
+      preferences: {
+        languagePreference: 'en',
+        communicationPreferences: ['email', 'phone']
+      }
     };
   }
 

@@ -5,7 +5,6 @@
  * health outcomes tracking, and population management
  */
 
-import { Injectable } from '@nestjs/common';
 import { EventEmitter } from 'events';
 
 export interface PopulationHealthMetrics {
@@ -143,7 +142,6 @@ export interface PopulationInsights {
   }>;
 }
 
-@Injectable()
 export class PopulationHealthService extends EventEmitter {
   private riskModels: Map<string, any> = new Map();
   private outcomeMetrics: Map<string, HealthOutcome[]> = new Map();
@@ -713,7 +711,7 @@ export class PopulationHealthService extends EventEmitter {
 
   private calculatePriorityScore(gaps: any[]): number {
     return gaps.reduce((score, gap) => {
-      const severityWeights = { 'Critical': 100, 'High': 75, 'Medium': 50, 'Low': 25 };
+      const severityWeights: Record<string, number> = { 'Critical': 100, 'High': 75, 'Medium': 50, 'Low': 25 };
       return score + (severityWeights[gap.severity] || 0);
     }, 0);
   }

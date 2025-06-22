@@ -1,0 +1,35 @@
+{
+  "name": "@omnicare/offline-tests",
+  "version": "1.0.0",
+  "description": "Comprehensive offline testing suite for OmniCare healthcare application",
+  "private": true,
+  "scripts": {
+    "test": "vitest run src/__tests__/offline/",
+    "test:watch": "vitest watch src/__tests__/offline/",
+    "test:coverage": "vitest run --coverage src/__tests__/offline/",
+    "test:performance": "vitest run src/__tests__/offline/offline-performance.test.ts",
+    "test:security": "vitest run src/__tests__/offline/offline-security.test.ts",
+    "test:integration": "vitest run src/__tests__/offline/offline-integration.test.tsx"
+  },
+  "dependencies": {
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/user-event": "^14.0.0",
+    "@testing-library/jest-dom": "^6.0.0",
+    "vitest": "^1.0.0",
+    "crypto-js": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/crypto-js": "^4.2.0",
+    "@vitest/coverage-v8": "^1.0.0"
+  },
+  "keywords": [
+    "offline",
+    "testing",
+    "service-worker",
+    "healthcare",
+    "sync",
+    "conflict-resolution",
+    "performance",
+    "security"
+  ]
+}

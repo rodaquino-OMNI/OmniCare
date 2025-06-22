@@ -3,24 +3,24 @@
  * HIPAA-Compliant Token Management with Multi-Factor Authentication
  */
 
-import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 import { authenticator } from 'otplib';
 import QRCode from 'qrcode';
-import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 
+import { getRolePermissions } from '@/auth/role-permissions';
 import { AUTH_CONFIG, PASSWORD_POLICY, MFA_REQUIRED_ROLES } from '@/config/auth.config';
 import { 
   User, 
   UserRole, 
   AuthToken, 
-  LoginCredentials, 
   MfaSetup,
   SessionInfo,
   Permission
 } from '@/types/auth.types';
-import { getRolePermissions } from '@/auth/role-permissions';
 
 export interface TokenPayload {
   userId: string;
@@ -46,16 +46,14 @@ export class JWTAuthService {
     authenticator.options = {
       window: AUTH_CONFIG.mfa.window,
       digits: AUTH_CONFIG.mfa.digits,
-      step: AUTH_CONFIG.mfa.period,
-      algorithm: 'sha1' as any, // Force type compatibility
-      encoding: 'base32' as any  // Force type compatibility
+      step: AUTH_CONFIG.mfa.period
     };
   }
 
   /**
    * Generate JWT access and refresh tokens
    */
-  async generateTokens(user: User): Promise<AuthToken> {
+  generateTokens(user: User): AuthToken {
     const sessionId = uuidv4();
     const permissions = getRolePermissions(user.role);
 
@@ -100,7 +98,7 @@ export class JWTAuthService {
   /**
    * Verify and decode JWT access token
    */
-  async verifyAccessToken(token: string): Promise<TokenPayload> {
+  verifyAccessToken(token: string): TokenPayload {
     try {
       const decoded = jwt.verify(token, this.accessTokenSecret, {
         issuer: AUTH_CONFIG.jwt.issuer,
@@ -109,7 +107,18 @@ export class JWTAuthService {
       }) as TokenPayload;
 
       return decoded;
-    } catch (error) {
+    } catch {
+      // Use constant time comparison to prevent timing attacks
+      const dummyToken = 'x'.repeat(token.length);
+      try {
+        jwt.verify(dummyToken, this.accessTokenSecret, {
+          issuer: AUTH_CONFIG.jwt.issuer,
+          audience: AUTH_CONFIG.jwt.audience,
+          algorithms: [AUTH_CONFIG.jwt.algorithm]
+        });
+      } catch {
+        // Ignore dummy verification errors
+      }
       throw new Error('Invalid or expired access token');
     }
   }
@@ -117,7 +126,7 @@ export class JWTAuthService {
   /**
    * Verify and decode JWT refresh token
    */
-  async verifyRefreshToken(token: string): Promise<{ userId: string; sessionId: string }> {
+  verifyRefreshToken(token: string): { userId: string; sessionId: string } {
     try {
       const decoded = jwt.verify(token, this.refreshTokenSecret, {
         issuer: AUTH_CONFIG.jwt.issuer,
@@ -126,7 +135,18 @@ export class JWTAuthService {
       }) as { userId: string; sessionId: string };
 
       return decoded;
-    } catch (error) {
+    } catch {
+      // Use constant time comparison to prevent timing attacks
+      const dummyToken = 'x'.repeat(token.length);
+      try {
+        jwt.verify(dummyToken, this.refreshTokenSecret, {
+          issuer: AUTH_CONFIG.jwt.issuer,
+          audience: AUTH_CONFIG.jwt.audience,
+          algorithms: [AUTH_CONFIG.jwt.algorithm]
+        });
+      } catch {
+        // Ignore dummy verification errors
+      }
       throw new Error('Invalid or expired refresh token');
     }
   }
@@ -134,8 +154,8 @@ export class JWTAuthService {
   /**
    * Refresh access token using valid refresh token
    */
-  async refreshAccessToken(refreshToken: string, user: User): Promise<AuthToken> {
-    const decoded = await this.verifyRefreshToken(refreshToken);
+  refreshAccessToken(refreshToken: string, user: User): AuthToken {
+    const decoded = this.verifyRefreshToken(refreshToken);
     if (decoded.userId !== user.id) {
       throw new Error('Token user mismatch');
     }
@@ -179,7 +199,7 @@ export class JWTAuthService {
       errors.push('Password must contain at least one number');
     }
 
-    if (PASSWORD_POLICY.requireSpecialChars && !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    if (PASSWORD_POLICY.requireSpecialChars && !/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
       errors.push('Password must contain at least one special character');
     }
 
@@ -332,14 +352,13 @@ export class JWTAuthService {
    */
   encryptData(data: string, key: string): { encrypted: string; iv: string; tag: string } {
     const iv = crypto.randomBytes(AUTH_CONFIG.encryption.ivLength);
-    const keyBuffer = Buffer.from(key.slice(0, 32).padEnd(32, '0'));
-    const cipher = crypto.createCipher(AUTH_CONFIG.encryption.algorithm, keyBuffer);
-    (cipher as any).setAAD(Buffer.from('OmniCare-EMR'));
+    const keyBuffer = crypto.scryptSync(key, 'salt', 32);
+    const cipher = crypto.createCipheriv('aes-256-gcm', keyBuffer, iv);
     
     let encrypted = cipher.update(data, 'utf8', AUTH_CONFIG.encryption.encoding);
     encrypted += cipher.final(AUTH_CONFIG.encryption.encoding);
     
-    const tag = (cipher as any).getAuthTag();
+    const tag = cipher.getAuthTag();
     
     return {
       encrypted,
@@ -352,13 +371,12 @@ export class JWTAuthService {
    * Decrypt sensitive data
    */
   decryptData(encryptedData: { encrypted: string; iv: string; tag: string }, key: string): string {
+    const keyBuffer = crypto.scryptSync(key, 'salt', 32);
     const iv = Buffer.from(encryptedData.iv, AUTH_CONFIG.encryption.encoding);
     const tag = Buffer.from(encryptedData.tag, AUTH_CONFIG.encryption.encoding);
-    const keyBuffer = Buffer.from(key.slice(0, 32).padEnd(32, '0'));
     
-    const decipher = crypto.createDecipher(AUTH_CONFIG.encryption.algorithm, keyBuffer);
-    (decipher as any).setAAD(Buffer.from('OmniCare-EMR'));
-    (decipher as any).setAuthTag(tag);
+    const decipher = crypto.createDecipheriv('aes-256-gcm', keyBuffer, iv);
+    decipher.setAuthTag(tag);
     
     let decrypted = decipher.update(encryptedData.encrypted, AUTH_CONFIG.encryption.encoding, 'utf8');
     decrypted += decipher.final('utf8');

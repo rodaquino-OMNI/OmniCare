@@ -1,0 +1,13 @@
+{
+  "objective": "“f”ix",
+  "strategy": "development",
+  "mode": "centralized",
+  "maxAgents": 10,
+  "timeout": 60,
+  "parallel": true,
+  "monitor": true,
+  "output": "json",
+  "outputDir": "./reports",
+  "timestamp": "2025-06-21T01:37:36.175Z",
+  "id": "swarm-development-centralized-1750469856176"
+}

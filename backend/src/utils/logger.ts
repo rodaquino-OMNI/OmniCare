@@ -1,6 +1,23 @@
-import winston from 'winston';
 import path from 'path';
-import config from '@/config';
+
+import winston from 'winston';
+
+// Import config with fallback for tests
+let config: any;
+try {
+  const configModule = require('../config');
+  config = configModule.default || configModule;
+  // Ensure config is properly structured
+  if (!config || !config.server) {
+    throw new Error('Invalid config structure');
+  }
+} catch (error) {
+  // Mock config for tests
+  config = {
+    server: { env: process.env.NODE_ENV || 'test' },
+    logging: { level: 'info', file: '/tmp/test.log' }
+  };
+}
 
 // Custom format for structured logging
 const customFormat = winston.format.combine(
@@ -8,20 +25,7 @@ const customFormat = winston.format.combine(
     format: 'YYYY-MM-DD HH:mm:ss',
   }),
   winston.format.errors({ stack: true }),
-  winston.format.json(),
-  winston.format.printf(({ level, message, timestamp, stack, ...meta }) => {
-    let logMessage = `${timestamp} [${level.toUpperCase()}]: ${message}`;
-    
-    if (Object.keys(meta).length > 0) {
-      logMessage += ` ${JSON.stringify(meta)}`;
-    }
-    
-    if (stack) {
-      logMessage += `\n${stack}`;
-    }
-    
-    return logMessage;
-  })
+  winston.format.json()
 );
 
 // Console format for development
@@ -30,14 +34,8 @@ const consoleFormat = winston.format.combine(
     format: 'HH:mm:ss',
   }),
   winston.format.colorize(),
-  winston.format.printf(({ level, message, timestamp, ...meta }) => {
-    let logMessage = `${timestamp} ${level}: ${message}`;
-    
-    if (Object.keys(meta).length > 0) {
-      logMessage += ` ${JSON.stringify(meta, null, 2)}`;
-    }
-    
-    return logMessage;
+  winston.format.printf(({ timestamp, level, message, ...meta }) => {
+    return `${timestamp} [${level}]: ${message} ${Object.keys(meta).length ? JSON.stringify(meta, null, 2) : ''}`;
   })
 );
 

@@ -1,0 +1,270 @@
+a38121fc7ac43e0b35f07d1323991c47
+"use strict";
+/**
+ * OmniCare EMR Backend - Unified Role-Based Permissions System
+ * HIPAA-Compliant Permission Definitions with Role Unification
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.UNIFIED_ROLE_PERMISSIONS = void 0;
+exports.getRolePermissions = getRolePermissions;
+exports.hasPermission = hasPermission;
+exports.getRoleInfo = getRoleInfo;
+exports.getAllRoles = getAllRoles;
+exports.hasAnyPermission = hasAnyPermission;
+exports.hasAllPermissions = hasAllPermissions;
+const auth_types_1 = require("@/types/auth.types");
+/**
+ * Unified Role-Based Permission Matrix
+ * Maps all role types (short and long form) to their permissions
+ */
+exports.UNIFIED_ROLE_PERMISSIONS = {
+    [auth_types_1.UserRoles.PHYSICIAN]: {
+        role: auth_types_1.UserRoles.PHYSICIAN,
+        permissions: [
+            // Clinical Documentation
+            auth_types_1.Permission.CREATE_CLINICAL_NOTES,
+            auth_types_1.Permission.EDIT_CLINICAL_NOTES,
+            auth_types_1.Permission.VIEW_CLINICAL_NOTES,
+            auth_types_1.Permission.FINALIZE_CLINICAL_NOTES,
+            // Prescription Management
+            auth_types_1.Permission.CREATE_PRESCRIPTIONS,
+            auth_types_1.Permission.MODIFY_PRESCRIPTIONS,
+            auth_types_1.Permission.VIEW_PRESCRIPTIONS,
+            // Patient Management
+            auth_types_1.Permission.VIEW_PATIENT_RECORDS,
+            auth_types_1.Permission.EDIT_PATIENT_RECORDS,
+            auth_types_1.Permission.CREATE_PATIENT_RECORDS,
+            auth_types_1.Permission.VIEW_PATIENT_DEMOGRAPHICS,
+            auth_types_1.Permission.EDIT_PATIENT_DEMOGRAPHICS,
+            // Orders and Lab Results
+            auth_types_1.Permission.CREATE_MEDICAL_ORDERS,
+            auth_types_1.Permission.VIEW_LAB_RESULTS,
+            auth_types_1.Permission.ACKNOWLEDGE_CRITICAL_RESULTS,
+            // Imaging and Radiology
+            auth_types_1.Permission.VIEW_IMAGING_RESULTS,
+            // Administrative Functions
+            auth_types_1.Permission.SCHEDULE_APPOINTMENTS,
+            auth_types_1.Permission.GENERATE_REPORTS
+        ],
+        description: 'Licensed physician with full clinical privileges',
+        restrictions: [
+            'Cannot access administrative functions',
+            'Cannot manage system configuration'
+        ]
+    },
+    [auth_types_1.UserRoles.NURSING_STAFF]: {
+        role: auth_types_1.UserRoles.NURSING_STAFF,
+        permissions: [
+            // Clinical Documentation
+            auth_types_1.Permission.CREATE_CLINICAL_NOTES,
+            auth_types_1.Permission.EDIT_CLINICAL_NOTES,
+            auth_types_1.Permission.VIEW_CLINICAL_NOTES,
+            // Patient Management
+            auth_types_1.Permission.VIEW_PATIENT_RECORDS,
+            auth_types_1.Permission.EDIT_PATIENT_RECORDS,
+            auth_types_1.Permission.VIEW_PATIENT_DEMOGRAPHICS,
+            // Nursing Functions
+            auth_types_1.Permission.DOCUMENT_VITAL_SIGNS,
+            auth_types_1.Permission.ADMINISTER_MEDICATIONS,
+            auth_types_1.Permission.DOCUMENT_NURSING_CARE,
+            auth_types_1.Permission.MANAGE_PATIENT_CARE_PLANS,
+            // Orders and Lab Results
+            auth_types_1.Permission.VIEW_LAB_RESULTS,
+            // Administrative Functions
+            auth_types_1.Permission.SCHEDULE_APPOINTMENTS
+        ],
+        description: 'Licensed nursing staff with patient care responsibilities',
+        restrictions: [
+            'Cannot create prescriptions',
+            'Cannot finalize physician notes'
+        ]
+    },
+    [auth_types_1.UserRoles.ADMINISTRATIVE_STAFF]: {
+        role: auth_types_1.UserRoles.ADMINISTRATIVE_STAFF,
+        permissions: [
+            // Administrative Functions
+            auth_types_1.Permission.SCHEDULE_APPOINTMENTS,
+            auth_types_1.Permission.MANAGE_BILLING,
+            auth_types_1.Permission.PROCESS_INSURANCE,
+            auth_types_1.Permission.GENERATE_REPORTS,
+            // Patient Management
+            auth_types_1.Permission.VIEW_PATIENT_DEMOGRAPHICS,
+            auth_types_1.Permission.EDIT_PATIENT_DEMOGRAPHICS,
+            auth_types_1.Permission.CREATE_PATIENT_RECORDS
+        ],
+        description: 'Administrative staff with billing and scheduling privileges',
+        restrictions: [
+            'Cannot access clinical data',
+            'Cannot view medical records'
+        ]
+    },
+    [auth_types_1.UserRoles.SYSTEM_ADMINISTRATOR]: {
+        role: auth_types_1.UserRoles.SYSTEM_ADMINISTRATOR,
+        permissions: [
+            // System Administration
+            auth_types_1.Permission.MANAGE_USERS,
+            auth_types_1.Permission.CONFIGURE_SYSTEM,
+            auth_types_1.Permission.VIEW_AUDIT_LOGS,
+            auth_types_1.Permission.MANAGE_SECURITY_SETTINGS,
+            // All other permissions (admin override)
+            auth_types_1.Permission.GENERATE_REPORTS,
+            auth_types_1.Permission.VIEW_PATIENT_DEMOGRAPHICS,
+            auth_types_1.Permission.SCHEDULE_APPOINTMENTS,
+            auth_types_1.Permission.MANAGE_BILLING
+        ],
+        description: 'System administrator with full system access',
+        restrictions: [
+            'Limited clinical data access for technical purposes only'
+        ]
+    },
+    [auth_types_1.UserRoles.PHARMACIST]: {
+        role: auth_types_1.UserRoles.PHARMACIST,
+        permissions: [
+            // Prescription Management
+            auth_types_1.Permission.VIEW_PRESCRIPTIONS,
+            auth_types_1.Permission.VERIFY_PRESCRIPTIONS,
+            auth_types_1.Permission.DISPENSE_MEDICATIONS,
+            auth_types_1.Permission.MODIFY_PRESCRIPTIONS,
+            // Patient Management (limited)
+            auth_types_1.Permission.VIEW_PATIENT_DEMOGRAPHICS,
+            // Clinical Documentation (limited)
+            auth_types_1.Permission.VIEW_CLINICAL_NOTES
+        ],
+        description: 'Licensed pharmacist with medication management privileges',
+        restrictions: [
+            'Limited to medication-related activities',
+            'Cannot access full patient records'
+        ]
+    },
+    [auth_types_1.UserRoles.LABORATORY_TECHNICIAN]: {
+        role: auth_types_1.UserRoles.LABORATORY_TECHNICIAN,
+        permissions: [
+            // Orders and Lab Results
+            auth_types_1.Permission.VIEW_LAB_RESULTS,
+            auth_types_1.Permission.ENTER_LAB_RESULTS,
+            auth_types_1.Permission.ACKNOWLEDGE_CRITICAL_RESULTS,
+            // Patient Management (minimal)
+            auth_types_1.Permission.VIEW_PATIENT_DEMOGRAPHICS
+        ],
+        description: 'Laboratory technician with lab result management privileges',
+        restrictions: [
+            'Limited to laboratory functions only',
+            'Cannot access clinical notes'
+        ]
+    },
+    [auth_types_1.UserRoles.RADIOLOGY_TECHNICIAN]: {
+        role: auth_types_1.UserRoles.RADIOLOGY_TECHNICIAN,
+        permissions: [
+            // Imaging and Radiology
+            auth_types_1.Permission.PERFORM_IMAGING_STUDIES,
+            auth_types_1.Permission.VIEW_IMAGING_RESULTS,
+            auth_types_1.Permission.MANAGE_IMAGING_EQUIPMENT,
+            // Patient Management (minimal)
+            auth_types_1.Permission.VIEW_PATIENT_DEMOGRAPHICS
+        ],
+        description: 'Radiology technician with imaging privileges',
+        restrictions: [
+            'Limited to radiology functions only',
+            'Cannot access clinical notes'
+        ]
+    },
+    [auth_types_1.UserRoles.PATIENT]: {
+        role: auth_types_1.UserRoles.PATIENT,
+        permissions: [
+            // Patient Portal Functions
+            auth_types_1.Permission.VIEW_OWN_RECORDS,
+            auth_types_1.Permission.REQUEST_APPOINTMENTS,
+            auth_types_1.Permission.MESSAGE_CARE_TEAM,
+            auth_types_1.Permission.UPDATE_PERSONAL_INFO
+        ],
+        description: 'Patient with access to their own health information',
+        restrictions: [
+            'Can only access own records',
+            'Cannot access other patients data',
+            'Limited administrative functions'
+        ]
+    },
+    [auth_types_1.UserRoles.BILLING]: {
+        role: auth_types_1.UserRoles.BILLING,
+        permissions: [
+            // Administrative Functions
+            auth_types_1.Permission.MANAGE_BILLING,
+            auth_types_1.Permission.PROCESS_INSURANCE,
+            auth_types_1.Permission.GENERATE_REPORTS,
+            // Patient Management (limited)
+            auth_types_1.Permission.VIEW_PATIENT_DEMOGRAPHICS,
+            auth_types_1.Permission.EDIT_PATIENT_DEMOGRAPHICS
+        ],
+        description: 'Billing specialist with financial management privileges',
+        restrictions: [
+            'Limited to billing and insurance functions',
+            'Cannot access clinical data'
+        ]
+    },
+    [auth_types_1.UserRoles.RECEPTIONIST]: {
+        role: auth_types_1.UserRoles.RECEPTIONIST,
+        permissions: [
+            // Administrative Functions
+            auth_types_1.Permission.SCHEDULE_APPOINTMENTS,
+            // Patient Management (minimal)
+            auth_types_1.Permission.VIEW_PATIENT_DEMOGRAPHICS,
+            auth_types_1.Permission.EDIT_PATIENT_DEMOGRAPHICS,
+            auth_types_1.Permission.CREATE_PATIENT_RECORDS
+        ],
+        description: 'Front desk staff with scheduling privileges',
+        restrictions: [
+            'Limited to scheduling and demographics',
+            'Cannot access clinical or billing data'
+        ]
+    }
+};
+/**
+ * Get permissions for a specific role
+ */
+function getRolePermissions(role) {
+    const roleInfo = exports.UNIFIED_ROLE_PERMISSIONS[role];
+    return roleInfo ? roleInfo.permissions : [];
+}
+/**
+ * Check if a role has a specific permission
+ */
+function hasPermission(role, permission) {
+    const permissions = getRolePermissions(role);
+    return permissions.includes(permission);
+}
+/**
+ * Get role information (excluding permissions for lighter payloads)
+ */
+function getRoleInfo(role) {
+    const roleInfo = exports.UNIFIED_ROLE_PERMISSIONS[role];
+    if (!roleInfo) {
+        return {
+            role,
+            description: 'Unknown role',
+            restrictions: ['Role not defined']
+        };
+    }
+    const { permissions, ...info } = roleInfo;
+    return info;
+}
+/**
+ * Get all available roles
+ */
+function getAllRoles() {
+    return Object.keys(exports.UNIFIED_ROLE_PERMISSIONS);
+}
+/**
+ * Check if user has any of the required permissions
+ */
+function hasAnyPermission(role, requiredPermissions) {
+    const userPermissions = getRolePermissions(role);
+    return requiredPermissions.some(permission => userPermissions.includes(permission));
+}
+/**
+ * Check if user has all of the required permissions
+ */
+function hasAllPermissions(role, requiredPermissions) {
+    const userPermissions = getRolePermissions(role);
+    return requiredPermissions.every(permission => userPermissions.includes(permission));
+}
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJmaWxlIjoiL1VzZXJzL3JvZHJpZ28vY2xhdWRlLXByb2plY3RzL09tbmlDYXJlL2JhY2tlbmQvc3JjL2F1dGgvdW5pZmllZC1yb2xlLXBlcm1pc3Npb25zLnRzIiwibWFwcGluZ3MiOiI7QUFBQTs7O0dBR0c7OztBQStPSCxnREFHQztBQUtELHNDQUdDO0FBS0Qsa0NBWUM7QUFLRCxrQ0FFQztBQUtELDRDQUdDO0FBS0QsOENBR0M7QUFoU0QsbURBQXNGO0FBRXRGOzs7R0FHRztBQUNVLFFBQUEsd0JBQXdCLEdBQXNDO0lBQ3pFLENBQUMsc0JBQVMsQ0FBQyxTQUFTLENBQUMsRUFBRTtRQUNyQixJQUFJLEVBQUUsc0JBQVMsQ0FBQyxTQUFTO1FBQ3pCLFdBQVcsRUFBRTtZQUNYLHlCQUF5QjtZQUN6Qix1QkFBVSxDQUFDLHFCQUFxQjtZQUNoQyx1QkFBVSxDQUFDLG1CQUFtQjtZQUM5Qix1QkFBVSxDQUFDLG1CQUFtQjtZQUM5Qix1QkFBVSxDQUFDLHVCQUF1QjtZQUVsQywwQkFBMEI7WUFDMUIsdUJBQVUsQ0FBQyxvQkFBb0I7WUFDL0IsdUJBQVUsQ0FBQyxvQkFBb0I7WUFDL0IsdUJBQVUsQ0FBQyxrQkFBa0I7WUFFN0IscUJBQXFCO1lBQ3JCLHVCQUFVLENBQUMsb0JBQW9CO1lBQy9CLHVCQUFVLENBQUMsb0JBQW9CO1lBQy9CLHVCQUFVLENBQUMsc0JBQXNCO1lBQ2pDLHVCQUFVLENBQUMseUJBQXlCO1lBQ3BDLHVCQUFVLENBQUMseUJBQXlCO1lBRXBDLHlCQUF5QjtZQUN6Qix1QkFBVSxDQUFDLHFCQUFxQjtZQUNoQyx1QkFBVSxDQUFDLGdCQUFnQjtZQUMzQix1QkFBVSxDQUFDLDRCQUE0QjtZQUV2Qyx3QkFBd0I7WUFDeEIsdUJBQVUsQ0FBQyxvQkFBb0I7WUFFL0IsMkJBQTJCO1lBQzNCLHVCQUFVLENBQUMscUJBQXFCO1lBQ2hDLHVCQUFVLENBQUMsZ0JBQWdCO1NBQzVCO1FBQ0QsV0FBVyxFQUFFLGtEQUFrRDtRQUMvRCxZQUFZLEVBQUU7WUFDWix3Q0FBd0M7WUFDeEMsb0NBQW9D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LE1BQU0sRUFBRSxXQUFXLEVBQUUsR0FBRyxJQUFJLEVBQUUsR0FBRyxRQUFRLENBQUM7SUFDMUMsT0FBTyxJQUFJLENBQUM7QUFDZCxDQUFDO0FBRUQ7O0dBRUc7QUFDSCxTQUFnQixXQUFXO0lBQ3pCLE9BQU8sTUFBTSxDQUFDLElBQUksQ0FBQyxnQ0FBd0IsQ0FBZSxDQUFDO0FBQzdELENBQUM7QUFFRDs7R0FFRztBQUNILFNBQWdCLGdCQUFnQixDQUFDLElBQWMsRUFBRSxtQkFBaUM7SUFDaEYsTUFBTSxlQUFlLEdBQUcsa0JBQWtCLENBQUMsSUFBSSxDQUFDLENBQUM7SUFDakQsT0FBTyxtQkFBbUIsQ0FBQyxJQUFJLENBQUMsVUFBVSxDQUFDLEVBQUUsQ0FBQyxlQUFlLENBQUMsUUFBUSxDQUFDLFVBQVUsQ0FBQyxDQUFDLENBQUM7QUFDdEYsQ0FBQztBQUVEOztHQUVHO0FBQ0gsU0FBZ0IsaUJBQWlCLENBQUMsSUFBYyxFQUFFLG1CQUFpQztJQUNqRixNQUFNLGVBQWUsR0FBRyxrQkFBa0IsQ0FBQyxJQUFJLENBQUMsQ0FBQztJQUNqRCxPQUFPLG1CQUFtQixDQUFDLEtBQUssQ0FBQyxVQUFVLENBQUMsRUFBRSxDQUFDLGVBQWUsQ0FBQyxRQUFRLENBQUMsVUFBVSxDQUFDLENBQUMsQ0FBQztBQUN2RixDQUFDIiwibmFtZXMiOltdLCJzb3VyY2VzIjpbIi9Vc2Vycy9yb2RyaWdvL2NsYXVkZS1wcm9qZWN0cy9PbW5pQ2FyZS9iYWNrZW5kL3NyYy9hdXRoL3VuaWZpZWQtcm9sZS1wZXJtaXNzaW9ucy50cyJdLCJzb3VyY2VzQ29udGVudCI6WyIvKipcbiAqIE9tbmlDYXJlIEVNUiBCYWNrZW5kIC0gVW5pZmllZCBSb2xlLUJhc2VkIFBlcm1pc3Npb25zIFN5c3RlbVxuICogSElQQUEtQ29tcGxpYW50IFBlcm1pc3Npb24gRGVmaW5pdGlvbnMgd2l0aCBSb2xlIFVuaWZpY2F0aW9uXG4gKi9cblxuaW1wb3J0IHsgVXNlclJvbGUsIFVzZXJSb2xlcywgUGVybWlzc2lvbiwgUm9sZVBlcm1pc3Npb25zIH0gZnJvbSAnQC90eXBlcy9hdXRoLnR5cGVzJztcblxuLyoqXG4gKiBVbmlmaWVkIFJvbGUtQmFzZWQgUGVybWlzc2lvbiBNYXRyaXhcbiAqIE1hcHMgYWxsIHJvbGUgdHlwZXMgKHNob3J0IGFuZCBsb25nIGZvcm0pIHRvIHRoZWlyIHBlcm1pc3Npb25zXG4gKi9cbmV4cG9ydCBjb25zdCBVTklGSUVEX1JPTEVfUEVSTUlTU0lPTlM6IFJlY29yZDxVc2VyUm9sZSwgUm9sZVBlcm1pc3Npb25zPiA9IHtcbiAgW1VzZXJSb2xlcy5QSFlTSUNJQU5dOiB7XG4gICAgcm9sZTogVXNlclJvbGVzLlBIWVNJQ0lBTixcbiAgICBwZXJtaXNzaW9uczogW1xuICAgICAgLy8gQ2xpbmljYWwgRG9jdW1lbnRhdGlvblxuICAgICAgUGVybWlzc2lvbi5DUkVBVEVfQ0xJTklDQUxfTk9URVMsXG4gICAgICBQZXJtaXNzaW9uLkVESVRfQ0xJTklDQUxfTk9URVMsXG4gICAgICBQZXJtaXNzaW9uLlZJRVdfQ0xJTklDQUxfTk9URVMsXG4gICAgICBQZXJtaXNzaW9uLkZJTkFMSVpFX0NMSU5JQ0FMX05PVEVTLFxuICAgICAgXG4gICAgICAvLyBQcmVzY3JpcHRpb24gTWFuYWdlbWVudFxuICAgICAgUGVybWlzc2lvbi5DUkVBVEVfUFJFU0NSSVBUSU9OUyxcbiAgICAgIFBlcm1pc3Npb24uTU9ESUZZX1BSRVNDUklQVElPTlMsXG4gICAgICBQZXJtaXNzaW9uLlZJRVdfUFJFU0NSSVBUSU9OUyxcbiAgICAgIFxuICAgICAgLy8gUGF0aWVudCBNYW5hZ2VtZW50XG4gICAgICBQZXJtaXNzaW9uLlZJRVdfUEFUSUVOVF9SRUNPUkRTLFxuICAgICAgUGVybWlzc2lvbi5FRElUX1BBVElFTlRfUkVDT1JEUyxcbiAgICAgIFBlcm1pc3Npb24uQ1JFQVRFX1BBVElFTlRfUkVDT1JEUyxcbiAgICAgIFBlcm1pc3Npb24uVklFV19QQVRJRU5UX0RFTU9HUkFQSElDUyxcbiAgICAgIFBlcm1pc3Npb24uRURJVF9QQVRJRU5UX0RFTU9HUkFQSElDUyxcbiAgICAgIFxuICAgICAgLy8gT3JkZXJzIGFuZCBMYWIgUmVzdWx0c1xuICAgICAgUGVybWlzc2lvbi5DUkVBVEVfTUVESUNBTF9PUkRFUlMsXG4gICAgICBQZXJtaXNzaW9uLlZJRVdfTEFCX1JFU1VMVFMsXG4gICAgICBQZXJtaXNzaW9uLkFDS05PV0xFREdFX0NSSVRJQ0FMX1JFU1VMVFMsXG4gICAgICBcbiAgICAgIC8vIEltYWdpbmcgYW5kIFJhZGlvbG9neVxuICAgICAgUGVybWlzc2lvbi5WSUVXX0lNQUdJTkdfUkVTVUxUUyxcbiAgICAgIFxuICAgICAgLy8gQWRtaW5pc3RyYXRpdmUgRnVuY3Rpb25zXG4gICAgICBQZXJtaXNzaW9uLlNDSEVEVUxFX0FQUE9JTlRNRU5UUyxcbiAgICAgIFBlcm1pc3Npb24uR0VORVJBVEVfUkVQT1JUU1xuICAgIF0sXG4gICAgZGVzY3JpcHRpb246ICdMaWNlbnNlZCBwaHlzaWNpYW4gd2l0aCBmdWxsIGNsaW5pY2FsIHByaXZpbGVnZXMnLFxuICAgIHJlc3RyaWN0aW9uczogW1xuICAgICAgJ0Nhbm5vdCBhY2Nlc3MgYWRtaW5pc3RyYXRpdmUgZnVuY3Rpb25zJyxcbiAgICAgICdDYW5ub3QgbWFuYWdlIHN5c3RlbSBjb25maWd1cmF0aW9uJ1xuICAgIF1cbiAgfSxcblxuICBbVXNlclJvbGVzLk5VUlNJTkdfU1RBRkZdOiB7XG4gICAgcm9sZTogVXNlclJvbGVzLk5VUlNJTkdfU1RBRkYsXG4gICAgcGVybWlzc2lvbnM6IFtcbiAgICAgIC8vIENsaW5pY2FsIERvY3VtZW50YXRpb25cbiAgICAgIFBlcm1pc3Npb24uQ1JFQVRFX0NMSU5JQ0FMX05PVEVTLFxuICAgICAgUGVybWlzc2lvbi5FRElUX0NMSU5JQ0FMX05PVEVTLFxuICAgICAgUGVybWlzc2lvbi5WSUVXX0NMSU5JQ0FMX05PVEVTLFxuICAgICAgXG4gICAgICAvLyBQYXRpZW50IE1hbmFnZW1lbnRcbiAgICAgIFBlcm1pc3Npb24uVklFV19QQVRJRU5UX1JFQ09SRFMsXG4gICAgICBQZXJtaXNzaW9uLkVESVRfUEFUSUVOVF9SRUNPUkRTLFxuICAgICAgUGVybWlzc2lvbi5WSUVXX1BBVElFTlRfREVNT0dSQVBISUNTLFxuICAgICAgXG4gICAgICAvLyBOdXJzaW5nIEZ1bmN0aW9uc1xuICAgICAgUGVybWlzc2lvbi5ET0NVTUVOVF9WSVRBTF9TSUdOUyxcbiAgICAgIFBlcm1pc3Npb24uQURNSU5JU1RFUl9NRURJQ0FUSU9OUyxcbiAgICAgIFBlcm1pc3Npb24uRE9DVU1FTlRfTlVSU0lOR19DQVJFLFxuICAgICAgUGVybWlzc2lvbi5NQU5BR0VfUEFUSUVOVF9DQVJFX1BMQU5TLFxuICAgICAgXG4gICAgICAvLyBPcmRlcnMgYW5kIExhYiBSZXN1bHRzXG4gICAgICBQZXJtaXNzaW9uLlZJRVdfTEFCX1JFU1VMVFMsXG4gICAgICBcbiAgICAgIC8vIEFkbWluaXN0cmF0aXZlIEZ1bmN0aW9uc1xuICAgICAgUGVybWlzc2lvbi5TQ0hFRFVMRV9BUFBPSU5UTUVOVFNcbiAgICBdLFxuICAgIGRlc2NyaXB0aW9uOiAnTGljZW5zZWQgbnVyc2luZyBzdGFmZiB3aXRoIHBhdGllbnQgY2FyZSByZXNwb25zaWJpbGl0aWVzJyxcbiAgICByZXN0cmljdGlvbnM6IFtcbiAgICAgICdDYW5ub3QgY3JlYXRlIHByZXNjcmlwdGlvbnMnLFxuICAgICAgJ0Nhbm5vdCBmaW5hbGl6ZSBwaHlzaWNpYW4gbm90ZXMnXG4gICAgXVxuICB9LFxuXG4gIFtVc2VyUm9sZXMuQURNSU5JU1RSQVRJVkVfU1RBRkZdOiB7XG4gICAgcm9sZTogVXNlclJvbGVzLkFETUlOSVNUUkFUSVZFX1NUQUZGLFxuICAgIHBlcm1pc3Npb25zOiBbXG4gICAgICAvLyBBZG1pbmlzdHJhdGl2ZSBGdW5jdGlvbnNcbiAgICAgIFBlcm1pc3Npb24uU0NIRURVTEVfQVBQT0lOVE1FTlRTLFxuICAgICAgUGVybWlzc2lvbi5NQU5BR0VfQklMTElORyxcbiAgICAgIFBlcm1pc3Npb24uUFJPQ0VTU19JTlNVUkFOQ0UsXG4gICAgICBQZXJtaXNzaW9uLkdFTkVSQVRFX1JFUE9SVFMsXG4gICAgICBcbiAgICAgIC8vIFBhdGllbnQgTWFuYWdlbWVudFxuICAgICAgUGVybWlzc2lvbi5WSUVXX1BBVElFTlRfREVNT0dSQVBISUNTLFxuICAgICAgUGVybWlzc2lvbi5FRElUX1BBVElFTlRfREVNT0dSQVBISUNTLFxuICAgICAgUGVybWlzc2lvbi5DUkVBVEVfUEFUSUVOVF9SRUNPUkRTXG4gICAgXSxcbiAgICBkZXNjcmlwdGlvbjogJ0FkbWluaXN0cmF0aXZlIHN0YWZmIHdpdGggYmlsbGluZyBhbmQgc2NoZWR1bGluZyBwcml2aWxlZ2VzJyxcbiAgICByZXN0cmljdGlvbnM6IFtcbiAgICAgICdDYW5ub3QgYWNjZXNzIGNsaW5pY2FsIGRhdGEnLFxuICAgICAgJ0Nhbm5vdCB2aWV3IG1lZGljYWwgcmVjb3JkcydcbiAgICBdXG4gIH0sXG5cbiAgW1VzZXJSb2xlcy5TWVNURU1fQURNSU5JU1RSQVRPUl06IHtcbiAgICByb2xlOiBVc2VyUm9sZXMuU1lTVEVNX0FETUlOSVNUUkFUT1IsXG4gICAgcGVybWlzc2lvbnM6IFtcbiAgICAgIC8vIFN5c3RlbSBBZG1pbmlzdHJhdGlvblxuICAgICAgUGVybWlzc2lvbi5NQU5BR0VfVVNFUlMsXG4gICAgICBQZXJtaXNzaW9uLkNPTkZJR1VSRV9TWVNURU0sXG4gICAgICBQZXJtaXNzaW9uLlZJRVdfQVVESVRfTE9HUyxcbiAgICAgIFBlcm1pc3Npb24uTUFOQUdFX1NFQ1VSSVRZX1NFVFRJTkdTLFxuICAgICAgXG4gICAgICAvLyBBbGwgb3RoZXIgcGVybWlzc2lvbnMgKGFkbWluIG92ZXJyaWRlKVxuICAgICAgUGVybWlzc2lvbi5HRU5FUkFURV9SRVBPUlRTLFxuICAgICAgUGVybWlzc2lvbi5WSUVXX1BBVElFTlRfREVNT0dSQVBISUNTLFxuICAgICAgUGVybWlzc2lvbi5TQ0hFRFVMRV9BUFBPSU5UTUVOVFMsXG4gICAgICBQZXJtaXNzaW9uLk1BTkFHRV9CSUxMSU5HXG4gICAgXSxcbiAgICBkZXNjcmlwdGlvbjogJ1N5c3RlbSBhZG1pbmlzdHJhdG9yIHdpdGggZnVsbCBzeXN0ZW0gYWNjZXNzJyxcbiAgICByZXN0cmljdGlvbnM6IFtcbiAgICAgICdMaW1pdGVkIGNsaW5pY2FsIGRhdGEgYWNjZXNzIGZvciB0ZWNobmljYWwgcHVycG9zZXMgb25seSdcbiAgICBdXG4gIH0sXG5cbiAgW1VzZXJSb2xlcy5QSEFSTUFDSVNUXToge1xuICAgIHJvbGU6IFVzZXJSb2xlcy5QSEFSTUFDSVNULFxuICAgIHBlcm1pc3Npb25zOiBbXG4gICAgICAvLyBQcmVzY3JpcHRpb24gTWFuYWdlbWVudFxuICAgICAgUGVybWlzc2lvbi5WSUVXX1BSRVNDUklQVElPTlMsXG4gICAgICBQZXJtaXNzaW9uLlZFUklGWV9QUkVTQ1JJUFRJT05TLFxuICAgICAgUGVybWlzc2lvbi5ESVNQRU5TRV9NRURJQ0FUSU9OUyxcbiAgICAgIFBlcm1pc3Npb24uTU9ESUZZX1BSRVNDUklQVElPTlMsXG4gICAgICBcbiAgICAgIC8vIFBhdGllbnQgTWFuYWdlbWVudCAobGltaXRlZClcbiAgICAgIFBlcm1pc3Npb24uVklFV19QQVRJRU5UX0RFTU9HUkFQSElDUyxcbiAgICAgIFxuICAgICAgLy8gQ2xpbmljYWwgRG9jdW1lbnRhdGlvbiAobGltaXRlZClcbiAgICAgIFBlcm1pc3Npb24uVklFV19DTElOSUNBTF9OT1RFU1xuICAgIF0sXG4gICAgZGVzY3JpcHRpb246ICdMaWNlbnNlZCBwaGFybWFjaXN0IHdpdGggbWVkaWNhdGlvbiBtYW5hZ2VtZW50IHByaXZpbGVnZXMnLFxuICAgIHJlc3RyaWN0aW9uczogW1xuICAgICAgJ0xpbWl0ZWQgdG8gbWVkaWNhdGlvbi1yZWxhdGVkIGFjdGl2aXRpZXMnLFxuICAgICAgJ0Nhbm5vdCBhY2Nlc3MgZnVsbCBwYXRpZW50IHJlY29yZHMnXG4gICAgXVxuICB9LFxuXG4gIFtVc2VyUm9sZXMuTEFCT1JBVE9SWV9URUNITklDSUFOXToge1xuICAgIHJvbGU6IFVzZXJSb2xlcy5MQUJPUkFUT1JZX1RFQ0hOSUNJQU4sXG4gICAgcGVybWlzc2lvbnM6IFtcbiAgICAgIC8vIE9yZGVycyBhbmQgTGFiIFJlc3VsdHNcbiAgICAgIFBlcm1pc3Npb24uVklFV19MQUJfUkVTVUxUUyxcbiAgICAgIFBlcm1pc3Npb24uRU5URVJfTEFCX1JFU1VMVFMsXG4gICAgICBQZXJtaXNzaW9uLkFDS05PV0xFREdFX0NSSVRJQ0FMX1JFU1VMVFMsXG4gICAgICBcbiAgICAgIC8vIFBhdGllbnQgTWFuYWdlbWVudCAobWluaW1hbClcbiAgICAgIFBlcm1pc3Npb24uVklFV19QQVRJRU5UX0RFTU9HUkFQSElDU1xuICAgIF0sXG4gICAgZGVzY3JpcHRpb246ICdMYWJvcmF0b3J5IHRlY2huaWNpYW4gd2l0aCBsYWIgcmVzdWx0IG1hbmFnZW1lbnQgcHJpdmlsZWdlcycsXG4gICAgcmVzdHJpY3Rpb25zOiBbXG4gICAgICAnTGltaXRlZCB0byBsYWJvcmF0b3J5IGZ1bmN0aW9ucyBvbmx5JyxcbiAgICAgICdDYW5ub3QgYWNjZXNzIGNsaW5pY2FsIG5vdGVzJ1xuICAgIF1cbiAgfSxcblxuICBbVXNlclJvbGVzLlJBRElPTE9HWV9URUNITklDSUFOXToge1xuICAgIHJvbGU6IFVzZXJSb2xlcy5SQURJT0xPR1lfVEVDSE5JQ0lBTixcbiAgICBwZXJtaXNzaW9uczogW1xuICAgICAgLy8gSW1hZ2luZyBhbmQgUmFkaW9sb2d5XG4gICAgICBQZXJtaXNzaW9uLlBFUkZPUk1fSU1BR0lOR19TVFVESUVTLFxuICAgICAgUGVybWlzc2lvbi5WSUVXX0lNQUdJTkdfUkVTVUxUUyxcbiAgICAgIFBlcm1pc3Npb24uTUFOQUdFX0lNQUdJTkdfRVFVSVBNRU5ULFxuICAgICAgXG4gICAgICAvLyBQYXRpZW50IE1hbmFnZW1lbnQgKG1pbmltYWwpXG4gICAgICBQZXJtaXNzaW9uLlZJRVdfUEFUSUVOVF9ERU1PR1JBUEhJQ1NcbiAgICBdLFxuICAgIGRlc2NyaXB0aW9uOiAnUmFkaW9sb2d5IHRlY2huaWNpYW4gd2l0aCBpbWFnaW5nIHByaXZpbGVnZXMnLFxuICAgIHJlc3RyaWN0aW9uczogW1xuICAgICAgJ0xpbWl0ZWQgdG8gcmFkaW9sb2d5IGZ1bmN0aW9ucyBvbmx5JyxcbiAgICAgICdDYW5ub3QgYWNjZXNzIGNsaW5pY2FsIG5vdGVzJ1xuICAgIF1cbiAgfSxcblxuICBbVXNlclJvbGVzLlBBVElFTlRdOiB7XG4gICAgcm9sZTogVXNlclJvbGVzLlBBVElFTlQsXG4gICAgcGVybWlzc2lvbnM6IFtcbiAgICAgIC8vIFBhdGllbnQgUG9ydGFsIEZ1bmN0aW9uc1xuICAgICAgUGVybWlzc2lvbi5WSUVXX09XTl9SRUNPUkRTLFxuICAgICAgUGVybWlzc2lvbi5SRVFVRVNUX0FQUE9JTlRNRU5UUyxcbiAgICAgIFBlcm1pc3Npb24uTUVTU0FHRV9DQVJFX1RFQU0sXG4gICAgICBQZXJtaXNzaW9uLlVQREFURV9QRVJTT05BTF9JTkZPXG4gICAgXSxcbiAgICBkZXNjcmlwdGlvbjogJ1BhdGllbnQgd2l0aCBhY2Nlc3MgdG8gdGhlaXIgb3duIGhlYWx0aCBpbmZvcm1hdGlvbicsXG4gICAgcmVzdHJpY3Rpb25zOiBbXG4gICAgICAnQ2FuIG9ubHkgYWNjZXNzIG93biByZWNvcmRzJyxcbiAgICAgICdDYW5ub3QgYWNjZXNzIG90aGVyIHBhdGllbnRzIGRhdGEnLFxuICAgICAgJ0xpbWl0ZWQgYWRtaW5pc3RyYXRpdmUgZnVuY3Rpb25zJ1xuICAgIF1cbiAgfSxcblxuICBbVXNlclJvbGVzLkJJTExJTkddOiB7XG4gICAgcm9sZTogVXNlclJvbGVzLkJJTExJTkcsXG4gICAgcGVybWlzc2lvbnM6IFtcbiAgICAgIC8vIEFkbWluaXN0cmF0aXZlIEZ1bmN0aW9uc1xuICAgICAgUGVybWlzc2lvbi5NQU5BR0VfQklMTElORyxcbiAgICAgIFBlcm1pc3Npb24uUFJPQ0VTU19JTlNVUkFOQ0UsXG4gICAgICBQZXJtaXNzaW9uLkdFTkVSQVRFX1JFUE9SVFMsXG4gICAgICBcbiAgICAgIC8vIFBhdGllbnQgTWFuYWdlbWVudCAobGltaXRlZClcbiAgICAgIFBlcm1pc3Npb24uVklFV19QQVRJRU5UX0RFTU9HUkFQSElDUyxcbiAgICAgIFBlcm1pc3Npb24uRURJVF9QQVRJRU5UX0RFTU9HUkFQSElDU1xuICAgIF0sXG4gICAgZGVzY3JpcHRpb246ICdCaWxsaW5nIHNwZWNpYWxpc3Qgd2l0aCBmaW5hbmNpYWwgbWFuYWdlbWVudCBwcml2aWxlZ2VzJyxcbiAgICByZXN0cmljdGlvbnM6IFtcbiAgICAgICdMaW1pdGVkIHRvIGJpbGxpbmcgYW5kIGluc3VyYW5jZSBmdW5jdGlvbnMnLFxuICAgICAgJ0Nhbm5vdCBhY2Nlc3MgY2xpbmljYWwgZGF0YSdcbiAgICBdXG4gIH0sXG5cbiAgW1VzZXJSb2xlcy5SRUNFUFRJT05JU1RdOiB7XG4gICAgcm9sZTogVXNlclJvbGVzLlJFQ0VQVElPTklTVCxcbiAgICBwZXJtaXNzaW9uczogW1xuICAgICAgLy8gQWRtaW5pc3RyYXRpdmUgRnVuY3Rpb25zXG4gICAgICBQZXJtaXNzaW9uLlNDSEVEVUxFX0FQUE9JTlRNRU5UUyxcbiAgICAgIFxuICAgICAgLy8gUGF0aWVudCBNYW5hZ2VtZW50IChtaW5pbWFsKVxuICAgICAgUGVybWlzc2lvbi5WSUVXX1BBVElFTlRfREVNT0dSQVBISUNTLFxuICAgICAgUGVybWlzc2lvbi5FRElUX1BBVElFTlRfREVNT0dSQVBISUNTLFxuICAgICAgUGVybWlzc2lvbi5DUkVBVEVfUEFUSUVOVF9SRUNPUkRTXG4gICAgXSxcbiAgICBkZXNjcmlwdGlvbjogJ0Zyb250IGRlc2sgc3RhZmYgd2l0aCBzY2hlZHVsaW5nIHByaXZpbGVnZXMnLFxuICAgIHJlc3RyaWN0aW9uczogW1xuICAgICAgJ0xpbWl0ZWQgdG8gc2NoZWR1bGluZyBhbmQgZGVtb2dyYXBoaWNzJyxcbiAgICAgICdDYW5ub3QgYWNjZXNzIGNsaW5pY2FsIG9yIGJpbGxpbmcgZGF0YSdcbiAgICBdXG4gIH1cbn07XG5cbi8qKlxuICogR2V0IHBlcm1pc3Npb25zIGZvciBhIHNwZWNpZmljIHJvbGVcbiAqL1xuZXhwb3J0IGZ1bmN0aW9uIGdldFJvbGVQZXJtaXNzaW9ucyhyb2xlOiBVc2VyUm9sZSk6IFBlcm1pc3Npb25bXSB7XG4gIGNvbnN0IHJvbGVJbmZvID0gVU5JRklFRF9ST0xFX1BFUk1JU1NJT05TW3JvbGVdO1xuICByZXR1cm4gcm9sZUluZm8gPyByb2xlSW5mby5wZXJtaXNzaW9ucyA6IFtdO1xufVxuXG4vKipcbiAqIENoZWNrIGlmIGEgcm9sZSBoYXMgYSBzcGVjaWZpYyBwZXJtaXNzaW9uXG4gKi9cbmV4cG9ydCBmdW5jdGlvbiBoYXNQZXJtaXNzaW9uKHJvbGU6IFVzZXJSb2xlLCBwZXJtaXNzaW9uOiBQZXJtaXNzaW9uKTogYm9vbGVhbiB7XG4gIGNvbnN0IHBlcm1pc3Npb25zID0gZ2V0Um9sZVBlcm1pc3Npb25zKHJvbGUpO1xuICByZXR1cm4gcGVybWlzc2lvbnMuaW5jbHVkZXMocGVybWlzc2lvbik7XG59XG5cbi8qKlxuICogR2V0IHJvbGUgaW5mb3JtYXRpb24gKGV4Y2x1ZGluZyBwZXJtaXNzaW9ucyBmb3IgbGlnaHRlciBwYXlsb2FkcylcbiAqL1xuZXhwb3J0IGZ1bmN0aW9uIGdldFJvbGVJbmZvKHJvbGU6IFVzZXJSb2xlKTogT21pdDxSb2xlUGVybWlzc2lvbnMsICdwZXJtaXNzaW9ucyc+IHtcbiAgY29uc3Qgcm9sZUluZm8gPSBVTklGSUVEX1JPTEVfUEVSTUlTU0lPTlNbcm9sZV07XG4gIGlmICghcm9sZUluZm8pIHtcbiAgICByZXR1cm4ge1xuICAgICAgcm9sZSxcbiAgICAgIGRlc2NyaXB0aW9uOiAnVW5rbm93biByb2xlJyxcbiAgICAgIHJlc3RyaWN0aW9uczogWydSb2xlIG5vdCBkZWZpbmVkJ11cbiAgICB9O1xuICB9XG4gIFxuICBjb25zdCB7IHBlcm1pc3Npb25zLCAuLi5pbmZvIH0gPSByb2xlSW5mbztcbiAgcmV0dXJuIGluZm87XG59XG5cbi8qKlxuICogR2V0IGFsbCBhdmFpbGFibGUgcm9sZXNcbiAqL1xuZXhwb3J0IGZ1bmN0aW9uIGdldEFsbFJvbGVzKCk6IFVzZXJSb2xlW10ge1xuICByZXR1cm4gT2JqZWN0LmtleXMoVU5JRklFRF9ST0xFX1BFUk1JU1NJT05TKSBhcyBVc2VyUm9sZVtdO1xufVxuXG4vKipcbiAqIENoZWNrIGlmIHVzZXIgaGFzIGFueSBvZiB0aGUgcmVxdWlyZWQgcGVybWlzc2lvbnNcbiAqL1xuZXhwb3J0IGZ1bmN0aW9uIGhhc0FueVBlcm1pc3Npb24ocm9sZTogVXNlclJvbGUsIHJlcXVpcmVkUGVybWlzc2lvbnM6IFBlcm1pc3Npb25bXSk6IGJvb2xlYW4ge1xuICBjb25zdCB1c2VyUGVybWlzc2lvbnMgPSBnZXRSb2xlUGVybWlzc2lvbnMocm9sZSk7XG4gIHJldHVybiByZXF1aXJlZFBlcm1pc3Npb25zLnNvbWUocGVybWlzc2lvbiA9PiB1c2VyUGVybWlzc2lvbnMuaW5jbHVkZXMocGVybWlzc2lvbikpO1xufVxuXG4vKipcbiAqIENoZWNrIGlmIHVzZXIgaGFzIGFsbCBvZiB0aGUgcmVxdWlyZWQgcGVybWlzc2lvbnNcbiAqL1xuZXhwb3J0IGZ1bmN0aW9uIGhhc0FsbFBlcm1pc3Npb25zKHJvbGU6IFVzZXJSb2xlLCByZXF1aXJlZFBlcm1pc3Npb25zOiBQZXJtaXNzaW9uW10pOiBib29sZWFuIHtcbiAgY29uc3QgdXNlclBlcm1pc3Npb25zID0gZ2V0Um9sZVBlcm1pc3Npb25zKHJvbGUpO1xuICByZXR1cm4gcmVxdWlyZWRQZXJtaXNzaW9ucy5ldmVyeShwZXJtaXNzaW9uID0+IHVzZXJQZXJtaXNzaW9ucy5pbmNsdWRlcyhwZXJtaXNzaW9uKSk7XG59Il0sInZlcnNpb24iOjN9

@@ -50,6 +50,7 @@ import {
 import { notifications } from '@mantine/notifications';
 import { medicationHelpers } from '@/lib/medplum';
 import { formatDateTime } from '@/utils';
+import { getErrorMessage, getDisplayErrorMessage } from '@/utils/error.utils';
 
 interface MedicationManagementProps {
   patient: Patient;
@@ -82,8 +83,9 @@ export function MedicationManagement({
     try {
       const meds = await medicationHelpers.getMedications(patient.id);
       setMedications(meds);
-    } catch (error) {
-      console.error('Error loading medications:', error);
+    } catch (error: unknown) {
+      const errorMessage = getDisplayErrorMessage(error);
+      console.error('Error loading medications:', errorMessage, error);
       notifications.show({
         title: 'Error',
         message: 'Failed to load medications',
@@ -114,8 +116,9 @@ export function MedicationManagement({
         color: 'green',
         icon: <IconCheck size={16} />
       });
-    } catch (error) {
-      console.error('Error creating prescription:', error);
+    } catch (error: unknown) {
+      const errorMessage = getDisplayErrorMessage(error);
+      console.error('Error creating prescription:', errorMessage, error);
       notifications.show({
         title: 'Error',
         message: 'Failed to create prescription',
@@ -146,8 +149,9 @@ export function MedicationManagement({
         message: 'Medication discontinued',
         color: 'green'
       });
-    } catch (error) {
-      console.error('Error discontinuing medication:', error);
+    } catch (error: unknown) {
+      const errorMessage = getDisplayErrorMessage(error);
+      console.error('Error discontinuing medication:', errorMessage, error);
       notifications.show({
         title: 'Error',
         message: 'Failed to discontinue medication',
@@ -414,8 +418,9 @@ function MedicationReconciliation({
       });
       
       onUpdate();
-    } catch (error) {
-      console.error('Error during reconciliation:', error);
+    } catch (error: unknown) {
+      const errorMessage = getDisplayErrorMessage(error);
+      console.error('Error during reconciliation:', errorMessage, error);
       notifications.show({
         title: 'Error',
         message: 'Failed to complete reconciliation',

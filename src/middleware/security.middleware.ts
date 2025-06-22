@@ -3,24 +3,27 @@
  * HIPAA-Compliant API Protection with Authentication, Authorization, and Security Controls
  */
 
+
 import { Request, Response, NextFunction } from 'express';
-import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
 import mongoSanitize from 'express-mongo-sanitize';
-import xss from 'xss';
+import rateLimit from 'express-rate-limit';
+import helmet from 'helmet';
 import hpp from 'hpp';
+import { v4 as uuidv4 } from 'uuid';
+import xss from 'xss';
 
 import { JWTAuthService } from '@/auth/jwt.service';
-import { SessionManager } from '@/services/session.service';
-import { AuditService } from '@/services/audit.service';
-import { AUTH_CONFIG, SECURITY_HEADERS, IP_RESTRICTIONS } from '@/config/auth.config';
 import { hasPermission } from '@/auth/role-permissions';
+import { AUTH_CONFIG, SECURITY_HEADERS, IP_RESTRICTIONS } from '@/config/auth.config';
+import { AuditService } from '@/services/audit.service';
+import { SessionManager } from '@/services/session.service';
 import { User, UserRole, Permission, SessionInfo } from '@/types/auth.types';
 
-export interface AuthenticatedRequest extends Request {
+export interface AuthenticatedRequest extends Omit<Request, 'session'> {
   user?: User;
-  session?: SessionInfo;
   sessionId?: string;
+  // Custom session type that allows undefined
+  session?: SessionInfo;
 }
 
 export class SecurityMiddleware {
@@ -49,7 +52,7 @@ export class SecurityMiddleware {
       hsts: SECURITY_HEADERS.hsts,
       noSniff: SECURITY_HEADERS.noSniff,
       xssFilter: SECURITY_HEADERS.xssFilter,
-      referrerPolicy: { policy: SECURITY_HEADERS.referrerPolicy },
+      referrerPolicy: { policy: SECURITY_HEADERS.referrerPolicy as any },
       permittedCrossDomainPolicies: SECURITY_HEADERS.permittedCrossDomainPolicies
     });
   }
@@ -68,7 +71,7 @@ export class SecurityMiddleware {
         message: 'Rate limit exceeded. Please try again later.'
       },
       handler: (req: Request, res: Response) => {
-        this.auditService.logSecurityEvent({
+        void this.auditService.logSecurityEvent({
           type: 'UNAUTHORIZED_ACCESS',
           severity: 'MEDIUM',
           description: 'Rate limit exceeded',
@@ -137,7 +140,7 @@ export class SecurityMiddleware {
 
       // Check if IP is in blocked ranges
       if (this.isIpInRanges(clientIp, IP_RESTRICTIONS.blockedRanges)) {
-        this.auditService.logSecurityEvent({
+        void this.auditService.logSecurityEvent({
           type: 'UNAUTHORIZED_ACCESS',
           severity: 'HIGH',
           description: 'Blocked IP address attempted access',
@@ -154,7 +157,7 @@ export class SecurityMiddleware {
       // Check if IP is in allowed ranges (if specified)
       if (IP_RESTRICTIONS.allowedRanges.length > 0) {
         if (!this.isIpInRanges(clientIp, IP_RESTRICTIONS.allowedRanges)) {
-          this.auditService.logSecurityEvent({
+          void this.auditService.logSecurityEvent({
             type: 'UNAUTHORIZED_ACCESS',
             severity: 'HIGH',
             description: 'Non-whitelisted IP address attempted access',
@@ -177,17 +180,18 @@ export class SecurityMiddleware {
    * JWT authentication middleware
    */
   public authenticate() {
-    return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
       try {
         const authHeader = req.get('Authorization');
-        const token = this.jwtService.extractTokenFromHelper(authHeader);
+        const token = this.jwtService.extractTokenFromHeader(authHeader);
 
         if (!token) {
-          return res.status(401).json({
+          res.status(401).json({
             success: false,
             error: 'Authentication required',
             message: 'No authentication token provided'
           });
+          return;
         }
 
         // Verify JWT token
@@ -197,11 +201,12 @@ export class SecurityMiddleware {
         const session = await this.sessionManager.getSession(tokenPayload.sessionId);
         
         if (!session) {
-          return res.status(401).json({
+          res.status(401).json({
             success: false,
             error: 'Session expired',
             message: 'Your session has expired. Please log in again.'
           });
+          return;
         }
 
         // Validate session security
@@ -228,11 +233,12 @@ export class SecurityMiddleware {
           // Destroy compromised session
           await this.sessionManager.destroySession(session.sessionId);
 
-          return res.status(401).json({
+          res.status(401).json({
             success: false,
             error: 'Security validation failed',
             message: 'Session security validation failed. Please log in again.'
           });
+          return;
         }
 
         // Update session activity
@@ -242,11 +248,12 @@ export class SecurityMiddleware {
         const user = await this.getUserById(tokenPayload.userId);
         
         if (!user || !user.isActive) {
-          return res.status(401).json({
+          res.status(401).json({
             success: false,
             error: 'User not found or inactive',
             message: 'User account is not active'
           });
+          return;
         }
 
         // Attach user and session to request
@@ -280,11 +287,12 @@ export class SecurityMiddleware {
           }
         });
 
-        return res.status(401).json({
+        res.status(401).json({
           success: false,
           error: 'Authentication failed',
           message: 'Invalid or expired authentication token'
         });
+        return;
       }
     };
   }
@@ -347,7 +355,7 @@ export class SecurityMiddleware {
         );
 
         next();
-      } catch (error) {
+      } catch {
         return res.status(500).json({
           success: false,
           error: 'Authorization error',
@@ -374,7 +382,7 @@ export class SecurityMiddleware {
       const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
       
       if (!roles.includes(user.role)) {
-        this.auditService.logUserAction(
+        void this.auditService.logUserAction(
           user.id,
           'unauthorized_role_access',
           req.path,
@@ -404,8 +412,8 @@ export class SecurityMiddleware {
       const origin = req.get('Origin');
       const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'];
 
-      if (!origin || allowedOrigins.includes(origin)) {
-        res.setHeader('Access-Control-Allow-Origin', origin || '*');
+      if (origin && allowedOrigins.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
         res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
         res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
         res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -424,12 +432,12 @@ export class SecurityMiddleware {
    * Request logging middleware
    */
   public requestLogging() {
-    return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
       const startTime = Date.now();
       
       // Log request
-      const requestId = require('uuid').v4();
-      req.requestId = requestId;
+      const requestId = uuidv4();
+      (req as any).requestId = requestId;
 
       res.on('finish', async () => {
         const duration = Date.now() - startTime;
@@ -499,22 +507,49 @@ export class SecurityMiddleware {
   }
 
   /**
-   * Check if IP is in CIDR range (simplified)
+   * Check if IP is in CIDR range (enhanced validation)
    */
   private isIpInCidr(ip: string, cidr: string): boolean {
-    // This is a simplified implementation
-    // In production, use a proper CIDR library
-    const [network, prefixLength] = cidr.split('/');
-    
-    // For simplicity, just check if it starts with the network
-    return ip.startsWith(network.split('.').slice(0, Math.ceil(parseInt(prefixLength) / 8)).join('.'));
+    try {
+      const [network, prefixLength] = cidr.split('/');
+      const prefixLen = parseInt(prefixLength);
+      
+      if (prefixLen < 0 || prefixLen > 32) {
+        return false;
+      }
+      
+      const ipParts = ip.split('.').map(Number);
+      const networkParts = network.split('.').map(Number);
+      
+      // Validate IP format
+      if (ipParts.length !== 4 || networkParts.length !== 4) {
+        return false;
+      }
+      
+      if (ipParts.some(part => part < 0 || part > 255) || 
+          networkParts.some(part => part < 0 || part > 255)) {
+        return false;
+      }
+      
+      // Convert to 32-bit integers
+      const ipInt = (ipParts[0] << 24) + (ipParts[1] << 16) + (ipParts[2] << 8) + ipParts[3];
+      const networkInt = (networkParts[0] << 24) + (networkParts[1] << 16) + (networkParts[2] << 8) + networkParts[3];
+      const mask = 0xFFFFFFFF << (32 - prefixLen);
+      
+      return (ipInt & mask) === (networkInt & mask);
+    } catch {
+      return false;
+    }
   }
 
   /**
    * Mock user lookup (replace with actual database query)
+   * WARNING: This will fail in production - implement proper user service
    */
-  private async getUserById(id: string): Promise<User | null> {
-    // Mock implementation - replace with actual database query
+  private async getUserById(_id: string): Promise<User | null> {
+    // TODO: Replace with actual database query via UserService
+    // throw new Error('getUserById not implemented - requires database integration');
+    console.warn('Using mock getUserById - replace with actual implementation');
     return null;
   }
 }

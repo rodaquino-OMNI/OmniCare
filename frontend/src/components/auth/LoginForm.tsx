@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Paper,
   TextInput,
   PasswordInput,
   Button,
@@ -23,6 +22,7 @@ import { notifications } from '@mantine/notifications';
 import { IconLogin, IconStethoscope, IconAlertCircle, IconUser, IconLock } from '@tabler/icons-react';
 import { useAuth } from '@/stores/auth';
 import { APP_NAME } from '@/constants';
+import { getDisplayErrorMessage } from '@/utils/error.utils';
 
 interface LoginFormData {
   email: string;
@@ -73,9 +73,10 @@ export function LoginForm() {
 
       // Redirect to dashboard
       router.push('/dashboard');
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Login failed';
+    } catch (err: unknown) {
+      const errorMessage = getDisplayErrorMessage(err);
       setError(errorMessage);
+      console.error('Login error:', err);
       
       notifications.show({
         title: 'Login Failed',
@@ -85,6 +86,7 @@ export function LoginForm() {
       });
     }
   };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">

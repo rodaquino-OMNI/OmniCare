@@ -1,6 +1,7 @@
 // Administrative Utility Functions for OmniCare EMR
 
-import { format, isValid, parseISO, differenceInDays, addDays, isAfter, isBefore } from 'date-fns';
+import { format, differenceInDays, addDays, isAfter, isBefore } from 'date-fns';
+
 import { Patient, InsuranceInfo, Appointment, Billing } from '@/types/administrative';
 
 /**
@@ -601,7 +602,7 @@ export class ComplianceUtils {
   /**
    * Checks if user has permission for action
    */
-  static hasPermission(userRole: string, module: string, action: string): boolean {
+  static hasPermission(userRole: string, _module: string, _action: string): boolean {
     // Implementation would check against permission matrix
     // This is a simplified version
     const adminRoles = ['System Administrator', 'Department Manager'];

@@ -1,0 +1,193 @@
+config:
+  target: 'http://localhost:8080'
+  phases:
+    # Baseline phase
+    - duration: 60
+      arrivalRate: 10
+      name: "Baseline"
+    
+    # Gradual stress ramp-up
+    - duration: 300
+      arrivalRate: 20
+      rampTo: 100
+      name: "Stress Ramp-up"
+    
+    # High stress phase
+    - duration: 600
+      arrivalRate: 150
+      name: "High Stress"
+    
+    # Extreme stress phase
+    - duration: 300
+      arrivalRate: 200
+      name: "Extreme Stress"
+    
+    # Breaking point test
+    - duration: 180
+      arrivalRate: 300
+      name: "Breaking Point"
+    
+    # Recovery test
+    - duration: 120
+      arrivalRate: 300
+      rampTo: 10
+      name: "Recovery"
+
+  processor: './stress-test-functions.js'
+  
+  variables:
+    # Stress test specific variables
+    maxPatients: 1000
+    maxObservations: 5000
+    maxConcurrentUsers: 500
+    
+  defaults:
+    headers:
+      'Content-Type': 'application/json'
+      'Accept': 'application/fhir+json'
+      'User-Agent': 'OmniCare-StressTest/1.0'
+      'X-Stress-Test': 'true'
+
+  # Aggressive thresholds for stress testing
+  ensure:
+    maxErrorRate: 15        # Allow higher error rate during stress
+    p95: 5000              # 5 second threshold for 95th percentile
+    p99: 10000             # 10 second threshold for 99th percentile
+
+  plugins:
+    metrics-by-endpoint:
+      useOnlyRequestNames: true
+    ensure: {}
+
+  engines:
+    http:
+      timeout: 60           # Longer timeout for stress conditions
+      pool: 100             # Larger connection pool
+      maxSockets: 200       # More concurrent sockets
+
+scenarios:
+  # Database stress testing
+  - name: "Database Heavy Operations"
+    weight: 40
+    flow:
+      # Authenticate
+      - post:
+          url: "/auth/login"
+          json:
+            username: "stress@omnicare.com"
+            password: "stresstest123"
+          capture:
+            - json: "$.accessToken"
+              as: "authToken"
+      
+      # Heavy patient search with large result sets
+      - get:
+          url: "/fhir/R4/Patient?_count=500&_sort=_lastUpdated"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      
+      # Complex observation queries
+      - get:
+          url: "/fhir/R4/Observation?date=gt2023-01-01&_count=1000&_include=Observation:patient"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      
+      # Multiple parallel patient $everything calls
+      - get:
+          url: "/fhir/R4/Patient/{{ $randomExistingPatientId() }}/$everything"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+
+  # Memory intensive operations
+  - name: "Memory Stress Operations"
+    weight: 25
+    flow:
+      # Authenticate
+      - post:
+          url: "/auth/login"
+          json:
+            username: "stress@omnicare.com"
+            password: "stresstest123"
+          capture:
+            - json: "$.accessToken"
+              as: "authToken"
+      
+      # Large batch operations
+      - post:
+          url: "/fhir/R4"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            resourceType: "Bundle"
+            type: "batch"
+            entry: "{{ $generateLargeBatchBundle() }}"
+      
+      # Analytics with large date ranges
+      - get:
+          url: "/analytics/facilities/{{ $randomFacilityId() }}/clinical-quality-measures?startDate=2020-01-01&endDate=2024-12-31"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+
+  # High frequency vital signs
+  - name: "High Frequency Vital Signs"
+    weight: 20
+    flow:
+      # Authenticate
+      - post:
+          url: "/auth/login"
+          json:
+            username: "stress@omnicare.com"
+            password: "stresstest123"
+          capture:
+            - json: "$.accessToken"
+              as: "authToken"
+      
+      # Rapid vital signs creation
+      - loop:
+        - post:
+            url: "/api/vitals/{{ $randomExistingPatientId() }}"
+            headers:
+              Authorization: "Bearer {{ authToken }}"
+            json:
+              encounterId: "{{ $randomExistingEncounterId() }}"
+              vitals:
+                temperature: "{{ $randomFloat(96.0, 102.0) }}"
+                bloodPressureSystolic: "{{ $randomInt(90, 180) }}"
+                bloodPressureDiastolic: "{{ $randomInt(60, 120) }}"
+                heartRate: "{{ $randomInt(60, 120) }}"
+                respiratoryRate: "{{ $randomInt(12, 25) }}"
+                oxygenSaturation: "{{ $randomInt(92, 100) }}"
+                weight: "{{ $randomFloat(100, 300) }}"
+                height: "{{ $randomInt(150, 200) }}"
+        count: 5
+
+  # Concurrent complex searches
+  - name: "Complex Search Stress"
+    weight: 15
+    flow:
+      # Authenticate
+      - post:
+          url: "/auth/login"
+          json:
+            username: "stress@omnicare.com"
+            password: "stresstest123"
+          capture:
+            - json: "$.accessToken"
+              as: "authToken"
+      
+      # Multiple complex queries in parallel
+      - parallel:
+        - get:
+            url: "/fhir/R4/Patient?_has:Observation:patient:category=vital-signs&_count=200"
+            headers:
+              Authorization: "Bearer {{ authToken }}"
+        
+        - get:
+            url: "/fhir/R4/Observation?subject:Patient.gender=male&code=8310-5&_sort=date&_count=300"
+            headers:
+              Authorization: "Bearer {{ authToken }}"
+        
+        - get:
+            url: "/fhir/R4/Encounter?status=finished&date=gt2023-01-01&_include=Encounter:patient&_count=150"
+            headers:
+              Authorization: "Bearer {{ authToken }}"

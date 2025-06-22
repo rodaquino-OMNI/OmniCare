@@ -28,6 +28,7 @@ import {
   IconAlertTriangle
 } from '@tabler/icons-react';
 import { Patient } from '@/types/administrative';
+import { getErrorMessage, getDisplayErrorMessage } from '@/utils/error.utils';
 
 interface PatientRegistrationProps {
   onComplete: (patient: Patient) => void;
@@ -166,8 +167,10 @@ const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onComplete, o
       };
       
       onComplete(newPatient);
-    } catch (error) {
-      console.error('Registration failed:', error);
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error);
+      console.error('Registration failed:', errorMessage, error);
+      // Could show user notification here if needed
     } finally {
       setLoading(false);
     }
@@ -596,7 +599,7 @@ const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onComplete, o
       <Stack gap="xl">
         {/* Progress Steps */}
         <Card padding="lg" withBorder>
-          <Stepper active={currentStep} breakpoint="sm">
+          <Stepper active={currentStep}>
             {steps.map((step) => (
               <Stepper.Step 
                 key={step.id} 

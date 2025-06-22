@@ -1,0 +1,42 @@
+{
+  "alertType": "CRITICAL",
+  "timestamp": "2025-06-20T15:47:00Z",
+  "from": "test-runner",
+  "priority": "URGENT",
+  "issue": "Test Suite Deterioration - Immediate Action Required",
+  "details": {
+    "testFailureIncrease": {
+      "from": 11,
+      "to": 54,
+      "percentageIncrease": "391%"
+    },
+    "rootCause": {
+      "primary": "Jest configuration changes causing import resolution failures",
+      "secondary": "Duplicate window mock definitions causing conflicts"
+    },
+    "affectedComponents": [
+      "LoginForm - All 15 tests failing with undefined import",
+      "ClinicalNoteInput - 11 tests now failing (was partially passing)",
+      "PatientHeader - Additional failures in rendering tests"
+    ]
+  },
+  "immediateActions": [
+    {
+      "action": "STOP all jest configuration changes",
+      "reason": "Current changes have broken test environment"
+    },
+    {
+      "action": "REVERT frontend/jest.config.js to remove setupFiles entry",
+      "reason": "New window.js mock conflicts with existing setup"
+    },
+    {
+      "action": "CHECK all Mantine imports in affected components",
+      "reason": "Components are becoming undefined at runtime"
+    }
+  ],
+  "coordinationNeeded": [
+    "test-fixer agents should pause current work",
+    "build-validator should verify no new jest/testing changes",
+    "All agents should check memory for this alert before proceeding"
+  ]
+}

@@ -1,12 +1,15 @@
-import jwt from 'jsonwebtoken';
-import axios from 'axios';
 import crypto from 'crypto';
+
+import axios from 'axios';
+import jwt from 'jsonwebtoken';
+
+import config from '@/config';
 import { 
   SMARTTokenResponse, 
   SMARTLaunchContext,
 } from '@/types/fhir';
-import config from '@/config';
 import logger from '@/utils/logger';
+import { getErrorMessage } from '@/utils/error.utils';
 
 /**
  * SMART on FHIR Integration Service
@@ -573,7 +576,7 @@ export class SMARTFHIRService {
     } catch (error) {
       return {
         status: 'DOWN',
-        details: { error: error instanceof Error ? error.message : String(error) },
+        details: { error: getErrorMessage(error) },
       };
     }
   }
@@ -582,7 +585,9 @@ export class SMARTFHIRService {
 // Export singleton instance
 export const smartFHIRService = new SMARTFHIRService();
 
-// Schedule cleanup of expired entries every 5 minutes
-setInterval(() => {
-  smartFHIRService.cleanupExpiredEntries();
-}, 5 * 60 * 1000);
+// Schedule cleanup of expired entries every 5 minutes (only in non-test environment)
+if (process.env.NODE_ENV !== 'test') {
+  setInterval(() => {
+    smartFHIRService.cleanupExpiredEntries();
+  }, 5 * 60 * 1000);
+}

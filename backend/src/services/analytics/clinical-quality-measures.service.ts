@@ -5,7 +5,6 @@
  * for regulatory compliance and quality improvement
  */
 
-import { Injectable } from '@nestjs/common';
 import { EventEmitter } from 'events';
 
 export interface ClinicalQualityMeasure {
@@ -83,7 +82,6 @@ export interface QualityGapAnalysis {
   }[];
 }
 
-@Injectable()
 export class ClinicalQualityMeasuresService extends EventEmitter {
   private measures: Map<string, ClinicalQualityMeasure> = new Map();
   private historicalData: Map<string, ClinicalQualityMeasure[]> = new Map();
@@ -222,15 +220,16 @@ export class ClinicalQualityMeasuresService extends EventEmitter {
     const measure = this.measures.get(measureId);
     
     const recentData = historical.slice(-months);
-    const data = recentData.map((item, index) => {
-      const previousRate = index > 0 ? recentData[index - 1].performanceRate : item.performanceRate;
+    const data = recentData.filter(item => item != null).map((item, index, filteredArray) => {
+      const previousItem = index > 0 ? filteredArray[index - 1] : null;
+      const previousRate = previousItem ? previousItem.performanceRate : item.performanceRate;
       let trend: 'up' | 'down' | 'stable' = 'stable';
       
       if (item.performanceRate > previousRate * 1.02) trend = 'up';
       else if (item.performanceRate < previousRate * 0.98) trend = 'down';
 
       return {
-        period: `${item.measurementPeriod.start.getFullYear()}-${item.measurementPeriod.start.getMonth() + 1}`,
+        period: `${item.measurementPeriod.start.getFullYear()}-${String(item.measurementPeriod.start.getMonth() + 1).padStart(2, '0')}`,
         performanceRate: item.performanceRate,
         benchmark: item.benchmark,
         trend
@@ -240,7 +239,7 @@ export class ClinicalQualityMeasuresService extends EventEmitter {
     // Calculate overall trend
     const firstRate = recentData[0]?.performanceRate || 0;
     const lastRate = recentData[recentData.length - 1]?.performanceRate || 0;
-    const changeRate = ((lastRate - firstRate) / firstRate) * 100;
+    const changeRate = firstRate !== 0 ? ((lastRate - firstRate) / firstRate) * 100 : 0;
     
     let overallTrend: 'Improving' | 'Stable' | 'Declining' = 'Stable';
     if (changeRate > 2) overallTrend = 'Improving';

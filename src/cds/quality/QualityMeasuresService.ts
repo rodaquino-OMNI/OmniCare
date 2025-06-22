@@ -114,7 +114,7 @@ export class QualityMeasuresService {
               performance.gaps.push({
                 patientId,
                 gapDescription: result.gapDescription || 'Quality measure not met',
-                dueDate: result.dueDate
+                dueDate: result.dueDate || new Date()
               });
             }
           }
@@ -451,10 +451,15 @@ export class QualityMeasuresService {
     // Mock patient data - would integrate with patient service
     return {
       patientId,
-      demographics: { age: 55, gender: 'F' },
+      demographics: { age: 55, gender: 'F' as const, weight: 65, height: 160, bmi: 25.4 },
       allergies: [],
       currentMedications: [],
-      medicalHistory: []
+      medicalHistory: [],
+      labResults: [],
+      preferences: {
+        languagePreference: 'en',
+        communicationPreferences: ['email']
+      }
     };
   }
 }

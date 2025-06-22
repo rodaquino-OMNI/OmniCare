@@ -1,0 +1,74 @@
+{
+  "title": "TypeScript Error Handling Patterns",
+  "key": "swarm-development-centralized-1750513345894/error-handling/patterns",
+  "created": "2025-06-21",
+  "summary": "Comprehensive error handling patterns and utilities for TypeScript unknown error types",
+  "utilities": {
+    "backend": "/backend/src/utils/error.utils.ts",
+    "frontend": "/frontend/src/utils/error.utils.ts",
+    "root": "/src/utils/error.utils.ts"
+  },
+  "coreTypeguards": [
+    "isError(value: unknown): value is Error",
+    "hasMessage(value: unknown): value is { message: string }",
+    "hasCode(value: unknown): value is { code: string }",
+    "getErrorMessage(error: unknown): string",
+    "getErrorCode(error: unknown): string | undefined",
+    "getErrorStack(error: unknown): string | undefined"
+  ],
+  "filesUpdated": {
+    "backend": [
+      "auth.middleware.ts",
+      "auth.controller.ts",
+      "medplum.service.ts",
+      "smart-fhir.service.ts",
+      "cds-hooks.service.ts",
+      "subscriptions.service.ts",
+      "validation.service.ts",
+      "fhir.controller.ts",
+      "direct-trust.service.ts",
+      "hl7v2-parser.service.ts",
+      "fhir-validation.service.ts",
+      "reporting-engine.service.ts"
+    ],
+    "frontend": [
+      "patient.ts",
+      "index.ts",
+      "fhir.service.ts"
+    ],
+    "root": [
+      "sso-integration.ts",
+      "WorkflowOrchestrationService.ts"
+    ]
+  },
+  "patterns": {
+    "basicErrorHandling": "catch (error) { logger.error('Operation failed:', getErrorMessage(error)); }",
+    "auditLogging": "metadata: { error: getErrorMessage(error) }",
+    "conditionalChecking": "if (hasMessage(error) && error.message.includes('not found'))",
+    "fhirErrors": "if (isFHIRError(error)) { return getFHIRErrorMessage(error); }",
+    "apiErrors": "if (isAPIError(error)) { return getAPIErrorMessage(error); }",
+    "networkErrors": "isNetworkError(error)"
+  },
+  "replacementRules": [
+    {
+      "from": "error instanceof Error ? error.message : String(error)",
+      "to": "getErrorMessage(error)"
+    },
+    {
+      "from": "catch (error: any)",
+      "to": "catch (error)"
+    },
+    {
+      "from": "error.message || 'Unknown error'",
+      "to": "getErrorMessage(error)"
+    }
+  ],
+  "bestPractices": [
+    "Always use getErrorMessage(error) instead of direct error.message access",
+    "Use type guards (isError, hasMessage) when you need to check error properties",
+    "Never use error: any in catch blocks - let TypeScript infer unknown",
+    "Import error utilities at the top of files that handle errors",
+    "Create specialized error type guards for domain-specific errors"
+  ]
+}
+EOF < /dev/null

@@ -8,7 +8,7 @@ export interface BaseModel {
   createdAt: Date;
   updatedAt: Date;
   version?: number;
-  active: boolean;
+  active?: boolean;
 }
 
 export interface FHIRResource extends BaseModel {
@@ -232,4 +232,198 @@ export interface Dosage {
   };
   maxDosePerAdministration?: Quantity;
   maxDosePerLifetime?: Quantity;
+}
+
+/**
+ * Validation Result Interface
+ */
+export interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
+/**
+ * Validation Functions
+ */
+export function validateHumanName(name: HumanName): ValidationResult {
+  const errors: string[] = [];
+  
+  if (!name.family && (!name.given || name.given.length === 0)) {
+    errors.push('At least family name or given name is required');
+  }
+  
+  if (name.given && name.given.length === 0) {
+    errors.push('Given names array cannot be empty');
+  }
+  
+  if (name.use && !['usual', 'official', 'temp', 'nickname', 'anonymous', 'old', 'maiden'].includes(name.use)) {
+    errors.push('Invalid name use. Must be one of: usual, official, temp, nickname, anonymous, old, maiden');
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+export function validateAddress(address: Address): ValidationResult {
+  const errors: string[] = [];
+  
+  if (!address.line || address.line.length === 0) {
+    errors.push('Address line is required');
+  }
+  
+  if (!address.city) {
+    errors.push('City is required');
+  }
+  
+  if (!address.country) {
+    errors.push('Country is required');
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+export function validateContactPoint(contact: ContactPoint): ValidationResult {
+  const errors: string[] = [];
+  
+  if (!contact.system) {
+    errors.push('Contact system is required');
+  }
+  
+  if (!contact.value) {
+    errors.push('Contact value is required');
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+export function validateCodeableConcept(concept: CodeableConcept): ValidationResult {
+  const errors: string[] = [];
+  
+  if (!concept.text && (!concept.coding || concept.coding.length === 0)) {
+    errors.push('Either text or coding is required');
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+export function validateIdentifier(identifier: Identifier): ValidationResult {
+  const errors: string[] = [];
+  
+  if (!identifier.value) {
+    errors.push('Identifier value is required');
+  }
+  
+  if (!identifier.system) {
+    errors.push('Identifier system is required');
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+export function validatePeriod(period: Period): ValidationResult {
+  const errors: string[] = [];
+  
+  if (!period.start && !period.end) {
+    errors.push('Either start or end date is required');
+  }
+  
+  if (period.start && period.end) {
+    const startDate = new Date(period.start);
+    const endDate = new Date(period.end);
+    if (startDate > endDate) {
+      errors.push('Start date cannot be after end date');
+    }
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+export function validateReference(reference: Reference): ValidationResult {
+  const errors: string[] = [];
+  
+  if (!reference.reference && !reference.identifier) {
+    errors.push('Either reference or identifier is required');
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+export function validateQuantity(quantity: Quantity): ValidationResult {
+  const errors: string[] = [];
+  
+  if (typeof quantity.value !== 'number' || isNaN(quantity.value)) {
+    errors.push('Quantity value must be a valid number');
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+/**
+ * Utility Functions
+ */
+export function createReference(resourceType: string, id: string, display?: string): Reference {
+  return {
+    reference: `${resourceType}/${id}`,
+    display
+  };
+}
+
+export function formatHumanName(name: HumanName): string {
+  const parts: string[] = [];
+  if (name.prefix && name.prefix.length > 0) {
+    parts.push(name.prefix.join(' '));
+  }
+  if (name.given && name.given.length > 0) {
+    parts.push(name.given.join(' '));
+  }
+  if (name.family) {
+    parts.push(name.family);
+  }
+  if (name.suffix && name.suffix.length > 0) {
+    parts.push(name.suffix.join(' '));
+  }
+  return parts.join(' ').trim();
+}
+
+export function formatAddress(address: Address): string {
+  const parts: string[] = [];
+  if (address.line && address.line.length > 0) {
+    parts.push(address.line.join(', '));
+  }
+  if (address.city) {
+    parts.push(address.city);
+  }
+  if (address.state) {
+    parts.push(address.state);
+  }
+  if (address.postalCode) {
+    parts.push(address.postalCode);
+  }
+  if (address.country) {
+    parts.push(address.country);
+  }
+  return parts.join(', ');
 }

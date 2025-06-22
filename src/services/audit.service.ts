@@ -3,15 +3,14 @@
  * HIPAA-Compliant Audit Trail with Security Event Monitoring
  */
 
+import crypto from 'crypto';
+import { EventEmitter } from 'events';
+
 import winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
-import { EventEmitter } from 'events';
-import crypto from 'crypto';
-import fs from 'fs/promises';
-import path from 'path';
 
 import { AUDIT_CONFIG } from '@/config/auth.config';
-import { AuditLogEntry, SecurityEvent, ComplianceReport, UserRole } from '@/types/auth.types';
+import { AuditLogEntry, SecurityEvent, ComplianceReport } from '@/types/auth.types';
 
 export interface AuditDatabase {
   saveAuditEntry(entry: AuditLogEntry): Promise<void>;
@@ -145,24 +144,28 @@ export class AuditService extends EventEmitter {
    * Setup event listeners for audit logging
    */
   private setupEventListeners(): void {
-    this.on('auditEntry', async (entry: AuditLogEntry) => {
-      try {
-        if (this.database) {
-          await this.database.saveAuditEntry(entry);
+    this.on('auditEntry', (entry: AuditLogEntry) => {
+      void (async () => {
+        try {
+          if (this.database) {
+            await this.database.saveAuditEntry(entry);
+          }
+        } catch (error) {
+          console.error('Failed to save audit entry to database:', error);
         }
-      } catch (error) {
-        console.error('Failed to save audit entry to database:', error);
-      }
+      })();
     });
 
-    this.on('securityEvent', async (event: SecurityEvent) => {
-      try {
-        if (AUDIT_CONFIG.criticalEvents.includes(event.type)) {
-          await this.handleCriticalSecurityEvent(event);
+    this.on('securityEvent', (event: SecurityEvent) => {
+      void (async () => {
+        try {
+          if (AUDIT_CONFIG.criticalEvents.includes(event.type)) {
+            await this.handleCriticalSecurityEvent(event);
+          }
+        } catch (error) {
+          console.error('Failed to handle critical security event:', error);
         }
-      } catch (error) {
-        console.error('Failed to handle critical security event:', error);
-      }
+      })();
     });
   }
 
@@ -467,7 +470,7 @@ export class AuditService extends EventEmitter {
   /**
    * Analyze log files for compliance reports (fallback method)
    */
-  private async analyzeLogFiles(startDate: Date, endDate: Date): Promise<AuditLogEntry[]> {
+  private async analyzeLogFiles(_startDate: Date, _endDate: Date): Promise<AuditLogEntry[]> {
     // Implementation would parse log files within date range
     // This is a simplified version
     return [];
@@ -515,7 +518,7 @@ export class AuditService extends EventEmitter {
   /**
    * Search log files (simplified implementation)
    */
-  private async searchLogFiles(query: string, filters?: AuditFilters): Promise<AuditLogEntry[]> {
+  private async searchLogFiles(_query: string, _filters?: AuditFilters): Promise<AuditLogEntry[]> {
     // Implementation would search through log files
     // This is a placeholder
     return [];
@@ -524,7 +527,7 @@ export class AuditService extends EventEmitter {
   /**
    * Calculate statistics from log files
    */
-  private async calculateStatisticsFromLogs(timeframe: string): Promise<AuditStatistics> {
+  private async calculateStatisticsFromLogs(_timeframe: string): Promise<AuditStatistics> {
     // Implementation would analyze log files
     // This is a placeholder
     return {

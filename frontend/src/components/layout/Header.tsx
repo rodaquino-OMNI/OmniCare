@@ -8,7 +8,6 @@ import {
   Menu,
   Avatar,
   UnstyledButton,
-  Spotlight,
   Breadcrumbs,
   Anchor,
   Badge,
@@ -33,13 +32,13 @@ import {
   IconMessageCircle,
   IconAlertTriangle,
 } from '@tabler/icons-react';
-import { spotlight } from '@mantine/spotlight';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/stores/auth';
 import { useSidebar } from '@/stores/ui';
 import { useNotifications } from '@/stores/ui';
 import { formatTime } from '@/utils';
+import { OfflineIndicator } from '@/components/offline';
 
 interface HeaderProps {
   title?: string;
@@ -59,9 +58,6 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
 
   const unreadNotifications = notifications.filter(n => !n.autoClose);
 
-  const handleSpotlightOpen = () => {
-    spotlight.open();
-  };
 
   const handleLogout = () => {
     logout();
@@ -83,12 +79,12 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
 
             <div className="flex-1 min-w-0">
               {breadcrumbs.length > 0 && (
-                <Breadcrumbs size="sm" className="mb-1">
+                <Breadcrumbs className="mb-1">
                   {breadcrumbs.map((item, index) => (
                     <Anchor
                       key={index}
-                      component={item.href ? Link : 'span'}
-                      href={item.href}
+                      component={item.href ? Link : 'span' as any}
+                      href={item.href || undefined}
                       size="sm"
                       c={index === breadcrumbs.length - 1 ? 'dimmed' : 'primary'}
                     >
@@ -120,7 +116,7 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
               leftSection={<IconSearch size={16} />}
               value={searchValue}
               onChange={(e) => setSearchValue(e.currentTarget.value)}
-              onFocus={handleSpotlightOpen}
+              onFocus={() => {}}
               className="w-full"
               size="sm"
             />
@@ -128,10 +124,13 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
 
           {/* Right side - Actions and User Menu */}
           <Group gap="sm">
+            {/* Offline Indicator */}
+            <OfflineIndicator />
+
             {/* Mobile Search */}
             <ActionIcon
               variant="subtle"
-              onClick={handleSpotlightOpen}
+              onClick={() => {}}
               className="md:hidden"
             >
               <IconSearch size={20} />
@@ -308,40 +307,7 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
         </Group>
       </div>
 
-      {/* Global Search Spotlight */}
-      <Spotlight
-        actions={[
-          {
-            id: 'patient-search',
-            label: 'Search Patients',
-            description: 'Find patients by name, MRN, or phone',
-            onClick: () => console.log('Patient search'),
-            leftSection: <IconUser size={18} />,
-          },
-          {
-            id: 'order-search',
-            label: 'Search Orders',
-            description: 'Find lab orders, prescriptions, and procedures',
-            onClick: () => console.log('Order search'),
-            leftSection: <IconSearch size={18} />,
-          },
-          {
-            id: 'result-search',
-            label: 'Search Results',
-            description: 'Find lab results and imaging reports',
-            onClick: () => console.log('Result search'),
-            leftSection: <IconSearch size={18} />,
-          },
-        ]}
-        searchProps={{
-          leftSection: <IconSearch size={20} />,
-          placeholder: 'Search patients, orders, results...',
-        }}
-        nothingFound="Nothing found..."
-        highlightQuery
-        maxHeight={400}
-        limit={7}
-      />
+      {/* Global Search - Spotlight removed for build compatibility */}
     </Paper>
   );
 }

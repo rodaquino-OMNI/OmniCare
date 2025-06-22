@@ -12,6 +12,7 @@ import {
   Location,
   Device,
   Bundle,
+  Resource,
   HumanName,
   ContactPoint,
   Address,
@@ -24,6 +25,7 @@ import {
   Extension,
   Annotation
 } from '@medplum/fhirtypes';
+
 import { 
   OmniCarePatient, 
   OmniCareEncounter, 
@@ -91,7 +93,7 @@ export class FHIRTransformationService {
         communication: this.transformCommunication(omnicarePatient.languages || []),
         
         // Care providers
-        generalPractitioner: this.transformPractitionerReferences(omnicarePatient.primaryCareProviders || []),
+        generalPractitioner: this.transformPractitionerReferences(omnicarePatient.primaryCareProviders || []) as any,
         managingOrganization: omnicarePatient.managingOrganization ? { reference: `Organization/${omnicarePatient.managingOrganization}` } : undefined,
         
         // Links to other patients
@@ -354,7 +356,7 @@ export class FHIRTransformationService {
         issued: omnicareObservation.issuedTime ? this.transformDateTime(omnicareObservation.issuedTime) : undefined,
         
         // Performer
-        performer: this.transformPerformerReferences(omnicareObservation.performers || []),
+        performer: this.transformPerformerReferences(omnicareObservation.performers || []) as any,
         
         // Value
         valueQuantity: omnicareObservation.valueQuantity ? this.transformQuantity(omnicareObservation.valueQuantity) : undefined,
@@ -475,7 +477,9 @@ export class FHIRTransformationService {
           }]
         },
         system: 'http://omnicare.com/patient-id',
-        value: mrn
+        value: mrn,
+        period: undefined,
+        assigner: undefined
       });
     }
 
@@ -595,6 +599,7 @@ export class FHIRTransformationService {
 
   private mapEncounterStatus(status?: string): 'planned' | 'arrived' | 'triaged' | 'in-progress' | 'onleave' | 'finished' | 'cancelled' | 'entered-in-error' | 'unknown' {
     const normalized = status?.toLowerCase();
+    if (!normalized) return 'unknown';
     if (['planned', 'scheduled'].includes(normalized)) return 'planned';
     if (['arrived', 'checked-in'].includes(normalized)) return 'arrived';
     if (['triaged'].includes(normalized)) return 'triaged';
@@ -608,6 +613,7 @@ export class FHIRTransformationService {
 
   private mapObservationStatus(status?: string): 'registered' | 'preliminary' | 'final' | 'amended' | 'corrected' | 'cancelled' | 'entered-in-error' | 'unknown' {
     const normalized = status?.toLowerCase();
+    if (!normalized) return 'unknown';
     if (['registered'].includes(normalized)) return 'registered';
     if (['preliminary', 'pending'].includes(normalized)) return 'preliminary';
     if (['final', 'completed'].includes(normalized)) return 'final';
@@ -700,7 +706,7 @@ export class FHIRTransformationService {
     return providers.map(provider => ({
       reference: typeof provider === 'string' ? `Practitioner/${provider}` : `Practitioner/${provider.id}`,
       display: provider.name || provider.display
-    }));
+    })) as Reference[];
   }
 
   private transformPatientLinks(linkedPatients: any[]): Patient['link'] {
@@ -775,7 +781,7 @@ export class FHIRTransformationService {
     return performers.map(performer => ({
       reference: `${performer.resourceType || 'Practitioner'}/${performer.id}`,
       display: performer.name || performer.display
-    }));
+    })) as Reference[];
   }
 
   private transformRange(range: any): any {

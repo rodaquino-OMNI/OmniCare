@@ -1,0 +1,286 @@
+config:
+  target: 'http://localhost:8080'
+  phases:
+    # Warm-up phase
+    - duration: 60
+      arrivalRate: 5
+      name: "Warm-up"
+    
+    # Ramp-up phase
+    - duration: 300
+      arrivalRate: 10
+      rampTo: 50
+      name: "Ramp-up"
+    
+    # Sustained load phase
+    - duration: 600
+      arrivalRate: 50
+      name: "Sustained Load"
+    
+    # Peak load phase
+    - duration: 180
+      arrivalRate: 100
+      name: "Peak Load"
+    
+    # Cool-down phase
+    - duration: 120
+      arrivalRate: 100
+      rampTo: 5
+      name: "Cool-down"
+
+  processor: './load-test-functions.js'
+  
+  # Environment variables for configuration
+  variables:
+    patientId: "test-patient-123"
+    encounterId: "test-encounter-456"
+    
+  # Default headers
+  defaults:
+    headers:
+      'Content-Type': 'application/json'
+      'Accept': 'application/fhir+json'
+      'User-Agent': 'OmniCare-LoadTest/1.0'
+
+  # Performance thresholds
+  ensure:
+    maxErrorRate: 5          # Maximum 5% error rate
+    p95: 2000               # 95th percentile should be under 2 seconds
+    p99: 5000               # 99th percentile should be under 5 seconds
+
+  # Metrics collection
+  plugins:
+    metrics-by-endpoint:
+      useOnlyRequestNames: true
+    
+  engines:
+    http:
+      timeout: 30
+      pool: 50
+
+scenarios:
+  # Authentication and Health Checks
+  - name: "Health Check and Authentication"
+    weight: 10
+    flow:
+      - get:
+          url: "/health"
+          capture:
+            - json: "$.status"
+              as: "healthStatus"
+      
+      - post:
+          url: "/auth/login"
+          json:
+            username: "test@omnicare.com"
+            password: "testpassword123"
+          capture:
+            - json: "$.accessToken"
+              as: "authToken"
+          
+      - get:
+          url: "/fhir/R4/metadata"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+
+  # FHIR Patient Operations
+  - name: "Patient CRUD Operations"
+    weight: 30
+    flow:
+      # Authenticate first
+      - post:
+          url: "/auth/login"
+          json:
+            username: "test@omnicare.com"
+            password: "testpassword123"
+          capture:
+            - json: "$.accessToken"
+              as: "authToken"
+      
+      # Create patient
+      - post:
+          url: "/fhir/R4/Patient"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            resourceType: "Patient"
+            name:
+              - given: ["LoadTest{{ $randomString() }}"]
+                family: "Performance"
+            gender: "{{ $randomGender() }}"
+            birthDate: "1990-01-01"
+            identifier:
+              - system: "http://omnicare.com/patient-id"
+                value: "LOAD-{{ $randomString() }}"
+          capture:
+            - json: "$.id"
+              as: "newPatientId"
+      
+      # Read patient
+      - get:
+          url: "/fhir/R4/Patient/{{ newPatientId }}"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      
+      # Search patients
+      - get:
+          url: "/fhir/R4/Patient?name=Performance&_count=20"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      
+      # Update patient
+      - put:
+          url: "/fhir/R4/Patient/{{ newPatientId }}"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            resourceType: "Patient"
+            id: "{{ newPatientId }}"
+            name:
+              - given: ["UpdatedLoadTest{{ $randomString() }}"]
+                family: "Performance"
+            gender: "other"
+            birthDate: "1990-01-01"
+
+  # FHIR Observation Operations (Vital Signs)
+  - name: "Vital Signs and Observations"
+    weight: 25
+    flow:
+      # Authenticate
+      - post:
+          url: "/auth/login"
+          json:
+            username: "test@omnicare.com"
+            password: "testpassword123"
+          capture:
+            - json: "$.accessToken"
+              as: "authToken"
+      
+      # Create vital signs
+      - post:
+          url: "/api/vitals/{{ patientId }}"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            encounterId: "{{ encounterId }}"
+            vitals:
+              temperature: "{{ $randomFloat(96.0, 102.0) }}"
+              bloodPressureSystolic: "{{ $randomInt(90, 180) }}"
+              bloodPressureDiastolic: "{{ $randomInt(60, 120) }}"
+              heartRate: "{{ $randomInt(60, 120) }}"
+              respiratoryRate: "{{ $randomInt(12, 25) }}"
+              oxygenSaturation: "{{ $randomInt(92, 100) }}"
+      
+      # Search observations
+      - get:
+          url: "/fhir/R4/Observation?category=vital-signs&patient={{ patientId }}&_count=50"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      
+      # Complex observation search
+      - get:
+          url: "/fhir/R4/Observation?code=8310-5&date=gt2024-01-01&_sort=date"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+
+  # FHIR Batch Operations
+  - name: "Batch and Transaction Operations"
+    weight: 15
+    flow:
+      # Authenticate
+      - post:
+          url: "/auth/login"
+          json:
+            username: "test@omnicare.com"
+            password: "testpassword123"
+          capture:
+            - json: "$.accessToken"
+              as: "authToken"
+      
+      # Execute batch bundle
+      - post:
+          url: "/fhir/R4"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            resourceType: "Bundle"
+            type: "batch"
+            entry:
+              - request:
+                  method: "POST"
+                  url: "Patient"
+                resource:
+                  resourceType: "Patient"
+                  name:
+                    - given: ["BatchTest{{ $randomString() }}"]
+                      family: "LoadTest"
+                  gender: "{{ $randomGender() }}"
+                  birthDate: "1985-05-15"
+              - request:
+                  method: "POST"
+                  url: "Observation"
+                resource:
+                  resourceType: "Observation"
+                  status: "final"
+                  code:
+                    coding:
+                      - system: "http://loinc.org"
+                        code: "8310-5"
+                        display: "Body temperature"
+                  subject:
+                    reference: "Patient/{{ patientId }}"
+                  valueQuantity:
+                    value: "{{ $randomFloat(96.0, 102.0) }}"
+                    unit: "°F"
+
+  # Analytics and Reporting
+  - name: "Analytics Operations"
+    weight: 10
+    flow:
+      # Authenticate
+      - post:
+          url: "/auth/login"
+          json:
+            username: "test@omnicare.com"
+            password: "testpassword123"
+          capture:
+            - json: "$.accessToken"
+              as: "authToken"
+      
+      # Get clinical quality measures
+      - get:
+          url: "/analytics/facilities/{{ $randomFacilityId() }}/clinical-quality-measures?startDate=2024-01-01&endDate=2024-12-31"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      
+      # Get operational metrics
+      - get:
+          url: "/analytics/facilities/{{ $randomFacilityId() }}/operational-metrics"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      
+      # Get real-time metrics
+      - get:
+          url: "/analytics/facilities/{{ $randomFacilityId() }}/real-time-metrics"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+
+  # Patient $everything Operation
+  - name: "Patient Everything Operation"
+    weight: 10
+    flow:
+      # Authenticate
+      - post:
+          url: "/auth/login"
+          json:
+            username: "test@omnicare.com"
+            password: "testpassword123"
+          capture:
+            - json: "$.accessToken"
+              as: "authToken"
+      
+      # Get patient everything
+      - get:
+          url: "/fhir/R4/Patient/{{ patientId }}/$everything"
+          headers:
+            Authorization: "Bearer {{ authToken }}"

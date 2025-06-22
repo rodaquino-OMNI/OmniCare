@@ -14,7 +14,8 @@ import {
   Button,
   Tooltip,
   Alert,
-  Divider
+  Divider,
+  Skeleton
 } from '@mantine/core';
 import { 
   IconUser, 
@@ -30,12 +31,17 @@ import {
   IconShield,
   IconAlertTriangle,
   IconClock,
-  IconId
+  IconId,
+  IconRefresh
 } from '@tabler/icons-react';
 import { Patient, AllergyIntolerance, Condition } from '@medplum/fhirtypes';
 import { ResourceBadge, ResourceAvatar } from '@medplum/react';
 import { patientHelpers } from '@/lib/medplum';
 import { formatDate, calculateAge } from '@/utils';
+import { CacheStatusIndicator } from '@/components/offline';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { useOfflineStore } from '@/stores/offline';
+import { patientCacheService } from '@/services/patient-cache.service';
 
 interface PatientHeaderProps {
   patient: Patient;
@@ -64,9 +70,10 @@ export function PatientHeader({
       
       try {
         setLoading(true);
+        // Use cache service for optimized data fetching
         const [allergiesData, conditionsData] = await Promise.all([
-          patientHelpers.getAllergies(patient.id),
-          patientHelpers.getConditions(patient.id)
+          patientCacheService.getPatientAllergies(patient.id),
+          patientCacheService.getPatientConditions(patient.id)
         ]);
         
         setAllergies(allergiesData);
@@ -79,6 +86,19 @@ export function PatientHeader({
     };
 
     loadPatientData();
+
+    // Listen for cache updates
+    const handleCacheUpdate = (event: any) => {
+      if (event.patientId === patient.id) {
+        loadPatientData();
+      }
+    };
+
+    patientCacheService.on('cache:related-invalidated', handleCacheUpdate);
+
+    return () => {
+      patientCacheService.off('cache:related-invalidated', handleCacheUpdate);
+    };
   }, [patient.id]);
 
   const fullName = patientHelpers.getFullName(patient);

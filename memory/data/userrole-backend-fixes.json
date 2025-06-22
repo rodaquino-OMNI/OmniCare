@@ -1,0 +1,22 @@
+{
+  "backend-userrole-fixes": {
+    "timestamp": "2025-06-21T14:38:34Z",
+    "summary": "Fixed UserRole enum/type conflicts in backend codebase",
+    "files_modified": [
+      "backend/src/auth/unified-role-permissions.ts",
+      "backend/src/middleware/auth.middleware.ts", 
+      "backend/src/services/session.service.ts",
+      "backend/src/types/auth.types.ts",
+      "backend/src/auth/jwt.service.ts"
+    ],
+    "fixes_applied": {
+      "created_unified_role_permissions": "Created missing unified-role-permissions.ts file",
+      "auth_middleware_fixes": "Fixed UserRole enum usage to UserRoles constants (lines 668, 683, 700)",
+      "session_service_fixes": "Fixed UserRole enum usage to UserRoles constants and added missing roles (billing, receptionist)",
+      "auth_types_fixes": "Moved UserRole imports to top of file to fix forward reference issues",
+      "jwt_service_fixes": "Added explicit UserRole[] type to MFA_REQUIRED_ROLES array"
+    },
+    "conflicts_resolved": 10,
+    "status": "completed"
+  }
+}

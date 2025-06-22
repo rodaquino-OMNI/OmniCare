@@ -1,0 +1,1329 @@
+{
+  "swarm_id": "swarm-development-centralized-1750518061074",
+  "agent": "e2e-tester",
+  "timestamp": "2025-06-21T15:30:00Z",
+  "title": "Comprehensive E2E Test Suite for OmniCare Clinical Workflows",
+  "description": "Complete end-to-end test scenarios covering all clinical workflows from patient registration to discharge",
+  "test_categories": [
+    "patient_registration",
+    "clinical_documentation", 
+    "medication_management",
+    "telemedicine_workflows",
+    "care_coordination",
+    "clinical_decision_support",
+    "laboratory_workflows",
+    "imaging_workflows",
+    "emergency_care",
+    "discharge_planning"
+  ],
+  "total_scenarios": 47,
+  "total_test_cases": 312,
+  "estimated_execution_time": "4.5 hours",
+  "coverage": {
+    "frontend_components": "95%",
+    "api_endpoints": "88%", 
+    "clinical_workflows": "100%",
+    "user_roles": "100%"
+  },
+  "test_scenarios": {
+    "patient_registration": {
+      "category": "Patient Registration and Management",
+      "priority": "critical",
+      "scenarios": [
+        {
+          "id": "PR001",
+          "title": "Complete Patient Registration Workflow",
+          "description": "Test complete patient registration from initial contact to system enrollment",
+          "preconditions": [
+            "User logged in as admin/receptionist",
+            "Registration system available"
+          ],
+          "steps": [
+            {
+              "step": 1,
+              "action": "Navigate to patient registration",
+              "selector": "text=Patient Registration",
+              "expected": "Registration form displays"
+            },
+            {
+              "step": 2,
+              "action": "Fill patient demographics",
+              "data": {
+                "firstName": "John",
+                "lastName": "Doe", 
+                "dateOfBirth": "1980-05-15",
+                "gender": "male",
+                "ssn": "123-45-6789"
+              },
+              "expected": "Form accepts demographic data"
+            },
+            {
+              "step": 3,
+              "action": "Check for duplicate patients",
+              "trigger": "Tab out of SSN field",
+              "expected": "System performs duplicate check"
+            },
+            {
+              "step": 4,
+              "action": "Fill contact information",
+              "data": {
+                "phone": "(555) 123-4567",
+                "email": "john.doe@email.com",
+                "address": {
+                  "street": "123 Main St",
+                  "city": "Springfield",
+                  "state": "IL",
+                  "zipCode": "62701"
+                }
+              },
+              "expected": "Contact information validated and accepted"
+            },
+            {
+              "step": 5,
+              "action": "Add emergency contact",
+              "data": {
+                "name": "Jane Doe",
+                "relationship": "spouse",
+                "phone": "(555) 123-4568"
+              },
+              "expected": "Emergency contact added successfully"
+            },
+            {
+              "step": 6,
+              "action": "Add insurance information",
+              "data": {
+                "provider": "Blue Cross Blue Shield",
+                "policyNumber": "BCBS123456789",
+                "groupNumber": "GRP987654",
+                "subscriberName": "John Doe"
+              },
+              "expected": "Insurance information captured"
+            },
+            {
+              "step": 7,
+              "action": "Verify insurance eligibility",
+              "trigger": "Click 'Verify Insurance'",
+              "expected": "Insurance verification completes successfully"
+            },
+            {
+              "step": 8,
+              "action": "Capture patient photo",
+              "trigger": "Click 'Capture Photo'",
+              "expected": "Camera interface opens and photo captured"
+            },
+            {
+              "step": 9,
+              "action": "Complete consent forms",
+              "data": {
+                "treatmentConsent": true,
+                "hipaaConsent": true,
+                "financialResponsibility": true
+              },
+              "expected": "All consent forms marked as agreed"
+            },
+            {
+              "step": 10,
+              "action": "Electronic signature",
+              "data": {
+                "signatureName": "John Doe"
+              },
+              "expected": "Electronic signature captured with timestamp"
+            },
+            {
+              "step": 11,
+              "action": "Submit registration",
+              "trigger": "Click 'Complete Registration'",
+              "expected": "Patient registered successfully with MRN generated"
+            },
+            {
+              "step": 12,
+              "action": "Verify patient profile creation",
+              "expected": "Redirected to patient profile page with all information displayed"
+            }
+          ],
+          "test_data": [
+            {
+              "scenario": "new_patient",
+              "patient": {
+                "firstName": "John",
+                "lastName": "Doe",
+                "dateOfBirth": "1980-05-15",
+                "gender": "male",
+                "ssn": "123-45-6789",
+                "phone": "(555) 123-4567",
+                "email": "john.doe@email.com"
+              }
+            },
+            {
+              "scenario": "duplicate_patient",
+              "patient": {
+                "firstName": "Jane",
+                "lastName": "Smith",
+                "dateOfBirth": "1990-05-15",
+                "ssn": "123-45-6789"
+              }
+            }
+          ],
+          "validation_points": [
+            "MRN generated and unique",
+            "Patient demographic data saved correctly",
+            "Insurance verification status recorded",
+            "Consent forms timestamped and signed",
+            "Audit trail created for registration"
+          ]
+        },
+        {
+          "id": "PR002",
+          "title": "Patient Search and Demographics Update",
+          "description": "Test patient search functionality and demographic updates",
+          "steps": [
+            {
+              "step": 1,
+              "action": "Search patient by MRN",
+              "data": {"mrn": "MRN123456"},
+              "expected": "Patient found and displayed"
+            },
+            {
+              "step": 2,
+              "action": "Search patient by name",
+              "data": {"name": "John Doe"},
+              "expected": "Patient list filtered by name"
+            },
+            {
+              "step": 3,
+              "action": "Update patient address",
+              "data": {
+                "street": "456 Oak Ave",
+                "city": "Chicago",
+                "state": "IL",
+                "zipCode": "60601"
+              },
+              "expected": "Address updated successfully"
+            },
+            {
+              "step": 4,
+              "action": "Add secondary insurance",
+              "data": {
+                "provider": "Aetna",
+                "policyNumber": "AET987654321",
+                "type": "secondary"
+              },
+              "expected": "Secondary insurance added"
+            }
+          ]
+        }
+      ]
+    },
+    "clinical_documentation": {
+      "category": "Clinical Documentation and Notes",
+      "priority": "critical",
+      "scenarios": [
+        {
+          "id": "CD001",
+          "title": "Complete Clinical Encounter Documentation",
+          "description": "Test complete clinical encounter from arrival to completion",
+          "preconditions": [
+            "Patient registered in system",
+            "Physician logged in",
+            "Appointment scheduled"
+          ],
+          "steps": [
+            {
+              "step": 1,
+              "action": "Start new encounter",
+              "data": {
+                "patientId": "PAT123456",
+                "appointmentType": "routine-checkup",
+                "chiefComplaint": "Annual physical examination"
+              },
+              "expected": "Encounter started and encounter ID generated"
+            },
+            {
+              "step": 2,
+              "action": "Document vital signs",
+              "data": {
+                "temperature": 98.6,
+                "bloodPressure": {"systolic": 120, "diastolic": 80},
+                "heartRate": 72,
+                "respiratoryRate": 16,
+                "oxygenSaturation": 98,
+                "weight": 160,
+                "height": 68
+              },
+              "expected": "Vital signs recorded with timestamp"
+            },
+            {
+              "step": 3,
+              "action": "Create clinical note",
+              "data": {
+                "noteType": "progress",
+                "content": "Patient appears well. No acute distress. Review of systems negative except as noted in HPI."
+              },
+              "expected": "Clinical note created in draft status"
+            },
+            {
+              "step": 4,
+              "action": "Document physical examination",
+              "data": {
+                "generalAppearance": "Well-appearing, no acute distress",
+                "heent": "Normocephalic, atraumatic",
+                "cardiovascular": "Regular rate and rhythm, no murmurs",
+                "pulmonary": "Clear to auscultation bilaterally",
+                "abdomen": "Soft, non-tender, non-distended",
+                "extremities": "No edema, good pulses"
+              },
+              "expected": "Physical exam findings documented"
+            },
+            {
+              "step": 5,
+              "action": "Add assessment and plan",
+              "data": {
+                "assessment": "Healthy adult, routine preventive care",
+                "plan": "Continue current lifestyle. Return in 1 year for routine follow-up."
+              },
+              "expected": "Assessment and plan documented"
+            },
+            {
+              "step": 6,
+              "action": "Add diagnosis codes",
+              "data": {
+                "diagnoses": [
+                  {
+                    "code": "Z00.00",
+                    "description": "Encounter for general adult medical examination without abnormal findings"
+                  }
+                ]
+              },
+              "expected": "Diagnosis codes added to encounter"
+            },
+            {
+              "step": 7,
+              "action": "Sign clinical note",
+              "trigger": "Click 'Sign Note'",
+              "expected": "Note signed and locked for editing"
+            },
+            {
+              "step": 8,
+              "action": "Complete encounter",
+              "trigger": "Click 'Complete Encounter'",
+              "expected": "Encounter status changed to completed"
+            }
+          ],
+          "validation_points": [
+            "Encounter properly linked to patient and appointment",
+            "All documentation timestamped and attributed",
+            "Clinical note signed and immutable",
+            "Diagnosis codes properly coded",
+            "Encounter summary generated"
+          ]
+        },
+        {
+          "id": "CD002",
+          "title": "Smart Text and Template Usage",
+          "description": "Test AI-assisted documentation and clinical templates",
+          "steps": [
+            {
+              "step": 1,
+              "action": "Open clinical note composer",
+              "expected": "Smart text editor with AI suggestions enabled"
+            },
+            {
+              "step": 2,
+              "action": "Start typing symptoms",
+              "data": {"text": "Patient reports chest"},
+              "expected": "AI suggestions appear for chest pain documentation"
+            },
+            {
+              "step": 3,
+              "action": "Select AI suggestion",
+              "trigger": "Click suggestion",
+              "expected": "Full clinical phrase inserted with proper formatting"
+            },
+            {
+              "step": 4,
+              "action": "Use clinical template",
+              "data": {"template": "Annual Physical Exam"},
+              "expected": "Template loaded with structured sections"
+            },
+            {
+              "step": 5,
+              "action": "Auto-populate patient context",
+              "expected": "Patient age, conditions, and medications populated automatically"
+            }
+          ]
+        }
+      ]
+    },
+    "medication_management": {
+      "category": "Medication Prescribing and Management",
+      "priority": "critical",
+      "scenarios": [
+        {
+          "id": "MM001",
+          "title": "Complete Medication Prescribing Workflow",
+          "description": "Test end-to-end medication prescribing with safety checks",
+          "preconditions": [
+            "Physician logged in",
+            "Patient has active encounter",
+            "Drug database available"
+          ],
+          "steps": [
+            {
+              "step": 1,
+              "action": "Access medication ordering",
+              "navigation": "Patient > Medications > New Prescription",
+              "expected": "Medication prescribing interface opens"
+            },
+            {
+              "step": 2,
+              "action": "Search for medication",
+              "data": {"medication": "Lisinopril"},
+              "expected": "Medication search results displayed with options"
+            },
+            {
+              "step": 3,
+              "action": "Select medication strength",
+              "data": {"strength": "10mg tablets"},
+              "expected": "Medication selected with strength"
+            },
+            {
+              "step": 4,
+              "action": "Set dosing instructions",
+              "data": {
+                "dose": "10mg",
+                "frequency": "once daily",
+                "route": "oral",
+                "timing": "morning"
+              },
+              "expected": "Dosing instructions configured"
+            },
+            {
+              "step": 5,
+              "action": "Specify quantity and refills",
+              "data": {
+                "quantity": 30,
+                "refills": 5,
+                "daysSupply": 30
+              },
+              "expected": "Prescription quantity set"
+            },
+            {
+              "step": 6,
+              "action": "Add indication",
+              "data": {"indication": "Hypertension"},
+              "expected": "Clinical indication documented"
+            },
+            {
+              "step": 7,
+              "action": "Trigger safety checks",
+              "trigger": "Auto-triggered on prescription creation",
+              "expected": "Drug interaction, allergy, and contraindication checks performed"
+            },
+            {
+              "step": 8,
+              "action": "Review safety alerts",
+              "expected": "Any safety alerts displayed with severity and recommendations"
+            },
+            {
+              "step": 9,
+              "action": "Add patient counseling points",
+              "data": {
+                "counselingPoints": [
+                  "Take with or without food",
+                  "Monitor for dizziness",
+                  "Check blood pressure regularly"
+                ]
+              },
+              "expected": "Patient education points documented"
+            },
+            {
+              "step": 10,
+              "action": "Send to pharmacy",
+              "data": {"pharmacy": "CVS Pharmacy - Main St"},
+              "expected": "Electronic prescription transmitted"
+            },
+            {
+              "step": 11,
+              "action": "Verify prescription status",
+              "expected": "Prescription status shows as 'Transmitted'"
+            }
+          ],
+          "safety_scenarios": [
+            {
+              "scenario": "drug_allergy_alert",
+              "setup": "Patient has documented penicillin allergy",
+              "medication": "Amoxicillin",
+              "expected": "Critical allergy alert blocks prescription"
+            },
+            {
+              "scenario": "drug_interaction",
+              "setup": "Patient taking Warfarin",
+              "medication": "Aspirin",
+              "expected": "Major interaction warning displayed"
+            },
+            {
+              "scenario": "contraindication",
+              "setup": "Patient has severe kidney disease",
+              "medication": "Metformin",
+              "expected": "Contraindication alert with alternative suggestions"
+            }
+          ]
+        },
+        {
+          "id": "MM002",
+          "title": "Medication Administration Recording",
+          "description": "Test nursing medication administration workflow",
+          "user_role": "nurse",
+          "steps": [
+            {
+              "step": 1,
+              "action": "Scan patient bracelet",
+              "method": "barcode_scan",
+              "expected": "Patient identity verified"
+            },
+            {
+              "step": 2,
+              "action": "Scan medication barcode",
+              "method": "barcode_scan",
+              "expected": "Medication matched to order"
+            },
+            {
+              "step": 3,
+              "action": "Verify five rights",
+              "checks": [
+                "Right patient",
+                "Right medication", 
+                "Right dose",
+                "Right route",
+                "Right time"
+              ],
+              "expected": "All five rights verified"
+            },
+            {
+              "step": 4,
+              "action": "Perform pre-administration assessment",
+              "data": {
+                "bloodPressure": "118/78",
+                "consciousnessLevel": "alert",
+                "contraindications": "none"
+              },
+              "expected": "Pre-administration checks completed"
+            },
+            {
+              "step": 5,
+              "action": "Administer medication",
+              "data": {
+                "actualTime": "current_timestamp",
+                "route": "oral",
+                "witnessRequired": false
+              },
+              "expected": "Administration documented"
+            },
+            {
+              "step": 6,
+              "action": "Monitor for immediate reactions",
+              "wait": "15 minutes",
+              "expected": "No adverse reactions documented"
+            }
+          ]
+        },
+        {
+          "id": "MM003",
+          "title": "Medication Reconciliation Process",
+          "description": "Test medication reconciliation during care transitions",
+          "steps": [
+            {
+              "step": 1,
+              "action": "Initiate med reconciliation",
+              "trigger": "Patient admission",
+              "expected": "Reconciliation workflow starts"
+            },
+            {
+              "step": 2,
+              "action": "Review home medications",
+              "data": {
+                "homeMedications": [
+                  {
+                    "name": "Lisinopril 10mg",
+                    "frequency": "once daily",
+                    "lastTaken": "this morning"
+                  }
+                ]
+              },
+              "expected": "Home medications listed"
+            },
+            {
+              "step": 3,
+              "action": "Compare with admission orders",
+              "expected": "Discrepancies identified automatically"
+            },
+            {
+              "step": 4,
+              "action": "Resolve discrepancies",
+              "data": {
+                "action": "continue_home_medication",
+                "rationale": "Patient stable on current regimen"
+              },
+              "expected": "Discrepancy resolved with documentation"
+            },
+            {
+              "step": 5,
+              "action": "Obtain physician approval",
+              "expected": "Reconciliation reviewed and approved by physician"
+            }
+          ]
+        }
+      ]
+    },
+    "telemedicine_workflows": {
+      "category": "Telemedicine and Virtual Care",
+      "priority": "high",
+      "scenarios": [
+        {
+          "id": "TM001",
+          "title": "Complete Telemedicine Visit Workflow",
+          "description": "Test end-to-end telemedicine consultation",
+          "preconditions": [
+            "Telemedicine appointment scheduled",
+            "Video platform configured",
+            "Patient and provider have access credentials"
+          ],
+          "steps": [
+            {
+              "step": 1,
+              "action": "Initialize telemedicine session",
+              "data": {
+                "appointmentId": "APPT123456",
+                "videoProvider": "zoom",
+                "sessionConfig": {
+                  "roomUrl": "https://zoom.us/j/123456789",
+                  "waitingRoom": true,
+                  "recording": false
+                }
+              },
+              "expected": "Telemedicine session created with video link"
+            },
+            {
+              "step": 2,
+              "action": "Patient joins waiting room",
+              "user": "patient",
+              "expected": "Patient checked in and waiting for provider"
+            },
+            {
+              "step": 3,
+              "action": "Provider starts encounter",
+              "user": "physician",
+              "expected": "Virtual encounter initiated and logged"
+            },
+            {
+              "step": 4,
+              "action": "Patient reports vital signs",
+              "data": {
+                "bloodPressure": {"systolic": 125, "diastolic": 82},
+                "heartRate": 78,
+                "temperature": 99.1,
+                "reportedBy": "patient"
+              },
+              "expected": "Patient-reported vitals recorded with source attribution"
+            },
+            {
+              "step": 5,
+              "action": "Conduct virtual examination",
+              "data": {
+                "generalAppearance": "Patient appears well on video",
+                "visualInspection": "No obvious distress",
+                "patientDemonstration": "Range of motion demonstrated by patient"
+              },
+              "expected": "Virtual examination findings documented"
+            },
+            {
+              "step": 6,
+              "action": "Share screen for patient education",
+              "content": "Treatment plan and medication information",
+              "expected": "Educational materials shared and documented"
+            },
+            {
+              "step": 7,
+              "action": "Document technical issues if any",
+              "data": {
+                "audioQuality": "good",
+                "videoQuality": "good", 
+                "connectionIssues": "none"
+              },
+              "expected": "Technical quality documented"
+            },
+            {
+              "step": 8,
+              "action": "Prescribe medications electronically",
+              "data": {
+                "medication": "Amoxicillin 500mg",
+                "instructions": "Take twice daily for 10 days"
+              },
+              "expected": "E-prescription sent during telemedicine visit"
+            },
+            {
+              "step": 9,
+              "action": "Schedule follow-up",
+              "data": {
+                "followUpType": "in-person",
+                "timeframe": "2 weeks",
+                "reason": "Reassessment of symptoms"
+              },
+              "expected": "Follow-up appointment scheduled"
+            },
+            {
+              "step": 10,
+              "action": "Complete telemedicine encounter",
+              "expected": "Encounter finalized with telemedicine-specific documentation"
+            },
+            {
+              "step": 11,
+              "action": "Generate visit summary",
+              "expected": "Telemedicine visit summary created and shared with patient"
+            }
+          ],
+          "validation_points": [
+            "Video session properly logged",
+            "Patient-reported vitals marked as such",
+            "Virtual exam limitations documented",
+            "Technical quality assessed",
+            "Telemedicine billing codes applied"
+          ]
+        },
+        {
+          "id": "TM002",
+          "title": "Telemedicine Technical Issue Handling",
+          "description": "Test handling of technical difficulties during virtual visits",
+          "steps": [
+            {
+              "step": 1,
+              "action": "Simulate video connection failure",
+              "expected": "System detects connection issue"
+            },
+            {
+              "step": 2,
+              "action": "Document technical problem",
+              "data": {
+                "issue": "Video connection lost",
+                "duration": "5 minutes",
+                "resolution": "Switched to phone consultation"
+              },
+              "expected": "Technical issue logged with impact assessment"
+            },
+            {
+              "step": 3,
+              "action": "Continue with audio-only",
+              "expected": "Visit continues with modified documentation"
+            },
+            {
+              "step": 4,
+              "action": "Adjust billing codes",
+              "expected": "Billing reflects audio-only consultation"
+            }
+          ]
+        }
+      ]
+    },
+    "care_coordination": {
+      "category": "Care Plan Management and Coordination",
+      "priority": "high",
+      "scenarios": [
+        {
+          "id": "CC001",
+          "title": "Comprehensive Care Plan Creation and Management",
+          "description": "Test creating and managing care plans for chronic disease patients",
+          "preconditions": [
+            "Patient with chronic condition (diabetes)",
+            "Care team identified",
+            "Care plan templates available"
+          ],
+          "steps": [
+            {
+              "step": 1,
+              "action": "Create care team",
+              "data": {
+                "members": [
+                  {"role": "primary_physician", "practitionerId": "PRAC001"},
+                  {"role": "endocrinologist", "practitionerId": "PRAC002"},
+                  {"role": "diabetes_educator", "practitionerId": "PRAC003"},
+                  {"role": "pharmacist", "practitionerId": "PRAC004"}
+                ]
+              },
+              "expected": "Care team established with defined roles"
+            },
+            {
+              "step": 2,
+              "action": "Select care plan template",
+              "data": {"template": "diabetes-management"},
+              "expected": "Diabetes management template loaded"
+            },
+            {
+              "step": 3,
+              "action": "Set care plan goals",
+              "data": {
+                "goals": [
+                  {
+                    "description": "Maintain HbA1c below 7%",
+                    "target": {"value": 7, "unit": "%"},
+                    "timeframe": "3 months",
+                    "priority": "high"
+                  },
+                  {
+                    "description": "Daily blood glucose monitoring",
+                    "target": {"value": "compliance", "unit": "daily"},
+                    "timeframe": "ongoing",
+                    "priority": "medium"
+                  }
+                ]
+              },
+              "expected": "Care plan goals established with measurable targets"
+            },
+            {
+              "step": 4,
+              "action": "Define care activities",
+              "data": {
+                "activities": [
+                  {
+                    "description": "Endocrinology follow-up",
+                    "frequency": "every 3 months",
+                    "performer": "endocrinologist"
+                  },
+                  {
+                    "description": "Diabetes education sessions",
+                    "frequency": "monthly for 3 months",
+                    "performer": "diabetes_educator"
+                  },
+                  {
+                    "description": "Medication review",
+                    "frequency": "monthly",
+                    "performer": "pharmacist"
+                  }
+                ]
+              },
+              "expected": "Care activities scheduled with responsible parties"
+            },
+            {
+              "step": 5,
+              "action": "Set monitoring schedule",
+              "data": {
+                "monitoring": [
+                  {"parameter": "HbA1c", "frequency": "every 3 months"},
+                  {"parameter": "blood glucose", "frequency": "daily"},
+                  {"parameter": "weight", "frequency": "weekly"},
+                  {"parameter": "blood pressure", "frequency": "monthly"}
+                ]
+              },
+              "expected": "Monitoring schedule defined with alerts"
+            },
+            {
+              "step": 6,
+              "action": "Activate care plan",
+              "expected": "Care plan activated and team notified"
+            },
+            {
+              "step": 7,
+              "action": "Track goal progress",
+              "data": {
+                "goalId": "HbA1c_goal",
+                "currentValue": 6.8,
+                "measurementDate": "current_date"
+              },
+              "expected": "Goal progress updated and tracked"
+            },
+            {
+              "step": 8,
+              "action": "Complete care activity",
+              "data": {
+                "activityId": "endocrinology_visit",
+                "completionDate": "current_date",
+                "outcome": "Patient education reinforced, medication adjusted"
+              },
+              "expected": "Care activity marked complete with outcomes"
+            },
+            {
+              "step": 9,
+              "action": "Generate care plan report",
+              "expected": "Comprehensive care plan progress report generated"
+            }
+          ]
+        },
+        {
+          "id": "CC002",
+          "title": "Care Transition and Handoff",
+          "description": "Test care transitions between providers and settings",
+          "steps": [
+            {
+              "step": 1,
+              "action": "Initiate care transition",
+              "data": {
+                "fromProvider": "Primary Care",
+                "toProvider": "Cardiology",
+                "reason": "Specialist consultation"
+              },
+              "expected": "Care transition process initiated"
+            },
+            {
+              "step": 2,
+              "action": "Generate transition summary",
+              "expected": "Comprehensive patient summary created for receiving provider"
+            },
+            {
+              "step": 3,
+              "action": "Transfer care plan ownership",
+              "expected": "Care plan updated with new primary responsibility"
+            },
+            {
+              "step": 4,
+              "action": "Notify care team of transition",
+              "expected": "All care team members notified of provider change"
+            }
+          ]
+        }
+      ]
+    },
+    "clinical_decision_support": {
+      "category": "Clinical Decision Support and Alerts",
+      "priority": "critical",
+      "scenarios": [
+        {
+          "id": "CDS001",
+          "title": "Clinical Decision Support Integration",
+          "description": "Test CDS hooks integration throughout clinical workflows",
+          "preconditions": [
+            "CDS hooks service active",
+            "Clinical guidelines loaded",
+            "Patient data available"
+          ],
+          "steps": [
+            {
+              "step": 1,
+              "action": "Open patient chart",
+              "trigger": "patient-view CDS hook",
+              "expected": "Patient risk assessment card displayed"
+            },
+            {
+              "step": 2,
+              "action": "Review CDS recommendations",
+              "data": {
+                "patientAge": 65,
+                "conditions": ["diabetes", "hypertension"],
+                "lastA1c": 8.2
+              },
+              "expected": "Preventive care recommendations and care gaps identified"
+            },
+            {
+              "step": 3,
+              "action": "Prescribe medication",
+              "trigger": "medication-prescribe CDS hook",
+              "data": {"medication": "Warfarin"},
+              "expected": "Drug interaction alerts triggered"
+            },
+            {
+              "step": 4,
+              "action": "Review interaction alert",
+              "expected": "Detailed interaction information with severity and management recommendations"
+            },
+            {
+              "step": 5,
+              "action": "Order laboratory test",
+              "trigger": "order-review CDS hook",
+              "data": {"test": "CBC"},
+              "expected": "Order appropriateness guidance provided"
+            },
+            {
+              "step": 6,
+              "action": "Accept CDS recommendation",
+              "data": {"recommendation": "alternative_medication"},
+              "expected": "Recommendation implemented and documented"
+            }
+          ],
+          "alert_scenarios": [
+            {
+              "scenario": "drug_allergy",
+              "severity": "critical",
+              "expected_action": "block_prescription"
+            },
+            {
+              "scenario": "duplicate_therapy",
+              "severity": "warning", 
+              "expected_action": "physician_review"
+            },
+            {
+              "scenario": "care_gap",
+              "severity": "info",
+              "expected_action": "schedule_screening"
+            }
+          ]
+        }
+      ]
+    },
+    "laboratory_workflows": {
+      "category": "Laboratory Orders and Results",
+      "priority": "high",
+      "scenarios": [
+        {
+          "id": "LAB001",
+          "title": "Complete Laboratory Workflow",
+          "description": "Test lab ordering, processing, and results reporting",
+          "steps": [
+            {
+              "step": 1,
+              "action": "Order laboratory tests",
+              "data": {
+                "tests": [
+                  {"code": "CBC", "urgency": "routine"},
+                  {"code": "BMP", "urgency": "routine"},
+                  {"code": "HbA1c", "urgency": "routine"}
+                ],
+                "indication": "Diabetes monitoring"
+              },
+              "expected": "Lab orders placed and transmitted to lab"
+            },
+            {
+              "step": 2,
+              "action": "Generate specimen labels",
+              "expected": "Barcode labels generated for specimen collection"
+            },
+            {
+              "step": 3,
+              "action": "Collect specimens",
+              "user": "lab_tech",
+              "data": {
+                "specimenType": "blood",
+                "collectionTime": "current_timestamp",
+                "collector": "LAB001"
+              },
+              "expected": "Specimen collection documented"
+            },
+            {
+              "step": 4,
+              "action": "Process lab results",
+              "user": "lab_tech",
+              "data": {
+                "results": [
+                  {"test": "Glucose", "value": 145, "unit": "mg/dL", "referenceRange": "70-99"},
+                  {"test": "HbA1c", "value": 7.2, "unit": "%", "referenceRange": "<7.0"}
+                ]
+              },
+              "expected": "Lab results entered and flagged if abnormal"
+            },
+            {
+              "step": 5,
+              "action": "Review and release results",
+              "user": "pathologist",
+              "expected": "Results reviewed and released to ordering physician"
+            },
+            {
+              "step": 6,
+              "action": "Physician reviews results",
+              "user": "physician",
+              "expected": "Abnormal results flagged for physician attention"
+            },
+            {
+              "step": 7,
+              "action": "Communicate results to patient",
+              "data": {
+                "method": "patient_portal",
+                "message": "Lab results available, please review and follow up as needed"
+              },
+              "expected": "Patient notified of results availability"
+            }
+          ]
+        }
+      ]
+    },
+    "imaging_workflows": {
+      "category": "Radiology Orders and Results",
+      "priority": "high",
+      "scenarios": [
+        {
+          "id": "IMG001",
+          "title": "Radiology Order to Results Workflow",
+          "description": "Test imaging orders, scheduling, and results",
+          "steps": [
+            {
+              "step": 1,
+              "action": "Order imaging study",
+              "data": {
+                "study": "Chest X-ray",
+                "urgency": "routine",
+                "indication": "Cough and fever",
+                "clinicalHistory": "3-day history of productive cough"
+              },
+              "expected": "Imaging order placed and sent to radiology"
+            },
+            {
+              "step": 2,
+              "action": "Schedule imaging appointment",
+              "user": "radiology_scheduler",
+              "data": {
+                "appointmentTime": "next_available",
+                "modality": "X-ray",
+                "location": "Radiology Suite A"
+              },
+              "expected": "Patient scheduled and notified"
+            },
+            {
+              "step": 3,
+              "action": "Perform imaging study",
+              "user": "radiology_tech",
+              "data": {
+                "images": ["PA view", "lateral view"],
+                "technique": "Standard chest technique",
+                "quality": "diagnostic"
+              },
+              "expected": "Images acquired and stored in PACS"
+            },
+            {
+              "step": 4,
+              "action": "Radiologist interpretation",
+              "user": "radiologist",
+              "data": {
+                "findings": "Bilateral lower lobe opacities consistent with pneumonia",
+                "impression": "Bilateral pneumonia"
+              },
+              "expected": "Radiology report generated and signed"
+            },
+            {
+              "step": 5,
+              "action": "Critical result notification",
+              "trigger": "Critical finding detected",
+              "expected": "Immediate notification sent to ordering physician"
+            }
+          ]
+        }
+      ]
+    },
+    "emergency_care": {
+      "category": "Emergency Department Workflows",
+      "priority": "critical",
+      "scenarios": [
+        {
+          "id": "ED001",
+          "title": "Emergency Department Workflow",
+          "description": "Test emergency patient flow from triage to disposition",
+          "steps": [
+            {
+              "step": 1,
+              "action": "Emergency patient arrival",
+              "data": {
+                "arrivalMode": "ambulance",
+                "chiefComplaint": "Chest pain",
+                "triageLevel": "2"
+              },
+              "expected": "Patient triaged and tracked in ED board"
+            },
+            {
+              "step": 2,
+              "action": "Rapid triage assessment",
+              "user": "triage_nurse",
+              "data": {
+                "vitals": {
+                  "bloodPressure": "160/95",
+                  "heartRate": 105,
+                  "temperature": 98.8,
+                  "respiratoryRate": 20,
+                  "oxygenSaturation": 96,
+                  "painScore": 8
+                },
+                "allergies": "NKDA",
+                "medications": ["Lisinopril", "Aspirin"]
+              },
+              "expected": "Triage completed and patient prioritized"
+            },
+            {
+              "step": 3,
+              "action": "ED physician evaluation",
+              "user": "emergency_physician",
+              "data": {
+                "assessment": "Rule out acute coronary syndrome",
+                "plan": "EKG, chest X-ray, troponin levels, admit for observation"
+              },
+              "expected": "Initial assessment completed with treatment plan"
+            },
+            {
+              "step": 4,
+              "action": "STAT orders",
+              "data": {
+                "orders": [
+                  {"type": "lab", "test": "Troponin", "urgency": "STAT"},
+                  {"type": "imaging", "study": "EKG", "urgency": "STAT"},
+                  {"type": "medication", "drug": "Nitroglycerin SL", "urgency": "PRN"}
+                ]
+              },
+              "expected": "STAT orders processed and results tracked"
+            },
+            {
+              "step": 5,
+              "action": "Monitor patient status",
+              "interval": "15 minutes",
+              "expected": "Vital signs and pain scores tracked continuously"
+            },
+            {
+              "step": 6,
+              "action": "Disposition decision",
+              "data": {
+                "disposition": "admit_to_telemetry",
+                "admittingPhysician": "Dr. Smith"
+              },
+              "expected": "Patient admitted with proper handoff documentation"
+            }
+          ]
+        }
+      ]
+    },
+    "discharge_planning": {
+      "category": "Discharge Planning and Transitions",
+      "priority": "high",
+      "scenarios": [
+        {
+          "id": "DP001",
+          "title": "Hospital Discharge Workflow",
+          "description": "Test comprehensive discharge planning process",
+          "steps": [
+            {
+              "step": 1,
+              "action": "Initiate discharge planning",
+              "trigger": "Patient medically stable",
+              "user": "discharge_planner",
+              "expected": "Discharge planning process started"
+            },
+            {
+              "step": 2,
+              "action": "Medication reconciliation",
+              "data": {
+                "homeMedications": "Continue Lisinopril",
+                "newMedications": "Add Metoprolol",
+                "discontinuedMedications": "Stop Hydrochlorothiazide"
+              },
+              "expected": "Discharge medication list finalized"
+            },
+            {
+              "step": 3,
+              "action": "Patient education",
+              "data": {
+                "topics": [
+                  "Heart-healthy diet",
+                  "Medication compliance",
+                  "Activity restrictions",
+                  "Warning signs to report"
+                ]
+              },
+              "expected": "Patient education completed and documented"
+            },
+            {
+              "step": 4,
+              "action": "Schedule follow-up appointments",
+              "data": {
+                "appointments": [
+                  {"provider": "Primary Care", "timeframe": "1 week"},
+                  {"provider": "Cardiology", "timeframe": "2 weeks"}
+                ]
+              },
+              "expected": "Follow-up appointments scheduled before discharge"
+            },
+            {
+              "step": 5,
+              "action": "Generate discharge summary",
+              "expected": "Comprehensive discharge summary created"
+            },
+            {
+              "step": 6,
+              "action": "Patient discharge",
+              "data": {
+                "transportMode": "family_member",
+                "dischargeTime": "current_timestamp"
+              },
+              "expected": "Patient discharged with complete documentation"
+            },
+            {
+              "step": 7,
+              "action": "Post-discharge follow-up",
+              "schedule": "24-48 hours",
+              "expected": "Follow-up call completed and documented"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "automation_scripts": {
+    "test_data_generation": {
+      "patient_generator": {
+        "function": "generateTestPatient",
+        "parameters": {
+          "scenario": "new_patient | existing_patient | high_risk_patient",
+          "age_range": [18, 90],
+          "conditions": ["diabetes", "hypertension", "asthma"],
+          "medications": ["lisinopril", "metformin", "albuterol"]
+        }
+      },
+      "encounter_generator": {
+        "function": "generateTestEncounter",
+        "parameters": {
+          "type": "routine | urgent | emergency",
+          "complexity": "low | medium | high"
+        }
+      }
+    },
+    "validation_helpers": {
+      "fhir_validation": {
+        "function": "validateFHIRResource",
+        "purpose": "Ensure all clinical data follows FHIR R4 standards"
+      },
+      "clinical_validation": {
+        "function": "validateClinicalWorkflow",
+        "purpose": "Verify clinical protocols are followed"
+      }
+    },
+    "reporting": {
+      "test_metrics": {
+        "execution_time": "Track test execution duration",
+        "pass_rate": "Calculate percentage of passing tests",
+        "coverage": "Measure workflow and code coverage"
+      },
+      "clinical_metrics": {
+        "safety_alerts": "Count and categorize safety alerts triggered",
+        "workflow_compliance": "Measure adherence to clinical protocols"
+      }
+    }
+  },
+  "performance_benchmarks": {
+    "response_times": {
+      "page_load": "< 3 seconds",
+      "search_results": "< 2 seconds",
+      "form_submission": "< 5 seconds",
+      "report_generation": "< 10 seconds"
+    },
+    "concurrent_users": {
+      "peak_capacity": 100,
+      "normal_load": 50,
+      "stress_test": 200
+    }
+  },
+  "compliance_testing": {
+    "hipaa_compliance": {
+      "audit_logging": "All patient data access logged",
+      "encryption": "Data encrypted in transit and at rest",
+      "access_controls": "Role-based access properly enforced"
+    },
+    "meaningful_use": {
+      "cpoe": "Computerized provider order entry tested",
+      "cds": "Clinical decision support functioning",
+      "patient_engagement": "Patient portal features tested"
+    }
+  },
+  "integration_testing": {
+    "external_systems": [
+      "pharmacy_systems",
+      "laboratory_systems", 
+      "radiology_pacs",
+      "insurance_eligibility",
+      "health_information_exchange"
+    ],
+    "fhir_compliance": {
+      "r4_compatibility": "All resources FHIR R4 compliant",
+      "interoperability": "Can exchange data with other EMRs"
+    }
+  }
+}

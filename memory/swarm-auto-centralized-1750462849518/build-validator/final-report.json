@@ -1,0 +1,66 @@
+{
+  "timestamp": "2025-06-20T11:15:00Z",
+  "validator": "build-validator",
+  "status": "completed",
+  "buildErrors": {
+    "initial": 158,
+    "current": 345,
+    "trend": "increased"
+  },
+  "criticalIssues": [
+    {
+      "issue": "Duplicate Function Implementations",
+      "severity": "critical",
+      "file": "src/clinical/emergency/EmergencyCareService.ts",
+      "count": 18,
+      "description": "Methods implemented multiple times causing TS2393 errors",
+      "impact": "Build failure - prevents compilation"
+    },
+    {
+      "issue": "Mantine v7 Migration Required",
+      "severity": "high",
+      "files": ["src/stories/*.tsx"],
+      "count": 211,
+      "description": "Component props need updating: spacing->gap, weight->fw, size->fz",
+      "impact": "TypeScript errors in all story files"
+    }
+  ],
+  "eslintStatus": {
+    "errors": 27,
+    "warnings": 62,
+    "mainErrorTypes": [
+      "no-unused-vars (12)",
+      "no-useless-escape (8)",
+      "no-unused-imports (6)",
+      "no-require-imports (1)"
+    ]
+  },
+  "errorBreakdown": {
+    "duplicate_implementations": 18,
+    "mantine_prop_errors": 211,
+    "missing_methods": 30,
+    "type_mismatches": 89,
+    "other": 17
+  },
+  "recommendations": {
+    "immediate": [
+      "Remove duplicate method implementations in EmergencyCareService.ts",
+      "Update all Mantine component props for v7 compatibility"
+    ],
+    "shortTerm": [
+      "Implement missing methods across service classes",
+      "Fix FHIR type reference mismatches",
+      "Fix ESLint errors (unused vars, escape chars)"
+    ],
+    "coordination": [
+      "EmergencyCareService needs urgent attention - duplicate methods",
+      "Storybook files need systematic Mantine v7 prop updates",
+      "Multiple services missing method implementations"
+    ]
+  },
+  "nextSteps": [
+    "Monitor for agent fixes to duplicate function issue",
+    "Track Mantine migration progress",
+    "Re-run build checks every 5 minutes"
+  ]
+}

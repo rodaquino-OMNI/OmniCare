@@ -1,0 +1,345 @@
+{
+  "test_execution_report": {
+    "metadata": {
+      "agent": "Full Test Runner",
+      "execution_timestamp": "2025-06-21T02:52:36Z",
+      "project": "OmniCare EMR",
+      "execution_duration_minutes": 15,
+      "memory_key": "swarm-auto-centralized-1750474023872/test-runner/results"
+    },
+    "execution_summary": {
+      "total_test_files_discovered": 275,
+      "project_test_files": 11,
+      "test_suites_executed": {
+        "root_level": {
+          "status": "MIXED",
+          "backend_tests": "FAILED",
+          "frontend_tests": "FAILED",
+          "test_suites": 8,
+          "passed_tests": 28,
+          "failed_tests": 22
+        },
+        "frontend_individual": {
+          "status": "FAILED",
+          "test_suites": 4,
+          "passed_tests": 25,
+          "failed_tests": 11
+        },
+        "backend_individual": {
+          "status": "FAILED", 
+          "test_suites": 3,
+          "passed_tests": 20,
+          "failed_tests": 0,
+          "compilation_errors": 2
+        },
+        "e2e_playwright": {
+          "status": "TIMEOUT",
+          "error": "Web server startup timeout (120s)",
+          "tests_executed": 0
+        },
+        "integration_tests": {
+          "status": "NOT_FOUND",
+          "reason": "No npm configuration in tests/integration directory"
+        }
+      }
+    },
+    "detailed_test_results": {
+      "backend_tests": {
+        "successful_suites": [
+          {
+            "name": "Logger Utils",
+            "file": "backend/tests/unit/utils/logger.test.ts",
+            "tests_passed": 20,
+            "tests_failed": 0,
+            "coverage": {
+              "statements": "58.97%",
+              "branches": "25%",
+              "functions": "55.55%",
+              "lines": "58.97%"
+            },
+            "test_categories": [
+              "Custom logging methods",
+              "Standard logging methods", 
+              "Logger configuration",
+              "Error handling",
+              "Context-specific logging scenarios"
+            ]
+          }
+        ],
+        "failed_suites": [
+          {
+            "name": "FHIR Resources Service",
+            "file": "backend/tests/unit/services/fhir-resources.service.test.ts",
+            "error_type": "COMPILATION_ERROR",
+            "errors": [
+              "Type incompatibility in address field - string vs union type",
+              "Bundle resourceType type mismatch - string vs 'Bundle'",
+              "Mock data type incompatibility with FHIR types"
+            ]
+          },
+          {
+            "name": "Medplum Service",
+            "file": "backend/tests/unit/services/medplum.service.test.ts", 
+            "error_type": "COMPILATION_ERROR",
+            "errors": [
+              "Missing required 'reason' property in Subscription type",
+              "setActiveProject method not found on MedplumClient mock",
+              "ProfileResource type incompatibility with undefined"
+            ]
+          },
+          {
+            "name": "Auth Controller Integration",
+            "file": "backend/tests/integration/auth.controller.integration.test.ts",
+            "error_type": "COMPILATION_ERROR",
+            "errors": [
+              "refreshInternalCredentials property missing",
+              "Type incompatibilities in authentication flow"
+            ]
+          }
+        ],
+        "coverage_summary": {
+          "global_thresholds": {
+            "statements": "80% (FAILED - achieved 4.09%)",
+            "branches": "80% (FAILED - achieved 1.24%)", 
+            "functions": "80% (FAILED - achieved 5.05%)",
+            "lines": "80% (FAILED - achieved 4.16%)"
+          },
+          "files_analyzed": [
+            "src/healthcheck.ts",
+            "src/services/smart-fhir.service.ts",
+            "src/services/subscriptions.service.ts", 
+            "src/services/validation.service.ts",
+            "src/utils/logger.ts"
+          ]
+        }
+      },
+      "frontend_tests": {
+        "successful_suites": [
+          {
+            "name": "Auth Store",
+            "file": "frontend/src/stores/__tests__/auth.test.ts",
+            "tests_passed": 25,
+            "tests_failed": 0,
+            "test_categories": [
+              "Initial State",
+              "Login functionality",
+              "Logout functionality", 
+              "Token refresh",
+              "User updates",
+              "Permission checks",
+              "Role checks",
+              "Loading states",
+              "useAuth Hook integration"
+            ]
+          }
+        ],
+        "failed_suites": [
+          {
+            "name": "Clinical Note Input",
+            "file": "frontend/src/components/clinical/__tests__/ClinicalNoteInput.test.tsx",
+            "tests_failed": 11,
+            "error_type": "COMPONENT_RENDERING_ERROR",
+            "primary_error": "Cannot read properties of undefined (reading 'List')",
+            "root_cause": "Mantine Tabs component not properly mocked",
+            "affected_functionality": [
+              "Component rendering",
+              "Text input handling",
+              "SmartText integration",
+              "Clinical decision support",
+              "Note templates",
+              "Save functionality",
+              "Auto-save features"
+            ]
+          },
+          {
+            "name": "Login Form",
+            "file": "frontend/src/components/auth/__tests__/LoginForm.test.tsx",
+            "tests_failed": "Multiple",
+            "error_type": "COMPONENT_INTEGRATION_ERROR",
+            "errors": [
+              "Element type invalid - component export issues",
+              "Mantine form integration problems",
+              "Authentication flow testing failures"
+            ]
+          },
+          {
+            "name": "Patient Header", 
+            "file": "frontend/src/components/patient/__tests__/PatientHeader.test.tsx",
+            "tests_failed": "Multiple",
+            "error_type": "COMPONENT_RENDERING_ERROR",
+            "similar_issues": "Mantine component mocking problems"
+          }
+        ],
+        "coverage_summary": {
+          "overall_coverage": "LOW",
+          "statements": "4.11%",
+          "branches": "1.46%",
+          "functions": "5.2%", 
+          "lines": "4.14%",
+          "highly_covered_files": [
+            "stores/auth.ts - 71.42% statements",
+            "components/patient/PatientHeader.tsx - 92.3% statements"
+          ],
+          "low_coverage_areas": [
+            "components/layout/*",
+            "components/medication/*",
+            "services/*",
+            "lib/*"
+          ]
+        }
+      },
+      "e2e_tests": {
+        "playwright_config": {
+          "browsers": ["chromium", "firefox", "webkit", "Mobile Chrome", "Mobile Safari", "Microsoft Edge", "Google Chrome"],
+          "test_timeout": "60s",
+          "global_timeout": "0",
+          "web_server": {
+            "command": "npm run dev",
+            "url": "http://localhost:3000",
+            "timeout": "120s"
+          }
+        },
+        "execution_result": {
+          "status": "FAILED",
+          "error": "Timed out waiting 120000ms from config.webServer",
+          "duration": "120.4s",
+          "tests_expected": 0,
+          "tests_executed": 0,
+          "reason": "Development server failed to start within timeout period"
+        }
+      }
+    },
+    "error_categorization": {
+      "type_system_errors": {
+        "count": 15,
+        "files_affected": [
+          "fhir-resources.service.test.ts",
+          "medplum.service.test.ts", 
+          "auth.controller.integration.test.ts"
+        ],
+        "common_patterns": [
+          "FHIR type incompatibilities",
+          "Mock object type mismatches",
+          "Missing required properties",
+          "Union type vs string mismatches"
+        ]
+      },
+      "component_rendering_errors": {
+        "count": 22,
+        "files_affected": [
+          "ClinicalNoteInput.test.tsx",
+          "LoginForm.test.tsx",
+          "PatientHeader.test.tsx"
+        ],
+        "root_causes": [
+          "Incomplete Mantine component mocking",
+          "Component export/import issues",
+          "Test provider configuration problems"
+        ]
+      },
+      "infrastructure_errors": {
+        "count": 1,
+        "issues": [
+          "E2E test server startup timeout"
+        ]
+      },
+      "missing_dependencies": {
+        "backend": [
+          "ajv-formats",
+          "nodemailer"
+        ],
+        "impact": "Prevents compilation of integration services"
+      }
+    },
+    "test_execution_commands": {
+      "root_level": "npm test",
+      "frontend_individual": "cd frontend && npm test -- --verbose --coverage --passWithNoTests",
+      "backend_individual": "cd backend && npm test -- --verbose --coverage --passWithNoTests", 
+      "backend_unit_only": "cd backend && npm run test:unit -- --verbose",
+      "frontend_e2e": "cd frontend && npm run test:e2e -- --reporter=json",
+      "integration_attempt": "cd tests/integration && npm test"
+    },
+    "statistics": {
+      "total_tests_discovered": 275,
+      "project_specific_tests": 11,
+      "tests_passed": 73,
+      "tests_failed": 33,
+      "compilation_failures": 17,
+      "success_rate": "68.9%",
+      "coverage_thresholds_met": 0,
+      "critical_issues": 5
+    },
+    "recommendations": {
+      "immediate_fixes": [
+        {
+          "priority": "HIGH",
+          "category": "Backend Type Issues",
+          "actions": [
+            "Fix FHIR type definitions in test mocks",
+            "Update address field type compatibility",
+            "Add missing required properties to Subscription mocks",
+            "Install missing dependencies: ajv-formats, nodemailer"
+          ]
+        },
+        {
+          "priority": "HIGH", 
+          "category": "Frontend Component Testing",
+          "actions": [
+            "Fix Mantine component mocking in __mocks__ directory",
+            "Update Tabs.List component mock implementation",
+            "Resolve component export/import issues",
+            "Fix test provider configuration"
+          ]
+        },
+        {
+          "priority": "MEDIUM",
+          "category": "E2E Testing Infrastructure",
+          "actions": [
+            "Investigate development server startup issues",
+            "Optimize web server startup time",
+            "Consider alternative E2E test setup",
+            "Add health check endpoints for faster startup detection"
+          ]
+        }
+      ],
+      "coverage_improvements": [
+        {
+          "category": "Backend Services",
+          "current_coverage": "4.09%",
+          "target": "80%",
+          "focus_files": [
+            "src/services/smart-fhir.service.ts",
+            "src/services/subscriptions.service.ts",
+            "src/services/validation.service.ts"
+          ]
+        },
+        {
+          "category": "Frontend Components",
+          "current_coverage": "4.11%",
+          "target": "75%", 
+          "focus_files": [
+            "components/layout/*",
+            "components/medication/*",
+            "services/*",
+            "lib/medplum.ts"
+          ]
+        }
+      ],
+      "testing_strategy": [
+        "Prioritize fixing compilation errors before adding new tests",
+        "Implement proper mocking strategy for external dependencies",
+        "Set up CI/CD pipeline with test quality gates",
+        "Establish testing standards and documentation",
+        "Create integration test environment with proper database setup"
+      ]
+    },
+    "next_steps": [
+      "Address compilation errors in backend services",
+      "Fix Mantine component mocking issues",
+      "Install missing dependencies",
+      "Investigate E2E testing infrastructure",
+      "Implement comprehensive test coverage strategy",
+      "Set up proper CI/CD testing pipeline"
+    ]
+  }
+}

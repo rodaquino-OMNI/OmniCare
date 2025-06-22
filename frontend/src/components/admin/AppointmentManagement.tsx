@@ -15,29 +15,24 @@ import {
   Badge,
   Modal,
   LoadingOverlay,
-  Alert,
-  Paper,
-  ActionIcon,
-  Tooltip
+  Paper
 } from '@mantine/core';
 import { 
   IconCalendar, 
-  IconClock, 
   IconUser, 
   IconPhone,
   IconCheck,
-  IconX,
   IconAlertTriangle,
   IconSearch,
   IconPlus
 } from '@tabler/icons-react';
 import { Appointment, Provider, Patient } from '@/types/administrative';
+import { getErrorMessage, getDisplayErrorMessage } from '@/utils/error.utils';
 
 // Setup the localizer for react-big-calendar
 const localizer = momentLocalizer(moment);
 
 interface AppointmentManagementProps {
-  userRole: string;
   facilityId: string;
 }
 
@@ -49,7 +44,7 @@ interface AppointmentEvent {
   resource: Appointment;
 }
 
-const AppointmentManagement: React.FC<AppointmentManagementProps> = ({ userRole, facilityId }) => {
+const AppointmentManagement: React.FC<AppointmentManagementProps> = ({ facilityId }) => {
   const [currentView, setCurrentView] = useState<View>('week');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -57,10 +52,10 @@ const AppointmentManagement: React.FC<AppointmentManagementProps> = ({ userRole,
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-  const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterProvider, setFilterProvider] = useState<string>('all');
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
 
   useEffect(() => {
     fetchAppointmentData();
@@ -180,8 +175,10 @@ const AppointmentManagement: React.FC<AppointmentManagementProps> = ({ userRole,
       setProviders(mockProviders);
       setPatients(mockPatients);
       setAppointments(mockAppointments);
-    } catch (error) {
-      console.error('Failed to fetch appointment data:', error);
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error);
+      console.error('Failed to fetch appointment data:', errorMessage, error);
+      // Could show user notification here if needed
     } finally {
       setLoading(false);
     }
@@ -236,9 +233,9 @@ const AppointmentManagement: React.FC<AppointmentManagementProps> = ({ userRole,
     setSelectedAppointment(event.resource);
   };
 
-  const handleSelectSlot = (slotInfo: SlotInfo) => {
+  const handleSelectSlot = () => {
     // Open scheduling modal for the selected time slot
-    setShowScheduleModal(true);
+    console.log('Slot selected - scheduling modal functionality to be implemented');
   };
 
   const handleStatusUpdate = async (appointmentId: string, newStatus: string) => {
@@ -247,18 +244,21 @@ const AppointmentManagement: React.FC<AppointmentManagementProps> = ({ userRole,
       setAppointments(prev => 
         prev.map(apt => 
           apt.id === appointmentId 
-            ? { ...apt, status: newStatus as any, updatedAt: new Date() }
+            ? { ...apt, status: newStatus as Appointment['status'], updatedAt: new Date() }
             : apt
         )
       );
       
       if (selectedAppointment?.id === appointmentId) {
         setSelectedAppointment(prev => 
-          prev ? { ...prev, status: newStatus as any } : null
+          prev ? { ...prev, status: newStatus as Appointment['status'], updatedAt: new Date() } : null
         );
       }
-    } catch (error) {
-      console.error('Failed to update appointment status:', error);
+    } catch (error: unknown) {
+      const errorMessage = getDisplayErrorMessage(error);
+      console.error('Failed to update appointment status:', errorMessage, error);
+      // Show user-friendly error message
+      // Could trigger a notification toast here
     }
   };
 
@@ -424,7 +424,7 @@ const AppointmentManagement: React.FC<AppointmentManagementProps> = ({ userRole,
             <Group gap="sm">
               <IconCalendar size={20} className="text-gray-400" />
               <div>
-                <Text size="sm" c="dimmed">Today's Appointments</Text>
+                <Text size="sm" c="dimmed">Today&apos;s Appointments</Text>
                 <Text size="lg" fw={700}>
                   {appointments.filter(apt => 
                     moment(apt.startTime).isSame(moment(), 'day')

@@ -1,5 +1,6 @@
 import { MedplumClient } from '@medplum/core';
 import { Patient, Practitioner, Encounter, ServiceRequest, CarePlan } from '@medplum/fhirtypes';
+import { v4 as uuidv4 } from 'uuid';
 import { CDSOrchestrator } from '../../cds/CDSOrchestrator';
 import { TelemedicineWorkflowService } from '../../clinical/telemedicine/TelemedicineWorkflowService';
 import { ReferralManagementService } from '../../clinical/referrals/ReferralManagementService';
@@ -9,6 +10,7 @@ import {
 } from '../../cds/guidelines/ClinicalGuidelinesService';
 import { RiskScoringService } from '../../cds/scoring/RiskScoringService';
 import { CDSHooksService } from '../../cds/hooks/CDSHooksService';
+import { getErrorMessage } from '@/utils/error.utils';
 
 export interface WorkflowContext {
   patientId: string;
@@ -78,7 +80,7 @@ export class WorkflowOrchestrationService {
 
     try {
       // Get patient and check for CDS recommendations
-      const patient = await this.medplum.readResource<Patient>('Patient', context.patientId);
+      const patient = await this.medplum.readResource('Patient', context.patientId);
       
       // Run CDS checks
       const cdsRecommendations = await this.runCDSChecks(context, patient!);
@@ -122,7 +124,7 @@ export class WorkflowOrchestrationService {
           action: 'Workflow failed',
           timestamp: new Date(),
           performer: 'system',
-          result: error instanceof Error ? error.message : 'Unknown error'
+          result: getErrorMessage(error)
         }]
       };
     }

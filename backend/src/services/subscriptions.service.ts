@@ -1,10 +1,14 @@
-import WebSocket from 'ws';
 import { EventEmitter } from 'events';
+
 import { Subscription, Bundle } from '@medplum/fhirtypes';
+import WebSocket from 'ws';
+
 import { medplumService } from './medplum.service';
-import { SubscriptionConfig } from '@/types/fhir';
+
 import config from '@/config';
+import { SubscriptionConfig } from '@/types/fhir';
 import logger from '@/utils/logger';
+import { getErrorMessage } from '@/utils/error.utils';
 
 interface ActiveSubscription {
   id: string;
@@ -705,7 +709,7 @@ export class SubscriptionsService extends EventEmitter {
     } catch (error) {
       return {
         status: 'DOWN',
-        details: { error: error instanceof Error ? error.message : String(error) },
+        details: { error: getErrorMessage(error) },
       };
     }
   }

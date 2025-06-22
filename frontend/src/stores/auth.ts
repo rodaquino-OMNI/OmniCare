@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { User, UserRole, Permission } from '@/types';
-import { getRolePermissions, hasPermission } from '@/auth/role-permissions';
+import { getRolePermissions } from '@/auth/unified-role-permissions';
+import { mapToFrontendRole } from '@/auth/role-mappings';
+import { getErrorMessage, getDisplayErrorMessage } from '@/utils/error.utils';
 
 interface SessionInfo {
   sessionId: string;
@@ -29,26 +31,18 @@ interface AuthState {
   refreshAuth: () => Promise<void>;
   updateUser: (user: Partial<User>) => void;
   setLoading: (loading: boolean) => void;
-  hasPermission: (permission: Permission) => boolean;
+  hasPermission: (permission: string) => boolean;
   hasRole: (role: UserRole) => boolean;
   hasAnyRole: (roles: UserRole[]) => boolean;
   getCurrentUser: () => Promise<void>;
 }
 
 interface LoginCredentials {
-  username: string;
+  email: string;
   password: string;
   mfaToken?: string;
 }
 
-interface AuthResponse {
-  success: boolean;
-  tokens: AuthTokens;
-  user: User;
-  session: SessionInfo;
-  requiresMfa?: boolean;
-  message?: string;
-}
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -86,11 +80,18 @@ export const useAuthStore = create<AuthState>()(
             throw new Error(data.message || 'Login failed');
           }
 
-          // Calculate user permissions
-          const userPermissions = getRolePermissions(data.user.role);
+          // Map backend role to frontend role
+          const frontendRole = mapToFrontendRole(data.user.role);
+          const userData = {
+            ...data.user,
+            role: frontendRole
+          };
+          
+          // Use permissions from API response or calculate from role
+          const userPermissions = data.permissions || getRolePermissions(frontendRole);
 
           set({
-            user: data.user,
+            user: userData,
             tokens: data.tokens,
             session: data.session,
             permissions: userPermissions,
@@ -103,8 +104,9 @@ export const useAuthStore = create<AuthState>()(
             localStorage.setItem('omnicare_access_token', data.tokens.accessToken);
             localStorage.setItem('omnicare_refresh_token', data.tokens.refreshToken);
           }
-        } catch (error) {
-          console.error('Login error:', error);
+        } catch (error: unknown) {
+          const errorMessage = getErrorMessage(error);
+          console.error('Login error:', errorMessage, error);
           set({
             user: null,
             tokens: null,
@@ -131,8 +133,9 @@ export const useAuthStore = create<AuthState>()(
               },
             });
           }
-        } catch (error) {
-          console.error('Logout error:', error);
+        } catch (error: unknown) {
+          const errorMessage = getErrorMessage(error);
+          console.error('Logout error:', errorMessage, error);
           // Continue with local logout even if server logout fails
         }
 
@@ -175,8 +178,17 @@ export const useAuthStore = create<AuthState>()(
             throw new Error(data.message || 'Token refresh failed');
           }
 
+          // Map backend role to frontend role
+          const frontendRole = mapToFrontendRole(data.user.role);
+          const userData = {
+            ...data.user,
+            role: frontendRole
+          };
+          
           set({
+            user: userData,
             tokens: data.tokens,
+            permissions: data.permissions || getRolePermissions(frontendRole),
             isAuthenticated: true,
           });
 
@@ -185,8 +197,9 @@ export const useAuthStore = create<AuthState>()(
             localStorage.setItem('omnicare_access_token', data.tokens.accessToken);
             localStorage.setItem('omnicare_refresh_token', data.tokens.refreshToken);
           }
-        } catch (error) {
-          console.error('Token refresh error:', error);
+        } catch (error: unknown) {
+          const errorMessage = getErrorMessage(error);
+          console.error('Token refresh error:', errorMessage, error);
           await get().logout();
         }
       },
@@ -221,25 +234,32 @@ export const useAuthStore = create<AuthState>()(
           const data = await response.json();
 
           if (response.ok && data.success) {
-            const userPermissions = getRolePermissions(data.user.role);
+            // Map backend role to frontend role
+            const frontendRole = mapToFrontendRole(data.user.role);
+            const userData = {
+              ...data.user,
+              role: frontendRole
+            };
+            const userPermissions = getRolePermissions(frontendRole);
             
             set({
-              user: data.user,
+              user: userData,
               permissions: userPermissions,
               isAuthenticated: true,
             });
           } else {
             await get().logout();
           }
-        } catch (error) {
-          console.error('Get current user error:', error);
+        } catch (error: unknown) {
+          const errorMessage = getErrorMessage(error);
+          console.error('Get current user error:', errorMessage, error);
           await get().logout();
         }
       },
 
-      hasPermission: (permission: Permission) => {
-        const { permissions, user } = get();
-        return user ? hasPermission(user.role, permission) : false;
+      hasPermission: (permissionId: string) => {
+        const { permissions } = get();
+        return permissions.some(p => p.id === permissionId);
       },
 
       hasRole: (role: UserRole) => {
@@ -272,24 +292,25 @@ export const useAuth = () => {
   
   return {
     ...store,
-    isPhysician: store.hasRole(UserRole.PHYSICIAN),
-    isNurse: store.hasRole(UserRole.NURSING_STAFF),
-    isAdmin: store.hasRole(UserRole.ADMINISTRATIVE_STAFF),
-    isSystemAdmin: store.hasRole(UserRole.SYSTEM_ADMINISTRATOR),
-    isPharmacist: store.hasRole(UserRole.PHARMACIST),
-    isLabTech: store.hasRole(UserRole.LABORATORY_TECHNICIAN),
-    isRadiologyTech: store.hasRole(UserRole.RADIOLOGY_TECHNICIAN),
-    isPatient: store.hasRole(UserRole.PATIENT),
+    isPhysician: store.hasRole('physician'),
+    isDoctor: store.hasRole('physician'), // Alias for compatibility
+    isNurse: store.hasRole('nurse'),
+    isAdmin: store.hasRole('admin'),
+    isSystemAdmin: store.hasRole('system_admin'),
+    isPharmacist: store.hasRole('pharmacist'),
+    isLabTech: store.hasRole('lab_tech'),
+    isRadiologyTech: store.hasRole('radiology_tech'),
+    isPatient: store.hasRole('patient'),
     
     // Common permission checks
-    canViewPatients: store.hasAnyRole([UserRole.PHYSICIAN, UserRole.NURSING_STAFF, UserRole.SYSTEM_ADMINISTRATOR]),
-    canEditPatients: store.hasAnyRole([UserRole.PHYSICIAN, UserRole.NURSING_STAFF]),
-    canCreateOrders: store.hasRole(UserRole.PHYSICIAN),
-    canAdministerMedications: store.hasRole(UserRole.NURSING_STAFF),
-    canPrescribeMedications: store.hasRole(UserRole.PHYSICIAN),
-    canViewLabResults: store.hasAnyRole([UserRole.PHYSICIAN, UserRole.NURSING_STAFF, UserRole.LABORATORY_TECHNICIAN]),
-    canManageSystem: store.hasRole(UserRole.SYSTEM_ADMINISTRATOR),
-    canManageBilling: store.hasRole(UserRole.ADMINISTRATIVE_STAFF),
+    canViewPatients: store.hasAnyRole(['physician', 'nurse']),
+    canEditPatients: store.hasAnyRole(['physician', 'nurse']),
+    canCreateOrders: store.hasRole('physician'),
+    canAdministerMedications: store.hasRole('nurse'),
+    canPrescribeMedications: store.hasRole('physician'),
+    canViewLabResults: store.hasAnyRole(['physician', 'nurse', 'lab_tech']),
+    canManageSystem: store.hasRole('system_admin'),
+    canManageBilling: store.hasRole('admin'),
   };
 };
 

@@ -513,7 +513,7 @@ export class ClinicalTemplateService implements TemplateRegistry {
         } catch (error) {
           errors.push({
             fieldId: rule.id,
-            message: `Validation rule error: ${error.message}`,
+            message: `Validation rule error: ${(error as Error).message}`,
             severity: 'error'
           });
         }
@@ -703,6 +703,7 @@ export class ClinicalTemplateService implements TemplateRegistry {
         tags: ['admission', 'comprehensive', 'h&p'],
         keywords: ['history', 'physical', 'examination', 'admission'],
         clinicalContext: ['hospital_admission', 'comprehensive_exam'],
+        applicableConditions: ['general_admission', 'comprehensive_assessment'],
         language: 'en',
         jurisdiction: 'US',
         complianceFramework: ['CMS', 'Joint Commission'],
@@ -832,6 +833,7 @@ export class ClinicalTemplateService implements TemplateRegistry {
         tags: ['progress', 'soap', 'daily'],
         keywords: ['progress', 'note', 'soap', 'daily'],
         clinicalContext: ['inpatient_care', 'outpatient_visit'],
+        applicableConditions: ['ongoing_care', 'progress_monitoring'],
         language: 'en',
         jurisdiction: 'US',
         reviewCycle: 6
@@ -949,6 +951,7 @@ export class ClinicalTemplateService implements TemplateRegistry {
         tags: ['discharge', 'summary', 'transition'],
         keywords: ['discharge', 'summary', 'transition', 'continuity'],
         clinicalContext: ['hospital_discharge', 'care_transition'],
+        applicableConditions: ['discharge_planning', 'care_transition'],
         language: 'en',
         jurisdiction: 'US',
         complianceFramework: ['CMS', 'Joint Commission'],
@@ -1040,6 +1043,7 @@ export class ClinicalTemplateService implements TemplateRegistry {
         tags: ['consultation', 'specialist', 'referral'],
         keywords: ['consultation', 'specialist', 'referral', 'expert'],
         clinicalContext: ['specialist_consultation', 'referral_response'],
+        applicableConditions: ['specialist_consultation', 'complex_cases'],
         language: 'en',
         jurisdiction: 'US',
         reviewCycle: 12
@@ -1145,6 +1149,7 @@ export class ClinicalTemplateService implements TemplateRegistry {
         tags: ['nursing', 'care', 'assessment'],
         keywords: ['nursing', 'care', 'assessment', 'intervention'],
         clinicalContext: ['nursing_care', 'patient_monitoring'],
+        applicableConditions: ['nursing_care', 'patient_assessment'],
         language: 'en',
         jurisdiction: 'US',
         reviewCycle: 6
@@ -1350,6 +1355,7 @@ class DefaultFormBuilder implements ClinicalFormBuilder {
         tags: [],
         keywords: [],
         clinicalContext: [],
+        applicableConditions: [],
         language: 'en',
         jurisdiction: 'US',
         reviewCycle: 12,

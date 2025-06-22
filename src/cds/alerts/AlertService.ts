@@ -58,15 +58,21 @@ export class AlertService {
    * Create and queue a new alert
    */
   async createAlert(alertData: Partial<Alert>): Promise<Alert> {
+    // Validate required fields
+    if (!alertData.patientId || !alertData.alertType || !alertData.severity || 
+        !alertData.title || !alertData.message || !alertData.source) {
+      throw new Error('Missing required alert data');
+    }
+
     const alert: Alert = {
       alertId: alertData.alertId || `alert-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      patientId: alertData.patientId!,
-      alertType: alertData.alertType!,
-      severity: alertData.severity!,
-      title: alertData.title!,
-      message: alertData.message!,
+      patientId: alertData.patientId,
+      alertType: alertData.alertType,
+      severity: alertData.severity,
+      title: alertData.title,
+      message: alertData.message,
       timestamp: new Date(),
-      source: alertData.source!,
+      source: alertData.source,
       actionable: alertData.actionable !== false,
       dismissed: false,
       relatedData: alertData.relatedData
@@ -193,7 +199,7 @@ export class AlertService {
     alert.dismissed = true;
     alert.dismissedBy = dismissedBy;
     alert.dismissedAt = new Date();
-    alert.dismissalReason = dismissalReason;
+    alert.dismissalReason = dismissalReason || '';
 
     // Move to history
     this.alertHistory.push(alert);
@@ -208,7 +214,7 @@ export class AlertService {
   /**
    * Get active alerts for a patient
    */
-  getActiveAlertsForPatient(patientId: string): Alert[] {
+  async getActiveAlertsForPatient(patientId: string): Promise<Alert[]> {
     return Array.from(this.activeAlerts.values())
       .filter(alert => alert.patientId === patientId)
       .sort((a, b) => {

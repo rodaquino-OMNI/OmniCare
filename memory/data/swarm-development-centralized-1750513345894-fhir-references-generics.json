@@ -1,0 +1,127 @@
+{
+  "id": "swarm-development-centralized-1750513345894-fhir-references-generics",
+  "timestamp": "2025-06-21T12:00:00Z",
+  "type": "fhir-generic-patterns",
+  "title": "TypeScript Generic Type Constraints for FHIR searchResources",
+  "summary": "Resolved generic type constraints in searchResources calls with proper type safety",
+  "patterns": {
+    "problem_identified": {
+      "description": "searchResources<T> calls lacked proper generic constraints causing type safety issues",
+      "issues": [
+        "Generic T parameter wasn't properly constrained to specific resource types",
+        "Bundle return type wasn't properly typed for specific resources",
+        "Type inference failed in clinical service implementations",
+        "Legacy searchResources calls used string types instead of constrained generics"
+      ]
+    },
+    "solutions_implemented": {
+      "type_safe_search_utilities": {
+        "file": "src/types/fhir-search.types.ts",
+        "description": "Comprehensive type definitions for FHIR resource searches",
+        "key_patterns": [
+          "ResourceTypeMap interface mapping resource types to interfaces",
+          "SearchableResource<T> generic constraint",
+          "Type-safe search parameter interfaces",
+          "Bundle result type constraints"
+        ]
+      },
+      "type_safe_search_class": {
+        "file": "src/utils/fhir-search.utils.ts", 
+        "description": "TypeSafeFHIRSearch wrapper class with proper generic constraints",
+        "key_patterns": [
+          "Constrained generic methods: searchResources<T extends keyof ResourceTypeMap>",
+          "Specialized search methods: searchPatients(), searchEncounters(), etc.",
+          "Result transformation utilities",
+          "Pagination and batch search support"
+        ]
+      },
+      "backend_service_improvements": {
+        "file": "backend/src/services/medplum.service.ts",
+        "description": "Updated MedplumService with proper generic constraints",
+        "pattern": "async searchResources<T extends Resource & { resourceType: ResourceType }>(resourceType: T['resourceType'], ...)"
+      },
+      "clinical_service_updates": {
+        "file": "src/clinical/referrals/ReferralManagementService.ts",
+        "description": "Updated clinical services to use type-safe search utilities",
+        "patterns": [
+          "Injected TypeSafeFHIRSearch instance",
+          "Replaced searchResources calls with type-safe equivalents",
+          "Used specialized search methods where applicable"
+        ]
+      }
+    },
+    "generic_constraint_patterns": {
+      "resource_type_mapping": {
+        "pattern": "type ResourceTypeMap = { 'Patient': Patient; 'Practitioner': Practitioner; ... }",
+        "benefit": "Maps string literals to actual FHIR resource interfaces"
+      },
+      "constrained_generic": {
+        "pattern": "async searchResources<T extends keyof ResourceTypeMap>(resourceType: T, ...): Promise<Bundle<ResourceTypeMap[T]>>",
+        "benefit": "Ensures type parameter matches resource type parameter"
+      },
+      "type_safe_extraction": {
+        "pattern": "function extractResourcesFromBundle<T extends Resource>(bundle: Bundle<T>): T[]",
+        "benefit": "Type-safe resource extraction from bundles"
+      },
+      "specialized_search_params": {
+        "pattern": "type PatientSearchParams = FHIRSearchParams & { name?: string; family?: string; ... }",
+        "benefit": "Resource-specific search parameter types"
+      }
+    },
+    "implementation_guidelines": {
+      "for_new_services": [
+        "Inject TypeSafeFHIRSearch in constructor",
+        "Use specialized search methods when available",
+        "Fall back to generic searchResources with proper constraints",
+        "Always use transformSearchResult for consistent results"
+      ],
+      "for_legacy_code": [
+        "Replace direct medplum.search calls with typeSafeSearch methods",
+        "Update generic constraints on existing methods",
+        "Use legacySearchResources for gradual migration",
+        "Add proper type assertions where needed"
+      ]
+    },
+    "type_safety_benefits": [
+      "Compile-time verification of resource types",
+      "Proper IntelliSense support for resource properties",
+      "Prevention of runtime type errors",
+      "Consistent API across all clinical services",
+      "Better maintainability and refactoring support"
+    ]
+  },
+  "files_created": [
+    "src/types/fhir-search.types.ts",
+    "src/utils/fhir-search.utils.ts"
+  ],
+  "files_modified": [
+    "backend/src/services/medplum.service.ts",
+    "src/clinical/referrals/ReferralManagementService.ts",
+    "src/clinical/telemedicine/TelemedicineWorkflowService.ts"
+  ],
+  "documentation_created": [
+    "docs/FHIR-SEARCH-TYPE-CONSTRAINTS.md"
+  ],
+  "completed_tasks": [
+    "✅ Created comprehensive FHIR search type definitions",
+    "✅ Implemented TypeSafeFHIRSearch utility class",
+    "✅ Updated backend MedplumService with proper constraints",
+    "✅ Migrated ReferralManagementService to type-safe search",
+    "✅ Migrated TelemedicineWorkflowService to type-safe search",
+    "✅ Resolved all searchResources type errors",
+    "✅ Created documentation and usage guidelines"
+  ],
+  "next_steps": [
+    "Update WorkflowOrchestrationService search calls",
+    "Add unit tests for type-safe search utilities",
+    "Apply patterns to remaining clinical services",
+    "Create search result caching utilities",
+    "Document advanced usage patterns"
+  ],
+  "testing_recommendations": [
+    "Verify all searchResources calls compile without type errors",
+    "Test resource type inference in IDE",
+    "Validate search results maintain proper typing",
+    "Test edge cases with empty search results"
+  ]
+}

@@ -4,24 +4,38 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
-  role: UserRole;
+  role: UserRoleShort; // Using the short form for frontend
   permissions: Permission[];
   department?: string;
   title?: string;
   avatar?: string;
 }
 
-export type UserRole = 
-  | 'admin'
-  | 'physician'
-  | 'nurse'
-  | 'patient'
-  | 'billing'
-  | 'receptionist'
-  | 'pharmacist'
-  | 'lab_tech'
-  | 'radiology_tech'
-  | 'system_admin';
+// Re-export unified role types for frontend use
+export type { 
+  UserRole,
+  UserRoleShort,
+  UserRoleLong,
+  UserRoleUnified,
+  UserRoleType
+} from '@/types/unified-user-roles';
+
+export { 
+  toCanonicalRole,
+  toShortRole,
+  isCanonicalRole,
+  isShortRole,
+  isValidRole,
+  getRoleDisplayName,
+  hasHigherRole,
+  ROLE_MAPPINGS,
+  ROLE_DISPLAY_NAMES,
+  ROLE_HIERARCHY,
+  UserRoles
+} from '@/types/unified-user-roles';
+
+// For backward compatibility, alias UserRoleShort as UserRoleType
+import type { UserRoleShort } from '@/types/unified-user-roles';
 
 export interface Permission {
   id: string;
@@ -282,7 +296,7 @@ export interface NavigationItem {
   label: string;
   path: string;
   icon: React.ComponentType<any>;
-  roles: UserRole[];
+  roles: UserRoleShort[];
   children?: NavigationItem[];
 }
 

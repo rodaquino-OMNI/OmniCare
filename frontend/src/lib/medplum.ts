@@ -120,6 +120,8 @@ export const medplumClient = new MedplumClient({
   // In production, this would be properly configured with OAuth
 });
 
+export const getMedplumClient = (): MedplumClient => medplumClient;
+
 // Initialize the client
 export const initializeMedplum = async () => {
   try {

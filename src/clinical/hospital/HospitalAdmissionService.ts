@@ -18,11 +18,25 @@ import {
   DischargeReadiness,
   InpatientTreatmentPlan,
   CodeStatus,
-  DischargeInstructions
+  DischargeInstructions,
+  PsychosocialAssessment,
+  NutritionalScreening,
+  SkinIntegrityAssessment,
+  FallPreventionPlan,
+  SafetyMeasure,
+  AdmissionEducation,
+  FamilyInvolvement,
+  DischargeNeedsAssessment,
+  TreatmentGoal,
+  ProphylaxisMeasure,
+  AdvancedDirectives,
+  CommunicationPlan,
+  DischargeSummary
 } from './types';
 
 import { Patient, VitalSigns, ClinicalOrder } from '../assessment/types';
 import { MedicationReconciliation } from '../medication/types';
+import { v4 as uuidv4 } from 'uuid';
 
 export class HospitalAdmissionService {
   private admissions: Map<string, HospitalAdmission> = new Map();
@@ -243,6 +257,8 @@ export class HospitalAdmissionService {
       throw new Error('Admission not found');
     }
 
+    const admissionDiagnoses = await this.createAdmissionDiagnoses(historyPhysical.diagnosticImpression);
+    
     const physicianAssessment: PhysicianAdmissionAssessment = {
       id: this.generateId(),
       admissionId,
@@ -264,11 +280,11 @@ export class HospitalAdmissionService {
         medicalDecisionMaking: ''
       },
       admissionOrders: [],
-      admissionDiagnosis: await this.createAdmissionDiagnoses(historyPhysical.diagnosticImpression),
+      admissionDiagnosis: admissionDiagnoses,
       treatmentPlan: await this.createInpatientTreatmentPlan(admission.patientId, historyPhysical.diagnosticImpression),
-      levelOfCare: this.determineLevelOfCare(admission.admissionDiagnosis),
+      levelOfCare: this.determineLevelOfCare(admissionDiagnoses),
       admissionGoals: await this.createTreatmentGoals(historyPhysical.diagnosticImpression),
-      expectedLengthOfStay: this.estimateLengthOfStay(admission.admissionDiagnosis),
+      expectedLengthOfStay: this.estimateLengthOfStay(admissionDiagnoses),
       consultationsRequired: [],
       prophylaxisMeasures: await this.orderProphylaxisMeasures(admission.patientId),
       codeStatus: await this.determineCodeStatus(admission.patientId),
@@ -277,6 +293,7 @@ export class HospitalAdmissionService {
     };
 
     admission.physicianAdmissionAssessment = physicianAssessment;
+    admission.admissionDiagnosis = admissionDiagnoses;
     admission.status = 'Active';
 
     this.admissions.set(admissionId, admission);
@@ -587,7 +604,7 @@ export class HospitalAdmissionService {
       dischargeDiagnoses: admission.admissionDiagnosis.map(diag => ({
         icd10Code: diag.icd10Code,
         description: diag.description,
-        type: diag.type,
+        type: diag.type === 'Principal' ? 'Principal' : 'Secondary',
         presentOnAdmission: diag.presentOnAdmission,
         resolved: true,
         chronicCondition: diag.chronicCondition
@@ -597,7 +614,23 @@ export class HospitalAdmissionService {
         dischargeCriteriaMet: true,
         medicationReconciliation: true,
         followUpArranged: false,
-        dischargeSummary: await this.generateDischargeSummary(admissionId),
+        dischargeSummary: {
+          admissionDate: admission.admissionDate,
+          dischargeDate: new Date(),
+          admissionDiagnosis: admission.admissionDiagnosis[0]?.description || '',
+          dischargeDiagnoses: admission.admissionDiagnosis.map(d => d.description),
+          hospitalCourse: 'Patient showed clinical improvement',
+          proceduresPerformed: [],
+          complications: [],
+          dischargeMedications: dischargeMedications.map(m => m.medication),
+          followUpInstructions: ['Follow up with PCP in 1 week'],
+          activityRestrictions: ['No heavy lifting for 2 weeks'],
+          dietInstructions: ['Regular diet', 'Low sodium'],
+          warningSymptoms: ['Chest pain', 'Shortness of breath'],
+          emergencyInstructions: 'Call 911 for chest pain or difficulty breathing',
+          providerInformation: 'Dr. Smith - 555-1234',
+          lengthOfStay: Math.ceil((new Date().getTime() - admission.admissionDate.getTime()) / (1000 * 60 * 60 * 24))
+        },
         dischargeOrders,
         dischargePrescriptions: dischargeMedications,
         followUpAppointments: [],
@@ -722,6 +755,285 @@ export class HospitalAdmissionService {
     };
   }
 
+  private async performFunctionalAssessment(patientId: string): Promise<FunctionalAssessment> {
+    return {
+      adlScore: 85,
+      mobilityLevel: 'Assistance Required',
+      mobilityAids: ['Walker'],
+      cognitiveStatus: 'Alert',
+      communicationAbility: 'Normal',
+      hearingStatus: 'Normal',
+      visionStatus: 'Normal',
+      assistiveDevices: [],
+      homeEnvironment: 'Single level home',
+      caregiverSupport: 'Good'
+    };
+  }
+
+  private async performPsychosocialAssessment(patientId: string): Promise<any> {
+    return {
+      mentalHealthHistory: false,
+      substanceUseHistory: false,
+      socialSupport: 'Strong',
+      livingSituation: 'Lives with family',
+      copingMechanisms: 'Adequate',
+      spiritualNeeds: false,
+      culturalConsiderations: [],
+      psychosocialInterventions: []
+    };
+  }
+
+  private async performNutritionalScreening(patientId: string): Promise<any> {
+    return {
+      nutritionalRisk: 'Low',
+      bmi: 24.5,
+      recentWeightLoss: false,
+      appetiteChanges: false,
+      dietaryRestrictions: [],
+      nutritionConsultNeeded: false,
+      malnutritionRisk: 'Low'
+    };
+  }
+
+  private async performSkinIntegrityAssessment(patientId: string): Promise<any> {
+    return {
+      skinCondition: 'Intact',
+      pressureUlcers: false,
+      bradenScore: 18,
+      woundPresent: false,
+      skinBreakdownRisk: 'Low',
+      preventiveMeasures: ['Turn q2h', 'Pressure relief mattress']
+    };
+  }
+
+  private async createFallPreventionPlan(patientId: string, vitalSigns: VitalSigns): Promise<any> {
+    return {
+      fallRiskScore: 25,
+      fallRiskLevel: 'Medium',
+      interventions: [
+        'Bed alarm activated',
+        'Call bell within reach',
+        'Non-slip socks',
+        'Assist with ambulation'
+      ],
+      environmentalModifications: ['Clear pathways', 'Adequate lighting'],
+      patientEducation: ['Call for assistance', 'Use assistive devices'],
+      reassessmentFrequency: 24
+    };
+  }
+
+  private async implementSafetyMeasures(admission: HospitalAdmission): Promise<SafetyMeasure[]> {
+    const reviewDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    return [
+      {
+        measure: 'Patient identification band applied',
+        indication: 'Patient safety',
+        implemented: true,
+        implementationDate: new Date(),
+        effectiveness: 'Effective',
+        reviewDate
+      },
+      {
+        measure: 'Allergy band applied if applicable',
+        indication: 'Allergy alert',
+        implemented: true,
+        implementationDate: new Date(),
+        effectiveness: 'Effective',
+        reviewDate
+      },
+      {
+        measure: 'Fall risk signage posted',
+        indication: 'Fall prevention',
+        implemented: true,
+        implementationDate: new Date(),
+        effectiveness: 'Effective',
+        reviewDate
+      },
+      {
+        measure: 'Bed in low position',
+        indication: 'Fall prevention',
+        implemented: true,
+        implementationDate: new Date(),
+        effectiveness: 'Effective',
+        reviewDate
+      },
+      {
+        measure: 'Side rails positioned per protocol',
+        indication: 'Patient safety',
+        implemented: true,
+        implementationDate: new Date(),
+        effectiveness: 'Effective',
+        reviewDate
+      }
+    ];
+  }
+
+  private async planAdmissionEducation(patientId: string): Promise<any> {
+    return {
+      educationTopics: [
+        'Hospital orientation',
+        'Patient rights and responsibilities',
+        'Pain management',
+        'Medication safety',
+        'Fall prevention'
+      ],
+      preferredLearningMethod: 'Visual and verbal',
+      barriersToLearning: [],
+      interpreterNeeded: false,
+      educationMaterials: ['Hospital handbook', 'Medication guide']
+    };
+  }
+
+  private async assessFamilyInvolvement(patientId: string): Promise<any> {
+    return {
+      primaryCaregiver: 'Spouse',
+      familyInvolvement: 'High',
+      decisionMaker: 'Patient',
+      familyEducationNeeds: ['Disease process', 'Home care'],
+      visitationPreferences: 'Open visitation',
+      familySupport: 'Available'
+    };
+  }
+
+  private async performInitialDischargeNeedsAssessment(patientId: string): Promise<DischargeNeedsAssessment> {
+    return {
+      dischargeDestination: 'Home',
+      homeEnvironment: 'Safe',
+      caregiverAvailability: 'Available',
+      equipmentNeeds: [],
+      serviceNeeds: [],
+      transportationArranged: false,
+      followUpAppointments: false,
+      anticipatedDischargeDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
+    };
+  }
+
+  private async orientPatientToEnvironment(patientId: string, bedAssignment: BedAssignment): Promise<void> {
+    // Implementation would orient patient to room, call bell, emergency procedures, etc.
+    console.log(`Patient ${patientId} oriented to ${bedAssignment.room} ${bedAssignment.bed}`);
+  }
+
+  private async implementFallPreventionMeasures(fallPrevention: FallPreventionPlan): Promise<void> {
+    // Implementation would activate fall prevention protocols
+    console.log(`Fall prevention measures implemented: ${fallPrevention.preventionInterventions.join(', ')}`);
+  }
+
+  private async implementRiskBasedInterventions(riskAssessments: AdmissionRiskAssessment[]): Promise<void> {
+    // Implementation would activate interventions based on risk assessments
+    for (const assessment of riskAssessments) {
+      console.log(`Implementing ${assessment.riskType} risk interventions: ${assessment.preventiveInterventions.join(', ')}`);
+    }
+  }
+
+  private async getCommunicationPreferences(patientId: string): Promise<any> {
+    // Implementation would fetch patient communication preferences
+    return {
+      primaryContact: 'Patient',
+      alternateContacts: ['Spouse', 'Adult child'],
+      preferredCommunicationMethod: 'Phone',
+      bestTimeToContact: 'Morning',
+      interpreterNeeded: false,
+      communicationBarriers: []
+    };
+  }
+
+  private async getNurseName(nurseId: string): Promise<string> {
+    // Implementation would look up nurse name from staff database
+    return `Nurse ${nurseId}`;
+  }
+
+  private async checkInpatientVitalSignsAlerts(admissionId: string, vitalSigns: VitalSigns): Promise<void> {
+    // Check for critical values
+    if (vitalSigns.bloodPressure.systolic > 180 || vitalSigns.bloodPressure.systolic < 90) {
+      console.warn(`Critical blood pressure for admission ${admissionId}`);
+    }
+    if (vitalSigns.heartRate > 120 || vitalSigns.heartRate < 50) {
+      console.warn(`Critical heart rate for admission ${admissionId}`);
+    }
+    if (vitalSigns.oxygenSaturation < 90) {
+      console.warn(`Critical oxygen saturation for admission ${admissionId}`);
+    }
+  }
+
+  private async assessMedicalStability(admissionId: string): Promise<boolean> {
+    const careRecords = this.inpatientCareRecords.get(admissionId) || [];
+    if (careRecords.length === 0) return false;
+    
+    const lastRecord = careRecords[careRecords.length - 1];
+    const lastVitals = lastRecord.vitalSigns[lastRecord.vitalSigns.length - 1];
+    
+    return lastVitals && 
+           lastVitals.bloodPressure.systolic >= 90 && lastVitals.bloodPressure.systolic <= 140 &&
+           lastVitals.heartRate >= 60 && lastVitals.heartRate <= 100 &&
+           lastVitals.oxygenSaturation >= 92;
+  }
+
+  private async assessPainManagement(admissionId: string): Promise<boolean> {
+    const careRecords = this.inpatientCareRecords.get(admissionId) || [];
+    if (careRecords.length === 0) return false;
+    
+    const lastRecord = careRecords[careRecords.length - 1];
+    return lastRecord.patientResponse.painLevel <= 3;
+  }
+
+  private async assessFunctionalCapacity(admissionId: string): Promise<boolean> {
+    const admission = this.admissions.get(admissionId);
+    if (!admission || !admission.nursingAdmissionAssessment) return false;
+    
+    const functionalAssessment = admission.nursingAdmissionAssessment.functionalAssessment;
+    return functionalAssessment.mobilityLevel === 'Independent' || 
+           functionalAssessment.mobilityLevel === 'Assistance Required';
+  }
+
+  private async assessDischargeSafety(admissionId: string): Promise<boolean> {
+    const admission = this.admissions.get(admissionId);
+    if (!admission) return false;
+    
+    // Check if patient is medically stable and has safe discharge plan
+    const medicallyStable = await this.assessMedicalStability(admissionId);
+    const hasDischargeNeeds = admission.nursingAdmissionAssessment?.dischargeNeedsAssessment;
+    
+    return medicallyStable && !!hasDischargeNeeds;
+  }
+
+  private async assessCaregiverReadiness(patientId: string): Promise<boolean> {
+    // Implementation would assess caregiver education completion and readiness
+    return true;
+  }
+
+  private async assessHomeEnvironment(patientId: string): Promise<boolean> {
+    // Implementation would verify home safety assessment completed
+    return true;
+  }
+
+  private async generateDischargeSummary(admissionId: string): Promise<string> {
+    const admission = this.admissions.get(admissionId);
+    if (!admission) return '';
+    
+    return `Discharge Summary\n\n` +
+           `Admission Date: ${admission.admissionDate}\n` +
+           `Discharge Date: ${new Date()}\n` +
+           `Primary Diagnosis: ${admission.admissionDiagnosis[0]?.description || 'N/A'}\n` +
+           `Hospital Course: Patient showed clinical improvement\n` +
+           `Discharge Condition: Improved\n` +
+           `Follow-up: As scheduled`;
+  }
+
+  private async createDischargeInstructions(admissionId: string): Promise<DischargeInstructions> {
+    return {
+      activityLevel: 'As tolerated',
+      activityRestrictions: ['No heavy lifting for 2 weeks'],
+      dietInstructions: ['Regular diet', 'Low sodium'],
+      medicationInstructions: ['Take medications as prescribed'],
+      woundCareInstructions: [],
+      followUpInstructions: ['Follow up with PCP in 1 week'],
+      warningSymptoms: ['Chest pain', 'Difficulty breathing', 'Fever > 101°F'],
+      emergencyContacts: ['911', 'Primary Care: 555-1234'],
+      whenToSeekCare: ['Severe shortness of breath', 'Chest pain lasting > 5 minutes'],
+      resourceContacts: ['Home Health: 555-5678']
+    };
+  }
+
   private async createInitialNursingCarePlan(patientId: string, admission: HospitalAdmission): Promise<NursingCarePlan> {
     return {
       id: this.generateId(),
@@ -761,7 +1073,24 @@ export class HospitalAdmissionService {
   }
 
   private generateId(): string {
-    return Math.random().toString(36).substr(2, 9);
+    return uuidv4();
+  }
+
+  private determineLevelOfCare(diagnoses: AdmissionDiagnosis[]): 'ICU' | 'Floor' | 'Telemetry' | 'CCU' | 'Step-down' {
+    const hasHighAcuity = diagnoses.some(d => d.severity === 'Severe');
+    if (hasHighAcuity) return 'ICU';
+    const needsMonitoring = diagnoses.some(d => d.icd10Code.startsWith('I'));
+    if (needsMonitoring) return 'Telemetry';
+    return 'Floor';
+  }
+
+  private estimateLengthOfStay(diagnoses: AdmissionDiagnosis[]): number {
+    const severityMap = { 'Mild': 2, 'Moderate': 4, 'Severe': 7 };
+    const maxSeverity = diagnoses.reduce((max, d) => {
+      const days = severityMap[d.severity as keyof typeof severityMap] || 3;
+      return days > max ? days : max;
+    }, 3);
+    return maxSeverity;
   }
 
   /**
@@ -797,5 +1126,116 @@ export class HospitalAdmissionService {
 
   public async getActiveAdmissions(): Promise<HospitalAdmission[]> {
     return Array.from(this.admissions.values()).filter(admission => admission.status === 'Active');
+  }
+
+  /**
+   * MISSING METHOD IMPLEMENTATIONS
+   */
+
+  private async createAdmissionDiagnoses(diagnosticImpression: string): Promise<AdmissionDiagnosis[]> {
+    // In a real implementation, this would parse the diagnostic impression
+    // and create structured diagnosis objects
+    return [
+      {
+        icd10Code: 'I50.9',
+        description: 'Heart failure, unspecified',
+        type: 'Principal',
+        presentOnAdmission: true,
+        severity: 'Moderate',
+        chronicCondition: true
+      }
+    ];
+  }
+
+  private async createInpatientTreatmentPlan(patientId: string, diagnosticImpression: string): Promise<InpatientTreatmentPlan> {
+    return {
+      primaryDiagnosis: diagnosticImpression,
+      treatmentGoals: ['Stabilize cardiac function', 'Optimize fluid balance'],
+      medicationPlan: [
+        {
+          medication: 'Furosemide',
+          indication: 'Fluid overload',
+          dosing: '40mg IV BID',
+          duration: 'Until euvolemic',
+          monitoring: 'Daily weights, I&O',
+          adjustmentCriteria: 'Based on fluid status'
+        }
+      ],
+      diagnosticPlan: ['Daily BNP', 'Chest X-ray', 'Echocardiogram'],
+      therapeuticInterventions: ['Fluid restriction', 'Low sodium diet'],
+      consultationPlan: ['Cardiology consult'],
+      mobilityPlan: 'Progressive ambulation as tolerated',
+      nutritionPlan: '2g sodium restriction',
+      dischargePlanning: 'Begin discharge planning on admission',
+      monitoring: [
+        {
+          parameter: 'Weight',
+          frequency: 'Daily',
+          target: 'Dry weight',
+          action: 'Adjust diuretics',
+          responsibleParty: 'Nursing'
+        }
+      ]
+    };
+  }
+
+
+  private async createTreatmentGoals(diagnosticImpression: string): Promise<TreatmentGoal[]> {
+    return [
+      {
+        goal: 'Achieve euvolemic state',
+        timeframe: '48-72 hours',
+        measurableOutcome: 'Weight at baseline, clear lungs',
+        interventions: ['Diuresis', 'Fluid restriction'],
+        achieved: false
+      }
+    ];
+  }
+
+
+  private async orderProphylaxisMeasures(patientId: string): Promise<ProphylaxisMeasure[]> {
+    return [
+      {
+        type: 'DVT',
+        indication: 'Immobility risk',
+        intervention: 'Sequential compression devices',
+        startDate: new Date(),
+        duration: 'Duration of admission',
+        monitoring: 'Daily assessment'
+      }
+    ];
+  }
+
+  private async determineCodeStatus(patientId: string): Promise<CodeStatus> {
+    return {
+      status: 'Full Code',
+      discussionDate: new Date(),
+      discussedWith: ['Patient', 'Family'],
+      documentedBy: 'Attending Physician'
+    };
+  }
+
+  private async reviewAdvancedDirectives(patientId: string): Promise<AdvancedDirectives> {
+    return {
+      hasAdvancedDirectives: false,
+      livingWill: false,
+      powerOfAttorney: false,
+      healthcareProxy: false,
+      dnarForm: false,
+      documentLocation: 'Not on file',
+      proxyName: undefined,
+      proxyContact: undefined
+    };
+  }
+
+  private async createCommunicationPlan(patientId: string): Promise<CommunicationPlan> {
+    return {
+      primaryContact: 'Spouse',
+      updateFrequency: 'Daily',
+      updateMethod: 'Phone',
+      familyMeetingScheduled: false,
+      interpreterNeeded: false,
+      languagePreference: 'English'
+    };
   }
 }

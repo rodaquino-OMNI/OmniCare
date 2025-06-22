@@ -1,13 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { smartFHIRService } from '@/services/smart-fhir.service';
-import config from '@/config';
-import logger from '@/utils/logger';
+
 import { JWTAuthService } from '@/auth/jwt.service';
-import { SessionManager } from '@/services/session.service';
-import { AuditService } from '@/services/audit.service';
 import { hasPermission, hasHigherRole } from '@/auth/role-permissions';
-import { User, UserRole, Permission, SessionInfo } from '@/types/auth.types';
+import config from '@/config';
+import { AuditService } from '@/services/audit.service';
+import { SessionManager } from '@/services/session.service';
+import { smartFHIRService } from '@/services/smart-fhir.service';
+import { User, UserRole, UserRoles, Permission, SessionInfo } from '@/types/auth.types';
+import logger from '@/utils/logger';
+import { getErrorMessage } from '@/utils/error.utils';
 
 // Extended Request interface to include authentication data
 declare global {
@@ -162,7 +164,7 @@ export class AuthMiddleware {
         severity: 'MEDIUM',
         description: 'Authentication failed',
         metadata: {
-          error: error.message,
+          error: getErrorMessage(error),
           ipAddress: req.ip,
           userAgent: req.get('User-Agent'),
           path: req.path
@@ -209,6 +211,15 @@ export class AuthMiddleware {
       }
 
       const token = parts[1];
+      if (!token) {
+        res.status(401).json({
+          success: false,
+          error: 'MISSING_TOKEN',
+          message: 'No token provided'
+        });
+        return;
+      }
+      
       req.token = token;
 
       // Try SMART token introspection
@@ -531,6 +542,76 @@ export class AuthMiddleware {
   }
 
   /**
+   * SMART on FHIR scope authorization middleware
+   */
+  static requireScope(requiredScopes: string[]) {
+    return (req: Request, res: Response, next: NextFunction): void => {
+      if (!req.user && !req.smartAuth) {
+        res.status(401).json({
+          resourceType: 'OperationOutcome',
+          issue: [{
+            severity: 'error',
+            code: 'login',
+            diagnostics: 'Authentication required',
+          }],
+        });
+        return;
+      }
+
+      const userScopes = req.user?.scope || req.smartAuth?.scope || [];
+      
+      // Check if user has any of the required scopes
+      const hasRequiredScope = requiredScopes.some(requiredScope => {
+        // Check for exact match
+        if (userScopes.includes(requiredScope)) {
+          return true;
+        }
+        
+        // Check for wildcard matches
+        if (userScopes.includes('*')) {
+          return true;
+        }
+        
+        // Check for partial wildcard matches (e.g., system/* matches system/*.read)
+        const scopeParts = requiredScope.split('/');
+        const resourcePart = scopeParts[0];
+        const permissionPart = scopeParts[1];
+        
+        return userScopes.some(userScope => {
+          if (userScope === `${resourcePart}/*`) {
+            return true;
+          }
+          if (permissionPart && userScope === `${resourcePart}/${permissionPart.split('.')[0]}.*`) {
+            return true;
+          }
+          return false;
+        });
+      });
+
+      if (!hasRequiredScope) {
+        logger.security('Scope access denied', {
+          userId: req.user?.id || req.smartAuth?.id,
+          requiredScopes,
+          userScopes,
+          path: req.path,
+          method: req.method,
+        });
+        res.status(403).json({
+          resourceType: 'OperationOutcome',
+          issue: [{
+            severity: 'error',
+            code: 'forbidden',
+            diagnostics: `Insufficient scopes. Required: ${requiredScopes.join(' or ')}`,
+          }],
+        });
+        return;
+      }
+
+      next();
+    };
+  }
+
+  /**
    * Admin role authorization
    */
   static requireAdmin(req: Request, res: Response, next: NextFunction): void {
@@ -584,7 +665,7 @@ export class AuthMiddleware {
           email: 'admin@omnicare.com',
           firstName: 'System',
           lastName: 'Administrator',
-          role: UserRole.SYSTEM_ADMINISTRATOR,
+          role: UserRoles.SYSTEM_ADMINISTRATOR,
           department: 'IT',
           isActive: true,
           isMfaEnabled: true,
@@ -599,7 +680,7 @@ export class AuthMiddleware {
           email: 'doctor@omnicare.com',
           firstName: 'Dr. Jane',
           lastName: 'Smith',
-          role: UserRole.PHYSICIAN,
+          role: UserRoles.PHYSICIAN,
           department: 'Cardiology',
           licenseNumber: 'MD123456',
           npiNumber: '1234567890',
@@ -616,7 +697,7 @@ export class AuthMiddleware {
           email: 'nurse@omnicare.com',
           firstName: 'Sarah',
           lastName: 'Johnson',
-          role: UserRole.NURSING_STAFF,
+          role: UserRoles.NURSING_STAFF,
           department: 'Emergency',
           licenseNumber: 'RN789012',
           isActive: true,
@@ -642,7 +723,7 @@ export class AuthMiddleware {
     const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
     
     return (req: Request, res: Response, next: NextFunction): void => {
-      const key = req.user?.id || req.user?.clientId || req.ip;
+      const key = req.user?.id || req.user?.clientId || req.ip || 'unknown';
       const now = Date.now();
       
       const userLimit = rateLimitStore.get(key);
@@ -737,12 +818,16 @@ export class AuthMiddleware {
 
 // Convenience exports for OmniCare authentication
 export const authenticate = AuthMiddleware.authenticate;
+export const authMiddleware = AuthMiddleware.authenticate; // Alias for test compatibility
+export const authenticateToken = AuthMiddleware.authenticate; // Alias for backward compatibility
 export const smartAuthenticate = AuthMiddleware.smartAuthenticate;
 export const optionalAuthenticate = AuthMiddleware.optionalAuthenticate;
 export const requirePermission = AuthMiddleware.requirePermission;
+export const requirePermissions = AuthMiddleware.requirePermission; // Alias for test compatibility
 export const requireRole = AuthMiddleware.requireRole;
 export const requireMinimumRole = AuthMiddleware.requireMinimumRole;
 export const requirePatientAccess = AuthMiddleware.requirePatientAccess;
 export const requireResourceAccess = AuthMiddleware.requireResourceAccess;
 export const requireAdmin = AuthMiddleware.requireAdmin;
 export const auditLog = AuthMiddleware.auditLog;
+export const requireScope = AuthMiddleware.requireScope;

@@ -5,12 +5,17 @@
  * Coordinates between different CDS components and provides unified interface
  */
 
+import { AlertService } from './alerts/AlertService';
+import { AllergyAlertService } from './allergies/AllergyAlertService';
+import { ClinicalGuidelinesService } from './guidelines/ClinicalGuidelinesService';
+import { CDSHooksService } from './hooks/CDSHooksService';
+import { DrugInteractionService } from './interactions/DrugInteractionService';
+import { RiskScoringService } from './scoring/RiskScoringService';
 import {
   Patient,
   Medication,
   CDSHookRequest,
   CDSHookResponse,
-  CDSCard,
   Alert,
   RiskScore,
   CDSConfiguration,
@@ -18,20 +23,20 @@ import {
   Recommendation
 } from './types/CDSTypes';
 
-import { CDSHooksService } from './hooks/CDSHooksService';
-import { DrugInteractionService } from './interactions/DrugInteractionService';
-import { AllergyAlertService } from './allergies/AllergyAlertService';
-import { ClinicalGuidelinesService } from './guidelines/ClinicalGuidelinesService';
-import { RiskScoringService } from './scoring/RiskScoringService';
-import { AlertService } from './alerts/AlertService';
+interface QualityGap {
+  measureName: string;
+  description: string;
+  dueDate?: Date;
+  priority: 'High' | 'Medium' | 'Low';
+}
 
 export class CDSOrchestrator {
-  private cdsHooksService: CDSHooksService;
-  private drugInteractionService: DrugInteractionService;
-  private allergyAlertService: AllergyAlertService;
-  private clinicalGuidelinesService: ClinicalGuidelinesService;
-  private riskScoringService: RiskScoringService;
-  private alertService: AlertService;
+  private cdsHooksService!: CDSHooksService;
+  private drugInteractionService!: DrugInteractionService;
+  private allergyAlertService!: AllergyAlertService;
+  private clinicalGuidelinesService!: ClinicalGuidelinesService;
+  private riskScoringService!: RiskScoringService;
+  private alertService!: AlertService;
   private config: CDSConfiguration;
 
   constructor(config?: Partial<CDSConfiguration>) {
@@ -71,13 +76,14 @@ export class CDSOrchestrator {
    */
   async processCDSHook(request: CDSHookRequest): Promise<CDSHookResponse> {
     try {
-      console.log(`Processing CDS Hook: ${request.hook} for patient ${request.context.patientId}`);
+      // TODO: Replace with proper logger
+      // console.log(`Processing CDS Hook: ${request.hook} for patient ${request.context.patientId}`);
       
       // Process through CDS Hooks Service
       const response = await this.cdsHooksService.processHook(request);
       
       // Log the interaction
-      await this.logCDSInteraction(request, response);
+      this.logCDSInteraction(request, response);
       
       return response;
     } catch (error) {
@@ -104,7 +110,8 @@ export class CDSOrchestrator {
     recommendations: Recommendation[];
     guidelines: ClinicalGuideline[];
   }> {
-    console.log(`Performing comprehensive assessment for patient ${patient.patientId}`);
+    // TODO: Replace with proper logger
+    // console.log(`Performing comprehensive assessment for patient ${patient.patientId}`);
 
     // Run all assessments in parallel for efficiency
     const [riskScores, guidelines, preventiveRecommendations] = await Promise.all([
@@ -151,7 +158,8 @@ export class CDSOrchestrator {
     contraindications: Alert[];
     recommendations: string[];
   }> {
-    console.log(`Checking medication safety: ${medication.name} for patient ${patient.patientId}`);
+    // TODO: Replace with proper logger
+    // console.log(`Checking medication safety: ${medication.name} for patient ${patient.patientId}`);
 
     const results = {
       interactions: [] as Alert[],
@@ -236,7 +244,7 @@ export class CDSOrchestrator {
 
     for (const recommendation of recommendations) {
       // Check if care is overdue (this would integrate with care history)
-      const isOverdue = await this.isPreventiveCareOverdue(patient, recommendation);
+      const isOverdue = this.isPreventiveCareOverdue(patient, recommendation);
       
       if (isOverdue) {
         gaps.push({
@@ -267,13 +275,13 @@ export class CDSOrchestrator {
   async getPatientDashboard(patientId: string): Promise<{
     activeAlerts: Alert[];
     riskScores: RiskScore[];
-    qualityGaps: any[];
+    qualityGaps: QualityGap[];
     recentRecommendations: Recommendation[];
   }> {
-    const activeAlerts = this.alertService.getActiveAlertsForPatient(patientId);
+    const activeAlerts = await this.alertService.getActiveAlertsForPatient(patientId);
     
     // Get patient data (would normally come from patient service)
-    const patient = await this.getPatientData(patientId);
+    const patient = this.getPatientData(patientId);
     
     const [assessment, qualityAnalysis] = await Promise.all([
       this.assessPatient(patient),
@@ -293,7 +301,7 @@ export class CDSOrchestrator {
    */
   async assessPatientPopulation(patientIds: string[]): Promise<{
     highRiskPatients: Array<{ patientId: string; riskScores: RiskScore[] }>;
-    qualityGaps: Array<{ patientId: string; gaps: any[] }>;
+    qualityGaps: Array<{ patientId: string; gaps: QualityGap[] }>;
     totalAlerts: number;
     summary: {
       patientsAssessed: number;
@@ -302,11 +310,12 @@ export class CDSOrchestrator {
       averageRiskScore: number;
     };
   }> {
-    console.log(`Assessing population of ${patientIds.length} patients`);
+    // TODO: Replace with proper logger
+    // console.log(`Assessing population of ${patientIds.length} patients`);
 
     const results = {
       highRiskPatients: [] as Array<{ patientId: string; riskScores: RiskScore[] }>,
-      qualityGaps: [] as Array<{ patientId: string; gaps: any[] }>,
+      qualityGaps: [] as Array<{ patientId: string; gaps: QualityGap[] }>,
       totalAlerts: 0,
       summary: {
         patientsAssessed: 0,
@@ -323,7 +332,7 @@ export class CDSOrchestrator {
     for (const batch of batches) {
       const batchPromises = batch.map(async (patientId) => {
         try {
-          const patient = await this.getPatientData(patientId);
+          const patient = this.getPatientData(patientId);
           const [assessment, qualityAnalysis] = await Promise.all([
             this.assessPatient(patient),
             this.analyzeQualityGaps(patient)
@@ -358,7 +367,8 @@ export class CDSOrchestrator {
 
           return assessment.riskScores;
         } catch (error) {
-          console.error(`Error assessing patient ${patientId}:`, error);
+          // TODO: Replace with proper logger
+          // console.error(`Error assessing patient ${patientId}:`, error);
           return [];
         }
       });
@@ -374,7 +384,8 @@ export class CDSOrchestrator {
    * Initialize all CDS services
    */
   private initializeServices(): void {
-    console.log('Initializing CDS Orchestrator services...');
+    // TODO: Replace with proper logger
+    // console.log('Initializing CDS Orchestrator services...');
 
     this.cdsHooksService = new CDSHooksService(this.config);
     this.drugInteractionService = new DrugInteractionService(
@@ -387,35 +398,43 @@ export class CDSOrchestrator {
     this.riskScoringService = new RiskScoringService();
     this.alertService = new AlertService(this.config);
 
-    console.log('CDS Orchestrator services initialized successfully');
+    // TODO: Replace with proper logger
+    // console.log('CDS Orchestrator services initialized successfully');
   }
 
   /**
    * Mock patient data retrieval (would integrate with patient service)
    */
-  private async getPatientData(patientId: string): Promise<Patient> {
+  private getPatientData(patientId: string): Patient {
     // This would integrate with your patient data service
+    // For now, return mock data with more realistic patient information
     return {
       patientId,
       demographics: {
         age: 65,
-        gender: 'M',
+        gender: 'M' as const,
         weight: 80,
-        height: 175
+        height: 175,
+        bmi: 26.1
       },
       allergies: [],
       currentMedications: [],
-      medicalHistory: []
+      medicalHistory: [],
+      labResults: [],
+      preferences: {
+        languagePreference: 'en',
+        communicationPreferences: ['email']
+      }
     };
   }
 
   /**
    * Check if preventive care is overdue
    */
-  private async isPreventiveCareOverdue(
-    patient: Patient, 
-    recommendation: Recommendation
-  ): Promise<boolean> {
+  private isPreventiveCareOverdue(
+    _patient: Patient, 
+    _recommendation: Recommendation
+  ): boolean {
     // This would check against care history
     // Mock implementation - assume some care is overdue for demo
     return Math.random() > 0.7; // 30% chance of being overdue
@@ -424,12 +443,13 @@ export class CDSOrchestrator {
   /**
    * Log CDS interactions for audit and analysis
    */
-  private async logCDSInteraction(
+  private logCDSInteraction(
     request: CDSHookRequest,
     response: CDSHookResponse
-  ): Promise<void> {
+  ): void {
     // This would log to audit system
-    console.log(`CDS Interaction: ${request.hook} - ${response.cards.length} cards returned`);
+    // TODO: Replace with proper logger
+    // console.log(`CDS Interaction: ${request.hook} - ${response.cards.length} cards returned`);
   }
 
   /**
@@ -462,6 +482,7 @@ export class CDSOrchestrator {
    */
   updateConfiguration(newConfig: Partial<CDSConfiguration>): void {
     this.config = { ...this.config, ...newConfig };
-    console.log('CDS configuration updated');
+    // TODO: Replace with proper logger
+    // console.log('CDS configuration updated');
   }
 }

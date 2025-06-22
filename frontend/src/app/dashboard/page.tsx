@@ -1,6 +1,6 @@
 'use client';
 
-import { Grid, Card, Text, Group, Badge, Stack, SimpleGrid, Progress, Paper, Center, RingProgress } from '@mantine/core';
+import { Grid, Card, Text, Group, Badge, Stack, SimpleGrid, Paper, Center, RingProgress } from '@mantine/core';
 import { IconUsers, IconStethoscope, IconPill, IconTestPipe, IconChartLine, IconCalendar, IconAlertTriangle, IconCheck } from '@tabler/icons-react';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import AppLayout from '@/components/layout/AppLayout';
@@ -126,7 +126,7 @@ function DashboardContent() {
             <Card shadow="sm" padding="lg" radius="md" withBorder h="100%">
               <Group justify="space-between" mb="md">
                 <Text fw={600} size="lg">
-                  Today's Schedule
+                  Today&apos;s Schedule
                 </Text>
                 <IconCalendar size={20} className="text-gray-500" />
               </Group>

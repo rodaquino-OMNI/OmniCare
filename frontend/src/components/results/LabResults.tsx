@@ -51,6 +51,7 @@ import {
 import { DatePickerInput } from '@mantine/dates';
 import { observationHelpers } from '@/lib/medplum';
 import { formatDateTime, formatDate } from '@/utils';
+import { getErrorMessage } from '@/utils/error.utils';
 
 interface LabResultsProps {
   patient: Patient;
@@ -119,8 +120,9 @@ export function LabResults({ patient, encounterId }: LabResultsProps) {
 
       setObservations(obs);
       setDiagnosticReports(reports);
-    } catch (error) {
-      console.error('Error loading lab results:', error);
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error);
+      console.error('Error loading lab results:', errorMessage, error);
     } finally {
       setLoading(false);
     }

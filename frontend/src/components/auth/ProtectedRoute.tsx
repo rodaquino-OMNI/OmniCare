@@ -5,11 +5,11 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Center, Loader, Alert, Button, Stack, Text } from '@mantine/core';
 import { IconShield, IconLogin, IconAlertTriangle } from '@tabler/icons-react';
 import { useAuth } from '@/stores/auth';
-import { UserRole } from '@/types';
+import { UserRoleType } from '@/types';
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  requiredRoles?: UserRole[];
+  requiredRoles?: UserRoleType[];
   requiredPermissions?: string[];
   fallback?: ReactNode;
   redirectTo?: string;
@@ -28,7 +28,6 @@ export function ProtectedRoute({
     isAuthenticated, 
     isLoading, 
     user, 
-    hasRole, 
     hasAnyRole, 
     hasPermission,
     logout,
@@ -145,7 +144,7 @@ export function ProtectedRoute({
 
 interface UnauthorizedAccessProps {
   user: any;
-  requiredRoles?: UserRole[];
+  requiredRoles?: UserRoleType[];
   requiredPermissions?: string[];
   onLogout: () => void;
   fallback?: ReactNode;

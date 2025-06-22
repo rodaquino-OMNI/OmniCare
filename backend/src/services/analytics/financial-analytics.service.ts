@@ -5,7 +5,6 @@
  * and business intelligence for OmniCare EMR
  */
 
-import { Injectable } from '@nestjs/common';
 import { EventEmitter } from 'events';
 
 export interface RevenueMetrics {
@@ -94,7 +93,6 @@ export interface FinancialForecast {
   riskFactors: string[];
 }
 
-@Injectable()
 export class FinancialAnalyticsService extends EventEmitter {
   private historicalData: Map<string, any[]> = new Map();
   private benchmarks: Map<string, number> = new Map();
@@ -226,7 +224,7 @@ export class FinancialAnalyticsService extends EventEmitter {
     let baseRevenue = historicalRevenue[historicalRevenue.length - 1]?.revenue || 0;
 
     for (let month = 1; month <= forecastMonths; month++) {
-      const seasonalityFactor = seasonality[month % 12];
+      const seasonalityFactor = seasonality[(month - 1) % 12] || 1.0;
       const trendFactor = 1 + (trendAnalysis.monthlyGrowthRate / 100);
       
       const projectedRevenue = baseRevenue * trendFactor * seasonalityFactor;
@@ -698,6 +696,14 @@ export class FinancialAnalyticsService extends EventEmitter {
   private generateScenarioAnalysis(forecasts: FinancialForecast[]): any {
     const realistic = forecasts[0]; // Use first forecast as baseline
     
+    if (!realistic) {
+      return {
+        optimistic: null,
+        realistic: null,
+        pessimistic: null
+      };
+    }
+    
     return {
       optimistic: {
         ...realistic,
@@ -743,7 +749,7 @@ export class FinancialAnalyticsService extends EventEmitter {
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
-    return months[(month - 1) % 12];
+    return months[(month - 1) % 12] || 'Unknown';
   }
 
   private initializeBenchmarks(): void {

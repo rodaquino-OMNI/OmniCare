@@ -9,6 +9,8 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { MedplumProvider } from '@medplum/react';
 import { MANTINE_THEME } from '@/constants/theme';
 import { medplumClient } from './medplum';
+import { ServiceWorkerProvider } from '@/components/providers/ServiceWorkerProvider';
+import { NetworkStatusProvider } from '@/contexts/NetworkStatusContext';
 
 // Import Mantine styles
 import '@mantine/core/styles.css';
@@ -221,27 +223,30 @@ export function Providers({ children }: ProvidersProps) {
     <QueryClientProvider client={queryClient}>
       <MedplumProvider medplum={medplumClient}>
         <MantineProvider theme={theme} defaultColorScheme="light">
-          <ModalsProvider
-            modalProps={{
-              centered: true,
-              overlayProps: { backgroundOpacity: 0.55, blur: 3 },
-              transitionProps: { transition: 'fade', duration: 200 },
-            }}
-          >
-            <Notifications
-              position="top-right"
-              autoClose={5000}
-              limit={5}
-              containerWidth={400}
-            />
-            {children}
-          </ModalsProvider>
+          <NetworkStatusProvider defaultMode="auto">
+            <ServiceWorkerProvider>
+              <ModalsProvider
+                modalProps={{
+                  centered: true,
+                  overlayProps: { backgroundOpacity: 0.55, blur: 3 },
+                  transitionProps: { transition: 'fade', duration: 200 },
+                }}
+              >
+                <Notifications
+                  position="top-right"
+                  autoClose={5000}
+                  limit={5}
+                  containerWidth={400}
+                />
+                {children}
+              </ModalsProvider>
+            </ServiceWorkerProvider>
+          </NetworkStatusProvider>
         </MantineProvider>
       </MedplumProvider>
       <ReactQueryDevtools
         initialIsOpen={false}
         position="bottom-right"
-        buttonPosition="bottom-right"
       />
     </QueryClientProvider>
   );

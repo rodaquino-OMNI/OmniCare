@@ -1,6 +1,6 @@
 {
-  "lastRun": "test-run-1750422854221",
-  "timestamp": "2025-06-20T12:34:14.221Z",
+  "lastRun": "test-run-1750426810732",
+  "timestamp": "2025-06-20T13:40:10.732Z",
   "status": "failed",
   "summary": {
     "total": 3,
@@ -8,8 +8,8 @@
     "failed": 3,
     "errors": 0
   },
-  "duration": 5174,
-  "commits": 55,
+  "duration": 22676,
+  "commits": 65,
   "agents": [
     "security",
     "architect",
@@ -52,6 +52,14 @@
     "large-file-detective",
     "commit-strategist",
     "memory-validator",
-    "test-manager"
+    "test-manager",
+    "validation-analyzer",
+    "test-investigator",
+    "debug-cleaner",
+    "integration-tester",
+    "qa-lead",
+    "memory-cleaner",
+    "swarm-fixer",
+    "validation-fixer"
   ]
 }

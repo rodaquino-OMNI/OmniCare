@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   Patient, 
   AllergyIntolerance, 
@@ -35,7 +35,10 @@ import {
   Loader,
   Text,
   Grid,
-  ScrollArea
+  ScrollArea,
+  Progress,
+  Tooltip,
+  ActionIcon
 } from '@mantine/core';
 import { 
   IconStethoscope, 
@@ -46,9 +49,16 @@ import {
   IconAlertTriangle,
   IconClipboardList,
   IconCalendar,
-  IconRefresh
+  IconRefresh,
+  IconDatabase,
+  IconClock
 } from '@tabler/icons-react';
 import { patientHelpers } from '@/lib/medplum';
+import { getErrorMessage } from '@/utils/error.utils';
+import { patientCacheService } from '@/services/patient-cache.service';
+import { useOfflineSync, useOfflineData } from '@/hooks';
+import { useOfflineFHIR } from '@/services/offline-fhir.service';
+import { IconWifiOff, IconCloudDownload } from '@tabler/icons-react';
 
 interface PatientChartProps {
   patientId: string;
@@ -59,6 +69,7 @@ export function PatientChart({ patientId }: PatientChartProps) {
   const patient = useResource<Patient>({ reference: `Patient/${patientId}` });
   const [activeTab, setActiveTab] = useState<string | null>('overview');
   const [loading, setLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [allergies, setAllergies] = useState<AllergyIntolerance[]>([]);
   const [conditions, setConditions] = useState<Condition[]>([]);
   const [medications, setMedications] = useState<MedicationRequest[]>([]);
@@ -66,50 +77,79 @@ export function PatientChart({ patientId }: PatientChartProps) {
   const [vitals, setVitals] = useState<Observation[]>([]);
   const [labs, setLabs] = useState<Observation[]>([]);
   const [documents, setDocuments] = useState<DocumentReference[]>([]);
+  const [cacheStats, setCacheStats] = useState<{ fromCache: boolean; lastRefreshed?: Date }>({ fromCache: false });
+  
+  // Offline capabilities
+  const { isOffline, pendingChanges } = useOfflineSync();
+  const { cachePatient, isOffline: fhirOffline } = useOfflineFHIR();
+  const [isPreloading, setIsPreloading] = useState(false);
 
-  // Load patient data
+  // Extract loadPatientData to use in refresh
+  const loadPatientData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [
+        allergyData,
+        conditionData,
+        medicationData,
+        encounterData,
+        vitalData,
+        labData
+      ] = await Promise.all([
+        patientCacheService.getPatientAllergies(patientId),
+        patientCacheService.getPatientConditions(patientId),
+        patientCacheService.getPatientMedications(patientId),
+        patientCacheService.getPatientEncounters(patientId),
+        patientCacheService.getPatientVitalSigns(patientId),
+        patientCacheService.getPatientLabResults(patientId)
+      ]);
+
+      const documentData = await medplum.searchResources('DocumentReference', {
+        patient: patientId,
+        _sort: '-date'
+      });
+
+      setAllergies(allergyData);
+      setConditions(conditionData);
+      setMedications(medicationData);
+      setEncounters(encounterData);
+      setVitals(vitalData);
+      setLabs(labData);
+      setDocuments(documentData);
+
+      const stats = patientCacheService.getStats();
+      setCacheStats({
+        fromCache: stats.hitRate > 0.5,
+        lastRefreshed: new Date()
+      });
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error);
+      console.error('Error loading patient data:', errorMessage, error);
+    } finally {
+      setLoading(false);
+    }
+  }, [patientId, medplum]);
+
+  // Load patient data with intelligent caching
   useEffect(() => {
     if (!patient) return;
 
-    const loadPatientData = async () => {
-      setLoading(true);
-      try {
-        const [
-          allergyData,
-          conditionData,
-          medicationData,
-          encounterData,
-          vitalData,
-          labData,
-          documentData
-        ] = await Promise.all([
-          patientHelpers.getAllergies(patientId),
-          patientHelpers.getConditions(patientId),
-          patientHelpers.getMedications(patientId),
-          patientHelpers.getEncounters(patientId),
-          patientHelpers.getVitalSigns(patientId),
-          patientHelpers.getLabResults(patientId),
-          medplum.searchResources('DocumentReference', {
-            patient: patientId,
-            _sort: '-date'
-          })
-        ]);
+    loadPatientData();
 
-        setAllergies(allergyData);
-        setConditions(conditionData);
-        setMedications(medicationData);
-        setEncounters(encounterData);
-        setVitals(vitalData);
-        setLabs(labData);
-        setDocuments(documentData);
-      } catch (error) {
-        console.error('Error loading patient data:', error);
-      } finally {
-        setLoading(false);
+    // Listen for cache events
+    const handleCacheUpdate = (event: any) => {
+      if (event.patientId === patientId) {
+        loadPatientData();
       }
     };
 
-    loadPatientData();
+    patientCacheService.on('cache:patient-updated', handleCacheUpdate);
+    patientCacheService.on('cache:related-invalidated', handleCacheUpdate);
+
+    return () => {
+      patientCacheService.off('cache:patient-updated', handleCacheUpdate);
+      patientCacheService.off('cache:related-invalidated', handleCacheUpdate);
+    };
   }, [patient, patientId, medplum]);
 
   if (!patient) {
@@ -123,8 +163,31 @@ export function PatientChart({ patientId }: PatientChartProps) {
     );
   }
 
-  const handleRefresh = () => {
-    window.location.reload();
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      // Force refresh all data
+      await Promise.all([
+        patientCacheService.getPatientAllergies(patientId, true),
+        patientCacheService.getPatientConditions(patientId, true),
+        patientCacheService.getPatientMedications(patientId, true),
+        patientCacheService.getPatientEncounters(patientId, true),
+        patientCacheService.getPatientVitalSigns(patientId, true),
+        patientCacheService.getPatientLabResults(patientId, true)
+      ]);
+      
+      // Reload the component data
+      await loadPatientData();
+      
+      setCacheStats({
+        fromCache: false,
+        lastRefreshed: new Date()
+      });
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   return (
@@ -149,14 +212,92 @@ export function PatientChart({ patientId }: PatientChartProps) {
               )}
             </Group>
           </div>
-          <Button
-            leftSection={<IconRefresh size={16} />}
-            onClick={handleRefresh}
-            variant="subtle"
-          >
-            Refresh
-          </Button>
+          <Group gap="xs">
+            {/* Offline Status */}
+            {(isOffline || fhirOffline) && (
+              <Badge 
+                leftSection={<IconWifiOff size={12} />} 
+                color="orange" 
+                variant="filled"
+                size="sm"
+              >
+                Offline Mode
+              </Badge>
+            )}
+            
+            {/* Pending Changes */}
+            {pendingChanges > 0 && (
+              <Tooltip label={`${pendingChanges} changes pending sync`}>
+                <Badge 
+                  color="blue" 
+                  variant="light"
+                  size="sm"
+                >
+                  {pendingChanges} pending
+                </Badge>
+              </Tooltip>
+            )}
+            
+            {cacheStats.fromCache && (
+              <Tooltip label={`Last refreshed: ${cacheStats.lastRefreshed?.toLocaleTimeString() || 'Unknown'}`}>
+                <Badge 
+                  leftSection={<IconDatabase size={12} />} 
+                  color="green" 
+                  variant="light"
+                  size="sm"
+                >
+                  Cached
+                </Badge>
+              </Tooltip>
+            )}
+            
+            {/* Preload for Offline */}
+            <Tooltip label="Download patient data for offline access">
+              <Button
+                leftSection={<IconCloudDownload size={16} />}
+                onClick={async () => {
+                  setIsPreloading(true);
+                  try {
+                    await cachePatient(patientId);
+                  } finally {
+                    setIsPreloading(false);
+                  }
+                }}
+                variant="subtle"
+                loading={isPreloading}
+                disabled={isPreloading || isOffline}
+                size="sm"
+              >
+                {isPreloading ? 'Downloading...' : 'Offline'}
+              </Button>
+            </Tooltip>
+            
+            <Button
+              leftSection={<IconRefresh size={16} />}
+              onClick={handleRefresh}
+              variant="subtle"
+              loading={isRefreshing}
+              disabled={isRefreshing || isOffline}
+            >
+              Refresh
+            </Button>
+          </Group>
         </Group>
+
+        {/* Offline Mode Alert */}
+        {(isOffline || fhirOffline) && (
+          <Alert 
+            icon={<IconWifiOff size={16} />} 
+            color="orange" 
+            variant="light"
+            mt="md"
+          >
+            <Text fw={600} mb={4}>Working Offline</Text>
+            <Text size="sm">
+              You're viewing cached patient data. Any changes will be synchronized when you're back online.
+            </Text>
+          </Alert>
+        )}
 
         {/* Allergy Alert */}
         {allergies.length > 0 && (

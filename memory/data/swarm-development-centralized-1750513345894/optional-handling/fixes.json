@@ -1,0 +1,126 @@
+{
+  "patterns": {
+    "interfaceExtensionWithOptionalSession": {
+      "description": "When extending Express Request interface with optional session property",
+      "problem": "Session type conflict when extending Request interface",
+      "solution": "Use Omit to exclude original session property and redefine",
+      "example": {
+        "before": "export interface AuthenticatedRequest extends Request {\n  session?: SessionInfo;\n}",
+        "after": "export interface AuthenticatedRequest extends Omit<Request, 'session'> {\n  session?: SessionInfo;\n}"
+      }
+    },
+    "helmetReferrerPolicyType": {
+      "description": "Helmet referrerPolicy expects specific type token",
+      "problem": "String literal not assignable to ReferrerPolicyToken type",
+      "solution": "Cast to any or use proper type",
+      "example": {
+        "before": "referrerPolicy: { policy: SECURITY_HEADERS.referrerPolicy }",
+        "after": "referrerPolicy: { policy: SECURITY_HEADERS.referrerPolicy as any }"
+      }
+    },
+    "asyncFunctionReturnVoid": {
+      "description": "Async middleware functions should return Promise<void>",
+      "problem": "Return statements in async functions returning void",
+      "solution": "Split return statement and value",
+      "example": {
+        "before": "return res.status(401).json({ error: 'Unauthorized' });",
+        "after": "res.status(401).json({ error: 'Unauthorized' });\nreturn;"
+      }
+    },
+    "passportStrategyCallbacks": {
+      "description": "Passport strategy callbacks have specific profile types",
+      "problem": "Profile type mismatch in passport strategies",
+      "solution": "Use 'any' type and cast internally",
+      "example": {
+        "before": "(profile: Record<string, unknown>, done: Function) => {...}",
+        "after": "(profile: any, done: (error: any, user?: any) => void) => {\n  void this.handleCallback(profile as Record<string, unknown>, done);\n}"
+      }
+    },
+    "fhirReferenceTypeCasting": {
+      "description": "FHIR Reference types need proper type assertions",
+      "problem": "Reference<Patient | Device | Group> not assignable to Reference<Patient>",
+      "solution": "Use type assertion with full import path",
+      "example": {
+        "before": "patient: referral.subject",
+        "after": "patient: referral.subject as import('@medplum/fhirtypes').Reference<import('@medplum/fhirtypes').Patient>"
+      }
+    },
+    "nullishCoalescingForDefaults": {
+      "description": "Use nullish coalescing for undefined fallbacks",
+      "problem": "Optional properties might be undefined",
+      "solution": "Use ?? operator for defaults",
+      "example": {
+        "before": "code: referral!.priority || 'normal'",
+        "after": "code: referral?.priority ?? 'normal'"
+      }
+    },
+    "optionalChainingForNestedAccess": {
+      "description": "Use optional chaining for deeply nested properties",
+      "problem": "Accessing nested properties that might not exist",
+      "solution": "Chain ?. operators",
+      "example": {
+        "before": "text: referral!.reasonCode?.[0]?.text",
+        "after": "text: referral?.reasonCode?.[0]?.text"
+      }
+    },
+    "arrayDefaultWithNullishCoalescing": {
+      "description": "Provide default empty arrays for async results",
+      "problem": "Async functions might return undefined",
+      "solution": "Add ?? [] to provide default",
+      "example": {
+        "before": "const observations = await this.medplum.searchResources<Observation>(...);",
+        "after": "const observations = await this.medplum.searchResources<Observation>(...) ?? [];"
+      }
+    },
+    "explicitTypeAnnotationsInCallbacks": {
+      "description": "Add explicit types in array method callbacks",
+      "problem": "TypeScript can't infer types in complex chains",
+      "solution": "Add explicit parameter types",
+      "example": {
+        "before": "observations.map(obs => ({...}))",
+        "after": "observations.map((obs: Observation) => ({...}))"
+      }
+    },
+    "propertyAccessWithTypeGuard": {
+      "description": "Use type guards or 'as any' for dynamic properties",
+      "problem": "Property doesn't exist on strict type",
+      "solution": "Cast to any for dynamic access",
+      "example": {
+        "before": "time: obs.effectiveDateTime",
+        "after": "time: (obs as any).effectiveDateTime ?? obs.effectivePeriod?.start"
+      }
+    }
+  },
+  "bestPractices": [
+    "Prefer optional chaining (?.) over non-null assertions (!)",
+    "Use nullish coalescing (??) instead of logical OR (||) for defaults",
+    "Add explicit type annotations in complex callback chains",
+    "Use Omit utility type when overriding interface properties",
+    "Cast to 'any' sparingly and document why it's necessary",
+    "Always provide default values for potentially undefined arrays",
+    "Split return statements from response sends in async void functions",
+    "Use full import paths for type assertions to avoid circular dependencies"
+  ],
+  "commonErrors": [
+    {
+      "error": "Type 'undefined' is not assignable to type 'X'",
+      "solution": "Use nullish coalescing or provide default value"
+    },
+    {
+      "error": "Object is possibly 'undefined'",
+      "solution": "Use optional chaining or add type guard"
+    },
+    {
+      "error": "Property 'X' does not exist on type 'never'",
+      "solution": "Add explicit type annotations or check array initialization"
+    },
+    {
+      "error": "Interface incorrectly extends interface",
+      "solution": "Use Omit to exclude conflicting properties"
+    },
+    {
+      "error": "Not all code paths return a value",
+      "solution": "Add explicit return type and ensure all paths return"
+    }
+  ]
+}

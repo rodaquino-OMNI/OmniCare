@@ -22,8 +22,11 @@ import {
   CirculatoryStatus,
   DispositionPlanning,
   EmergencyConsultation,
-  EmergencyProcedure
+  EmergencyProcedure,
+  AnatomicalArea
 } from './types';
+import { FallPreventionPlan } from '../hospital/types';
+import { v4 as uuidv4 } from 'uuid';
 
 import { VitalSigns, Patient, ClinicalOrder } from '../assessment/types';
 
@@ -371,7 +374,7 @@ export class EmergencyCareService {
     }
 
     const disposition: EmergencyDisposition = {
-      finalDisposition: dispositionPlan.plannedDisposition,
+      finalDisposition: this.mapDispositionToFinalType(dispositionPlan.plannedDisposition),
       dispositionDate: new Date(),
       dispositionTime: new Date(),
       dispositionBy: physicianId,
@@ -777,6 +780,79 @@ export class EmergencyCareService {
     };
   }
 
+  /**
+   * TRIAGE ASSESSMENT HELPERS
+   */
+
+  private isTraumaPresentation(complaint: string, arrivalMethod: EmergencyEncounter['arrivalMethod']): boolean {
+    const traumaKeywords = [
+      'trauma', 'injury', 'accident', 'fall', 'assault', 'stabbing', 'gunshot',
+      'mvc', 'mva', 'collision', 'crash', 'burn', 'laceration', 'fracture',
+      'head injury', 'chest injury', 'penetrating'
+    ];
+    
+    const hasTraumaKeyword = traumaKeywords.some(keyword => 
+      complaint.toLowerCase().includes(keyword)
+    );
+    
+    const isTraumaArrival = ['Ambulance', 'Helicopter', 'Police'].includes(arrivalMethod);
+    
+    return hasTraumaKeyword || isTraumaArrival;
+  }
+
+  private isMentalHealthPresentation(complaint: string): boolean {
+    const mentalHealthKeywords = [
+      'suicidal', 'suicide', 'depression', 'anxiety', 'panic', 'psychosis',
+      'hallucination', 'delusion', 'paranoid', 'manic', 'bipolar', 'psychiatric',
+      'self-harm', 'overdose', 'intoxication', 'withdrawal', 'agitated', 'violent',
+      'homicidal', 'altered mental status', 'confusion'
+    ];
+    
+    return mentalHealthKeywords.some(keyword => 
+      complaint.toLowerCase().includes(keyword)
+    );
+  }
+
+  private isModerateComplexity(assessment: TriageAssessment): boolean {
+    // Check for moderate acuity conditions
+    const hasModerateVitalSigns = 
+      (assessment.vitalSigns.bloodPressure.systolic > 160 && assessment.vitalSigns.bloodPressure.systolic <= 180) ||
+      (assessment.vitalSigns.heartRate > 100 && assessment.vitalSigns.heartRate <= 120) ||
+      (assessment.vitalSigns.oxygenSaturation >= 92 && assessment.vitalSigns.oxygenSaturation < 95);
+    
+    const hasModerateSymptoms = 
+      assessment.painAssessment.painLevel >= 4 && assessment.painAssessment.painLevel <= 7;
+    
+    const needsMultipleResources = 
+      assessment.chiefComplaint.toLowerCase().includes('abdominal pain') ||
+      assessment.chiefComplaint.toLowerCase().includes('headache') ||
+      assessment.chiefComplaint.toLowerCase().includes('back pain');
+    
+    return hasModerateVitalSigns || hasModerateSymptoms || needsMultipleResources;
+  }
+
+  private isLowComplexity(assessment: TriageAssessment): boolean {
+    // Check for low acuity conditions
+    const hasStableVitalSigns = 
+      assessment.vitalSigns.bloodPressure.systolic >= 90 && assessment.vitalSigns.bloodPressure.systolic <= 160 &&
+      assessment.vitalSigns.heartRate >= 60 && assessment.vitalSigns.heartRate <= 100 &&
+      assessment.vitalSigns.oxygenSaturation >= 95;
+    
+    const hasMinimalSymptoms = 
+      assessment.painAssessment.painLevel < 4;
+    
+    const simpleComplaints = [
+      'med refill', 'prescription', 'suture removal', 'wound check',
+      'minor laceration', 'rash', 'sore throat', 'uri', 'uti symptoms'
+    ];
+    
+    const isSimpleComplaint = simpleComplaints.some(complaint => 
+      assessment.chiefComplaint.toLowerCase().includes(complaint)
+    );
+    
+    return hasStableVitalSigns && (hasMinimalSymptoms || isSimpleComplaint);
+  }
+
   private hasCriticalVitalSigns(vitalSigns: VitalSigns): boolean {
     return (
       vitalSigns.bloodPressure.systolic < 70 ||
@@ -803,23 +879,157 @@ export class EmergencyCareService {
   }
 
   private generateId(): string {
-    return Math.random().toString(36).substr(2, 9);
+    return uuidv4();
   }
 
-  /**
-   * PUBLIC API METHODS
-   */
-
-  public async getEmergencyEncounter(encounterId: string): Promise<EmergencyEncounter | undefined> {
-    return this.emergencyEncounters.get(encounterId);
+  private getTriageLevelDescription(level: 1 | 2 | 3 | 4 | 5): string {
+    const descriptions = {
+      1: 'Resuscitation - Immediate life-saving intervention required',
+      2: 'Emergent - High risk situation requiring immediate care',
+      3: 'Urgent - Multiple resources needed, potential deterioration',
+      4: 'Less Urgent - Single resource needed, stable',
+      5: 'Non-Urgent - May be seen in fast track or referred'
+    };
+    return descriptions[level];
   }
 
-  public async getTriageQueue(): Promise<EmergencyEncounter[]> {
-    return this.triageQueue.sort((a, b) => a.acuityLevel - b.acuityLevel);
+  private getMaxWaitTime(level: 1 | 2 | 3 | 4 | 5): number {
+    const waitTimes = { 1: 0, 2: 10, 3: 30, 4: 60, 5: 120 };
+    return waitTimes[level];
   }
 
-  public async getActiveAlerts(): Promise<EmergencyAlert[]> {
-    return this.activeAlerts.filter(alert => !alert.acknowledged);
+  private getResourceRequirements(level: 1 | 2 | 3 | 4 | 5): string[] {
+    const resources = {
+      1: ['Resuscitation room', 'Full team activation', 'All resources'],
+      2: ['High acuity bed', 'Multiple resources', 'Immediate physician'],
+      3: ['Treatment room', '2+ resources', 'Labs/imaging likely'],
+      4: ['Fast track eligible', '1 resource', 'Simple intervention'],
+      5: ['May defer to clinic', 'Minimal resources', 'Non-urgent']
+    };
+    return resources[level];
+  }
+
+  private getMonitoringFrequency(level: 1 | 2 | 3 | 4 | 5): number {
+    const frequencies = { 1: 5, 2: 15, 3: 30, 4: 60, 5: 120 };
+    return frequencies[level];
+  }
+
+  private getTreatmentArea(level: 1 | 2 | 3 | 4 | 5): 'Resuscitation' | 'Acute' | 'Urgent' | 'Fast Track' | 'Waiting Room' {
+    const areas: Record<number, 'Resuscitation' | 'Acute' | 'Urgent' | 'Fast Track' | 'Waiting Room'> = {
+      1: 'Resuscitation',
+      2: 'Acute',
+      3: 'Urgent',
+      4: 'Fast Track',
+      5: 'Waiting Room'
+    };
+    return areas[level];
+  }
+
+  private isSTEMIPresentation(assessment: TriageAssessment): boolean {
+    const stemiKeywords = ['chest pain', 'heart attack', 'mi', 'cardiac'];
+    return stemiKeywords.some(keyword => 
+      assessment.chiefComplaint.toLowerCase().includes(keyword)
+    ) && assessment.triageCategory.level <= 2;
+  }
+
+  private isStrokePresentation(assessment: TriageAssessment): boolean {
+    const strokeKeywords = ['stroke', 'weakness', 'numbness', 'slurred speech', 'facial droop'];
+    return strokeKeywords.some(keyword => 
+      assessment.chiefComplaint.toLowerCase().includes(keyword)
+    );
+  }
+
+  private isSepsisPresentation(assessment: TriageAssessment): boolean {
+    return assessment.vitalSigns.temperature > 101 || 
+           assessment.vitalSigns.temperature < 96.8 ||
+           (assessment.vitalSigns.heartRate > 90 && assessment.vitalSigns.respiratoryRate > 20);
+  }
+
+  private isPediatricResuscitation(assessment: TriageAssessment): boolean {
+    return assessment.chiefComplaint.toLowerCase().includes('pediatric') && 
+           assessment.triageCategory.level === 1;
+  }
+
+  private async activatePediatricProtocol(assessment: TriageAssessment): Promise<EmergencyProtocol> {
+    return {
+      protocolName: 'Pediatric Resuscitation Protocol',
+      indication: 'Pediatric emergency requiring resuscitation',
+      interventions: [
+        {
+          intervention: 'Activate pediatric code team',
+          timing: 'Immediate',
+          priority: 'Critical',
+          completed: false
+        },
+        {
+          intervention: 'Obtain pediatric crash cart',
+          timing: 'Immediate',
+          priority: 'Critical',
+          completed: false
+        },
+        {
+          intervention: 'Calculate weight-based medication dosing',
+          timing: 'Within 5 min',
+          priority: 'Critical',
+          completed: false
+        }
+      ],
+      contraindications: [],
+      precautions: ['Use pediatric-specific equipment', 'Weight-based dosing'],
+      monitoringRequirements: ['Continuous monitoring', 'Frequent reassessment'],
+      activatedBy: assessment.nurseId,
+      activationTime: new Date()
+    };
+  }
+
+  private async performTraumaAssessment(presentingComplaint: string, arrivalMethod: EmergencyEncounter['arrivalMethod']): Promise<TraumaAssessment> {
+    const now = new Date();
+    const anatomicalAreas: AnatomicalArea[] = [
+      { region: 'Head', injured: false },
+      { region: 'Neck', injured: false },
+      { region: 'Chest', injured: false },
+      { region: 'Abdomen', injured: false },
+      { region: 'Pelvis', injured: false },
+      { region: 'Extremities', injured: false },
+      { region: 'Back', injured: false },
+      { region: 'Spine', injured: false }
+    ];
+
+    return {
+      mechanismOfInjury: presentingComplaint,
+      timeOfInjury: now,
+      traumaType: 'Blunt',
+      anatomicalAreas,
+      traumaScore: 0,
+      traumaTeamActivated: arrivalMethod === 'Ambulance' || arrivalMethod === 'Helicopter',
+      traumaTeamActivationCriteria: [],
+      cSpineImmobilization: true,
+      logRollRequired: true,
+      primarySurvey: {
+        airway: 'Patent',
+        breathing: 'Adequate',
+        circulation: 'Adequate',
+        disability: 'None',
+        exposure: 'Complete',
+        interventions: []
+      }
+    };
+  }
+
+  private async performMentalHealthScreening(): Promise<MentalHealthScreening> {
+    return {
+      suicidalIdeation: false,
+      homicidalIdeation: false,
+      depressionScreen: 0,
+      anxietyScreen: 0,
+      substanceUseScreen: false,
+      agitation: false,
+      cooperativeness: 'Cooperative',
+      mentalStatus: 'Alert and oriented',
+      safetyRisk: 'Low',
+      safeguardsRequired: [],
+      psychiatricConsultNeeded: true
+    };
   }
 
   private addToTriageQueue(encounter: EmergencyEncounter): void {
@@ -843,4 +1053,195 @@ export class EmergencyCareService {
       });
     }
   }
+
+  private mapDispositionToFinalType(plannedDisposition: 'Observation' | 'Transfer' | 'Discharge' | 'Admit' | 'OR' | 'ICU' | 'Morgue'): 'Discharged' | 'Admitted' | 'Transferred' | 'Deceased' | 'Left AMA' | 'Eloped' {
+    const mapping: Record<string, 'Discharged' | 'Admitted' | 'Transferred' | 'Deceased' | 'Left AMA' | 'Eloped'> = {
+      'Discharge': 'Discharged',
+      'Admit': 'Admitted',
+      'Transfer': 'Transferred',
+      'Morgue': 'Deceased',
+      'OR': 'Admitted',
+      'ICU': 'Admitted',
+      'Observation': 'Admitted'
+    };
+    return mapping[plannedDisposition] || 'Discharged';
+  }
+
+  /**
+   * EMERGENCY CARE SUPPORT METHODS
+   */
+
+  private async generateStandingOrders(assessment: TriageAssessment): Promise<ClinicalOrder[]> {
+    const orders: ClinicalOrder[] = [];
+    
+    // Basic standing orders based on triage category
+    if (assessment.triageCategory.level <= 2) {
+      orders.push({
+        id: this.generateId(),
+        type: 'Laboratory',
+        description: 'CBC, BMP, PT/INR, Type & Screen',
+        status: 'Pending',
+        priority: 'STAT',
+        orderedBy: 'Standing Order Protocol',
+        orderDate: new Date()
+      });
+      
+      orders.push({
+        id: this.generateId(),
+        type: 'Procedure',
+        description: 'Establish IV access',
+        status: 'Pending',
+        priority: 'STAT',
+        orderedBy: 'Standing Order Protocol',
+        orderDate: new Date()
+      });
+    }
+    
+    // Chest pain standing orders
+    if (assessment.chiefComplaint.toLowerCase().includes('chest pain')) {
+      orders.push({
+        id: this.generateId(),
+        type: 'Laboratory',
+        description: 'EKG',
+        status: 'Pending',
+        priority: 'STAT',
+        orderedBy: 'Standing Order Protocol',
+        orderDate: new Date()
+      });
+      
+      orders.push({
+        id: this.generateId(),
+        type: 'Laboratory',
+        description: 'Troponin, BNP',
+        status: 'Pending',
+        priority: 'STAT',
+        orderedBy: 'Standing Order Protocol',
+        orderDate: new Date()
+      });
+    }
+    
+    // Stroke standing orders
+    if (this.isStrokePresentation(assessment)) {
+      orders.push({
+        id: this.generateId(),
+        type: 'Imaging',
+        description: 'CT Head without contrast',
+        status: 'Pending',
+        priority: 'STAT',
+        orderedBy: 'Standing Order Protocol',
+        orderDate: new Date()
+      });
+    }
+    
+    return orders;
+  }
+
+  private async determineImmediateInterventions(assessment: TriageAssessment): Promise<string[]> {
+    const interventions: string[] = [];
+    
+    // Critical interventions based on vital signs
+    if (assessment.vitalSigns.oxygenSaturation < 92) {
+      interventions.push('Apply supplemental oxygen');
+    }
+    
+    if (assessment.vitalSigns.bloodPressure.systolic < 90) {
+      interventions.push('Start IV fluid resuscitation');
+    }
+    
+    if (assessment.vitalSigns.temperature > 104) {
+      interventions.push('Initiate cooling measures');
+    }
+    
+    // Pain management
+    if (assessment.painAssessment.painLevel >= 7) {
+      interventions.push('Administer pain medication per protocol');
+    }
+    
+    // Trauma interventions
+    if (assessment.traumaAssessment) {
+      interventions.push('Apply cervical collar');
+      interventions.push('Maintain spinal immobilization');
+    }
+    
+    // Mental health interventions
+    if (assessment.mentalHealthAssessment?.safetyRisk === 'High') {
+      interventions.push('Initiate 1:1 observation');
+      interventions.push('Remove potentially harmful items');
+    }
+    
+    return interventions;
+  }
+
+  private determineOrderPriority(
+    order: ClinicalOrder,
+    acuityLevel: number
+  ): 'STAT' | 'Urgent' | 'Routine' {
+    // Critical acuity always gets STAT
+    if (acuityLevel === 1) return 'STAT';
+    
+    // Check order type and description for priority indicators
+    const statIndicators = ['troponin', 'ekg', 'ct head', 'blood gas', 'lactate'];
+    const orderDesc = order.description.toLowerCase();
+    
+    if (statIndicators.some(indicator => orderDesc.includes(indicator))) {
+      return 'STAT';
+    }
+    
+    // High acuity (level 2) defaults to Urgent
+    if (acuityLevel === 2) return 'Urgent';
+    
+    // Lower acuity defaults to Routine
+    return 'Routine';
+  }
+
+  private async activateSTATOrder(order: ClinicalOrder, encounterId: string): Promise<void> {
+    // Notify relevant departments
+    console.log(`STAT Order Activated: ${order.description}`);
+    
+    // In a real system, this would:
+    // 1. Send notifications to appropriate departments
+    // 2. Update order tracking systems
+    // 3. Alert relevant staff
+    // 4. Set up monitoring for completion
+    
+    // Update order status
+    order.status = 'In Progress';
+    
+    // Create alert for STAT order
+    this.activeAlerts.push({
+      id: this.generateId(),
+      alertType: 'Protocol Reminder',
+      severity: 'High',
+      message: `STAT Order: ${order.description} for encounter ${encounterId}`,
+      patientId: '',
+      encounterId,
+      generatedBy: 'System',
+      generatedDate: new Date(),
+      acknowledged: false,
+      resolved: false
+    });
+  }
+
+  private async verifyEmergencyMedication(medication: string, acuityLevel: number): Promise<void> {
+    // Verify medication is appropriate for emergency use
+    const emergencyMedications = [
+      'epinephrine', 'atropine', 'adenosine', 'amiodarone', 'lidocaine',
+      'naloxone', 'nitroglycerin', 'aspirin', 'morphine', 'fentanyl',
+      'midazolam', 'lorazepam', 'dexamethasone', 'albuterol', 'ipratropium'
+    ];
+    
+    const medLower = medication.toLowerCase();
+    const isEmergencyMed = emergencyMedications.some(med => medLower.includes(med));
+    
+    if (!isEmergencyMed && acuityLevel <= 2) {
+      console.warn(`Non-emergency medication ordered for critical patient: ${medication}`);
+    }
+    
+    // In a real system, this would:
+    // 1. Check drug interactions
+    // 2. Verify dosing is appropriate
+    // 3. Check for allergies
+    // 4. Ensure medication is available
+  }
+
 }

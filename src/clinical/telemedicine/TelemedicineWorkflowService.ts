@@ -7,9 +7,20 @@ import {
   Communication,
   Media,
   DocumentReference,
-  Observation
+  Observation,
+  AppointmentParticipant,
+  Reference,
+  Group,
+  PractitionerRole,
+  RelatedPerson,
+  Device,
+  HealthcareService,
+  Location
 } from '@medplum/fhirtypes';
 import { v4 as uuidv4 } from 'uuid';
+import { isReferenceToType, isFHIRResourceType, isDefined } from '../../utils/type-guards';
+import { createFlexibleReference, toFlexibleReference, safeCastReference } from '../../utils/fhir-reference-utils';
+import { TypeSafeFHIRSearch } from '../../utils/fhir-search.utils';
 
 export interface VideoSessionConfig {
   provider: string; // 'zoom' | 'teams' | 'webrtc' | 'doxy.me'
@@ -49,7 +60,11 @@ export interface VirtualVitals {
 }
 
 export class TelemedicineWorkflowService {
-  constructor(private medplum: MedplumClient) {}
+  private typeSafeSearch: TypeSafeFHIRSearch;
+  
+  constructor(private medplum: MedplumClient) {
+    this.typeSafeSearch = new TypeSafeFHIRSearch(medplum);
+  }
 
   /**
    * Schedule a telemedicine appointment
@@ -106,7 +121,7 @@ export class TelemedicineWorkflowService {
     appointmentId: string,
     videoConfig: VideoSessionConfig
   ): Promise<TelemedicineSession> {
-    const appointment = await this.medplum.readResource<Appointment>('Appointment', appointmentId);
+    const appointment = await this.medplum.readResource('Appointment', appointmentId) as Appointment;
     
     if (!appointment) {
       throw new Error('Appointment not found');
@@ -139,7 +154,7 @@ export class TelemedicineWorkflowService {
           display: 'Telemedicine session configuration'
         }]
       },
-      subject: patientRef.actor,
+      subject: patientRef.actor ? patientRef.actor as Reference<Patient | Device | Group | Practitioner> : { reference: 'Patient/unknown' },
       context: {
         related: [{ reference: `Appointment/${appointmentId}` }]
       },
@@ -161,7 +176,7 @@ export class TelemedicineWorkflowService {
     sessionId: string,
     appointmentId: string
   ): Promise<Encounter> {
-    const appointment = await this.medplum.readResource<Appointment>('Appointment', appointmentId);
+    const appointment = await this.medplum.readResource('Appointment', appointmentId) as Appointment;
     
     if (!appointment) {
       throw new Error('Appointment not found');
@@ -192,9 +207,9 @@ export class TelemedicineWorkflowService {
           display: 'Telemedicine consultation with patient'
         }]
       }],
-      subject: patientRef!.actor!,
+      subject: patientRef?.actor ? patientRef.actor as Reference<Patient | Group> : { reference: 'Patient/unknown' },
       participant: [{
-        individual: practitionerRef!.actor!,
+        individual: practitionerRef?.actor ? practitionerRef.actor as Reference<Practitioner | PractitionerRole | RelatedPerson> : { reference: 'Practitioner/unknown' },
         type: [{
           coding: [{
             system: 'http://terminology.hl7.org/CodeSystem/v3-ParticipationType',
@@ -407,7 +422,7 @@ export class TelemedicineWorkflowService {
     followUpRequired: boolean,
     prescriptionsIssued: string[]
   ): Promise<Encounter> {
-    const encounter = await this.medplum.readResource<Encounter>('Encounter', encounterId);
+    const encounter = await this.medplum.readResource('Encounter', encounterId) as Encounter;
     
     if (!encounter) {
       throw new Error('Encounter not found');
@@ -424,7 +439,7 @@ export class TelemedicineWorkflowService {
     });
 
     // Update appointment
-    const appointment = await this.medplum.readResource<Appointment>('Appointment', appointmentId);
+    const appointment = await this.medplum.readResource('Appointment', appointmentId) as Appointment;
     await this.medplum.updateResource<Appointment>({
       ...appointment!,
       status: 'fulfilled'
@@ -489,28 +504,32 @@ export class TelemedicineWorkflowService {
    * Generate telemedicine visit summary
    */
   async generateVisitSummary(encounterId: string): Promise<DocumentReference> {
-    const encounter = await this.medplum.readResource<Encounter>('Encounter', encounterId);
-    const observations = await this.medplum.searchResources<Observation>('Observation', {
+    const encounter = await this.medplum.readResource('Encounter', encounterId) as Encounter;
+    const observationsResult = await this.typeSafeSearch.searchObservations({
       encounter: `Encounter/${encounterId}`
     });
-    const communications = await this.medplum.searchResources<Communication>('Communication', {
+    const observations = observationsResult.resources;
+    
+    const communicationsBundle = await this.typeSafeSearch.searchResources('Communication', {
       encounter: `Encounter/${encounterId}`
     });
+    const communications = communicationsBundle.entry?.map(entry => entry.resource).filter(Boolean) || [];
 
     const summary = {
       visitDate: encounter?.period?.start,
       duration: encounter?.period?.end && encounter?.period?.start
         ? new Date(encounter.period.end).getTime() - new Date(encounter.period.start).getTime()
         : null,
-      vitalSigns: observations.map(obs => ({
+      vitalSigns: observations.map((obs: Observation) => ({
         type: obs.code?.coding?.[0]?.display,
         value: obs.valueQuantity?.value,
         unit: obs.valueQuantity?.unit,
-        time: obs.effectiveDateTime
+        time: (obs as any).effectiveDateTime ?? obs.effectivePeriod?.start
       })),
       technicalIssues: communications
-        .filter(comm => comm.category?.[0]?.coding?.[0]?.code === 'technical-issue')
-        .map(comm => comm.payload?.[0]?.contentString)
+        .filter((comm: Communication | undefined): comm is Communication => comm !== undefined && comm.category?.[0]?.coding?.[0]?.code === 'technical-issue')
+        .map((comm: Communication) => comm.payload?.[0]?.contentString)
+        .filter((content): content is string => content !== undefined)
     };
 
     return await this.medplum.createResource<DocumentReference>({

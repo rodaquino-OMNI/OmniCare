@@ -94,16 +94,16 @@ export interface IntegrationMessage {
   error?: IntegrationError;
 }
 
-// Validation Result
-export interface ValidationResult {
+// Integration Validation Result
+export interface IntegrationValidationResult {
   valid: boolean;
-  errors: ValidationError[];
+  errors: IntegrationValidationError[];
   warnings: ValidationWarning[];
   schemaVersion?: string;
   validatedAt: Date;
 }
 
-export interface ValidationError {
+export interface IntegrationValidationError {
   path: string;
   message: string;
   code: string;

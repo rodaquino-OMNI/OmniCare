@@ -23,15 +23,14 @@ describe('MedplumService', () => {
   const mockLogger = logger as jest.Mocked<typeof logger>;
 
   beforeEach(() => {
-    // Create mock MedplumClient instance
+    // Create mock MedplumClient instance  
     mockMedplumClient = {
       startClientLogin: jest.fn(),
-      setActiveProject: jest.fn(),
       createResource: jest.fn(),
       readResource: jest.fn(),
       updateResource: jest.fn(),
       deleteResource: jest.fn(),
-      search: jest.fn(),
+      searchResources: jest.fn(),
       executeBatch: jest.fn(),
       get: jest.fn(),
       graphql: jest.fn(),
@@ -47,8 +46,8 @@ describe('MedplumService', () => {
 
   describe('Initialization', () => {
     it('should initialize with correct configuration for SaaS', async () => {
-      mockMedplumClient.startClientLogin.mockResolvedValue(undefined);
-      mockMedplumClient.setActiveProject.mockResolvedValue(undefined);
+      const mockProfile = { resourceType: 'ProfileResource', id: 'profile-123' };
+      mockMedplumClient.startClientLogin.mockResolvedValue(mockProfile as any);
       mockMedplumClient.readResource.mockRejectedValue(new Error('Not found')); // For test connection
 
       await service.initialize();
@@ -65,7 +64,6 @@ describe('MedplumService', () => {
         config.medplum.clientId,
         config.medplum.clientSecret
       );
-      expect(mockMedplumClient.setActiveProject).toHaveBeenCalledWith(config.medplum.projectId);
       expect(mockLogger.info).toHaveBeenCalledWith('Medplum FHIR server connection established successfully');
     });
 
@@ -74,7 +72,8 @@ describe('MedplumService', () => {
       const originalConfig = { ...config.medplum };
       config.medplum.selfHosted = true;
 
-      mockMedplumClient.startClientLogin.mockResolvedValue(undefined);
+      const mockProfile = { resourceType: 'ProfileResource', id: 'profile-123' };
+      mockMedplumClient.startClientLogin.mockResolvedValue(mockProfile as any);
       mockMedplumClient.readResource.mockRejectedValue(new Error('Not found'));
 
       await service.initialize();
@@ -130,15 +129,15 @@ describe('MedplumService', () => {
   describe('Resource Management', () => {
     beforeEach(async () => {
       // Initialize service for resource management tests
-      mockMedplumClient.startClientLogin.mockResolvedValue(undefined);
-      mockMedplumClient.setActiveProject.mockResolvedValue(undefined);
+      const mockProfile = { resourceType: 'ProfileResource', id: 'profile-123' };
+      mockMedplumClient.startClientLogin.mockResolvedValue(mockProfile as any);
       mockMedplumClient.readResource.mockRejectedValue(new Error('Not found'));
       await service.initialize();
     });
 
     describe('createResource', () => {
       it('should create a resource successfully', async () => {
-        const resource = global.createMockPatient();
+        const resource = (global as any).createMockPatient();
         const createdResource = { ...resource, id: 'created-patient-1' };
 
         mockMedplumClient.createResource.mockResolvedValue(createdResource);
@@ -153,7 +152,7 @@ describe('MedplumService', () => {
       });
 
       it('should handle creation errors', async () => {
-        const resource = global.createMockPatient();
+        const resource = (global as any).createMockPatient();
         const error = new Error('Creation failed');
 
         mockMedplumClient.createResource.mockRejectedValue(error);
@@ -166,7 +165,7 @@ describe('MedplumService', () => {
       });
 
       it('should handle FHIR operation outcome errors', async () => {
-        const resource = global.createMockPatient();
+        const resource = (global as any).createMockPatient();
         const fhirError = {
           outcome: {
             issue: [
@@ -191,7 +190,7 @@ describe('MedplumService', () => {
       it('should read a resource successfully', async () => {
         const resourceType = 'Patient';
         const resourceId = 'test-patient-1';
-        const resource = global.createMockPatient();
+        const resource = (global as any).createMockPatient();
 
         mockMedplumClient.readResource.mockResolvedValue(resource);
 
@@ -223,7 +222,7 @@ describe('MedplumService', () => {
 
     describe('updateResource', () => {
       it('should update a resource successfully', async () => {
-        const resource = { ...global.createMockPatient(), id: 'test-patient-1' };
+        const resource = { ...(global as any).createMockPatient(), id: 'test-patient-1' };
         const updatedResource = { ...resource, name: [{ given: ['Updated'], family: 'Name' }] };
 
         mockMedplumClient.updateResource.mockResolvedValue(updatedResource);
@@ -238,7 +237,7 @@ describe('MedplumService', () => {
       });
 
       it('should throw error for resource without ID', async () => {
-        const resource = global.createMockPatient();
+        const resource = (global as any).createMockPatient();
         delete resource.id;
 
         await expect(service.updateResource(resource)).rejects.toThrow(
@@ -248,7 +247,7 @@ describe('MedplumService', () => {
       });
 
       it('should handle update errors', async () => {
-        const resource = { ...global.createMockPatient(), id: 'test-patient-1' };
+        const resource = { ...(global as any).createMockPatient(), id: 'test-patient-1' };
         const error = new Error('Update failed');
 
         mockMedplumClient.updateResource.mockRejectedValue(error);
@@ -296,8 +295,8 @@ describe('MedplumService', () => {
 
   describe('Search Operations', () => {
     beforeEach(async () => {
-      mockMedplumClient.startClientLogin.mockResolvedValue(undefined);
-      mockMedplumClient.setActiveProject.mockResolvedValue(undefined);
+      const mockProfile = { resourceType: 'ProfileResource', id: 'profile-123' };
+      mockMedplumClient.startClientLogin.mockResolvedValue(mockProfile as any);
       mockMedplumClient.readResource.mockRejectedValue(new Error('Not found'));
       await service.initialize();
     });
@@ -305,33 +304,36 @@ describe('MedplumService', () => {
     it('should search resources successfully', async () => {
       const resourceType = 'Patient';
       const searchParams = { family: 'Doe', given: 'John' };
-      const searchResults = {
-        resourceType: 'Bundle',
-        type: 'searchset',
-        total: 1,
-        entry: [{ resource: global.createMockPatient() }],
-      };
-
-      mockMedplumClient.search.mockResolvedValue(searchResults);
+      const mockPatient = (global as any).createMockPatient();
+      
+      // Mock searchResources to return ResourceArray structure
+      const resourceArray = Object.assign([mockPatient], {
+        bundle: {
+          resourceType: 'Bundle' as const,
+          type: 'searchset' as const,
+          total: 1,
+          entry: [{ resource: mockPatient }]
+        }
+      });
+      
+      mockMedplumClient.searchResources.mockResolvedValue(resourceArray);
 
       const result = await service.searchResources(resourceType, searchParams);
 
-      expect(mockMedplumClient.search).toHaveBeenCalledWith({
-        resourceType,
-        filters: [
-          { code: 'family', operator: 'equals', value: 'Doe' },
-          { code: 'given', operator: 'equals', value: 'John' },
-        ],
-        count: undefined,
-        offset: undefined,
-        sortRules: undefined,
-        total: undefined,
-        summary: undefined,
-        elements: undefined,
-        include: undefined,
-        revInclude: undefined,
+      expect(mockMedplumClient.searchResources).toHaveBeenCalledWith(resourceType, {
+        family: 'Doe',
+        given: 'John'
       });
-      expect(result).toEqual(searchResults);
+      
+      expect(result).toEqual({
+        resourceType: 'Bundle',
+        type: 'searchset',
+        total: 1,
+        entry: [{
+          resource: mockPatient,
+          fullUrl: `${mockPatient.resourceType}/${mockPatient.id}`
+        }]
+      });
     });
 
     it('should handle search with special parameters', async () => {
@@ -346,31 +348,28 @@ describe('MedplumService', () => {
         _elements: 'id,name,birthDate',
       };
 
-      const searchResults = {
-        resourceType: 'Bundle',
-        type: 'searchset',
-        total: 5,
-        entry: [],
-      };
-
-      mockMedplumClient.search.mockResolvedValue(searchResults);
+      // Mock searchResources to return empty ResourceArray
+      const emptyResourceArray = Object.assign([], {
+        bundle: {
+          resourceType: 'Bundle' as const,
+          type: 'searchset' as const,
+          total: 0,
+          entry: []
+        }
+      });
+      
+      mockMedplumClient.searchResources.mockResolvedValue(emptyResourceArray);
 
       await service.searchResources(resourceType, searchParams);
 
-      expect(mockMedplumClient.search).toHaveBeenCalledWith({
-        resourceType,
-        filters: [{ code: 'family', operator: 'equals', value: 'Doe' }],
-        count: 10,
-        offset: 0,
-        sortRules: [
-          { code: 'family', descending: false },
-          { code: 'given', descending: true },
-        ],
-        total: undefined,
-        summary: undefined,
-        elements: ['id', 'name', 'birthDate'],
-        include: ['Patient:general-practitioner'],
-        revInclude: ['Encounter:patient'],
+      expect(mockMedplumClient.searchResources).toHaveBeenCalledWith(resourceType, {
+        family: 'Doe',
+        _count: 10,
+        _offset: 0,
+        _sort: 'family:asc,given:desc',
+        _include: 'Patient:general-practitioner',
+        _revinclude: 'Encounter:patient',
+        _elements: 'id,name,birthDate'
       });
     });
 
@@ -379,7 +378,7 @@ describe('MedplumService', () => {
       const searchParams = { family: 'Doe' };
       const error = new Error('Search failed');
 
-      mockMedplumClient.search.mockRejectedValue(error);
+      mockMedplumClient.searchResources.mockRejectedValue(error);
 
       await expect(service.searchResources(resourceType, searchParams)).rejects.toThrow(
         'Search failed'
@@ -393,25 +392,26 @@ describe('MedplumService', () => {
 
   describe('Batch Operations', () => {
     beforeEach(async () => {
-      mockMedplumClient.startClientLogin.mockResolvedValue(undefined);
-      mockMedplumClient.setActiveProject.mockResolvedValue(undefined);
+      const mockProfile = { resourceType: 'ProfileResource', id: 'profile-123' };
+      mockMedplumClient.startClientLogin.mockResolvedValue(mockProfile as any);
       mockMedplumClient.readResource.mockRejectedValue(new Error('Not found'));
       await service.initialize();
     });
 
     it('should execute batch bundle successfully', async () => {
       const bundleRequest = {
+        resourceType: 'Bundle',
         type: 'batch' as const,
         resources: [
-          global.createMockPatient(),
-          { ...global.createMockPatient(), id: 'existing-patient-1' },
+          (global as any).createMockPatient(),
+          { ...(global as any).createMockPatient(), id: 'existing-patient-1' },
         ],
         timestamp: '2024-01-01T12:00:00Z',
       };
 
       const batchResponse = {
-        resourceType: 'Bundle',
-        type: 'batch-response',
+        resourceType: 'Bundle' as const,
+        type: 'batch-response' as const,
         entry: [
           { response: { status: '201', location: 'Patient/new-patient-1' } },
           { response: { status: '200', location: 'Patient/existing-patient-1' } },
@@ -443,8 +443,9 @@ describe('MedplumService', () => {
 
     it('should handle batch execution errors', async () => {
       const bundleRequest = {
+        resourceType: 'Bundle',
         type: 'batch' as const,
-        resources: [global.createMockPatient()],
+        resources: [(global as any).createMockPatient()],
       };
 
       const error = new Error('Batch execution failed');
@@ -459,8 +460,8 @@ describe('MedplumService', () => {
 
   describe('Utility Operations', () => {
     beforeEach(async () => {
-      mockMedplumClient.startClientLogin.mockResolvedValue(undefined);
-      mockMedplumClient.setActiveProject.mockResolvedValue(undefined);
+      const mockProfile = { resourceType: 'ProfileResource', id: 'profile-123' };
+      mockMedplumClient.startClientLogin.mockResolvedValue(mockProfile as any);
       mockMedplumClient.readResource.mockRejectedValue(new Error('Not found'));
       await service.initialize();
     });
@@ -494,9 +495,9 @@ describe('MedplumService', () => {
     });
 
     it('should validate resource', async () => {
-      const resource = global.createMockPatient();
+      const resource = (global as any).createMockPatient();
       const validationResult = {
-        resourceType: 'OperationOutcome',
+        resourceType: 'OperationOutcome' as const,
         issue: [],
       };
 
@@ -514,14 +515,19 @@ describe('MedplumService', () => {
       const endpoint = 'https://example.com/webhook';
 
       const subscription = {
-        resourceType: 'Subscription',
+        resourceType: 'Subscription' as const,
         id: 'sub-123',
-        status: 'active',
+        status: 'active' as const,
+        reason: 'OmniCare EMR Integration',
         criteria,
-        channel: { type: channelType, endpoint },
+        channel: { 
+          type: channelType as 'rest-hook',
+          endpoint,
+          payload: 'application/fhir+json'
+        },
       };
 
-      mockMedplumClient.createResource.mockResolvedValue(subscription);
+      mockMedplumClient.createResource.mockResolvedValue(subscription as any);
 
       const result = await service.createSubscription(criteria, channelType, endpoint);
 
@@ -551,8 +557,8 @@ describe('MedplumService', () => {
     });
 
     it('should return UP status when healthy', async () => {
-      mockMedplumClient.startClientLogin.mockResolvedValue(undefined);
-      mockMedplumClient.setActiveProject.mockResolvedValue(undefined);
+      const mockProfile = { resourceType: 'ProfileResource', id: 'profile-123' };
+      mockMedplumClient.startClientLogin.mockResolvedValue(mockProfile as any);
       mockMedplumClient.readResource.mockRejectedValue(new Error('Not found'));
       mockMedplumClient.get.mockResolvedValue({ resourceType: 'CapabilityStatement' });
 
@@ -569,8 +575,8 @@ describe('MedplumService', () => {
     });
 
     it('should return DOWN status when unhealthy', async () => {
-      mockMedplumClient.startClientLogin.mockResolvedValue(undefined);
-      mockMedplumClient.setActiveProject.mockResolvedValue(undefined);
+      const mockProfile = { resourceType: 'ProfileResource', id: 'profile-123' };
+      mockMedplumClient.startClientLogin.mockResolvedValue(mockProfile as any);
       mockMedplumClient.readResource.mockRejectedValue(new Error('Not found'));
       await service.initialize();
 
@@ -591,14 +597,14 @@ describe('MedplumService', () => {
 
   describe('Error Handling', () => {
     it('should throw error when not initialized', async () => {
-      await expect(service.createResource(global.createMockPatient())).rejects.toThrow(
+      await expect(service.createResource((global as any).createMockPatient())).rejects.toThrow(
         'MedplumService not initialized. Call initialize() first.'
       );
     });
 
     it('should handle FHIR operation outcome in response data', async () => {
-      mockMedplumClient.startClientLogin.mockResolvedValue(undefined);
-      mockMedplumClient.setActiveProject.mockResolvedValue(undefined);
+      const mockProfile = { resourceType: 'ProfileResource', id: 'profile-123' };
+      mockMedplumClient.startClientLogin.mockResolvedValue(mockProfile as any);
       mockMedplumClient.readResource.mockRejectedValue(new Error('Not found'));
       await service.initialize();
 
@@ -619,20 +625,20 @@ describe('MedplumService', () => {
 
       mockMedplumClient.createResource.mockRejectedValue(fhirError);
 
-      await expect(service.createResource(global.createMockPatient())).rejects.toThrow(
+      await expect(service.createResource((global as any).createMockPatient())).rejects.toThrow(
         'FHIR Error: Invalid resource format'
       );
     });
 
     it('should handle non-Error objects', async () => {
-      mockMedplumClient.startClientLogin.mockResolvedValue(undefined);
-      mockMedplumClient.setActiveProject.mockResolvedValue(undefined);
+      const mockProfile = { resourceType: 'ProfileResource', id: 'profile-123' };
+      mockMedplumClient.startClientLogin.mockResolvedValue(mockProfile as any);
       mockMedplumClient.readResource.mockRejectedValue(new Error('Not found'));
       await service.initialize();
 
       mockMedplumClient.createResource.mockRejectedValue('String error');
 
-      await expect(service.createResource(global.createMockPatient())).rejects.toThrow(
+      await expect(service.createResource((global as any).createMockPatient())).rejects.toThrow(
         'String error'
       );
     });
@@ -640,8 +646,8 @@ describe('MedplumService', () => {
 
   describe('Shutdown', () => {
     it('should shutdown service properly', async () => {
-      mockMedplumClient.startClientLogin.mockResolvedValue(undefined);
-      mockMedplumClient.setActiveProject.mockResolvedValue(undefined);
+      const mockProfile = { resourceType: 'ProfileResource', id: 'profile-123' };
+      mockMedplumClient.startClientLogin.mockResolvedValue(mockProfile as any);
       mockMedplumClient.readResource.mockRejectedValue(new Error('Not found'));
       await service.initialize();
 
@@ -650,7 +656,7 @@ describe('MedplumService', () => {
       expect(mockLogger.info).toHaveBeenCalledWith('Shutting down Medplum service...');
       
       // Service should not be initialized after shutdown
-      await expect(service.createResource(global.createMockPatient())).rejects.toThrow(
+      await expect(service.createResource((global as any).createMockPatient())).rejects.toThrow(
         'MedplumService not initialized. Call initialize() first.'
       );
     });

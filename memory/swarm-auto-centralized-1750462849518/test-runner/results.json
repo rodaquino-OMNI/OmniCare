@@ -1,0 +1,76 @@
+{
+  "timestamp": "2025-06-20T15:45:00Z",
+  "testRunNumber": 2,
+  "summary": {
+    "testSuites": {
+      "failed": 8,
+      "passed": 2,
+      "total": 10
+    },
+    "tests": {
+      "failed": 54,
+      "passed": 47,
+      "total": 101
+    },
+    "time": "14.807s"
+  },
+  "criticalIssue": {
+    "description": "Test situation has deteriorated significantly since run #1",
+    "comparison": {
+      "run1": {
+        "failedSuites": 7,
+        "failedTests": 11,
+        "passedTests": 101
+      },
+      "run2": {
+        "failedSuites": 8,
+        "failedTests": 54,
+        "passedTests": 47
+      }
+    },
+    "rootCause": "Recent changes to jest setup files may have introduced import/configuration issues"
+  },
+  "newFailures": {
+    "frontend": {
+      "LoginForm": {
+        "error": "Element type is invalid: expected a string but got: undefined",
+        "cause": "Import issue - component is undefined",
+        "affectedTests": 15
+      },
+      "ClinicalNoteInput": {
+        "previouslyPassing": ["renders with all required sections"],
+        "nowFailing": 11
+      },
+      "PatientHeader": {
+        "additionalFailures": ["should render inactive patient status", "should have proper color contrast"]
+      }
+    }
+  },
+  "possibleCauses": [
+    "Duplicate window mock definitions in jest.setup.js and __mocks__/window.js",
+    "Import path resolution issues after configuration changes",
+    "Mantine component mock conflicts"
+  ],
+  "recommendations": [
+    {
+      "priority": 1,
+      "action": "Remove duplicate window mocks - keep only one definition",
+      "impact": "Should fix jest environment issues"
+    },
+    {
+      "priority": 2,
+      "action": "Check all import statements in affected components",
+      "impact": "Fix undefined component errors"
+    },
+    {
+      "priority": 3,
+      "action": "Revert recent jest configuration changes if necessary",
+      "impact": "Restore baseline test functionality"
+    }
+  ],
+  "buildStatus": {
+    "stillFailing": true,
+    "emergencyServiceErrors": 20,
+    "typeScriptErrors": "Multiple duplicate function implementations"
+  }
+}

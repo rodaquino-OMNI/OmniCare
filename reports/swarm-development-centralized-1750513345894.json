@@ -1,0 +1,13 @@
+{
+  "objective": "Deploy additional TypeScript specialists to resolve the remaining compilation blockers identified on the las run. Verify memory to check past progress.",
+  "strategy": "development",
+  "mode": "centralized",
+  "maxAgents": 10,
+  "timeout": 60,
+  "parallel": true,
+  "monitor": true,
+  "output": "json",
+  "outputDir": "./reports",
+  "timestamp": "2025-06-21T13:42:25.893Z",
+  "id": "swarm-development-centralized-1750513345894"
+}

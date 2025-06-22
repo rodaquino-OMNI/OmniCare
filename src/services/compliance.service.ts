@@ -3,13 +3,14 @@
  * HIPAA-Compliant Security Audit and Compliance Reporting System
  */
 
+import { EventEmitter } from 'events';
 import fs from 'fs/promises';
 import path from 'path';
-import { EventEmitter } from 'events';
+
 import { createObjectCsvWriter } from 'csv-writer';
 
-import { AuditService } from '@/services/audit.service';
 import { AUDIT_CONFIG } from '@/config/auth.config';
+import { AuditService } from '@/services/audit.service';
 import { 
   ComplianceReport, 
   AuditLogEntry, 

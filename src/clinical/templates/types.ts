@@ -3,7 +3,7 @@
  * OmniCare EMR - Clinical Documentation Templates
  */
 
-import { DiagnosticImpression, TreatmentPlan, VitalSigns } from '../assessment/types';
+import { DiagnosticImpression, VitalSigns } from '../assessment/types';
 
 export interface ClinicalTemplate {
   id: string;

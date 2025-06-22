@@ -1,0 +1,314 @@
+{
+  "swarm_id": "swarm-development-centralized-1750518061074",
+  "agent": "test-architect",
+  "timestamp": "2025-06-21T10:30:00Z",
+  "analysis": {
+    "current_state": {
+      "total_test_files": 276,
+      "test_frameworks": {
+        "unit_integration": "Jest with ts-jest",
+        "frontend_components": "React Testing Library + Jest",
+        "e2e_testing": "Playwright", 
+        "api_testing": "Supertest",
+        "fhir_validation": "@medplum/core Validator",
+        "performance": "Autocannon + custom metrics",
+        "security": "Custom security test suites"
+      },
+      "coverage_setup": {
+        "backend": "80% threshold (branches, functions, lines, statements)",
+        "frontend": "75% threshold",
+        "reporting": "lcov, html, json, text"
+      },
+      "current_test_structure": {
+        "root_jest_config": "Multi-project setup with backend/frontend separation",
+        "backend_tests": "Unit, integration, security, FHIR compliance",
+        "frontend_tests": "Component, integration, E2E with Playwright",
+        "specialized_tests": "Performance benchmarks, security penetration, FHIR validation"
+      }
+    },
+    "healthcare_compliance_requirements": {
+      "hipaa_compliance": {
+        "phi_protection": "Required in all test data handling",
+        "access_controls": "Role-based testing with healthcare permissions",
+        "audit_trails": "Test execution logging for compliance",
+        "encryption": "PHI data must be encrypted in test environments"
+      },
+      "fhir_r4_compliance": {
+        "resource_validation": "Complete FHIR resource schema validation",
+        "interoperability": "Cross-system FHIR exchange testing",
+        "search_parameters": "FHIR search compliance testing",
+        "operations": "FHIR operation compliance ($validate, $everything, etc.)"
+      },
+      "clinical_workflow_testing": {
+        "patient_safety": "Critical path testing for patient care workflows",
+        "medication_management": "Drug interaction and dosage validation",
+        "clinical_decision_support": "CDS hooks and alerts testing",
+        "emergency_scenarios": "High-priority clinical scenario testing"
+      }
+    }
+  },
+  "test_architecture_design": {
+    "testing_pyramid": {
+      "unit_tests": {
+        "percentage": "70%",
+        "scope": "Individual functions, components, services",
+        "frameworks": ["Jest", "React Testing Library"],
+        "healthcare_focus": [
+          "FHIR resource validation",
+          "PHI data sanitization",
+          "Clinical calculation accuracy",
+          "Medical coding validation"
+        ]
+      },
+      "integration_tests": {
+        "percentage": "20%", 
+        "scope": "Service integration, API contracts, database interactions",
+        "frameworks": ["Jest", "Supertest", "TestContainers"],
+        "healthcare_focus": [
+          "EHR system integration",
+          "HL7 message processing", 
+          "Insurance verification",
+          "Lab results integration"
+        ]
+      },
+      "e2e_tests": {
+        "percentage": "10%",
+        "scope": "Complete user workflows, critical clinical paths",
+        "frameworks": ["Playwright", "Custom healthcare scenarios"],
+        "healthcare_focus": [
+          "Patient registration to discharge",
+          "Medication ordering workflow",
+          "Emergency department triage",
+          "Clinical documentation"
+        ]
+      }
+    },
+    "specialized_testing_layers": {
+      "security_testing": {
+        "authentication": "Multi-factor, SMART-on-FHIR, SSO testing",
+        "authorization": "Role-based access control validation",
+        "data_protection": "PHI encryption and access logging",
+        "penetration_testing": "SQL injection, XSS, CSRF protection",
+        "compliance_auditing": "HIPAA audit trail validation"
+      },
+      "performance_testing": {
+        "load_testing": "Healthcare peak load simulation",
+        "stress_testing": "Emergency department surge capacity",
+        "volume_testing": "Large patient dataset handling",
+        "endurance_testing": "24/7 operation reliability",
+        "scalability_testing": "Multi-facility deployment"
+      },
+      "accessibility_testing": {
+        "wcag_compliance": "Healthcare accessibility standards",
+        "screen_reader": "Medical professional accessibility",
+        "keyboard_navigation": "Emergency access scenarios",
+        "color_contrast": "Clinical alert visibility"
+      },
+      "fhir_compliance_testing": {
+        "resource_crud": "Complete FHIR resource operations",
+        "search_parameters": "Clinical search functionality",
+        "bulk_operations": "Population health data exchange",
+        "subscriptions": "Real-time clinical notifications",
+        "terminology": "Medical coding system validation"
+      }
+    },
+    "test_data_management": {
+      "synthetic_phi": {
+        "generation": "FHIR-compliant synthetic patient data",
+        "diversity": "Demographic and clinical diversity",
+        "scenarios": "Comprehensive medical conditions coverage",
+        "privacy": "No real PHI in test environments"
+      },
+      "test_data_lifecycle": {
+        "creation": "Automated synthetic data generation",
+        "isolation": "Test environment data segregation", 
+        "cleanup": "Automated test data purging",
+        "versioning": "Test data set version control"
+      },
+      "clinical_scenarios": {
+        "common_conditions": "Diabetes, hypertension, cardiac care",
+        "emergency_cases": "Trauma, stroke, cardiac arrest",
+        "specialty_care": "Oncology, pediatrics, mental health",
+        "medication_management": "Complex drug interactions"
+      }
+    },
+    "test_environments": {
+      "development": {
+        "scope": "Developer local testing",
+        "data": "Minimal synthetic dataset",
+        "services": "Mocked external integrations"
+      },
+      "integration": {
+        "scope": "System integration testing",
+        "data": "Comprehensive synthetic dataset", 
+        "services": "Stubbed external systems"
+      },
+      "staging": {
+        "scope": "Production-like testing",
+        "data": "Full synthetic dataset with edge cases",
+        "services": "Sandbox external integrations"
+      },
+      "production": {
+        "scope": "Production monitoring and smoke tests",
+        "data": "Real data with strict access controls",
+        "services": "Live external integrations"
+      }
+    },
+    "continuous_testing_pipeline": {
+      "pre_commit": {
+        "unit_tests": "Fast unit test execution",
+        "linting": "Code quality and security scanning",
+        "type_checking": "TypeScript validation"
+      },
+      "pull_request": {
+        "full_test_suite": "Unit + integration tests",
+        "security_scan": "Vulnerability assessment",
+        "performance_regression": "Performance baseline comparison"
+      },
+      "deployment": {
+        "smoke_tests": "Critical path validation",
+        "integration_tests": "External system connectivity",
+        "rollback_tests": "Deployment rollback validation"
+      },
+      "production": {
+        "health_checks": "System health monitoring",
+        "synthetic_monitoring": "Continuous workflow validation",
+        "performance_monitoring": "Real-time performance metrics"
+      }
+    },
+    "quality_gates": {
+      "code_coverage": {
+        "unit_tests": "Minimum 85% line coverage",
+        "integration_tests": "Minimum 80% integration coverage",
+        "e2e_tests": "100% critical path coverage"
+      },
+      "performance_thresholds": {
+        "api_response": "95th percentile < 200ms",
+        "page_load": "First contentful paint < 1.5s",
+        "database_queries": "99th percentile < 100ms"
+      },
+      "security_requirements": {
+        "vulnerability_scan": "Zero high/critical vulnerabilities",
+        "dependency_audit": "No known security vulnerabilities",
+        "penetration_testing": "Quarterly security assessment"
+      },
+      "fhir_compliance": {
+        "resource_validation": "100% FHIR R4 schema compliance",
+        "search_parameters": "All required search parameters implemented",
+        "operations": "Core FHIR operations functional"
+      }
+    }
+  },
+  "implementation_strategy": {
+    "phase1_foundation": {
+      "duration": "2-3 weeks",
+      "deliverables": [
+        "Enhanced Jest configuration with healthcare-specific matchers",
+        "Synthetic PHI data generation framework",
+        "FHIR validation test utilities",
+        "Security testing base framework"
+      ]
+    },
+    "phase2_expansion": {
+      "duration": "3-4 weeks", 
+      "deliverables": [
+        "Comprehensive E2E clinical workflow tests",
+        "Performance testing framework with healthcare metrics",
+        "Accessibility testing automation",
+        "CI/CD pipeline integration"
+      ]
+    },
+    "phase3_optimization": {
+      "duration": "2-3 weeks",
+      "deliverables": [
+        "Test data management automation",
+        "Advanced security testing scenarios",
+        "Production monitoring and synthetic testing",
+        "Compliance reporting automation"
+      ]
+    }
+  },
+  "tooling_recommendations": {
+    "core_framework": {
+      "unit_integration": "Jest + Testing Library (current)",
+      "e2e": "Playwright (current)",
+      "performance": "K6 + Autocannon (upgrade from current)",
+      "security": "OWASP ZAP + custom security test suite",
+      "fhir_validation": "@medplum/core + custom validators (current)"
+    },
+    "specialized_tools": {
+      "synthetic_data": "Synthea for FHIR synthetic patient data",
+      "accessibility": "axe-core + pa11y automation",
+      "security_scanning": "Snyk + Semgrep for static analysis",
+      "test_reporting": "Allure for comprehensive test reporting",
+      "monitoring": "Datadog + custom healthcare metrics"
+    },
+    "infrastructure": {
+      "containers": "Docker + TestContainers for integration testing",
+      "orchestration": "GitHub Actions with healthcare compliance workflows", 
+      "test_data": "PostgreSQL + Redis test instances",
+      "external_services": "WireMock for EHR system simulation"
+    }
+  },
+  "compliance_considerations": {
+    "hipaa_requirements": {
+      "test_data": "No real PHI in any test environment",
+      "access_logging": "All test access must be logged and auditable",
+      "encryption": "PHI-like test data must be encrypted at rest and in transit",
+      "retention": "Test data retention policies must align with HIPAA"
+    },
+    "fda_validation": {
+      "software_validation": "IEC 62304 medical device software lifecycle",
+      "risk_management": "ISO 14971 risk management testing",
+      "clinical_evaluation": "Clinical safety testing protocols",
+      "change_control": "Validated change control for medical devices"
+    },
+    "quality_standards": {
+      "iso_13485": "Quality management for medical devices",
+      "iso_27001": "Information security management",
+      "hl7_fhir": "HL7 FHIR R4 compliance certification",
+      "ihe_profiles": "IHE integration profile compliance"
+    }
+  },
+  "metrics_and_reporting": {
+    "test_metrics": {
+      "coverage": "Line, branch, function, and statement coverage",
+      "execution_time": "Test suite execution performance",
+      "flakiness": "Test reliability and stability metrics",
+      "maintenance": "Test maintenance effort tracking"
+    },
+    "healthcare_metrics": {
+      "clinical_accuracy": "Clinical calculation and decision accuracy",
+      "patient_safety": "Safety-critical workflow test coverage", 
+      "interoperability": "FHIR exchange success rates",
+      "compliance": "Regulatory compliance test results"
+    },
+    "business_metrics": {
+      "defect_density": "Defects per feature/module",
+      "time_to_detection": "Bug discovery time in pipeline",
+      "time_to_resolution": "Bug fix and validation time",
+      "release_quality": "Production issue rates"
+    }
+  },
+  "recommendations": {
+    "immediate_actions": [
+      "Implement synthetic PHI data generation for all test scenarios",
+      "Enhance FHIR validation coverage to include all resource types",
+      "Add comprehensive security testing for all authentication flows",
+      "Create dedicated healthcare workflow E2E test scenarios"
+    ],
+    "short_term_improvements": [
+      "Integrate performance testing into CI/CD pipeline",
+      "Implement accessibility testing automation",
+      "Create test data lifecycle management automation",
+      "Add clinical decision support testing framework"
+    ],
+    "long_term_strategy": [
+      "Develop AI-powered test generation for clinical scenarios",
+      "Implement continuous clinical validation monitoring",
+      "Create advanced analytics for test effectiveness",
+      "Build automated compliance reporting dashboard"
+    ]
+  }
+}
+EOF < /dev/null

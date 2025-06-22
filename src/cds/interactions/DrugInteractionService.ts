@@ -295,6 +295,9 @@ export class DrugInteractionService {
    * Initialize local drug interaction database with common interactions
    */
   private initializeLocalDatabase(): void {
+    // Initialize contraindications database
+    this.initializeContraindications();
+    
     // Common drug interactions - in a real system, this would be loaded from a database
     const commonInteractions: DrugInteraction[] = [
       {
@@ -340,6 +343,16 @@ export class DrugInteractionService {
     this.initializeTherapeuticClasses();
   }
 
+  /**
+   * Initialize contraindications database
+   */
+  private initializeContraindications(): void {
+    // Common drug-disease contraindications
+    this.interactionDatabase.contraindications.set('metformin', ['N18.3', 'N18.4', 'N18.5', 'N18.6']);
+    this.interactionDatabase.contraindications.set('nsaid', ['I50.0', 'I50.1', 'I50.9']);
+    this.interactionDatabase.contraindications.set('warfarin', ['K92.2', 'I85.0']); // Bleeding disorders
+  }
+
   private initializeTherapeuticClasses(): void {
     const therapeuticClasses = new Map([
       ['ACE Inhibitors', ['lisinopril', 'enalapril', 'captopril', 'ramipril']],
@@ -354,7 +367,7 @@ export class DrugInteractionService {
     // Reverse mapping: drug name -> therapeutic class
     for (const [className, drugs] of therapeuticClasses) {
       for (const drug of drugs) {
-        this.interactionDatabase.therapeuticClasses.set(drug.toLowerCase(), className);
+        this.interactionDatabase.therapeuticClasses.set(drug.toLowerCase(), [className]);
       }
     }
   }
@@ -380,7 +393,8 @@ export class DrugInteractionService {
   }
 
   private async getTherapeuticClass(drugName: string): Promise<string | null> {
-    return this.interactionDatabase.therapeuticClasses.get(drugName.toLowerCase()) || null;
+    const classes = this.interactionDatabase.therapeuticClasses.get(drugName.toLowerCase());
+    return classes?.[0] || null;
   }
 
   private sortInteractionsBySeverity(interactions: DrugInteraction[]): DrugInteraction[] {
@@ -442,9 +456,19 @@ export class DrugInteractionService {
 
   private async isContraindicated(drugName: string, icd10Code: string): Promise<boolean> {
     // This would check against a comprehensive contraindication database
-    // Mock implementation
-    const contraindications = this.interactionDatabase.contraindications.get(drugName.toLowerCase());
-    return contraindications?.includes(icd10Code) || false;
+    // Mock implementation with common contraindications
+    const contraindications = this.interactionDatabase.contraindications.get(drugName.toLowerCase()) || [];
+    
+    // Add some common contraindications
+    if (drugName.toLowerCase().includes('metformin') && icd10Code.startsWith('N18')) {
+      return true; // Metformin contraindicated in chronic kidney disease
+    }
+    
+    if (drugName.toLowerCase().includes('nsaid') && icd10Code.startsWith('I50')) {
+      return true; // NSAIDs contraindicated in heart failure
+    }
+    
+    return contraindications.includes(icd10Code);
   }
 
   private async checkCrossReactivity(drugName: string, allergen: string): Promise<boolean> {

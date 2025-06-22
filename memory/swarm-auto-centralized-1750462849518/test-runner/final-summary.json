@@ -1,0 +1,94 @@
+{
+  "finalReport": "TEST_RUNNER_SUMMARY",
+  "timestamp": "2025-06-20T15:55:00Z",
+  "swarmId": "swarm-auto-centralized-1750462849518",
+  "reportedBy": "test-runner",
+  "executiveSummary": {
+    "status": "CRITICAL_FAILURE",
+    "testTrend": "SEVERE_DETERIORATION",
+    "rootCause": "Compilation failures preventing test execution"
+  },
+  "testRunHistory": [
+    {
+      "run": 1,
+      "time": "15:30:00Z",
+      "suites": {"failed": 7, "passed": 3, "total": 10},
+      "tests": {"failed": 11, "passed": 101, "total": 112},
+      "status": "FAILING_BUT_RUNNING"
+    },
+    {
+      "run": 2,
+      "time": "15:45:00Z",
+      "suites": {"failed": 8, "passed": 2, "total": 10},
+      "tests": {"failed": 54, "passed": 47, "total": 101},
+      "status": "DETERIORATING"
+    },
+    {
+      "run": 3,
+      "time": "15:55:00Z",
+      "suites": {"failed": 11, "passed": 1, "total": 12},
+      "tests": {"failed": 0, "passed": 20, "total": 20},
+      "status": "COMPILATION_FAILURE"
+    }
+  ],
+  "criticalFindings": [
+    {
+      "finding": "Test execution blocked by TypeScript errors",
+      "impact": "Only 20 of 112 tests are running",
+      "cause": "Backend services have compilation errors"
+    },
+    {
+      "finding": "Frontend tests failing due to import issues",
+      "impact": "All LoginForm, ClinicalNoteInput tests failing",
+      "cause": "Jest configuration conflicts with duplicate mocks"
+    },
+    {
+      "finding": "Build errors increasing not decreasing",
+      "impact": "From 158 to 345 errors per build-validator",
+      "cause": "New changes introducing more problems"
+    }
+  ],
+  "failurePatterns": {
+    "backend": {
+      "medplumService": "Missing methods and type mismatches",
+      "authSecurity": "Location header undefined type",
+      "authController": "Missing refreshInternalToken method",
+      "fhirResources": "Global mock functions missing",
+      "emergencyService": "18 duplicate function implementations"
+    },
+    "frontend": {
+      "jestConfig": "Duplicate window mocks causing conflicts",
+      "imports": "Components becoming undefined at runtime",
+      "actWarnings": "State updates not wrapped in act()"
+    }
+  },
+  "coordinationWithOtherAgents": {
+    "buildValidator": {
+      "reported": "345 build errors, up from 158",
+      "criticalIssue": "EmergencyCareService duplicate methods"
+    },
+    "qualityController": {
+      "reported": "Overall score 25/100",
+      "status": "NOT_PRODUCTION_READY",
+      "estimatedFix": "8-10 hours"
+    }
+  },
+  "recommendations": [
+    {
+      "priority": "IMMEDIATE",
+      "action": "Revert jest configuration changes",
+      "reason": "Recent changes broke working tests"
+    },
+    {
+      "priority": "URGENT",
+      "action": "Fix EmergencyCareService duplicate methods",
+      "reason": "Blocking compilation of backend tests"
+    },
+    {
+      "priority": "HIGH",
+      "action": "Implement missing Medplum client methods",
+      "reason": "Multiple test suites cannot compile"
+    }
+  ],
+  "conclusion": "The test suite has gone from partially failing to mostly non-executable due to compilation errors. The situation requires immediate intervention to restore basic test functionality before any further fixes can be attempted."
+}

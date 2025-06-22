@@ -5,7 +5,7 @@
 
 import crypto from 'crypto';
 import fs from 'fs/promises';
-import path from 'path';
+
 import { AUTH_CONFIG } from '@/config/auth.config';
 
 export interface EncryptedData {
@@ -60,18 +60,20 @@ export class EncryptionService {
     const key = keyId ? this.getDataKey(keyId) : this.masterKey;
     const iv = crypto.randomBytes(this.config.ivLength);
     
-    const cipher = crypto.createCipherGCM(this.config.algorithm, key, iv);
+    // Use GCM mode for authenticated encryption
+    const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
     
     let encrypted = cipher.update(data, 'utf8', this.config.encoding);
     encrypted += cipher.final(this.config.encoding);
     
+    // Get authentication tag for GCM mode
     const tag = cipher.getAuthTag();
     
     return {
       encrypted,
       iv: iv.toString(this.config.encoding),
       tag: tag.toString(this.config.encoding),
-      algorithm: this.config.algorithm,
+      algorithm: 'aes-256-gcm',
       keyId
     };
   }
@@ -85,10 +87,15 @@ export class EncryptionService {
       : this.masterKey;
     
     const iv = Buffer.from(encryptedData.iv, this.config.encoding);
-    const tag = Buffer.from(encryptedData.tag, this.config.encoding);
     
-    const decipher = crypto.createDecipherGCM(encryptedData.algorithm, key, iv);
-    decipher.setAuthTag(tag);
+    // Use GCM mode for authenticated decryption
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    
+    // Set authentication tag for GCM mode
+    if (encryptedData.tag) {
+      const tag = Buffer.from(encryptedData.tag, this.config.encoding);
+      decipher.setAuthTag(tag);
+    }
     
     let decrypted = decipher.update(encryptedData.encrypted, this.config.encoding, 'utf8');
     decrypted += decipher.final('utf8');
@@ -266,7 +273,7 @@ export class EncryptionService {
    */
   rotateKeys(): void {
     // Generate new master key
-    const newMasterKey = crypto.randomBytes(this.config.keyLength);
+    const _newMasterKey = crypto.randomBytes(this.config.keyLength);
     
     // Re-encrypt all data with new key (in production, this would be a background process)
     console.log('Key rotation initiated - implement gradual re-encryption process');
@@ -276,7 +283,7 @@ export class EncryptionService {
     
     // Mark old keys for retirement
     const currentTime = new Date();
-    for (const [keyId, keyPair] of this.keyPairs.entries()) {
+    for (const [_keyId, keyPair] of this.keyPairs.entries()) {
       if (!keyPair.expiresAt || keyPair.expiresAt < currentTime) {
         // Mark for deletion after grace period
         keyPair.expiresAt = new Date(currentTime.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
@@ -337,10 +344,23 @@ export class EncryptionService {
    * Derive master key from environment
    */
   private deriveMasterKey(): Buffer {
-    const keyMaterial = process.env.ENCRYPTION_MASTER_KEY || 'default-master-key-change-in-production';
-    const salt = process.env.ENCRYPTION_SALT || 'omnicare-emr-salt';
+    const keyMaterial = process.env.ENCRYPTION_MASTER_KEY;
+    const salt = process.env.ENCRYPTION_SALT;
     
-    return crypto.pbkdf2Sync(keyMaterial, salt, 100000, this.config.keyLength, 'sha512');
+    if (!keyMaterial || !salt) {
+      throw new Error('CRITICAL SECURITY ERROR: ENCRYPTION_MASTER_KEY and ENCRYPTION_SALT environment variables must be set in production');
+    }
+    
+    if (keyMaterial === 'default-master-key-change-in-production' || 
+        salt === 'omnicare-emr-salt') {
+      throw new Error('CRITICAL SECURITY ERROR: Default encryption keys detected. Change ENCRYPTION_MASTER_KEY and ENCRYPTION_SALT in production');
+    }
+    
+    if (keyMaterial.length < 32 || salt.length < 16) {
+      throw new Error('CRITICAL SECURITY ERROR: Encryption key material too short. Use at least 32 characters for key and 16 for salt');
+    }
+    
+    return crypto.pbkdf2Sync(keyMaterial, salt, 600000, this.config.keyLength, 'sha512');
   }
 
   /**

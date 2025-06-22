@@ -5,7 +5,6 @@
  * staff utilization, appointment analytics, and operational KPIs
  */
 
-import { Injectable } from '@nestjs/common';
 import { EventEmitter } from 'events';
 
 export interface PatientFlowMetrics {
@@ -147,7 +146,6 @@ export interface OperationalDashboard {
   };
 }
 
-@Injectable()
 export class OperationalMetricsService extends EventEmitter {
   private realTimeData: Map<string, any> = new Map();
   private historicalMetrics: Map<string, any[]> = new Map();

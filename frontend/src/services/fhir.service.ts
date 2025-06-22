@@ -15,6 +15,7 @@ import {
   Resource,
   Parameters
 } from '@medplum/fhirtypes';
+import { getErrorMessage, hasMessage, isAPIError, isError } from '@/utils/error.utils';
 
 // API Configuration
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -698,32 +699,53 @@ export class FHIRService {
   /**
    * Handle API errors and convert to appropriate format
    */
-  private handleError(error: any, context: string): Error {
+  private handleError(error: unknown, context: string): Error {
     console.error(`FHIR Service Error - ${context}:`, error);
 
+    // Check if it's already a FHIRError
     if (error instanceof FHIRError) {
       return error;
     }
 
-    if (error.response?.data?.resourceType === 'OperationOutcome') {
-      const operationOutcome = error.response.data as OperationOutcome;
-      const message = operationOutcome.issue?.[0]?.diagnostics || context;
-      return new FHIRError(message, operationOutcome, error.response.status);
+    // Check if it's an API error with response structure
+    if (isAPIError(error)) {
+      // Check for FHIR OperationOutcome
+      if (error.response?.data && (error.response.data as any).resourceType === 'OperationOutcome') {
+        const operationOutcome = error.response.data as OperationOutcome;
+        const message = operationOutcome.issue?.[0]?.diagnostics || context;
+        return new FHIRError(message, operationOutcome, error.response.status);
+      }
+
+      // Handle specific HTTP status codes
+      const status = error.response?.status || error.status || error.statusCode;
+      switch (status) {
+        case 404:
+          return new FHIRError(`Resource not found - ${context}`, undefined, 404);
+        case 403:
+          return new FHIRError(`Access denied - ${context}`, undefined, 403);
+        case 401:
+          return new FHIRError(`Authentication required - ${context}`, undefined, 401);
+        case 500:
+          return new FHIRError(`Server error - ${context}`, undefined, 500);
+        default:
+          const errorMessage = error.response?.data?.message || error.data?.message || getErrorMessage(error);
+          return new FHIRError(`${context}: ${errorMessage}`, undefined, status);
+      }
     }
 
-    if (error.response?.status === 404) {
-      return new FHIRError(`Resource not found - ${context}`, undefined, 404);
+    // Check if it's a standard Error with response property (axios-like)
+    if (isError(error) && 'response' in error) {
+      const axiosError = error as any;
+      if (axiosError.response?.status) {
+        const status = axiosError.response.status;
+        const errorMessage = axiosError.response?.data?.message || axiosError.message || context;
+        return new FHIRError(errorMessage, undefined, status);
+      }
     }
 
-    if (error.response?.status === 403) {
-      return new FHIRError(`Access denied - ${context}`, undefined, 403);
-    }
-
-    if (error.response?.status === 401) {
-      return new FHIRError(`Authentication required - ${context}`, undefined, 401);
-    }
-
-    return new Error(`${context}: ${error.message || 'Unknown error'}`);
+    // Fallback for any other error types
+    const errorMessage = hasMessage(error) ? error.message : getErrorMessage(error);
+    return new Error(`${context}: ${errorMessage}`);
   }
 }
 
@@ -738,4 +760,3 @@ export type {
   HealthStatus
 };
 
-export { FHIRError };

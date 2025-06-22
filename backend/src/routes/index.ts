@@ -1,6 +1,7 @@
 import express from 'express';
-import { fhirController } from '@/controllers/fhir.controller';
+
 import { authController } from '@/controllers/auth.controller';
+import { fhirController } from '@/controllers/fhir.controller';
 import { 
   authenticate, 
   optionalAuthenticate, 
@@ -11,11 +12,25 @@ import {
   auditLog,
   AuthMiddleware,
 } from '@/middleware/auth.middleware';
+import networkRoutes from './network.routes';
+import syncRoutes from './sync.routes';
 
 const router = express.Router();
 
 // Apply audit logging to all routes
 router.use(auditLog);
+
+// ===============================
+// NETWORK MONITORING ROUTES
+// ===============================
+
+router.use('/api', networkRoutes);
+
+// ===============================
+// SYNC ROUTES
+// ===============================
+
+router.use('/api/sync', syncRoutes);
 
 // ===============================
 // HEALTH CHECK ROUTES
@@ -34,7 +49,7 @@ router.post('/auth/introspect', authController.introspect.bind(authController));
 
 // Internal API authentication
 router.post('/auth/login', authController.login.bind(authController));
-router.post('/auth/refresh', authController.refreshInternalToken.bind(authController));
+router.post('/auth/refresh', authController.refreshToken.bind(authController));
 
 // ===============================
 // FHIR METADATA ROUTES
@@ -50,21 +65,21 @@ router.get('/fhir/R4/metadata', fhirController.getCapabilityStatement.bind(fhirC
 // Batch/Transaction operations
 router.post('/fhir/R4', 
   authenticate,
-  requireScope('system/*.write', 'user/*.write'),
+  requireScope(['system/*.write', 'user/*.write']),
   fhirController.processBatch.bind(fhirController)
 );
 
 // GraphQL endpoint
 router.post('/fhir/R4/$graphql',
   authenticate,
-  requireScope('system/*.read', 'user/*.read'),
+  requireScope(['system/*.read', 'user/*.read']),
   fhirController.executeGraphQL.bind(fhirController)
 );
 
 // Resource validation
 router.post('/fhir/R4/:resourceType/$validate',
   authenticate,
-  requireScope('system/*.read', 'user/*.read'),
+  requireScope(['system/*.read', 'user/*.read']),
   fhirController.validateResource.bind(fhirController)
 );
 
@@ -84,6 +99,17 @@ router.post('/fhir/R4/:resourceType',
   (req, res, next) => {
     // Dynamic resource access check
     const resourceType = req.params.resourceType;
+    if (!resourceType) {
+      res.status(400).json({
+        resourceType: 'OperationOutcome',
+        issue: [{
+          severity: 'error',
+          code: 'invalid',
+          diagnostics: 'Resource type is required',
+        }],
+      });
+      return;
+    }
     return requireResourceAccess(resourceType, 'create')(req, res, next);
   },
   fhirController.createResource.bind(fhirController)
@@ -100,10 +126,10 @@ router.get('/fhir/R4/:resourceType',
     if (patientParam && !req.user?.scope?.some(s => s.includes('system/'))) {
       // For patient-scoped searches, check patient access
       return requirePatientAccess(req, res, () => {
-        return requireResourceAccess(resourceType, 'read')(req, res, next);
+        return requireResourceAccess(resourceType || '', 'read')(req, res, next);
       });
     } else {
-      return requireResourceAccess(resourceType, 'read')(req, res, next);
+      return requireResourceAccess(resourceType || '', 'read')(req, res, next);
     }
   },
   fhirController.searchResources.bind(fhirController)
@@ -114,12 +140,25 @@ router.get('/fhir/R4/:resourceType/:id',
   authenticate,
   (req, res, next) => {
     const resourceType = req.params.resourceType;
+    if (!resourceType) {
+      res.status(400).json({
+        resourceType: 'OperationOutcome',
+        issue: [{
+          severity: 'error',
+          code: 'invalid',
+          diagnostics: 'Resource type is required',
+        }],
+      });
+      return;
+    }
     
     // For patient-related resources, check patient access
     if (['Patient', 'Observation', 'MedicationRequest', 'Encounter', 'DiagnosticReport', 'CarePlan'].includes(resourceType)) {
       if (resourceType === 'Patient') {
         // For Patient resources, the patient ID is the resource ID
-        req.params.patientId = req.params.id;
+        if (req.params.id) {
+          req.params.patientId = req.params.id;
+        }
         return requirePatientAccess(req, res, () => {
           return requireResourceAccess(resourceType, 'read')(req, res, next);
         });
@@ -140,11 +179,24 @@ router.put('/fhir/R4/:resourceType/:id',
   authenticate,
   (req, res, next) => {
     const resourceType = req.params.resourceType;
+    if (!resourceType) {
+      res.status(400).json({
+        resourceType: 'OperationOutcome',
+        issue: [{
+          severity: 'error',
+          code: 'invalid',
+          diagnostics: 'Resource type is required',
+        }],
+      });
+      return;
+    }
     
     // Similar patient access logic as READ
     if (['Patient', 'Observation', 'MedicationRequest', 'Encounter', 'DiagnosticReport', 'CarePlan'].includes(resourceType)) {
       if (resourceType === 'Patient') {
-        req.params.patientId = req.params.id;
+        if (req.params.id) {
+          req.params.patientId = req.params.id;
+        }
         return requirePatientAccess(req, res, () => {
           return requireResourceAccess(resourceType, 'write')(req, res, next);
         });
@@ -163,11 +215,24 @@ router.delete('/fhir/R4/:resourceType/:id',
   authenticate,
   (req, res, next) => {
     const resourceType = req.params.resourceType;
+    if (!resourceType) {
+      res.status(400).json({
+        resourceType: 'OperationOutcome',
+        issue: [{
+          severity: 'error',
+          code: 'invalid',
+          diagnostics: 'Resource type is required',
+        }],
+      });
+      return;
+    }
     
     // Similar patient access logic as READ/UPDATE
     if (['Patient', 'Observation', 'MedicationRequest', 'Encounter', 'DiagnosticReport', 'CarePlan'].includes(resourceType)) {
       if (resourceType === 'Patient') {
-        req.params.patientId = req.params.id;
+        if (req.params.id) {
+          req.params.patientId = req.params.id;
+        }
         return requirePatientAccess(req, res, () => {
           return requireResourceAccess(resourceType, 'delete')(req, res, next);
         });
@@ -202,7 +267,7 @@ router.get('/cds-services', fhirController.getCDSServices.bind(fhirController));
 // CDS Hook execution
 router.post('/cds-services/:serviceId',
   authenticate,
-  requireScope('user/*.read', 'system/*.read'),
+  requireScope(['user/*.read', 'system/*.read']),
   fhirController.executeCDSHook.bind(fhirController)
 );
 
@@ -247,7 +312,7 @@ router.post('/api/vitals/:patientId',
       
       const { fhirResourcesService } = await import('@/services/fhir-resources.service');
       const observations = await fhirResourcesService.createVitalSigns(
-        patientId,
+        patientId || '',
         encounterId,
         vitals
       );
@@ -273,7 +338,7 @@ router.post('/api/vitals/:patientId',
 // Medication Management APIs
 router.post('/api/prescriptions',
   authenticate,
-  requireScope('user/*.write', 'system/*.write'),
+  requireScope(['user/*.write', 'system/*.write']),
   async (req, res) => {
     try {
       const medicationRequest = req.body;
@@ -298,7 +363,7 @@ router.post('/api/prescriptions',
 // Care Plan Management APIs
 router.post('/api/care-plans',
   authenticate,
-  requireScope('user/*.write', 'system/*.write'),
+  requireScope(['user/*.write', 'system/*.write']),
   async (req, res) => {
     try {
       const carePlan = req.body;

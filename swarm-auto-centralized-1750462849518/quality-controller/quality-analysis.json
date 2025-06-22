@@ -1,0 +1,108 @@
+{
+  "timestamp": "2025-06-20T10:30:00Z",
+  "swarmId": "swarm-auto-centralized-1750462849518",
+  "qualityStatus": "CRITICAL",
+  "summary": {
+    "overallHealth": "FAILING",
+    "typeScriptCompilation": "FAILING",
+    "testSuite": "FAILING",
+    "criticalIssuesCount": 175
+  },
+  "typeScriptErrors": {
+    "totalErrors": 175,
+    "criticalFiles": [
+      "src/clinical/coordination/CarePlanManagementService.ts",
+      "src/clinical/emergency/EmergencyCareService.ts",
+      "src/clinical/hospital/HospitalAdmissionService.ts",
+      "src/stories/VitalSignCard.stories.tsx"
+    ],
+    "errorCategories": {
+      "missingMethods": 24,
+      "typeIncompatibility": 89,
+      "propertyMissing": 62
+    },
+    "mostCritical": [
+      {
+        "file": "src/clinical/emergency/EmergencyCareService.ts",
+        "errors": 22,
+        "description": "Multiple missing methods and incorrect type mappings"
+      },
+      {
+        "file": "src/clinical/coordination/CarePlanManagementService.ts",
+        "errors": 2,
+        "description": "FHIR type incompatibilities"
+      }
+    ]
+  },
+  "testResults": {
+    "totalSuites": 10,
+    "passedSuites": 2,
+    "failedSuites": 8,
+    "totalTests": 101,
+    "passedTests": 74,
+    "failedTests": 27,
+    "failureRate": "26.7%",
+    "failingTestSuites": [
+      "frontend/src/components/clinical/__tests__/ClinicalNoteInput.test.tsx",
+      "frontend/src/components/patient/__tests__/PatientHeader.test.tsx",
+      "backend/tests/unit/services/medplum.service.test.ts",
+      "frontend/src/components/auth/__tests__/LoginForm.test.tsx",
+      "backend/tests/integration/auth.controller.integration.test.ts",
+      "backend/tests/unit/services/fhir-resources.service.test.ts",
+      "backend/tests/setup.ts",
+      "backend/tests/security/auth-security.test.ts"
+    ]
+  },
+  "criticalIssues": [
+    {
+      "severity": "HIGH",
+      "category": "Service Implementation",
+      "description": "EmergencyCareService has 22 missing method implementations",
+      "impact": "Emergency care functionality completely broken"
+    },
+    {
+      "severity": "HIGH",
+      "category": "Type Safety",
+      "description": "Multiple FHIR type incompatibilities in clinical services",
+      "impact": "Cannot compile TypeScript code"
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "Testing",
+      "description": "80% of test suites failing",
+      "impact": "Cannot validate code correctness"
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "UI Components",
+      "description": "VitalSignCard stories have incorrect prop types",
+      "impact": "Storybook documentation broken"
+    }
+  ],
+  "recommendedActions": [
+    {
+      "priority": 1,
+      "action": "Fix EmergencyCareService missing methods",
+      "effort": "2-3 hours",
+      "agent": "backend-specialist"
+    },
+    {
+      "priority": 2,
+      "action": "Resolve FHIR type incompatibilities",
+      "effort": "1-2 hours",
+      "agent": "fhir-specialist"
+    },
+    {
+      "priority": 3,
+      "action": "Fix VitalSignCard story prop types",
+      "effort": "30 minutes",
+      "agent": "frontend-specialist"
+    },
+    {
+      "priority": 4,
+      "action": "Repair failing test suites",
+      "effort": "2-3 hours",
+      "agent": "test-engineer"
+    }
+  ]
+}

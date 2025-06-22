@@ -19,7 +19,9 @@ import {
   Immunization,
   Bundle,
 } from '@medplum/fhirtypes';
+
 import { medplumService } from './medplum.service';
+
 import { 
   OmniCarePatient, 
   OmniCareEncounter, 
@@ -657,13 +659,13 @@ export class FHIRResourcesService {
   /**
    * Validate a FHIR resource
    */
-  async validateResource<T>(resource: T): Promise<ValidationResult> {
+  async validateResource<T extends import('@medplum/fhirtypes').Resource>(resource: T): Promise<ValidationResult> {
     try {
       const result = await medplumService.validateResource(resource);
       
       // Parse validation results
       const validationResult: ValidationResult = {
-        valid: !result.issue || result.issue.length === 0,
+        valid: true, // Will be set to false if there are errors
         errors: [],
         warnings: [],
       };
@@ -687,6 +689,9 @@ export class FHIRResourcesService {
           }
         });
       }
+
+      // Resource is invalid only if there are errors or fatal issues
+      validationResult.valid = validationResult.errors.length === 0;
 
       logger.fhir('Resource validation completed', {
         valid: validationResult.valid,

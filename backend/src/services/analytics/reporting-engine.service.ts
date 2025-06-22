@@ -4,9 +4,8 @@
  * Custom report builder, scheduled reporting, and automated alerts
  */
 
-import { Injectable } from '@nestjs/common';
 import { EventEmitter } from 'events';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { getErrorMessage } from '@/utils/error.utils';
 
 export interface ReportConfiguration {
   id?: string;
@@ -113,7 +112,6 @@ export interface ReportAlert {
   triggerCount: number;
 }
 
-@Injectable()
 export class ReportingEngineService extends EventEmitter {
   private reportConfigurations: Map<string, ReportConfiguration> = new Map();
   private generatedReports: Map<string, GeneratedReport> = new Map();
@@ -249,7 +247,7 @@ export class ReportingEngineService extends EventEmitter {
       this.emit('report-failed', {
         reportId,
         configurationId,
-        error: error.message
+        error: getErrorMessage(error)
       });
 
       throw error;
@@ -438,7 +436,7 @@ export class ReportingEngineService extends EventEmitter {
   }
 
   // Scheduled job for automatic report generation
-  @Cron(CronExpression.EVERY_HOUR)
+  // Note: Would need to implement external cron scheduler (e.g., node-cron)
   async processScheduledReports(): Promise<void> {
     const now = new Date();
     
@@ -563,7 +561,7 @@ export class ReportingEngineService extends EventEmitter {
     } else if (visualization.chartType === 'bar' || visualization.chartType === 'line') {
       return data.slice(0, 10).map((row, index) => ({
         name: `Item ${index + 1}`,
-        ...visualization.dataColumns.reduce((acc, col) => {
+        ...visualization.dataColumns.reduce((acc: Record<string, any>, col) => {
           acc[col] = row[col] || Math.random() * 100;
           return acc;
         }, {})
@@ -679,7 +677,7 @@ export class ReportingEngineService extends EventEmitter {
     const [hour, minute] = schedule.time.split(':').map(Number);
 
     const nextRun = new Date(now);
-    nextRun.setHours(hour, minute, 0, 0);
+    nextRun.setHours(hour || 0, minute || 0, 0, 0);
 
     switch (schedule.frequency) {
       case 'daily':

@@ -1,7 +1,12 @@
+// Base model and common types
+export * from './base.model';
+
+// Core FHIR resource models
 export * from './patient.model';
-export * from './encounter.model';
 export * from './practitioner.model';
 export * from './organization.model';
-export * from './billing.model';
+export * from './encounter.model';
 export * from './appointment.model';
-export * from './base.model';
+
+// Additional models
+export * from './billing.model';

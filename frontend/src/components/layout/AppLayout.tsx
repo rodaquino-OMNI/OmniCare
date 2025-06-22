@@ -5,6 +5,8 @@ import { AppShell } from '@mantine/core';
 import { useSidebar } from '@/stores/ui';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import { OfflineStatusBanner, SyncProgressIndicator } from '@/components/offline';
+import { useSyncStore } from '@/stores/sync';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -25,38 +27,52 @@ export function AppLayout({
   headerActions,
 }: AppLayoutProps) {
   const { isOpen, isCollapsed } = useSidebar();
+  const { isSyncing } = useSyncStore();
 
   return (
-    <AppShell
-      navbar={{
-        width: isCollapsed ? 80 : 280,
-        breakpoint: 'md',
-        collapsed: { mobile: !isOpen, desktop: !isOpen },
-      }}
-      header={{ height: 64 }}
-      padding="md"
-    >
-      {/* Sidebar Navigation */}
-      <AppShell.Navbar p={0}>
-        <Sidebar />
-      </AppShell.Navbar>
+    <>
+      {/* Offline Status Banner - Fixed position */}
+      <OfflineStatusBanner position="top" />
+      
+      <AppShell
+        navbar={{
+          width: isCollapsed ? 80 : 280,
+          breakpoint: 'md',
+          collapsed: { mobile: !isOpen, desktop: !isOpen },
+        }}
+        header={{ height: 64 }}
+        padding="md"
+      >
+        {/* Sidebar Navigation */}
+        <AppShell.Navbar p={0}>
+          <Sidebar />
+        </AppShell.Navbar>
 
-      {/* Header */}
-      <AppShell.Header>
-        <Header 
-          title={title}
-          subtitle={subtitle}
-          breadcrumbs={breadcrumbs}
+        {/* Header */}
+        <AppShell.Header>
+          <Header 
+            title={title}
+            subtitle={subtitle}
+            breadcrumbs={breadcrumbs}
+          />
+        </AppShell.Header>
+
+        {/* Main Content */}
+        <AppShell.Main>
+          <div className="min-h-[calc(100vh-64px-2rem)]">
+            {children}
+          </div>
+        </AppShell.Main>
+      </AppShell>
+      
+      {/* Sync Progress Indicator - Fixed position */}
+      {isSyncing && (
+        <SyncProgressIndicator 
+          position="fixed"
+          showDetails={true}
         />
-      </AppShell.Header>
-
-      {/* Main Content */}
-      <AppShell.Main>
-        <div className="min-h-[calc(100vh-64px-2rem)]">
-          {children}
-        </div>
-      </AppShell.Main>
-    </AppShell>
+      )}
+    </>
   );
 }
 

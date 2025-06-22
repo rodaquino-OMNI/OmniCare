@@ -1,51 +1,36 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Textarea, 
-  Menu, 
+  Popover, 
+  Group, 
   Text, 
-  Stack, 
-  Paper, 
   Badge, 
-  Group,
+  ScrollArea,
+  Paper,
   ActionIcon,
-  Button,
-  Popover,
+  Tooltip,
   Divider,
-  ScrollArea
+  Button,
+  Stack,
+  Modal,
+  Select,
+  TextInput
 } from '@mantine/core';
 import { 
-  IconSparkles, 
   IconTemplate, 
-  IconUser, 
-  IconStethoscope,
-  IconCalendar,
+  IconBrain, 
+  IconChevronRight,
   IconClock,
+  IconStethoscope,
+  IconPill,
+  IconKeyboard,
   IconCheck,
-  IconX,
-  IconBulb
+  IconX
 } from '@tabler/icons-react';
-import { useAuth } from '@/stores/auth';
-import { formatDateTime } from '@/utils';
-
-interface SmartTextTemplate {
-  id: string;
-  name: string;
-  description: string;
-  category: 'assessment' | 'plan' | 'history' | 'examination' | 'discharge' | 'progress';
-  template: string;
-  variables: string[];
-  userTypes: string[];
-}
-
-interface SmartTextSuggestion {
-  id: string;
-  text: string;
-  type: 'template' | 'phrase' | 'medication' | 'diagnosis' | 'procedure';
-  description?: string;
-  category?: string;
-}
+import { notifications } from '@mantine/notifications';
+import { offlineSmartTextService, SmartTextTemplate } from '@/services/offline-smarttext.service';
 
 interface SmartTextProps {
   value: string;
@@ -60,471 +45,358 @@ interface SmartTextProps {
     patientId: string;
     encounterId?: string;
     visitType?: string;
+    age?: number;
+    gender?: string;
+    conditions?: string[];
+    medications?: string[];
   };
-  onSave?: () => void;
-  onCancel?: () => void;
 }
 
-const CLINICAL_TEMPLATES: SmartTextTemplate[] = [
-  {
-    id: 'soap-assessment',
-    name: 'SOAP Assessment',
-    description: 'Standard SOAP note template',
-    category: 'assessment',
-    template: `SUBJECTIVE:
-{{CHIEF_COMPLAINT}}
-
-OBJECTIVE:
-Vital Signs: {{VITAL_SIGNS}}
-Physical Examination: {{PHYSICAL_EXAM}}
-
-ASSESSMENT:
-{{ASSESSMENT}}
-
-PLAN:
-{{PLAN}}`,
-    variables: ['CHIEF_COMPLAINT', 'VITAL_SIGNS', 'PHYSICAL_EXAM', 'ASSESSMENT', 'PLAN'],
-    userTypes: ['physician', 'nurse']
-  },
-  {
-    id: 'progress-note',
-    name: 'Progress Note',
-    description: 'Daily progress note template',
-    category: 'progress',
-    template: `Patient continues with {{CONDITION}}.
-
-Current Status: {{STATUS}}
-
-Interventions: {{INTERVENTIONS}}
-
-Response: {{RESPONSE}}
-
-Plan: {{PLAN}}`,
-    variables: ['CONDITION', 'STATUS', 'INTERVENTIONS', 'RESPONSE', 'PLAN'],
-    userTypes: ['physician', 'nurse']
-  },
-  {
-    id: 'discharge-summary',
-    name: 'Discharge Summary',
-    description: 'Hospital discharge summary template',
-    category: 'discharge',
-    template: `ADMISSION DATE: {{ADMISSION_DATE}}
-DISCHARGE DATE: {{DISCHARGE_DATE}}
-
-ADMITTING DIAGNOSIS: {{ADMITTING_DIAGNOSIS}}
-DISCHARGE DIAGNOSIS: {{DISCHARGE_DIAGNOSIS}}
-
-HOSPITAL COURSE:
-{{HOSPITAL_COURSE}}
-
-DISCHARGE MEDICATIONS:
-{{DISCHARGE_MEDICATIONS}}
-
-FOLLOW-UP:
-{{FOLLOW_UP}}
-
-DISCHARGE INSTRUCTIONS:
-{{DISCHARGE_INSTRUCTIONS}}`,
-    variables: ['ADMISSION_DATE', 'DISCHARGE_DATE', 'ADMITTING_DIAGNOSIS', 'DISCHARGE_DIAGNOSIS', 'HOSPITAL_COURSE', 'DISCHARGE_MEDICATIONS', 'FOLLOW_UP', 'DISCHARGE_INSTRUCTIONS'],
-    userTypes: ['physician']
-  },
-  {
-    id: 'nursing-assessment',
-    name: 'Nursing Assessment',
-    description: 'Comprehensive nursing assessment',
-    category: 'assessment',
-    template: `NURSING ASSESSMENT:
-
-General Appearance: {{GENERAL_APPEARANCE}}
-Neurological: {{NEUROLOGICAL}}
-Cardiovascular: {{CARDIOVASCULAR}}
-Respiratory: {{RESPIRATORY}}
-Gastrointestinal: {{GASTROINTESTINAL}}
-Genitourinary: {{GENITOURINARY}}
-Musculoskeletal: {{MUSCULOSKELETAL}}
-Skin/Wounds: {{SKIN_WOUNDS}}
-
-Pain Assessment: {{PAIN_ASSESSMENT}}
-Fall Risk: {{FALL_RISK}}
-Psychosocial: {{PSYCHOSOCIAL}}
-
-Nursing Diagnosis: {{NURSING_DIAGNOSIS}}
-Interventions: {{INTERVENTIONS}}`,
-    variables: ['GENERAL_APPEARANCE', 'NEUROLOGICAL', 'CARDIOVASCULAR', 'RESPIRATORY', 'GASTROINTESTINAL', 'GENITOURINARY', 'MUSCULOSKELETAL', 'SKIN_WOUNDS', 'PAIN_ASSESSMENT', 'FALL_RISK', 'PSYCHOSOCIAL', 'NURSING_DIAGNOSIS', 'INTERVENTIONS'],
-    userTypes: ['nurse']
-  }
-];
-
-const SMART_PHRASES: SmartTextSuggestion[] = [
-  {
-    id: 'normal-exam',
-    text: 'Physical examination reveals a well-appearing patient in no acute distress.',
-    type: 'phrase',
-    description: 'Normal physical exam',
-    category: 'examination'
-  },
-  {
-    id: 'stable-condition',
-    text: 'Patient remains in stable condition with no acute changes.',
-    type: 'phrase',
-    description: 'Stable patient status',
-    category: 'assessment'
-  },
-  {
-    id: 'pain-free',
-    text: 'Patient reports being pain-free at this time.',
-    type: 'phrase',
-    description: 'No pain reported',
-    category: 'subjective'
-  },
-  {
-    id: 'follow-up',
-    text: 'Patient advised to follow up with primary care physician in 1-2 weeks.',
-    type: 'phrase',
-    description: 'Standard follow-up instruction',
-    category: 'plan'
-  }
-];
+interface MacroSuggestion {
+  trigger: string;
+  expansion: string;
+  category: string;
+}
 
 export function SmartText({
   value,
   onChange,
-  placeholder = 'Start typing your clinical note...',
+  placeholder,
   minRows = 4,
   maxRows = 20,
   disabled = false,
-  showTemplates = true,
-  showAISuggestions = true,
-  patientContext,
-  onSave,
-  onCancel
+  showTemplates = false,
+  showAISuggestions = false,
+  patientContext
 }: SmartTextProps) {
-  const { user } = useAuth();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [cursorPosition, setCursorPosition] = useState(0);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [suggestions, setSuggestions] = useState<SmartTextSuggestion[]>([]);
-  const [selectedSuggestion, setSelectedSuggestion] = useState(0);
-  const [templateMenuOpen, setTemplateMenuOpen] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [showMacroPopover, setShowMacroPopover] = useState(false);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [macroSuggestions, setMacroSuggestions] = useState<MacroSuggestion[]>([]);
+  const [contextualSuggestions, setContextualSuggestions] = useState<string[]>([]);
+  const [selectedMacroIndex, setSelectedMacroIndex] = useState(0);
+  const [currentWord, setCurrentWord] = useState('');
+  const [templates, setTemplates] = useState<SmartTextTemplate[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<SmartTextTemplate | null>(null);
+  const [templateValues, setTemplateValues] = useState<Record<string, string>>({});
 
-  // Filter templates based on user role
-  const availableTemplates = CLINICAL_TEMPLATES.filter(template =>
-    template.userTypes.includes(user?.role || '')
-  );
-
+  // Load templates on mount
   useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
+    if (showTemplates) {
+      loadTemplates();
+    }
+  }, [showTemplates, patientContext?.visitType]);
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (showSuggestions) {
-        switch (e.key) {
-          case 'ArrowDown':
-            e.preventDefault();
-            setSelectedSuggestion(prev => 
-              prev < suggestions.length - 1 ? prev + 1 : 0
-            );
-            break;
-          case 'ArrowUp':
-            e.preventDefault();
-            setSelectedSuggestion(prev => 
-              prev > 0 ? prev - 1 : suggestions.length - 1
-            );
-            break;
-          case 'Enter':
-          case 'Tab':
-            e.preventDefault();
-            applySuggestion(suggestions[selectedSuggestion]);
-            break;
-          case 'Escape':
-            setShowSuggestions(false);
-            break;
-        }
+  const loadTemplates = async () => {
+    const category = patientContext?.visitType || 'progress';
+    const loadedTemplates = await offlineSmartTextService.getTemplates(category);
+    setTemplates(loadedTemplates);
+  };
+
+  // Handle text input and macro detection
+  const handleTextChange = useCallback(async (newValue: string) => {
+    onChange(newValue);
+
+    if (!textareaRef.current) return;
+
+    const cursorPosition = textareaRef.current.selectionStart;
+    const textBeforeCursor = newValue.substring(0, cursorPosition);
+    const words = textBeforeCursor.split(/\s+/);
+    const lastWord = words[words.length - 1];
+
+    // Check for macro triggers
+    if (lastWord.startsWith('.')) {
+      setCurrentWord(lastWord);
+      const allMacros = offlineSmartTextService.getAllMacros();
+      const filteredMacros = allMacros.filter(macro => 
+        macro.trigger.toLowerCase().startsWith(lastWord.toLowerCase())
+      );
+      
+      if (filteredMacros.length > 0) {
+        setMacroSuggestions(filteredMacros);
+        setShowMacroPopover(true);
+        setSelectedMacroIndex(0);
+      } else {
+        setShowMacroPopover(false);
       }
-    };
-
-    textarea.addEventListener('keydown', handleKeyDown);
-    return () => textarea.removeEventListener('keydown', handleKeyDown);
-  }, [showSuggestions, suggestions, selectedSuggestion]);
-
-  const handleTextChange = (newValue: string) => {
-    onChange(newValue);
-    const textarea = textareaRef.current;
-    if (textarea) {
-      setCursorPosition(textarea.selectionStart);
-    }
-
-    // Trigger smart suggestions
-    if (showAISuggestions) {
-      triggerSmartSuggestions(newValue);
-    }
-  };
-
-  const triggerSmartSuggestions = (text: string) => {
-    // Simple keyword-based suggestions (in production, this would use AI)
-    const lastWords = text.toLowerCase().split(' ').slice(-3).join(' ');
-    
-    const matchingSuggestions = SMART_PHRASES.filter(phrase =>
-      phrase.text.toLowerCase().includes(lastWords) ||
-      phrase.description?.toLowerCase().includes(lastWords)
-    );
-
-    if (matchingSuggestions.length > 0) {
-      setSuggestions(matchingSuggestions);
-      setSelectedSuggestion(0);
-      setShowSuggestions(true);
     } else {
-      setShowSuggestions(false);
+      setShowMacroPopover(false);
+      
+      // Get contextual suggestions if enabled
+      if (showAISuggestions && patientContext) {
+        const suggestions = await offlineSmartTextService.getContextualSuggestions(
+          patientContext.visitType || 'progress',
+          newValue,
+          {
+            age: patientContext.age,
+            gender: patientContext.gender,
+            conditions: patientContext.conditions,
+            medications: patientContext.medications
+          }
+        );
+        setContextualSuggestions(suggestions);
+      }
     }
-  };
 
-  const applySuggestion = (suggestion: SmartTextSuggestion) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
+    // Update autocomplete data
+    if (lastWord.length > 2 && !lastWord.startsWith('.')) {
+      await offlineSmartTextService.updateAutoComplete(
+        lastWord,
+        patientContext?.visitType || 'general'
+      );
+    }
+  }, [onChange, showAISuggestions, patientContext]);
 
-    const beforeCursor = value.substring(0, cursorPosition);
-    const afterCursor = value.substring(cursorPosition);
-    const newValue = beforeCursor + suggestion.text + afterCursor;
+  // Handle keyboard navigation for macro suggestions
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (showMacroPopover && macroSuggestions.length > 0) {
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          setSelectedMacroIndex((prev) => 
+            prev < macroSuggestions.length - 1 ? prev + 1 : 0
+          );
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          setSelectedMacroIndex((prev) => 
+            prev > 0 ? prev - 1 : macroSuggestions.length - 1
+          );
+          break;
+        case 'Enter':
+        case 'Tab':
+          e.preventDefault();
+          applyMacro(macroSuggestions[selectedMacroIndex]);
+          break;
+        case 'Escape':
+          setShowMacroPopover(false);
+          break;
+      }
+    }
+  }, [showMacroPopover, macroSuggestions, selectedMacroIndex]);
+
+  // Apply selected macro
+  const applyMacro = (macro: MacroSuggestion) => {
+    if (!textareaRef.current) return;
+
+    const cursorPosition = textareaRef.current.selectionStart;
+    const textBeforeCursor = value.substring(0, cursorPosition);
+    const textAfterCursor = value.substring(cursorPosition);
+    
+    // Remove the trigger word and replace with expansion
+    const beforeWithoutTrigger = textBeforeCursor.substring(0, textBeforeCursor.length - currentWord.length);
+    const newValue = beforeWithoutTrigger + macro.expansion + textAfterCursor;
     
     onChange(newValue);
-    setShowSuggestions(false);
-
-    // Set cursor position after the inserted text
+    setShowMacroPopover(false);
+    
+    // Position cursor after the expansion
     setTimeout(() => {
-      const newCursorPos = cursorPosition + suggestion.text.length;
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
-      textarea.focus();
+      if (textareaRef.current) {
+        const newPosition = beforeWithoutTrigger.length + macro.expansion.length;
+        textareaRef.current.setSelectionRange(newPosition, newPosition);
+        textareaRef.current.focus();
+      }
     }, 0);
   };
 
-  const applyTemplate = (template: SmartTextTemplate) => {
-    let templateText = template.template;
-    
-    // Replace variables with placeholders or patient data
-    template.variables.forEach(variable => {
-      const placeholder = `[${variable.replace(/_/g, ' ')}]`;
-      templateText = templateText.replace(`{{${variable}}}`, placeholder);
+  // Apply template
+  const applyTemplate = () => {
+    if (!selectedTemplate) return;
+
+    const processedContent = offlineSmartTextService.processTemplate(
+      selectedTemplate,
+      templateValues
+    );
+
+    const newValue = value + (value ? '\n\n' : '') + processedContent;
+    onChange(newValue);
+    setShowTemplateModal(false);
+    setSelectedTemplate(null);
+    setTemplateValues({});
+
+    notifications.show({
+      title: 'Template Applied',
+      message: `${selectedTemplate.name} has been inserted`,
+      color: 'blue'
     });
-
-    // If there's existing text, add template at cursor position
-    const textarea = textareaRef.current;
-    if (textarea && value.trim()) {
-      const beforeCursor = value.substring(0, cursorPosition);
-      const afterCursor = value.substring(cursorPosition);
-      const newValue = beforeCursor + '\n\n' + templateText + '\n\n' + afterCursor;
-      onChange(newValue);
-    } else {
-      onChange(templateText);
-    }
-
-    setTemplateMenuOpen(false);
   };
 
-  const generateAISuggestion = async () => {
-    setIsProcessing(true);
-    try {
-      // In production, this would call an AI service
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const aiSuggestion = {
-        id: 'ai-suggestion',
-        text: 'Continue with recommended diagnostic workup including CBC, CMP, and chest X-ray.',
-        type: 'phrase' as const,
-        description: 'AI-generated suggestion based on context'
-      };
-      
-      setSuggestions([aiSuggestion]);
-      setShowSuggestions(true);
-      setSelectedSuggestion(0);
-    } catch (error) {
-      console.error('Error generating AI suggestion:', error);
-    } finally {
-      setIsProcessing(false);
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'vitals': return <IconStethoscope size={14} />;
+      case 'medication': return <IconPill size={14} />;
+      case 'time': return <IconClock size={14} />;
+      default: return <IconKeyboard size={14} />;
     }
   };
 
   return (
-    <Stack gap="sm">
-      {/* Toolbar */}
-      <Group justify="space-between">
-        <Group gap="sm">
-          {showTemplates && (
-            <Menu 
-              shadow="md" 
-              width={300}
-              opened={templateMenuOpen}
-              onChange={setTemplateMenuOpen}
-            >
-              <Menu.Target>
-                <Button
-                  leftSection={<IconTemplate size={16} />}
-                  variant="light"
-                  size="sm"
-                  disabled={disabled}
-                >
-                  Templates
-                </Button>
-              </Menu.Target>
-              <Menu.Dropdown>
-                <Menu.Label>Clinical Templates</Menu.Label>
-                {availableTemplates.map(template => (
-                  <Menu.Item
-                    key={template.id}
-                    onClick={() => applyTemplate(template)}
-                  >
-                    <div>
-                      <Text size="sm" fw={500}>{template.name}</Text>
-                      <Text size="xs" c="dimmed">{template.description}</Text>
-                    </div>
-                  </Menu.Item>
-                ))}
-              </Menu.Dropdown>
-            </Menu>
-          )}
+    <>
+      <div style={{ position: 'relative' }}>
+        {showTemplates && (
+          <Group justify="flex-end" mb="xs">
+            <Tooltip label="Insert Template">
+              <ActionIcon 
+                variant="light" 
+                onClick={() => setShowTemplateModal(true)}
+                disabled={disabled}
+              >
+                <IconTemplate size={16} />
+              </ActionIcon>
+            </Tooltip>
+            {showAISuggestions && (
+              <Tooltip label="AI Suggestions">
+                <ActionIcon variant="light" disabled={disabled}>
+                  <IconBrain size={16} />
+                </ActionIcon>
+              </Tooltip>
+            )}
+          </Group>
+        )}
 
-          {showAISuggestions && (
-            <Button
-              leftSection={<IconSparkles size={16} />}
-              variant="light"
-              size="sm"
+        <Popover 
+          opened={showMacroPopover} 
+          onClose={() => setShowMacroPopover(false)}
+          width="target"
+          position="top-start"
+          withArrow={false}
+        >
+          <Popover.Target>
+            <Textarea
+              ref={textareaRef}
+              value={value}
+              onChange={(e) => handleTextChange(e.currentTarget.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={placeholder}
+              minRows={minRows}
+              maxRows={maxRows}
               disabled={disabled}
-              loading={isProcessing}
-              onClick={generateAISuggestion}
-            >
-              AI Assist
-            </Button>
-          )}
-        </Group>
+              autosize
+              style={{ fontFamily: 'monospace' }}
+            />
+          </Popover.Target>
+          
+          <Popover.Dropdown p={0}>
+            <ScrollArea mah={200}>
+              {macroSuggestions.map((macro, index) => (
+                <Paper
+                  key={macro.trigger}
+                  p="xs"
+                  className={`cursor-pointer ${
+                    index === selectedMacroIndex ? 'bg-blue-50' : 'hover:bg-gray-50'
+                  }`}
+                  onClick={() => applyMacro(macro)}
+                >
+                  <Group gap="xs" wrap="nowrap">
+                    {getCategoryIcon(macro.category)}
+                    <div style={{ flex: 1 }}>
+                      <Text size="sm" fw={500}>{macro.trigger}</Text>
+                      <Text size="xs" c="dimmed" lineClamp={1}>
+                        {macro.expansion}
+                      </Text>
+                    </div>
+                    <IconChevronRight size={14} className="text-gray-400" />
+                  </Group>
+                </Paper>
+              ))}
+            </ScrollArea>
+          </Popover.Dropdown>
+        </Popover>
 
-        <Group gap="sm">
-          <Badge variant="light" size="sm">
-            {user?.role?.replace('_', ' ').toUpperCase()}
-          </Badge>
-          <Text size="xs" c="dimmed">
-            {formatDateTime(new Date())}
-          </Text>
-        </Group>
-      </Group>
-
-      {/* Text Area with Suggestions */}
-      <div className="relative">
-        <Textarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => handleTextChange(e.currentTarget.value)}
-          placeholder={placeholder}
-          minRows={minRows}
-          maxRows={maxRows}
-          disabled={disabled}
-          autosize
-          className="font-mono"
-          onFocus={() => {
-            const textarea = textareaRef.current;
-            if (textarea) {
-              setCursorPosition(textarea.selectionStart);
-            }
-          }}
-          onSelect={() => {
-            const textarea = textareaRef.current;
-            if (textarea) {
-              setCursorPosition(textarea.selectionStart);
-            }
-          }}
-        />
-
-        {/* Suggestions Popup */}
-        {showSuggestions && suggestions.length > 0 && (
-          <Paper
-            shadow="lg"
-            p="xs"
-            className="absolute z-50 mt-1 w-full max-w-md"
-            style={{ 
-              top: '100%',
-              left: 0
-            }}
-          >
+        {/* Contextual Suggestions */}
+        {showAISuggestions && contextualSuggestions.length > 0 && (
+          <Paper shadow="sm" p="sm" mt="xs" withBorder>
+            <Group gap="xs" mb="xs">
+              <IconBrain size={16} className="text-blue-600" />
+              <Text size="sm" fw={500}>Suggestions</Text>
+            </Group>
             <Stack gap="xs">
-              <Group gap="xs">
-                <IconBulb size={14} />
-                <Text size="xs" fw={500}>Smart Suggestions</Text>
-              </Group>
-              <Divider />
-              <ScrollArea mah={200}>
-                <Stack gap="xs">
-                  {suggestions.map((suggestion, index) => (
-                    <Paper
-                      key={suggestion.id}
-                      p="xs"
-                      className={`cursor-pointer transition-colors ${
-                        index === selectedSuggestion 
-                          ? 'bg-blue-50 border border-blue-200' 
-                          : 'hover:bg-gray-50'
-                      }`}
-                      onClick={() => applySuggestion(suggestion)}
-                    >
-                      <Text size="sm">{suggestion.text}</Text>
-                      {suggestion.description && (
-                        <Text size="xs" c="dimmed">{suggestion.description}</Text>
-                      )}
-                    </Paper>
-                  ))}
-                </Stack>
-              </ScrollArea>
+              {contextualSuggestions.map((suggestion, index) => (
+                <Text 
+                  key={index} 
+                  size="sm" 
+                  className="cursor-pointer hover:text-blue-600"
+                  onClick={() => {
+                    const newValue = value + (value.endsWith(' ') ? '' : ' ') + suggestion;
+                    onChange(newValue);
+                  }}
+                >
+                  • {suggestion}
+                </Text>
+              ))}
             </Stack>
           </Paper>
         )}
       </div>
 
-      {/* Action Buttons */}
-      {(onSave || onCancel) && (
-        <Group justify="flex-end" gap="sm">
-          {onCancel && (
-            <Button
-              leftSection={<IconX size={16} />}
-              variant="light"
-              color="gray"
-              onClick={onCancel}
-            >
+      {/* Template Modal */}
+      <Modal
+        opened={showTemplateModal}
+        onClose={() => {
+          setShowTemplateModal(false);
+          setSelectedTemplate(null);
+          setTemplateValues({});
+        }}
+        title="Insert Template"
+        size="lg"
+      >
+        <Stack gap="md">
+          <Select
+            label="Select Template"
+            placeholder="Choose a template"
+            data={templates.map(t => ({
+              value: t.id,
+              label: t.name
+            }))}
+            value={selectedTemplate?.id}
+            onChange={(value) => {
+              const template = templates.find(t => t.id === value);
+              setSelectedTemplate(template || null);
+              if (template?.placeholders) {
+                const values: Record<string, string> = {};
+                template.placeholders.forEach(p => {
+                  values[p.key] = p.defaultValue || '';
+                });
+                setTemplateValues(values);
+              }
+            }}
+          />
+
+          {selectedTemplate?.placeholders && (
+            <>
+              <Divider label="Template Fields" />
+              {selectedTemplate.placeholders.map(placeholder => (
+                <TextInput
+                  key={placeholder.key}
+                  label={placeholder.label}
+                  required={placeholder.required}
+                  value={templateValues[placeholder.key] || ''}
+                  onChange={(e) => setTemplateValues(prev => ({
+                    ...prev,
+                    [placeholder.key]: e.currentTarget.value
+                  }))}
+                  placeholder={`Enter ${placeholder.label.toLowerCase()}`}
+                />
+              ))}
+            </>
+          )}
+
+          <Group justify="flex-end" gap="sm">
+            <Button variant="light" onClick={() => setShowTemplateModal(false)}>
               Cancel
             </Button>
-          )}
-          {onSave && (
-            <Button
+            <Button 
+              onClick={applyTemplate}
+              disabled={!selectedTemplate}
               leftSection={<IconCheck size={16} />}
-              onClick={onSave}
-              disabled={!value.trim()}
             >
-              Save Note
+              Apply Template
             </Button>
-          )}
-        </Group>
-      )}
-
-      {/* Context Info */}
-      {patientContext && (
-        <Paper p="xs" className="bg-blue-50 border border-blue-200">
-          <Group gap="md">
-            <Text size="xs" c="dimmed">
-              <IconUser size={12} className="inline mr-1" />
-              Patient: {patientContext.patientId}
-            </Text>
-            {patientContext.encounterId && (
-              <Text size="xs" c="dimmed">
-                <IconStethoscope size={12} className="inline mr-1" />
-                Encounter: {patientContext.encounterId}
-              </Text>
-            )}
-            {patientContext.visitType && (
-              <Text size="xs" c="dimmed">
-                <IconCalendar size={12} className="inline mr-1" />
-                Visit: {patientContext.visitType}
-              </Text>
-            )}
           </Group>
-        </Paper>
-      )}
-    </Stack>
+        </Stack>
+      </Modal>
+    </>
   );
 }
 

@@ -11,8 +11,9 @@ import {
   HL7v2AckCode,
   HL7v2ErrorCondition
 } from '../types/hl7v2.types';
-import { ValidationResult } from '../types/integration.types';
+import { IntegrationValidationResult } from '../types/integration.types';
 import logger from '@/utils/logger';
+import { getErrorMessage } from '@/utils/error.utils';
 
 /**
  * HL7 v2 Parser Service
@@ -116,7 +117,7 @@ export class HL7v2ParserService {
       return message;
     } catch (error) {
       logger.error('Failed to parse HL7 v2 message:', error);
-      throw new Error(`HL7 v2 parsing failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`HL7 v2 parsing failed: ${getErrorMessage(error)}`);
     }
   }
 
@@ -302,13 +303,13 @@ export class HL7v2ParserService {
   private extractMessageInfo(mshSegment: HL7v2Segment): any {
     const fields = mshSegment.fields;
     
-    // Parse message type (MSH.9)
+    // Parse message type (MSH.9) - adjust for 0-based indexing
     let messageType = '';
     let triggerEvent = '';
     let messageStructure = '';
     
-    if (fields.length > 8 && fields[8].value) {
-      const msgTypeField = fields[8];
+    if (fields.length > 7 && fields[7].value) {
+      const msgTypeField = fields[7];
       if (msgTypeField.components && msgTypeField.components.length > 0) {
         messageType = this.getComponentValue(msgTypeField.components[0]);
         if (msgTypeField.components.length > 1) {
@@ -331,14 +332,14 @@ export class HL7v2ParserService {
       messageType,
       triggerEvent,
       messageStructure,
-      messageControlId: this.getFieldValue(fields, 9) || '',
-      sendingApplication: this.getFieldValue(fields, 2) || '',
-      sendingFacility: this.getFieldValue(fields, 3) || '',
-      receivingApplication: this.getFieldValue(fields, 4) || '',
-      receivingFacility: this.getFieldValue(fields, 5) || '',
-      timestamp: this.parseHL7DateTime(this.getFieldValue(fields, 6) || ''),
-      processingId: this.getFieldValue(fields, 10) || '',
-      versionId: this.getFieldValue(fields, 11) || '',
+      messageControlId: this.getFieldValue(fields, 8) || '',
+      sendingApplication: this.getFieldValue(fields, 1) || '',
+      sendingFacility: this.getFieldValue(fields, 2) || '',
+      receivingApplication: this.getFieldValue(fields, 3) || '',
+      receivingFacility: this.getFieldValue(fields, 4) || '',
+      timestamp: this.parseHL7DateTime(this.getFieldValue(fields, 5) || ''),
+      processingId: this.getFieldValue(fields, 9) || '',
+      versionId: this.getFieldValue(fields, 10) || '',
       sequenceNumber: this.parseNumber(this.getFieldValue(fields, 12)),
       continuationPointer: this.getFieldValue(fields, 13),
       acceptAcknowledgmentType: this.getFieldValue(fields, 14),
@@ -452,7 +453,7 @@ export class HL7v2ParserService {
         valid: false,
         errors: [{
           path: 'root',
-          message: `Validation failed: ${error instanceof Error ? error.message : String(error)}`,
+          message: `Validation failed: ${getErrorMessage(error)}`,
           code: 'validation-error',
           severity: 'error'
         }],

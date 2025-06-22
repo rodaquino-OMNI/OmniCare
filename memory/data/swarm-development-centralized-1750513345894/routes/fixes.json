@@ -1,0 +1,89 @@
+{
+  "timestamp": "2025-06-21T00:00:00.000Z",
+  "fixed_issues": {
+    "refreshInternalToken_method": {
+      "issue": "Method 'refreshInternalToken' does not exist on authController",
+      "fix": "Changed to 'refreshToken' which is the actual method name",
+      "location": "line 38"
+    },
+    "requireScope_permissions": {
+      "issue": "requireScope was called with multiple string arguments but was aliased to requireResourceAccess which expects different parameters",
+      "fixes": [
+        {
+          "old": "requireScope('system/*.write', 'user/*.write')",
+          "new": "requireScope(['system/*.write', 'user/*.write'])",
+          "locations": ["line 54", "line 277", "line 302"]
+        },
+        {
+          "old": "requireScope('system/*.read', 'user/*.read')",
+          "new": "requireScope(['system/*.read', 'user/*.read'])",
+          "locations": ["line 61", "line 68"]
+        },
+        {
+          "old": "requireScope('user/*.read', 'system/*.read')",
+          "new": "requireScope(['user/*.read', 'system/*.read'])",
+          "location": "line 206"
+        }
+      ],
+      "implementation": "Added new requireScope middleware that properly handles SMART on FHIR scope arrays"
+    },
+    "undefined_parameters": {
+      "issue": "TypeScript errors for string|undefined parameters",
+      "fixes": [
+        {
+          "parameter": "req.params.resourceType",
+          "solution": "Added null checks and error responses for missing resourceType",
+          "locations": ["lines 88, 117, 143, 166"]
+        },
+        {
+          "parameter": "req.params.patientId",
+          "solution": "Added conditional assignment only when req.params.id exists",
+          "locations": ["lines 123, 148, 171"]
+        },
+        {
+          "parameter": "patientId in createVitalSigns",
+          "solution": "Added fallback to empty string with patientId || ''",
+          "location": "line 251"
+        }
+      ]
+    }
+  },
+  "permission_system": {
+    "description": "OmniCare uses SMART on FHIR scopes for authorization",
+    "scope_format": "context/resource.permission",
+    "contexts": ["system", "user", "patient"],
+    "resources": ["*", "Patient", "Observation", "MedicationRequest", "Encounter", "DiagnosticReport", "CarePlan"],
+    "permissions": ["read", "write", "create", "delete", "*"],
+    "examples": [
+      "system/*.write - System-level write access to all resources",
+      "user/*.read - User-level read access to all resources",
+      "patient/Observation.read - Patient-level read access to Observations",
+      "system/Patient.* - System-level full access to Patient resources"
+    ],
+    "middleware_functions": {
+      "authenticate": "OmniCare JWT authentication",
+      "smartAuthenticate": "SMART on FHIR token authentication",
+      "requireScope": "Validates SMART on FHIR scopes (array of strings)",
+      "requireResourceAccess": "Resource-specific access control (resourceType, operation)",
+      "requirePatientAccess": "Patient-specific data access control",
+      "requireAdmin": "Admin role authorization",
+      "requirePermission": "Permission-based authorization (Permission enum)",
+      "requireRole": "Role-based authorization (UserRole enum)"
+    }
+  },
+  "auth_controller_methods": {
+    "oauth2_endpoints": {
+      "authorize": "GET /auth/authorize - SMART authorization endpoint",
+      "token": "POST /auth/token - SMART token endpoint",
+      "introspect": "POST /auth/introspect - Token introspection endpoint"
+    },
+    "internal_auth": {
+      "login": "POST /auth/login - JWT-based authentication",
+      "refreshToken": "POST /auth/refresh - Refresh access token (was incorrectly called refreshInternalToken)",
+      "logout": "POST /auth/logout - Logout and destroy session",
+      "getCurrentUser": "GET /auth/me - Get current user info",
+      "setupMfa": "POST /auth/setup-mfa - Setup multi-factor authentication",
+      "verifyMfa": "POST /auth/verify-mfa - Verify and enable MFA"
+    }
+  }
+}

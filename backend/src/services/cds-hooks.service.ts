@@ -1,4 +1,9 @@
 import axios from 'axios';
+
+import { fhirResourcesService } from './fhir-resources.service';
+import { medplumService } from './medplum.service';
+
+import config from '@/config';
 import {
   CDSHookRequest,
   CDSHookResponse,
@@ -12,10 +17,8 @@ import {
   ServiceRequest,
   Observation,
 } from '@/types/fhir';
-import { medplumService } from './medplum.service';
-import { fhirResourcesService } from './fhir-resources.service';
-import config from '@/config';
 import logger from '@/utils/logger';
+import { getErrorMessage } from '@/utils/error.utils';
 
 interface CDSService {
   hook: string;
@@ -142,7 +145,7 @@ export class CDSHooksService {
 
       // Get patient data
       const patient = prefetchData.patient || 
-        await fhirResourcesService.getPatient(request.context.patientId);
+        (request.context.patientId ? await fhirResourcesService.getPatient(request.context.patientId) : null);
 
       // Risk assessment card
       const riskCard = await this.assessPatientRisk(patient, prefetchData);
@@ -184,7 +187,7 @@ export class CDSHooksService {
 
       // Get patient data
       const patient = prefetchData.patient || 
-        await fhirResourcesService.getPatient(request.context.patientId);
+        (request.context.patientId ? await fhirResourcesService.getPatient(request.context.patientId) : null);
 
       // Check each draft medication order
       for (const draftOrder of request.context.draftOrders || []) {
@@ -235,7 +238,7 @@ export class CDSHooksService {
 
       // Get patient data
       const patient = prefetchData.patient || 
-        await fhirResourcesService.getPatient(request.context.patientId);
+        (request.context.patientId ? await fhirResourcesService.getPatient(request.context.patientId) : null);
 
       // Check each draft order
       for (const draftOrder of request.context.draftOrders || []) {
@@ -644,7 +647,7 @@ export class CDSHooksService {
     } catch (error) {
       return {
         status: 'DOWN',
-        details: { error: error instanceof Error ? error.message : String(error) },
+        details: { error: getErrorMessage(error) },
       };
     }
   }
