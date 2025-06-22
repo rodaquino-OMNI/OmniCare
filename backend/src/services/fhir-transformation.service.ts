@@ -131,7 +131,7 @@ export class FHIRTransformationService {
       return patient;
     } catch (error) {
       logger.error('Failed to transform patient to FHIR:', error);
-      throw new Error(`Patient transformation failed: ${error}`);
+      throw new Error(`Patient transformation failed: ${String(error)}`);
     }
   }
 
@@ -183,7 +183,7 @@ export class FHIRTransformationService {
       return omnicarePatient;
     } catch (error) {
       logger.error('Failed to transform FHIR patient to OmniCare format:', error);
-      throw new Error(`Patient transformation failed: ${error}`);
+      throw new Error(`Patient transformation failed: ${String(error)}`);
     }
   }
 
@@ -298,7 +298,7 @@ export class FHIRTransformationService {
       return encounter;
     } catch (error) {
       logger.error('Failed to transform encounter to FHIR:', error);
-      throw new Error(`Encounter transformation failed: ${error}`);
+      throw new Error(`Encounter transformation failed: ${String(error)}`);
     }
   }
 
@@ -436,7 +436,7 @@ export class FHIRTransformationService {
       return observation;
     } catch (error) {
       logger.error('Failed to transform observation to FHIR:', error);
-      throw new Error(`Observation transformation failed: ${error}`);
+      throw new Error(`Observation transformation failed: ${String(error)}`);
     }
   }
 
@@ -884,7 +884,7 @@ export class FHIRTransformationService {
       return { valid, errors };
     } catch (error) {
       logger.error('Transformation validation error:', error);
-      return { valid: false, errors: [`Validation error: ${error}`] };
+      return { valid: false, errors: [`Validation error: ${String(error)}`] };
     }
   }
 
@@ -948,7 +948,7 @@ export class FHIRTransformationService {
       return bundle;
     } catch (error) {
       logger.error('Bundle transformation failed:', error);
-      throw new Error(`Bundle transformation failed: ${error}`);
+      throw new Error(`Bundle transformation failed: ${String(error)}`);
     }
   }
 }

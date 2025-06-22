@@ -6,6 +6,84 @@ import { TEST_RUN_ID, getTestDataCleanupIds } from './helpers/test-data';
  * Cleans up test environment, generates reports, and ensures proper cleanup
  */
 
+// TypeScript interfaces for test data structures
+interface TestResult {
+  suites?: TestSuite[];
+  [key: string]: any;
+}
+
+interface TestSuite {
+  specs?: TestSpec[];
+  [key: string]: any;
+}
+
+interface TestSpec {
+  ok: boolean;
+  duration?: number;
+  [key: string]: any;
+}
+
+interface TestResultsCollection {
+  [filename: string]: TestResult;
+}
+
+interface TestSummary {
+  total: number;
+  passed: number;
+  failed: number;
+  skipped: number;
+  passRate: string;
+  totalDuration: string;
+  categories: {
+    authentication: { tests: number; passed: number };
+    patientManagement: { tests: number; passed: number };
+    clinicalWorkflows: { tests: number; passed: number };
+    fhirOperations: { tests: number; passed: number };
+    errorHandling: { tests: number; passed: number };
+  };
+}
+
+interface PerformanceData {
+  [key: string]: any;
+}
+
+interface CoverageData {
+  [key: string]: any;
+}
+
+interface TestReport {
+  testRunId: string;
+  timestamp: string;
+  environment: string;
+  baseURL?: string;
+  config: {
+    browsers: string[];
+    timeout?: number;
+    retries?: number;
+    workers?: number;
+  };
+  results: TestResultsCollection;
+  summary: TestSummary;
+  performance: PerformanceData;
+  coverage: CoverageData;
+}
+
+interface TeardownSummary {
+  testRunId: string;
+  teardownTime: number;
+  timestamp: string;
+  cleanupOperations: string[];
+  status: string;
+}
+
+interface TeardownFailure {
+  testRunId: string;
+  error: string;
+  stack?: string;
+  timestamp: string;
+  phase: string;
+}
+
 async function globalTeardown(config: FullConfig) {
   const startTime = Date.now();
   
@@ -60,14 +138,14 @@ async function generateTestReports(config: FullConfig) {
     fs.mkdirSync(reportDir, { recursive: true });
     
     // Collect all test result files
-    let testResults = {};
+    const testResults: TestResultsCollection = {};
     try {
       const resultsFiles = fs.readdirSync(resultsDir)
         .filter((file: string) => file.endsWith('.json') && file.includes('results'));
       
       for (const file of resultsFiles) {
         const filePath = path.join(resultsDir, file);
-        const content = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        const content = JSON.parse(fs.readFileSync(filePath, 'utf8')) as TestResult;
         testResults[file] = content;
       }
     } catch (error) {
@@ -75,16 +153,16 @@ async function generateTestReports(config: FullConfig) {
     }
     
     // Generate comprehensive report
-    const report = {
+    const report: TestReport = {
       testRunId: TEST_RUN_ID,
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV || 'test',
       baseURL: config.projects[0].use.baseURL,
       config: {
         browsers: config.projects.map(p => p.name),
-        timeout: config.timeout,
-        retries: config.retries,
-        workers: config.workers
+        timeout: (config as any).globalTimeout || (config as any).timeout,
+        retries: (config as any).retries,
+        workers: (config as any).workers
       },
       results: testResults,
       summary: await generateTestSummary(testResults),
@@ -110,7 +188,7 @@ async function generateTestReports(config: FullConfig) {
 /**
  * Generate test summary statistics
  */
-async function generateTestSummary(testResults: any) {
+async function generateTestSummary(testResults: TestResultsCollection): Promise<TestSummary> {
   try {
     let totalTests = 0;
     let passedTests = 0;
@@ -124,9 +202,9 @@ async function generateTestSummary(testResults: any) {
         // Handle different result formats
         if (results.suites) {
           // Playwright format
-          results.suites.forEach((suite: any) => {
+          results.suites.forEach((suite: TestSuite) => {
             if (suite.specs) {
-              suite.specs.forEach((spec: any) => {
+              suite.specs.forEach((spec: TestSpec) => {
                 totalTests++;
                 if (spec.ok) passedTests++;
                 else failedTests++;
@@ -162,7 +240,14 @@ async function generateTestSummary(testResults: any) {
       failed: 0,
       skipped: 0,
       passRate: '0%',
-      totalDuration: '0s'
+      totalDuration: '0s',
+      categories: {
+        authentication: { tests: 0, passed: 0 },
+        patientManagement: { tests: 0, passed: 0 },
+        clinicalWorkflows: { tests: 0, passed: 0 },
+        fhirOperations: { tests: 0, passed: 0 },
+        errorHandling: { tests: 0, passed: 0 }
+      }
     };
   }
 }
@@ -170,14 +255,14 @@ async function generateTestSummary(testResults: any) {
 /**
  * Collect performance metrics from tests
  */
-async function collectPerformanceMetrics() {
+async function collectPerformanceMetrics(): Promise<PerformanceData> {
   try {
     const fs = require('fs');
     const path = require('path');
     
     // Look for performance data files
     const performanceFiles = ['setup-metadata.json', 'performance-*.json'];
-    const performanceData = {};
+    const performanceData: PerformanceData = {};
     
     for (const pattern of performanceFiles) {
       try {
@@ -186,7 +271,7 @@ async function collectPerformanceMetrics() {
         
         for (const file of files) {
           const filePath = path.join(process.cwd(), 'test-results', file);
-          const content = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+          const content = JSON.parse(fs.readFileSync(filePath, 'utf8')) as any;
           performanceData[file] = content;
         }
       } catch (error) {
@@ -205,7 +290,7 @@ async function collectPerformanceMetrics() {
 /**
  * Collect test coverage data
  */
-async function collectCoverageData() {
+async function collectCoverageData(): Promise<CoverageData> {
   try {
     const fs = require('fs');
     const path = require('path');
@@ -217,10 +302,10 @@ async function collectCoverageData() {
       const coverageFiles = fs.readdirSync(coveragePath)
         .filter((file: string) => file.endsWith('.json'));
       
-      const coverage = {};
+      const coverage: CoverageData = {};
       for (const file of coverageFiles) {
         const filePath = path.join(coveragePath, file);
-        const content = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        const content = JSON.parse(fs.readFileSync(filePath, 'utf8')) as any;
         coverage[file] = content;
       }
       
@@ -238,7 +323,7 @@ async function collectCoverageData() {
 /**
  * Generate HTML report
  */
-async function generateHTMLReport(report: any, reportDir: string) {
+async function generateHTMLReport(report: TestReport, reportDir: string): Promise<void> {
   try {
     const fs = require('fs');
     const path = require('path');
@@ -302,7 +387,7 @@ async function generateHTMLReport(report: any, reportDir: string) {
         
         <div class="details">
             <h2>Test Categories</h2>
-            ${Object.entries(report.summary.categories || {}).map(([category, data]: [string, any]) => `
+            ${Object.entries(report.summary.categories || {}).map(([category, data]: [string, { tests: number; passed: number }]) => `
                 <div class="test-category">
                     <div class="category-title">${category.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</div>
                     <div class="progress-bar">
@@ -504,12 +589,12 @@ async function validateCleanup() {
 /**
  * Generate teardown summary
  */
-async function generateTeardownSummary(startTime: number) {
+async function generateTeardownSummary(startTime: number): Promise<void> {
   try {
     const fs = require('fs');
     const path = require('path');
     
-    const summary = {
+    const summary: TeardownSummary = {
       testRunId: TEST_RUN_ID,
       teardownTime: Date.now() - startTime,
       timestamp: new Date().toISOString(),
@@ -536,12 +621,12 @@ async function generateTeardownSummary(startTime: number) {
 /**
  * Capture teardown failure information
  */
-async function captureTeardownFailure(error: any) {
+async function captureTeardownFailure(error: any): Promise<void> {
   try {
     const fs = require('fs');
     const path = require('path');
     
-    const failureInfo = {
+    const failureInfo: TeardownFailure = {
       testRunId: TEST_RUN_ID,
       error: error.message,
       stack: error.stack,

@@ -1,12 +1,15 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 
 import { cdsHooksService } from '@/services/cds-hooks.service';
 import { fhirResourcesService } from '@/services/fhir-resources.service';
+import { fhirValidationService } from '@/services/integration/fhir/fhir-validation.service';
 import { medplumService } from '@/services/medplum.service';
 import { subscriptionsService } from '@/services/subscriptions.service';
+import { databaseService } from '@/services/database.service';
 import { FHIRSearchParams, CDSHookRequest, BundleRequest } from '@/types/fhir';
+import { Patient, Encounter, Observation, Bundle } from '@medplum/fhirtypes';
 import logger from '@/utils/logger';
-import { getErrorMessage, hasMessage } from '@/utils/error.utils';
+import { hasMessage } from '@/utils/error.utils';
 import { validateResourceType } from '@/utils/fhir-validation.utils';
 
 /**
@@ -669,22 +672,360 @@ export class FHIRController {
   }
 
   // ===============================
+  // RESOURCE-SPECIFIC OPERATIONS
+  // ===============================
+
+  /**
+   * POST /fhir/R4/Patient - Create patient (specific method for tests)
+   */
+  async createPatient(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      // Validate content type
+      if (req.headers['content-type'] && !req.headers['content-type'].includes('application/fhir+json') && !req.headers['content-type'].includes('application/json')) {
+        res.status(415).json({
+          resourceType: 'OperationOutcome',
+          issue: [{
+            severity: 'error',
+            code: 'not-supported',
+            diagnostics: 'Unsupported content type. Expected application/fhir+json'
+          }]
+        });
+        return;
+      }
+
+      // Validate resource type
+      if (!req.body.resourceType) {
+        res.status(400).json({
+          resourceType: 'OperationOutcome',
+          issue: [{
+            severity: 'error',
+            code: 'required',
+            diagnostics: 'resourceType is required'
+          }]
+        });
+        return;
+      }
+
+      // Check permissions
+      if (req.user?.role === 'nurse' && !req.user?.permissions?.includes('patient:write')) {
+        res.status(403).json({
+          resourceType: 'OperationOutcome',
+          issue: [{
+            severity: 'error',
+            code: 'forbidden',
+            diagnostics: 'Insufficient permissions to create Patient resource'
+          }]
+        });
+        return;
+      }
+
+      // Validate the resource
+      const validationResult = await fhirValidationService.validateResource(req.body);
+      if (!validationResult.valid) {
+        res.status(400).json({
+          resourceType: 'OperationOutcome',
+          issue: validationResult.errors.map(error => ({
+            severity: 'error',
+            code: 'invalid',
+            diagnostics: error.message,
+            location: error.path ? [error.path] : undefined
+          }))
+        });
+        return;
+      }
+
+      const createdPatient = await fhirResourcesService.createPatient(req.body);
+      
+      res.status(201)
+        .set('Location', `/fhir/Patient/${createdPatient.id}`)
+        .json(createdPatient);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /fhir/R4/Patient/{id} - Get patient by ID (specific method for tests)
+   */
+  async getPatient(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      
+      if (!id) {
+        res.status(400).json({
+          resourceType: 'OperationOutcome',
+          issue: [{
+            severity: 'error',
+            code: 'required',
+            diagnostics: 'Patient ID is required'
+          }]
+        });
+        return;
+      }
+
+      const patient = await fhirResourcesService.getPatient(id);
+      
+      res.status(200).json(patient);
+    } catch (error) {
+      if ((error as any).name === 'NotFoundError' || (hasMessage(error) && error.message.includes('not found'))) {
+        res.status(404).json({
+          resourceType: 'OperationOutcome',
+          issue: [{
+            severity: 'error',
+            code: 'not-found',
+            diagnostics: `Patient with ID ${req.params.id} not found`
+          }]
+        });
+        return;
+      }
+      next(error);
+    }
+  }
+
+  /**
+   * PUT /fhir/R4/Patient/{id} - Update patient (specific method for tests)
+   */
+  async updatePatient(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      
+      if (!id) {
+        res.status(400).json({
+          resourceType: 'OperationOutcome',
+          issue: [{
+            severity: 'error',
+            code: 'required',
+            diagnostics: 'Patient ID is required'
+          }]
+        });
+        return;
+      }
+
+      // Ensure the resource has the correct ID
+      req.body.id = id;
+
+      // Validate the resource
+      const validationResult = await fhirValidationService.validateResource(req.body);
+      if (!validationResult.valid) {
+        res.status(400).json({
+          resourceType: 'OperationOutcome',
+          issue: validationResult.errors.map(error => ({
+            severity: 'error',
+            code: 'invalid',
+            diagnostics: error.message,
+            location: error.path ? [error.path] : undefined
+          }))
+        });
+        return;
+      }
+
+      const updatedPatient = await fhirResourcesService.updatePatient(req.body);
+      
+      res.status(200).json(updatedPatient);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /fhir/R4/Patient - Search patients (specific method for tests)
+   */
+  async searchPatients(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      // Validate _count parameter if present
+      if (req.query._count && isNaN(Number(req.query._count))) {
+        res.status(400).json({
+          resourceType: 'OperationOutcome',
+          issue: [{
+            severity: 'error',
+            code: 'invalid',
+            diagnostics: 'Invalid search parameter: _count must be a number'
+          }]
+        });
+        return;
+      }
+
+      // Convert _count to number if present
+      const searchParams: any = { ...req.query };
+      if (searchParams._count) {
+        searchParams._count = Number(searchParams._count);
+      }
+
+      const searchResults = await fhirResourcesService.searchPatients(searchParams);
+      
+      res.status(200).json(searchResults);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /fhir/R4/Encounter - Create encounter (specific method for tests)
+   */
+  async createEncounter(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const createdEncounter = await fhirResourcesService.createEncounter(req.body);
+      
+      res.status(201).json(createdEncounter);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /fhir/R4/Observation - Create observation (specific method for tests)
+   */
+  async createObservation(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const createdObservation = await fhirResourcesService.createObservation(req.body);
+      
+      res.status(201).json(createdObservation);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /fhir/R4/Patient/{id}/vitals - Create vital signs observations
+   */
+  async createVitalSigns(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const vitalsData = req.body;
+      
+      if (!id) {
+        res.status(400).json({
+          resourceType: 'OperationOutcome',
+          issue: [{
+            severity: 'error',
+            code: 'required',
+            diagnostics: 'Patient ID is required'
+          }]
+        });
+        return;
+      }
+
+      const createdObservations = await fhirResourcesService.createVitalSigns(id, undefined, vitalsData);
+      
+      const responseBundle: Bundle = {
+        resourceType: 'Bundle',
+        type: 'transaction-response',
+        entry: createdObservations.map(obs => ({
+          resource: obs,
+          response: {
+            status: '201',
+            location: `/fhir/Observation/${obs.id}`
+          }
+        }))
+      };
+
+      res.status(201).json(responseBundle);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /fhir/R4/Bundle - Process bundle (specific method for tests)
+   */
+  async processBundle(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const bundle = req.body;
+
+      if (bundle.resourceType !== 'Bundle') {
+        res.status(400).json({
+          resourceType: 'OperationOutcome',
+          issue: [{
+            severity: 'error',
+            code: 'invalid',
+            diagnostics: 'Expected Bundle resource type'
+          }]
+        });
+        return;
+      }
+
+      // Validate the bundle
+      const validationResult = await fhirValidationService.validateBundle(bundle);
+      if (!validationResult.valid) {
+        res.status(400).json({
+          resourceType: 'OperationOutcome',
+          issue: validationResult.errors.map(error => ({
+            severity: 'error',
+            code: 'invalid',
+            diagnostics: error.message,
+            location: error.path ? [error.path] : undefined
+          }))
+        });
+        return;
+      }
+
+      const result = await fhirResourcesService.processBundle(bundle);
+      
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /fhir/$validate - Validate a FHIR resource (specific method for tests)
+   */
+  async validateResource(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const resource = req.body;
+
+      const validationResult = await fhirValidationService.validateResource(resource);
+      
+      if (validationResult.valid) {
+        res.status(200).json({
+          resourceType: 'OperationOutcome',
+          issue: [{
+            severity: 'information',
+            code: 'informational',
+            diagnostics: 'Resource is valid'
+          }]
+        });
+      } else {
+        res.status(400).json({
+          resourceType: 'OperationOutcome',
+          issue: validationResult.errors.map(error => ({
+            severity: 'error',
+            code: 'invalid',
+            diagnostics: error.message,
+            location: error.path ? [error.path] : undefined
+          }))
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        resourceType: 'OperationOutcome',
+        issue: [{
+          severity: 'error',
+          code: 'exception',
+          diagnostics: 'Failed to validate resource'
+        }]
+      });
+    }
+  }
+
+  // ===============================
   // HEALTH CHECK
   // ===============================
 
   /**
    * GET /health - Health check endpoint
    */
-  async healthCheck(req: Request, res: Response): Promise<void> {
+  async healthCheck(_req: Request, res: Response): Promise<void> {
     try {
-      const [medplumHealth, cdsHealth, subscriptionsHealth] = await Promise.all([
+      const [medplumHealth, cdsHealth, subscriptionsHealth, dbHealth] = await Promise.all([
         medplumService.getHealthStatus(),
         cdsHooksService.getHealthStatus(),
         subscriptionsService.getHealthStatus(),
+        databaseService.checkHealth(),
       ]);
 
       const overallStatus = [medplumHealth, cdsHealth, subscriptionsHealth]
-        .every(health => health.status === 'UP') ? 'UP' : 'DOWN';
+        .every(health => health.status === 'UP') && dbHealth.status === 'healthy' ? 'UP' : 'DOWN';
 
       const healthStatus = {
         status: overallStatus,
@@ -693,6 +1034,16 @@ export class FHIRController {
           medplum: medplumHealth,
           cdsHooks: cdsHealth,
           subscriptions: subscriptionsHealth,
+          database: {
+            status: dbHealth.status === 'healthy' ? 'UP' : 'DOWN',
+            latency: dbHealth.latency,
+            connections: {
+              active: dbHealth.activeConnections,
+              idle: dbHealth.idleConnections,
+              total: dbHealth.totalConnections,
+            },
+            message: dbHealth.message,
+          },
         },
       };
 

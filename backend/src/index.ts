@@ -6,6 +6,7 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import { medplumService } from '@/services/medplum.service';
 import { subscriptionsService } from '@/services/subscriptions.service';
+import { databaseService } from '@/services/database.service';
 import config from '@/config';
 import logger from '@/utils/logger';
 import routes from '@/routes';
@@ -159,12 +160,23 @@ class OmniCareServer {
     });
 
     // Health check endpoint (before authentication)
-    this.app.get('/ping', (req, res) => {
-      res.json({ 
-        status: 'OK', 
-        timestamp: new Date().toISOString(),
-        version: process.env.npm_package_version || '1.0.0',
-      });
+    this.app.get('/ping', async (_req, res) => {
+      try {
+        const dbHealth = await databaseService.checkHealth();
+        res.json({ 
+          status: 'OK', 
+          timestamp: new Date().toISOString(),
+          version: process.env.npm_package_version || '1.0.0',
+          database: dbHealth
+        });
+      } catch (error) {
+        res.json({ 
+          status: 'OK', 
+          timestamp: new Date().toISOString(),
+          version: process.env.npm_package_version || '1.0.0',
+          database: { status: 'unhealthy', message: 'Failed to check database health' }
+        });
+      }
     });
   }
 
@@ -176,7 +188,7 @@ class OmniCareServer {
     this.app.use('/', routes);
 
     // Serve SMART configuration
-    this.app.get('/.well-known/smart_configuration', (req, res) => {
+    this.app.get('/.well-known/smart_configuration', (_req, res) => {
       const smartConfig = {
         authorization_endpoint: config.smart.authorizationUrl,
         token_endpoint: config.smart.tokenUrl,
@@ -206,7 +218,7 @@ class OmniCareServer {
     });
 
     // Serve SMART styling configuration
-    this.app.get('/smart-style.json', (req, res) => {
+    this.app.get('/smart-style.json', (_req, res) => {
       const smartStyle = {
         color_background: '#ffffff',
         color_error: '#d32f2f',
@@ -281,6 +293,16 @@ class OmniCareServer {
     logger.info('Initializing OmniCare FHIR backend services...');
 
     try {
+      // Initialize database connection first
+      logger.info('Initializing database connection...');
+      await databaseService.initialize();
+      await databaseService.ensureAuditSchema();
+      logger.info('Database connection established');
+
+      // Check database health
+      const dbHealth = await databaseService.checkHealth();
+      logger.info('Database health check:', dbHealth);
+
       // Initialize Medplum service
       logger.info('Initializing Medplum FHIR server connection...');
       await medplumService.initialize();
@@ -364,6 +386,9 @@ class OmniCareServer {
 
         // Shutdown Medplum service
         await medplumService.shutdown();
+        
+        // Shutdown database connection
+        await databaseService.shutdown();
 
         logger.info('Graceful shutdown completed');
         process.exit(0);

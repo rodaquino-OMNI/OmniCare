@@ -13,9 +13,10 @@ import { AuditService } from '@/services/audit.service';
 import { 
   User, 
   LoginCredentials, 
-  SecurityEvent
+  SecurityEvent,
+  SessionInfo
 } from '@/types/auth.types';
-import { hasPasswordHash, hasSessionId, hasMFAProperties, isDefined, toRecordWithIndexSignature } from '@/utils/type-guards';
+import { hasPasswordHash, hasSessionId, hasMFAProperties, toRecordWithIndexSignature } from '@/utils/type-guards';
 
 export interface AuthRequest extends Request {
   user?: User;
@@ -206,7 +207,7 @@ export class AuthController {
       this.failedAttempts.delete(lockoutKey);
 
       // Generate tokens
-      const tokens = await this.jwtService.generateTokens(user);
+      const tokens = this.jwtService.generateTokens(user);
       
       // Create session
       const sessionInfo = this.jwtService.createSessionInfo(user, tokens.sessionId, ipAddress, userAgent);
@@ -313,7 +314,7 @@ export class AuthController {
         return;
       }
 
-      const decoded = await this.jwtService.verifyRefreshToken(refreshToken);
+      const decoded = this.jwtService.verifyRefreshToken(refreshToken);
       const user = await this.findUserById(decoded.userId);
       
       if (!user || !user.isActive) {
@@ -332,8 +333,8 @@ export class AuthController {
         });
         return;
       }
-      const session = this.activeSessions.get(decoded.sessionId);
-      if (!session || !this.jwtService.isSessionValid(session)) {
+      const sessionRecord = this.activeSessions.get(decoded.sessionId);
+      if (!sessionRecord || !this.jwtService.isSessionValid(sessionRecord as SessionInfo)) {
         this.activeSessions.delete(decoded.sessionId);
         res.status(401).json({
           success: false,
@@ -343,10 +344,10 @@ export class AuthController {
       }
 
       // Generate new tokens
-      const tokens = await this.jwtService.generateTokens(user);
+      const tokens = this.jwtService.generateTokens(user);
       
       // Update session
-      const updatedSession = this.jwtService.updateSessionActivity(session);
+      const updatedSession = this.jwtService.updateSessionActivity(sessionRecord as SessionInfo);
       if (hasSessionId(tokens) && hasSessionId(decoded)) {
         this.activeSessions.set(tokens.sessionId, toRecordWithIndexSignature(updatedSession));
         this.activeSessions.delete(decoded.sessionId); // Remove old session
@@ -529,11 +530,15 @@ export class AuthController {
       // Invalidate all sessions if configured
       if (AUTH_CONFIG.security.forceLogoutOnPasswordChange) {
         // Remove all user sessions
-        for (const [sessionId, session] of this.activeSessions.entries()) {
+        const sessionsToDelete: string[] = [];
+        this.activeSessions.forEach((session, sessionId) => {
           if (session.userId === user.id) {
-            this.activeSessions.delete(sessionId);
+            sessionsToDelete.push(sessionId);
           }
-        }
+        });
+        sessionsToDelete.forEach(sessionId => {
+          this.activeSessions.delete(sessionId);
+        });
       }
 
       await this.logSecurityEvent({

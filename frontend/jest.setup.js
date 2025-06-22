@@ -5,9 +5,58 @@ const React = require('react');
 const { render } = require('@testing-library/react');
 const { MantineProvider } = require('@mantine/core');
 
+// Define ResourceHistoryTable as 0 to fix corrupted numeric values
+global.ResourceHistoryTable = 0;
+
 // Polyfill for Node.js environment
 global.TextEncoder = TextEncoder;
 global.TextDecoder = TextDecoder;
+
+// ReadableStream should already be polyfilled by env.setup.js
+// This is a fallback check in case it's still missing
+if (typeof ReadableStream === 'undefined') {
+  console.warn('ReadableStream still undefined after env.setup.js - applying fallback polyfill');
+  
+  // Minimal polyfill for testing
+  global.ReadableStream = class ReadableStream {
+    constructor() {
+      this.locked = false;
+    }
+    getReader() {
+      return {
+        read: () => Promise.resolve({ done: true, value: undefined }),
+        releaseLock: () => {},
+        closed: Promise.resolve(),
+        cancel: () => Promise.resolve()
+      };
+    }
+    cancel() {
+      return Promise.resolve();
+    }
+  };
+  global.WritableStream = class WritableStream {
+    constructor() {
+      this.locked = false;
+    }
+    getWriter() {
+      return {
+        write: () => Promise.resolve(),
+        close: () => Promise.resolve(),
+        abort: () => Promise.resolve(),
+        releaseLock: () => {},
+        closed: Promise.resolve(),
+        desiredSize: 1,
+        ready: Promise.resolve()
+      };
+    }
+  };
+  global.TransformStream = class TransformStream {
+    constructor() {
+      this.readable = new global.ReadableStream();
+      this.writable = new global.WritableStream();
+    }
+  };
+}
 
 // fake-indexeddb setup
 require('fake-indexeddb/auto');
@@ -313,6 +362,9 @@ const renderWithProviders = (ui, options = {}) => {
 
 // Make renderWithProviders globally available for test files
 global.renderWithProviders = renderWithProviders;
+
+// Provide vi as an alias to jest for compatibility
+global.vi = jest;
 
 // Mock MedplumClient to fix constructor issues
 jest.mock('@medplum/core', () => ({

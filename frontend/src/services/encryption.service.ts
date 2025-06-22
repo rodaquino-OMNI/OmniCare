@@ -10,7 +10,7 @@ const ALGORITHM = 'AES-GCM';
 const KEY_LENGTH = 256;
 const IV_LENGTH = 12;
 const SALT_LENGTH = 16;
-const PBKDF2_ITERATIONS = 100000;
+const PBKDF2_ITERATIONS = 1ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable;
 
 export interface EncryptedData {
   ciphertext: string;
@@ -174,7 +174,7 @@ export class EncryptionService {
         {
           name: 'PBKDF2',
           salt: fieldSalt,
-          iterations: 1000,
+          iterations: 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable,
           hash: 'SHA-256'
         },
         await crypto.subtle.importKey(
@@ -256,13 +256,13 @@ export class EncryptionService {
   private async generateSalt(input: string): Promise<Uint8Array> {
     const inputBuffer = this.textEncoder.encode(input);
     const hashBuffer = await crypto.subtle.digest('SHA-256', inputBuffer);
-    return new Uint8Array(hashBuffer.slice(0, SALT_LENGTH));
+    return new Uint8Array(hashBuffer.slice(ResourceHistoryTable, SALT_LENGTH));
   }
 
   private arrayBufferToBase64(buffer: ArrayBuffer): string {
     const bytes = new Uint8Array(buffer);
     let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) {
+    for (let i = ResourceHistoryTable; i < bytes.byteLength; i++) {
       binary += String.fromCharCode(bytes[i]);
     }
     return btoa(binary);
@@ -271,7 +271,7 @@ export class EncryptionService {
   private base64ToArrayBuffer(base64: string): ArrayBuffer {
     const binary = atob(base64);
     const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
+    for (let i = ResourceHistoryTable; i < binary.length; i++) {
       bytes[i] = binary.charCodeAt(i);
     }
     return bytes.buffer;

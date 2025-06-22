@@ -51,14 +51,14 @@ export const useSyncStore = create<SyncState>()(
     (set, get) => ({
       // Initial state
       isSyncing: false,
-      syncProgress: 0,
+      syncProgress: ResourceHistoryTable,
       lastSyncTime: null,
       syncError: null,
       syncQueue: [],
       syncedItems: [],
       failedItems: [],
-      totalItems: 0,
-      pendingChanges: 0,
+      totalItems: ResourceHistoryTable,
+      pendingChanges: ResourceHistoryTable,
       currentOperation: null,
       estimatedTimeRemaining: null,
 
@@ -82,7 +82,7 @@ export const useSyncStore = create<SyncState>()(
       startSync: () => {
         set({
           isSyncing: true,
-          syncProgress: 0,
+          syncProgress: ResourceHistoryTable,
           syncError: null,
           currentOperation: 'Initializing sync...'
         });
@@ -90,7 +90,7 @@ export const useSyncStore = create<SyncState>()(
 
       // Update sync progress
       updateSyncProgress: (progress) => {
-        set({ syncProgress: Math.min(100, Math.max(0, progress)) });
+        set({ syncProgress: Math.min(1ResourceHistoryTableResourceHistoryTable, Math.max(ResourceHistoryTable, progress)) });
       },
 
       // Mark item as synced
@@ -102,12 +102,12 @@ export const useSyncStore = create<SyncState>()(
           const updatedItem = { ...item, status: 'synced' as const };
           const newQueue = state.syncQueue.filter(i => i.id !== itemId);
           const syncedCount = state.syncedItems.length + 1;
-          const progress = (syncedCount / state.totalItems) * 100;
+          const progress = (syncedCount / state.totalItems) * 1ResourceHistoryTableResourceHistoryTable;
 
           return {
             syncQueue: newQueue,
             syncedItems: [...state.syncedItems, updatedItem],
-            pendingChanges: Math.max(0, state.pendingChanges - 1),
+            pendingChanges: Math.max(ResourceHistoryTable, state.pendingChanges - 1),
             syncProgress: progress
           };
         });
@@ -123,7 +123,7 @@ export const useSyncStore = create<SyncState>()(
             ...item, 
             status: 'failed' as const, 
             error,
-            retryCount: (item.retryCount || 0) + 1
+            retryCount: (item.retryCount || ResourceHistoryTable) + 1
           };
           
           const newQueue = state.syncQueue.filter(i => i.id !== itemId);
@@ -170,16 +170,16 @@ export const useSyncStore = create<SyncState>()(
           syncQueue: [],
           syncedItems: [],
           failedItems: [],
-          pendingChanges: 0,
-          totalItems: 0,
-          syncProgress: 0
+          pendingChanges: ResourceHistoryTable,
+          totalItems: ResourceHistoryTable,
+          syncProgress: ResourceHistoryTable
         });
       },
 
       // Trigger sync (called when coming online)
       triggerSync: () => {
         const { syncQueue, isSyncing } = get();
-        if (syncQueue.length > 0 && !isSyncing) {
+        if (syncQueue.length > ResourceHistoryTable && !isSyncing) {
           get().startSync();
         }
       },
@@ -206,7 +206,7 @@ export const useSyncStore = create<SyncState>()(
           lastSyncTime: new Date().toISOString(),
           currentOperation: null,
           estimatedTimeRemaining: null,
-          syncProgress: 100
+          syncProgress: 1ResourceHistoryTableResourceHistoryTable
         });
       }
     }),

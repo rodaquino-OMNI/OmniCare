@@ -77,7 +77,7 @@ export class CDSService {
     }
 
     // Check for allergies
-    if (context.allergies && context.allergies.length > 0) {
+    if (context.allergies && context.allergies.length > ResourceHistoryTable) {
       alerts.push({
         id: 'allergy-check',
         title: 'Allergy Alert',
@@ -117,7 +117,7 @@ export class CDSService {
     const recommendations: string[] = [];
 
     // Check for duplicate orders
-    if (context.orders && context.orders.length > 0) {
+    if (context.orders && context.orders.length > ResourceHistoryTable) {
       alerts.push({
         id: 'duplicate-order-check',
         title: 'Duplicate Order Check',
@@ -145,7 +145,7 @@ export class CDSService {
 
   async getPatientRiskScore(patientId: string): Promise<number> {
     // Simplified risk scoring - in real implementation would use clinical algorithms
-    const baseScore = Math.random() * 100;
+    const baseScore = Math.random() * 1ResourceHistoryTableResourceHistoryTable;
     return Math.round(baseScore);
   }
 
@@ -156,13 +156,13 @@ export class CDSService {
         measure: 'Diabetes HbA1c Control',
         status: 'compliant',
         lastValue: '6.8%',
-        target: '<7.0%'
+        target: '<7.ResourceHistoryTable%'
       },
       {
         measure: 'Blood Pressure Control',
         status: 'non-compliant',
-        lastValue: '145/90',
-        target: '<130/80'
+        lastValue: '145/9ResourceHistoryTable',
+        target: '<13ResourceHistoryTable/8ResourceHistoryTable'
       }
     ];
   }

@@ -49,6 +49,85 @@ global.TextEncoder = require('util').TextEncoder;
 global.TextDecoder = require('util').TextDecoder;
 global.crypto = require('crypto').webcrypto;
 
+// Web API polyfills - MUST be before any module that uses them
+// MessagePort and MessageChannel
+if (typeof MessagePort === 'undefined') {
+  global.MessagePort = class MessagePort {
+    constructor() {
+      this.onmessage = null;
+      this.onmessageerror = null;
+    }
+    postMessage() {}
+    start() {}
+    close() {}
+    addEventListener() {}
+    removeEventListener() {}
+    dispatchEvent() { return true; }
+  };
+}
+
+if (typeof MessageChannel === 'undefined') {
+  global.MessageChannel = class MessageChannel {
+    constructor() {
+      this.port1 = new global.MessagePort();
+      this.port2 = new global.MessagePort();
+    }
+  };
+}
+
+// Web Streams API polyfill - MUST be before any module that uses it
+if (typeof ReadableStream === 'undefined') {
+  // Try to use web-streams-polyfill if available
+  try {
+    const { ReadableStream, WritableStream, TransformStream } = require('stream/web');
+    global.ReadableStream = ReadableStream;
+    global.WritableStream = WritableStream;
+    global.TransformStream = TransformStream;
+  } catch (e) {
+    // Fallback to basic implementation
+    global.ReadableStream = class ReadableStream {
+      constructor() {
+        this.locked = false;
+      }
+      getReader() {
+        return {
+          read: () => Promise.resolve({ done: true, value: undefined }),
+          releaseLock: () => {},
+          closed: Promise.resolve(),
+          cancel: () => Promise.resolve()
+        };
+      }
+      cancel() {
+        return Promise.resolve();
+      }
+    };
+    
+    global.WritableStream = class WritableStream {
+      constructor() {
+        this.locked = false;
+      }
+      getWriter() {
+        return {
+          write: () => Promise.resolve(),
+          close: () => Promise.resolve(),
+          abort: () => Promise.resolve(),
+          releaseLock: () => {},
+          closed: Promise.resolve(),
+          desiredSize: 1,
+          ready: Promise.resolve()
+        };
+      }
+    };
+    
+    global.TransformStream = class TransformStream {
+      constructor() {
+        this.readable = new global.ReadableStream();
+        this.writable = new global.WritableStream();
+      }
+    };
+  }
+}
+
 // Mock window.location for Next.js
 delete window.location;
 window.location = {

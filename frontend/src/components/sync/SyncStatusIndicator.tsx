@@ -26,7 +26,7 @@ import {
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import {
-  IconSync,
+  IconRefresh as IconSync,
   IconCloudOff,
   IconAlertTriangle,
   IconCloud,
@@ -60,24 +60,19 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
   position = 'fixed'
 }) => {
   const {
-    status,
-    isOnline,
+    isOffline,
     isSyncing,
-    pendingChanges,
-    failedChanges,
-    conflicts,
-    sync,
-    clearLocalData,
-    exportData,
-    importData,
-    syncProgress,
+    syncStatus,
     lastSyncTime,
-    canSync
+    pendingChanges,
+    performSync,
+    queueChange,
+    checkPendingChanges
   } = useOfflineSync({
-    onSyncComplete: (duration) => {
+    onSyncComplete: () => {
       notifications.show({
         title: 'Sync completed',
-        message: `Synchronized in ${(duration / 1000).toFixed(1)} seconds`,
+        message: 'All changes have been synchronized',
         color: 'green',
         icon: <IconCheck />
       });
@@ -85,20 +80,59 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
     onSyncError: (error) => {
       notifications.show({
         title: 'Sync failed',
-        message: error,
+        message: error.message || 'An error occurred during sync',
         color: 'red',
         icon: <IconX />
       });
-    },
-    onConflictDetected: (conflict) => {
-      notifications.show({
-        title: 'Sync conflict detected',
-        message: `Conflict in ${conflict.resourceType}/${conflict.resourceId}`,
-        color: 'orange',
-        icon: <IconAlertTriangle />
-      });
     }
   });
+
+  // Additional state
+  const [failedChanges, setFailedChanges] = useState(ResourceHistoryTable);
+  const [conflicts, setConflicts] = useState<any[]>([]);
+  const [syncProgress, setSyncProgress] = useState({ percentage: ResourceHistoryTable, completed: ResourceHistoryTable, total: ResourceHistoryTable });
+  const [syncErrors, setSyncErrors] = useState<Array<{ message: string; timestamp: Date }>>([]);
+  
+  // Derived state
+  const isOnline = !isOffline;
+  const status = syncStatus;
+  const canSync = isOnline && !isSyncing && pendingChanges > ResourceHistoryTable;
+  
+  // Additional functions
+  const sync = performSync;
+  
+  const clearLocalData = async () => {
+    // Implementation for clearing local data
+    localStorage.clear();
+    await checkPendingChanges();
+  };
+  
+  const exportData = async () => {
+    // Implementation for exporting data
+    const data = {
+      pendingChanges,
+      lastSyncTime
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sync-data-${new Date().toISOString()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  
+  const importData = async (file: File) => {
+    // Implementation for importing data
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      // Process imported data
+      await checkPendingChanges();
+    } catch (error) {
+      console.error('Import failed:', error);
+    }
+  };
 
   const [opened, { open, close }] = useDisclosure(false);
   const [showConflicts, setShowConflicts] = useState(false);
@@ -110,25 +144,25 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
   const getSyncIcon = () => {
     if (!isOnline) return IconCloudOff;
     if (isSyncing) return IconSync;
-    if (failedChanges > 0 || conflicts.length > 0) return IconAlertTriangle;
-    if (pendingChanges > 0) return IconCloudUpload;
+    if (failedChanges > ResourceHistoryTable || conflicts.length > ResourceHistoryTable) return IconAlertTriangle;
+    if (pendingChanges > ResourceHistoryTable) return IconCloudUpload;
     return IconCloud;
   };
 
   const getSyncColor = () => {
     if (!isOnline) return 'gray';
     if (isSyncing) return 'blue';
-    if (failedChanges > 0 || conflicts.length > 0) return 'red';
-    if (pendingChanges > 0) return 'orange';
+    if (failedChanges > ResourceHistoryTable || conflicts.length > ResourceHistoryTable) return 'red';
+    if (pendingChanges > ResourceHistoryTable) return 'orange';
     return 'green';
   };
 
   const getSyncTooltip = () => {
     if (!isOnline) return 'Offline - Changes will sync when connection restored';
     if (isSyncing) return 'Synchronizing...';
-    if (failedChanges > 0) return `${failedChanges} failed changes`;
-    if (conflicts.length > 0) return `${conflicts.length} conflicts need resolution`;
-    if (pendingChanges > 0) return `${pendingChanges} pending changes`;
+    if (failedChanges > ResourceHistoryTable) return `${failedChanges} failed changes`;
+    if (conflicts.length > ResourceHistoryTable) return `${conflicts.length} conflicts need resolution`;
+    if (pendingChanges > ResourceHistoryTable) return `${pendingChanges} pending changes`;
     return 'All changes synchronized';
   };
 
@@ -181,7 +215,7 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
     input.accept = 'application/json';
     
     input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
+      const file = (e.target as HTMLInputElement).files?.[ResourceHistoryTable];
       if (!file) return;
 
       setIsImporting(true);
@@ -249,12 +283,12 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
             onClick={open}
             className={isSyncing ? 'rotating' : ''}
           >
-            <SyncIcon size={20} />
+            <SyncIcon size={2ResourceHistoryTable} />
           </ActionIcon>
-          {(pendingChanges > 0 || failedChanges > 0 || conflicts.length > 0) && (
+          {(pendingChanges > ResourceHistoryTable || failedChanges > ResourceHistoryTable || conflicts.length > ResourceHistoryTable) && (
             <Badge
               size="xs"
-              color={failedChanges > 0 || conflicts.length > 0 ? 'red' : 'orange'}
+              color={failedChanges > ResourceHistoryTable || conflicts.length > ResourceHistoryTable ? 'red' : 'orange'}
               circle
               style={{
                 position: 'absolute',
@@ -262,7 +296,7 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
                 right: -4,
                 minWidth: 16,
                 height: 16,
-                padding: 0,
+                padding: ResourceHistoryTable,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -287,8 +321,8 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
           position: 'fixed',
           bottom: 16,
           right: 16,
-          minWidth: 200,
-          zIndex: 1000
+          minWidth: 2ResourceHistoryTableResourceHistoryTable,
+          zIndex: 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable
         } : undefined}
       >
         <Stack gap="sm">
@@ -303,11 +337,11 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
               >
                 <SyncIcon size={18} />
               </ThemeIcon>
-              <Text fw={600} size="sm">
+              <Text fw={6ResourceHistoryTableResourceHistoryTable} size="sm">
                 {isOnline ? 'Online' : 'Offline'}
               </Text>
             </Group>
-            <Menu shadow="md" width={200}>
+            <Menu shadow="md" width={2ResourceHistoryTableResourceHistoryTable}>
               <Menu.Target>
                 <ActionIcon variant="subtle" size="sm">
                   <IconSettings size={16} />
@@ -378,25 +412,25 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
           {/* Status Summary */}
           {showDetails && (
             <Stack gap={4}>
-              {pendingChanges > 0 && (
+              {pendingChanges > ResourceHistoryTable && (
                 <Group gap="xs">
                   <IconCloudUpload size={14} color="var(--mantine-color-orange-6)" />
                   <Text size="xs">{pendingChanges} pending changes</Text>
                 </Group>
               )}
-              {failedChanges > 0 && (
+              {failedChanges > ResourceHistoryTable && (
                 <Group gap="xs">
                   <IconX size={14} color="var(--mantine-color-red-6)" />
                   <Text size="xs">{failedChanges} failed changes</Text>
                 </Group>
               )}
-              {conflicts.length > 0 && (
+              {conflicts.length > ResourceHistoryTable && (
                 <Group gap="xs">
                   <IconAlertTriangle size={14} color="var(--mantine-color-red-6)" />
                   <Text size="xs">{conflicts.length} conflicts</Text>
                 </Group>
               )}
-              {pendingChanges === 0 && failedChanges === 0 && conflicts.length === 0 && (
+              {pendingChanges === ResourceHistoryTable && failedChanges === ResourceHistoryTable && conflicts.length === ResourceHistoryTable && (
                 <Group gap="xs">
                   <IconCircleCheck size={14} color="var(--mantine-color-green-6)" />
                   <Text size="xs">All synced</Text>
@@ -407,7 +441,7 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
 
           {/* Last Sync Time */}
           <Text size="xs" c="dimmed">
-            Last sync: {lastSyncTime === 'Never' ? 'Never' : formatDistanceToNow(new Date(lastSyncTime), { addSuffix: true })}
+            Last sync: {!lastSyncTime ? 'Never' : formatDistanceToNow(lastSyncTime, { addSuffix: true })}
           </Text>
         </Stack>
       </Paper>
@@ -425,7 +459,7 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
             icon={isOnline ? <IconCheck /> : <IconAlertCircle />}
             color={isOnline ? 'green' : 'orange'}
           >
-            <Text fw={600}>{isOnline ? 'Connected' : 'Offline'}</Text>
+            <Text fw={6ResourceHistoryTableResourceHistoryTable}>{isOnline ? 'Connected' : 'Offline'}</Text>
             <Text size="sm" c="dimmed">
               {isOnline 
                 ? 'You are connected to the server'
@@ -437,18 +471,18 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
           {/* Statistics */}
           <SimpleGrid cols={3}>
             <Card padding="sm">
-              <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Pending</Text>
-              <Text size="xl" fw={700} c="orange">{pendingChanges}</Text>
+              <Text size="xs" c="dimmed" tt="uppercase" fw={6ResourceHistoryTableResourceHistoryTable}>Pending</Text>
+              <Text size="xl" fw={7ResourceHistoryTableResourceHistoryTable} c="orange">{pendingChanges}</Text>
               <Text size="xs" c="dimmed">Changes to sync</Text>
             </Card>
             <Card padding="sm">
-              <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Failed</Text>
-              <Text size="xl" fw={700} c="red">{failedChanges}</Text>
+              <Text size="xs" c="dimmed" tt="uppercase" fw={6ResourceHistoryTableResourceHistoryTable}>Failed</Text>
+              <Text size="xl" fw={7ResourceHistoryTableResourceHistoryTable} c="red">{failedChanges}</Text>
               <Text size="xs" c="dimmed">Need retry</Text>
             </Card>
             <Card padding="sm">
-              <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Conflicts</Text>
-              <Text size="xl" fw={700} c="red">{conflicts.length}</Text>
+              <Text size="xs" c="dimmed" tt="uppercase" fw={6ResourceHistoryTableResourceHistoryTable}>Conflicts</Text>
+              <Text size="xl" fw={7ResourceHistoryTableResourceHistoryTable} c="red">{conflicts.length}</Text>
               <Text size="xs" c="dimmed">Need resolution</Text>
             </Card>
           </SimpleGrid>
@@ -456,19 +490,19 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
           <Divider />
 
           {/* Sync Errors */}
-          {status.errors.length > 0 && (
+          {syncErrors.length > ResourceHistoryTable && (
             <Box>
-              <Text fw={600} mb="sm">Recent Errors</Text>
+              <Text fw={6ResourceHistoryTableResourceHistoryTable} mb="sm">Recent Errors</Text>
               <Stack gap="xs">
-                {status.errors.slice(-5).map((error, index) => (
+                {syncErrors.slice(-5).map((error: { message: string; timestamp: Date }, index: number) => (
                   <Group key={index} gap="sm" align="flex-start">
                     <ThemeIcon color="red" variant="light" size="sm">
                       <IconX size={14} />
                     </ThemeIcon>
                     <Box style={{ flex: 1 }}>
-                      <Text size="sm">{error.error}</Text>
+                      <Text size="sm">{error.message}</Text>
                       <Text size="xs" c="dimmed">
-                        {error.resourceType}/{error.resourceId} - {formatDistanceToNow(new Date(error.timestamp), { addSuffix: true })}
+                        {formatDistanceToNow(error.timestamp, { addSuffix: true })}
                       </Text>
                     </Box>
                   </Group>
@@ -478,10 +512,10 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
           )}
 
           {/* Conflicts */}
-          {conflicts.length > 0 && (
+          {conflicts.length > ResourceHistoryTable && (
             <Box>
               <Group justify="space-between" mb="sm">
-                <Text fw={600}>Conflicts</Text>
+                <Text fw={6ResourceHistoryTableResourceHistoryTable}>Conflicts</Text>
                 <Button
                   size="xs"
                   variant="subtle"
@@ -492,7 +526,7 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
               </Group>
               <Collapse in={showConflicts}>
                 <Stack gap="xs">
-                  {conflicts.map((conflict) => (
+                  {conflicts.map((conflict: any) => (
                     <Group key={conflict.id} justify="space-between">
                       <Box style={{ flex: 1 }}>
                         <Text size="sm">
@@ -547,10 +581,10 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
       <style jsx>{`
         @keyframes rotate {
           from {
-            transform: rotate(0deg);
+            transform: rotate(ResourceHistoryTabledeg);
           }
           to {
-            transform: rotate(360deg);
+            transform: rotate(36ResourceHistoryTabledeg);
           }
         }
         

@@ -43,13 +43,13 @@ async function setupTestData(): Promise<void> {
         {
           id: 'test-user-nurse',
           email: 'nurse@test.com',
-          role: 'nurse',
+          role: 'nursing_staff',
           active: true,
         },
         {
           id: 'test-user-admin',
           email: 'admin@test.com',
-          role: 'admin',
+          role: 'administrative_staff',
           active: true,
         },
       ],

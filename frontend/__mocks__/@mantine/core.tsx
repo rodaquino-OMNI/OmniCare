@@ -208,7 +208,7 @@ interface TooltipProps extends React.HTMLAttributes<HTMLDivElement> {
 export const Tooltip: React.FC<TooltipProps> = ({ children, label, ...props }) => (
   <div 
     data-testid="mantine-tooltip"
-    aria-label={label}
+    aria-label={typeof label === 'string' ? label : undefined}
     role="tooltip"
     {...props}
   >
@@ -216,7 +216,7 @@ export const Tooltip: React.FC<TooltipProps> = ({ children, label, ...props }) =
   </div>
 );
 
-interface AlertProps extends React.HTMLAttributes<HTMLDivElement> {
+interface AlertProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
   children?: ReactNode;
   icon?: ReactNode;
   color?: string;
@@ -321,15 +321,18 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({ label, placeholder
   );
 };
 
-interface TitleProps extends React.HTMLAttributes<HTMLHeadingElement> {
+interface TitleProps {
   children?: ReactNode;
   order?: 1 | 2 | 3 | 4 | 5 | 6;
   size?: string;
   fw?: number | string;
   c?: string;
+  style?: CSSProperties;
+  className?: string;
+  id?: string;
 }
 
-export const Title: React.FC<TitleProps> = ({ children, order = 1, size, fw, c, ...props }) => {
+export const Title: React.FC<TitleProps> = ({ children, order = 1, size, fw, c, style, className, id }) => {
   const Tag = `h${order}` as keyof JSX.IntrinsicElements;
   return (
     <Tag
@@ -338,7 +341,9 @@ export const Title: React.FC<TitleProps> = ({ children, order = 1, size, fw, c, 
       data-size={size}
       data-fw={fw}
       data-color={c}
-      {...props}
+      style={style}
+      className={className}
+      id={id}
     >
       {children}
     </Tag>
@@ -551,7 +556,7 @@ export const MantineProvider: React.FC<MantineProviderProps> = ({ children, them
 };
 
 // Drawer component (if needed)
-interface DrawerProps extends React.HTMLAttributes<HTMLDivElement> {
+interface DrawerProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
   children?: ReactNode;
   opened?: boolean;
   onClose?: () => void;
@@ -605,7 +610,7 @@ Drawer.Title = ({ children, ...props }: DrawerTitleProps) => (
 );
 
 // Tabs components
-interface TabsProps extends React.HTMLAttributes<HTMLDivElement> {
+interface TabsProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
   children?: ReactNode;
   value?: string;
   onChange?: (value: string) => void;
@@ -628,7 +633,7 @@ export const Tabs: React.FC<TabsProps> & {
   );
 };
 
-interface TabsListProps extends React.HTMLAttributes<HTMLDivElement> {
+interface TabsListProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
   children?: ReactNode;
   onChange?: (value: string) => void;
 }
@@ -695,25 +700,28 @@ interface SelectOption {
   label: string;
 }
 
-interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'onChange' | 'size'> {
+interface SelectProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
   label?: ReactNode;
   data?: SelectOption[];
   value?: string;
   onChange?: (value: string) => void;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   style?: CSSProperties;
+  disabled?: boolean;
+  className?: string;
 }
 
-export const Select: React.FC<SelectProps> = ({ label, data, value, onChange, size, style, ...props }) => {
+export const Select: React.FC<SelectProps> = ({ label, data, value, onChange, size, style, disabled, className, ...props }) => {
   const inputId = `select-${Math.random().toString(36).substr(2, 9)}`;
   return (
-    <div data-testid="mantine-select" style={style} {...props}>
+    <div data-testid="mantine-select" style={style} className={className} {...props}>
       {label && <label htmlFor={inputId}>{label}</label>}
       <select
         id={inputId}
         value={value}
         onChange={(e) => onChange?.(e.target.value)}
         data-size={size}
+        disabled={disabled}
       >
         {data?.map((option, index) => (
           <option key={index} value={option.value}>
@@ -726,7 +734,7 @@ export const Select: React.FC<SelectProps> = ({ label, data, value, onChange, si
 };
 
 // Textarea component
-interface TextareaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'onChange'> {
+interface TextareaProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
   label?: ReactNode;
   placeholder?: string;
   value?: string | number;
@@ -739,8 +747,9 @@ interface TextareaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaEl
 
 export const Textarea: React.FC<TextareaProps> = ({ label, placeholder, value, onChange, minRows, maxRows, disabled, autosize, ...props }) => {
   const inputId = `textarea-${Math.random().toString(36).substr(2, 9)}`;
+  const { style, className, ...restProps } = props;
   return (
-    <div data-testid="mantine-textarea" data-autosize={autosize} {...props}>
+    <div data-testid="mantine-textarea" data-autosize={autosize} style={style} className={className} {...restProps}>
       {label && <label htmlFor={inputId}>{label}</label>}
       <textarea
         id={inputId}
@@ -760,7 +769,7 @@ export const Textarea: React.FC<TextareaProps> = ({ label, placeholder, value, o
 };
 
 // Modal component
-interface ModalProps extends React.HTMLAttributes<HTMLDivElement> {
+interface ModalProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
   children?: ReactNode;
   opened?: boolean;
   onClose?: () => void;
@@ -832,7 +841,7 @@ export const Spotlight: React.FC<SpotlightProps> = ({ children, searchProps, act
 );
 
 // MultiSelect component
-interface MultiSelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'onChange' | 'size'> {
+interface MultiSelectProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
   label?: ReactNode;
   data?: Array<{ value: string; label: string }>;
   value?: string[];
@@ -841,6 +850,8 @@ interface MultiSelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectEle
   placeholder?: string;
   searchable?: boolean;
   clearable?: boolean;
+  disabled?: boolean;
+  className?: string;
 }
 
 export const MultiSelect: React.FC<MultiSelectProps> = ({ 
@@ -867,7 +878,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
           onChange?.(selectedValues);
         }}
         data-size={size}
-        placeholder={placeholder}
+        data-placeholder={placeholder}
         data-searchable={searchable}
         data-clearable={clearable}
       >
@@ -882,7 +893,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
 };
 
 // DateInput component (Mantine v7)
-interface DateInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+interface DateInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'size' | 'value'> {
   label?: ReactNode;
   placeholder?: string;
   value?: Date;
@@ -954,7 +965,7 @@ export const Progress: React.FC<ProgressProps> = ({
 );
 
 // Popover component
-interface PopoverProps extends React.HTMLAttributes<HTMLDivElement> {
+interface PopoverProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
   children?: ReactNode;
   target?: ReactNode;
   opened?: boolean;
@@ -995,7 +1006,7 @@ Object.assign(Popover, { Target: Popover.Target, Dropdown: Popover.Dropdown });
 
 // Export all components
 // Missing components that are imported in ClinicalNoteInput
-interface FileButtonProps extends React.HTMLAttributes<HTMLInputElement> {
+interface FileButtonProps extends Omit<React.HTMLAttributes<HTMLLabelElement>, 'onChange'> {
   children?: ReactNode;
   onChange?: (file: File | null) => void;
   accept?: string;
@@ -1003,14 +1014,13 @@ interface FileButtonProps extends React.HTMLAttributes<HTMLInputElement> {
 }
 
 export const FileButton: React.FC<FileButtonProps> = ({ children, onChange, accept, multiple, ...props }) => (
-  <label data-testid="mantine-file-button">
+  <label data-testid="mantine-file-button" {...props}>
     <input
       type="file"
       accept={accept}
       multiple={multiple}
       onChange={(e) => onChange?.(e.target.files?.[0] || null)}
       style={{ display: 'none' }}
-      {...props}
     />
     {children}
   </label>

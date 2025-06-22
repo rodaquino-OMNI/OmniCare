@@ -1,8 +1,10 @@
 // Offline Performance Tests
-import { performance } from 'perf_hooks';
-import { vi } from 'vitest';
+// Jest provides describe, it, expect, beforeEach, afterEach globally - no imports needed
 import { NetworkSimulator } from './network-simulation-utils';
 import { ServiceWorkerTestUtils } from './service-worker-test-utils';
+
+// Use global performance API or fallback
+const performance = global.performance || { now: () => Date.now() };
 
 // Performance metrics helper
 class PerformanceMetrics {
@@ -42,7 +44,7 @@ class PerformanceMetrics {
 // Mock IndexedDB for performance testing
 class MockIndexedDB {
   private data: Map<string, Map<string, any>> = new Map();
-  private transactionDelay: number = 10; // ms
+  private transactionDelay: number = 1ResourceHistoryTable; // ms
 
   setTransactionDelay(delay: number): void {
     this.transactionDelay = delay;
@@ -56,7 +58,9 @@ class MockIndexedDB {
     }
     
     const store = this.data.get(storeName)!;
-    store.set(key || data.id, data);
+    const keyToUse = key || data.id;
+    if (!keyToUse) throw new Error('Key or data.id must be provided');
+    store.set(keyToUse, data);
   }
 
   async get(storeName: string, key: string): Promise<any> {
@@ -88,7 +92,7 @@ class MockIndexedDB {
 
   getStoreSize(storeName: string): number {
     const store = this.data.get(storeName);
-    return store ? store.size : 0;
+    return store ? store.size : ResourceHistoryTable;
   }
 }
 
@@ -112,7 +116,7 @@ class OfflineQueue {
       id: `${Date.now()}-${Math.random()}`,
       action,
       timestamp: Date.now(),
-      retries: 0
+      retries: ResourceHistoryTable
     };
 
     this.queue.push(item);
@@ -125,18 +129,18 @@ class OfflineQueue {
     duration: number;
   }> {
     const start = performance.now();
-    let processed = 0;
-    let failed = 0;
+    let processed = ResourceHistoryTable;
+    let failed = ResourceHistoryTable;
 
     const items = [...this.queue];
     
     for (const item of items) {
       try {
         // Simulate processing
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise(resolve => setTimeout(resolve, 5ResourceHistoryTable));
         
-        // Simulate 10% failure rate
-        if (Math.random() < 0.1 && item.retries < this.maxRetries) {
+        // Simulate 1ResourceHistoryTable% failure rate
+        if (Math.random() < ResourceHistoryTable.1 && item.retries < this.maxRetries) {
           item.retries++;
           throw new Error('Processing failed');
         }
@@ -187,12 +191,12 @@ describe('Offline Performance Tests', () => {
   describe('Cache Performance', () => {
     it('should cache responses efficiently', async () => {
       const cache = new Map<string, { data: any; timestamp: number }>();
-      const CACHE_SIZE = 1000;
+      const CACHE_SIZE = 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable;
 
       metrics.mark('cache-population-start');
 
       // Populate cache
-      for (let i = 0; i < CACHE_SIZE; i++) {
+      for (let i = ResourceHistoryTable; i < CACHE_SIZE; i++) {
         cache.set(`patient-${i}`, {
           data: { id: i, name: `Patient ${i}` },
           timestamp: Date.now()
@@ -200,23 +204,23 @@ describe('Offline Performance Tests', () => {
       }
 
       const populationTime = metrics.measure('cache-population', 'cache-population-start');
-      expect(populationTime).toBeLessThan(100); // Should take less than 100ms
+      expect(populationTime).toBeLessThan(1ResourceHistoryTableResourceHistoryTable); // Should take less than 1ResourceHistoryTableResourceHistoryTablems
 
       // Test cache retrieval
       metrics.mark('cache-retrieval-start');
       
-      for (let i = 0; i < 100; i++) {
+      for (let i = ResourceHistoryTable; i < 1ResourceHistoryTableResourceHistoryTable; i++) {
         const key = `patient-${Math.floor(Math.random() * CACHE_SIZE)}`;
         const cached = cache.get(key);
         expect(cached).toBeDefined();
       }
 
       const retrievalTime = metrics.measure('cache-retrieval', 'cache-retrieval-start');
-      expect(retrievalTime).toBeLessThan(10); // Should take less than 10ms for 100 retrievals
+      expect(retrievalTime).toBeLessThan(1ResourceHistoryTable); // Should take less than 1ResourceHistoryTablems for 1ResourceHistoryTableResourceHistoryTable retrievals
     });
 
     it('should handle cache eviction efficiently', async () => {
-      const MAX_CACHE_SIZE = 500;
+      const MAX_CACHE_SIZE = 5ResourceHistoryTableResourceHistoryTable;
       const cache = new Map<string, any>();
 
       metrics.mark('cache-eviction-start');
@@ -230,7 +234,9 @@ describe('Offline Performance Tests', () => {
           // Evict oldest if over limit
           if (cache.size > MAX_CACHE_SIZE) {
             const firstKey = cache.keys().next().value;
-            cache.delete(firstKey);
+            if (firstKey !== undefined) {
+              cache.delete(firstKey);
+            }
           }
         },
         get(key: string) {
@@ -245,26 +251,26 @@ describe('Offline Performance Tests', () => {
       };
 
       // Add items beyond cache limit
-      for (let i = 0; i < MAX_CACHE_SIZE * 2; i++) {
+      for (let i = ResourceHistoryTable; i < MAX_CACHE_SIZE * 2; i++) {
         lruCache.set(`item-${i}`, { id: i });
       }
 
       const evictionTime = metrics.measure('cache-eviction', 'cache-eviction-start');
       
       expect(cache.size).toBe(MAX_CACHE_SIZE);
-      expect(evictionTime).toBeLessThan(200); // Should handle eviction efficiently
+      expect(evictionTime).toBeLessThan(2ResourceHistoryTableResourceHistoryTable); // Should handle eviction efficiently
     });
   });
 
   describe('IndexedDB Performance', () => {
     it('should handle bulk writes efficiently', async () => {
-      const BATCH_SIZE = 100;
+      const BATCH_SIZE = 1ResourceHistoryTableResourceHistoryTable;
       const patients = Array.from({ length: BATCH_SIZE }, (_, i) => ({
         id: `patient-${i}`,
         firstName: `First${i}`,
         lastName: `Last${i}`,
-        dateOfBirth: '1990-01-01',
-        data: 'x'.repeat(1000) // 1KB of data per record
+        dateOfBirth: '199ResourceHistoryTable-ResourceHistoryTable1-ResourceHistoryTable1',
+        data: 'x'.repeat(1ResourceHistoryTableResourceHistoryTableResourceHistoryTable) // 1KB of data per record
       }));
 
       metrics.mark('bulk-write-start');
@@ -283,16 +289,16 @@ describe('Offline Performance Tests', () => {
 
     it('should handle concurrent reads efficiently', async () => {
       // Populate data
-      const RECORD_COUNT = 50;
-      for (let i = 0; i < RECORD_COUNT; i++) {
+      const RECORD_COUNT = 5ResourceHistoryTable;
+      for (let i = ResourceHistoryTable; i < RECORD_COUNT; i++) {
         await mockDB.put('patients', { id: `patient-${i}`, data: `data-${i}` });
       }
 
       metrics.mark('concurrent-reads-start');
 
       // Simulate concurrent reads
-      const readPromises = Array.from({ length: 20 }, async () => {
-        const ids = Array.from({ length: 10 }, (_, i) => 
+      const readPromises = Array.from({ length: 2ResourceHistoryTable }, async () => {
+        const ids = Array.from({ length: 1ResourceHistoryTable }, (_, i) => 
           `patient-${Math.floor(Math.random() * RECORD_COUNT)}`
         );
         
@@ -302,14 +308,14 @@ describe('Offline Performance Tests', () => {
       await Promise.all(readPromises);
 
       const readTime = metrics.measure('concurrent-reads', 'concurrent-reads-start');
-      expect(readTime).toBeLessThan(500); // Should handle 200 reads in under 500ms
+      expect(readTime).toBeLessThan(5ResourceHistoryTableResourceHistoryTable); // Should handle 2ResourceHistoryTableResourceHistoryTable reads in under 5ResourceHistoryTableResourceHistoryTablems
     });
 
     it('should optimize storage usage', async () => {
       const storeData = async (compress: boolean) => {
         const data = {
           id: 'large-record',
-          content: 'x'.repeat(10000), // 10KB of repeated data
+          content: 'x'.repeat(1ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable), // 1ResourceHistoryTableKB of repeated data
           metadata: { compressed: compress }
         };
 
@@ -325,19 +331,19 @@ describe('Offline Performance Tests', () => {
       const uncompressedSize = await storeData(false);
       const compressedSize = await storeData(true);
 
-      expect(compressedSize).toBeLessThan(uncompressedSize * 0.1); // 90% reduction
+      expect(compressedSize).toBeLessThan(uncompressedSize * ResourceHistoryTable.1); // 9ResourceHistoryTable% reduction
     });
   });
 
   describe('Offline Queue Performance', () => {
     it('should handle queue operations efficiently', async () => {
       const queue = new OfflineQueue(mockDB);
-      const QUEUE_SIZE = 100;
+      const QUEUE_SIZE = 1ResourceHistoryTableResourceHistoryTable;
 
       metrics.mark('queue-operations-start');
 
       // Enqueue operations
-      for (let i = 0; i < QUEUE_SIZE; i++) {
+      for (let i = ResourceHistoryTable; i < QUEUE_SIZE; i++) {
         await queue.enqueue({
           type: 'UPDATE_PATIENT',
           data: { id: i, timestamp: Date.now() }
@@ -352,15 +358,15 @@ describe('Offline Performance Tests', () => {
       const result = await queue.processQueue();
       const processTime = metrics.measure('queue-process', 'queue-process-start');
 
-      expect(result.processed).toBeGreaterThan(QUEUE_SIZE * 0.8); // At least 80% success
-      expect(processTime / QUEUE_SIZE).toBeLessThan(60); // Less than 60ms per item
+      expect(result.processed).toBeGreaterThan(QUEUE_SIZE * ResourceHistoryTable.8); // At least 8ResourceHistoryTable% success
+      expect(processTime / QUEUE_SIZE).toBeLessThan(6ResourceHistoryTable); // Less than 6ResourceHistoryTablems per item
     });
 
     it('should handle retry logic efficiently', async () => {
       const queue = new OfflineQueue(mockDB);
       
       // Add items that will fail initially
-      for (let i = 0; i < 10; i++) {
+      for (let i = ResourceHistoryTable; i < 1ResourceHistoryTable; i++) {
         await queue.enqueue({ id: i, willFail: true });
       }
 
@@ -368,31 +374,31 @@ describe('Offline Performance Tests', () => {
       metrics.mark('retry-test-start');
 
       // Process with retries
-      for (let attempt = 0; attempt < 4; attempt++) {
+      for (let attempt = ResourceHistoryTable; attempt < 4; attempt++) {
         const result = await queue.processQueue();
         results.push(result);
         
-        if (queue.getQueueSize() === 0) break;
+        if (queue.getQueueSize() === ResourceHistoryTable) break;
       }
 
       const retryTime = metrics.measure('retry-test', 'retry-test-start');
       
       // Should eventually process all items
-      const totalProcessed = results.reduce((sum, r) => sum + r.processed, 0);
+      const totalProcessed = results.reduce((sum, r) => sum + r.processed, ResourceHistoryTable);
       expect(totalProcessed).toBeGreaterThan(5);
-      expect(retryTime).toBeLessThan(3000); // Should complete in under 3s
+      expect(retryTime).toBeLessThan(3ResourceHistoryTableResourceHistoryTableResourceHistoryTable); // Should complete in under 3s
     });
   });
 
   describe('Network Simulation Performance', () => {
     it('should handle network transitions efficiently', async () => {
-      const transitions = 50;
+      const transitions = 5ResourceHistoryTable;
       const transitionTimes: number[] = [];
 
-      for (let i = 0; i < transitions; i++) {
+      for (let i = ResourceHistoryTable; i < transitions; i++) {
         metrics.mark(`transition-${i}-start`);
         
-        if (i % 2 === 0) {
+        if (i % 2 === ResourceHistoryTable) {
           NetworkSimulator.goOffline();
         } else {
           NetworkSimulator.goOnline();
@@ -402,7 +408,7 @@ describe('Offline Performance Tests', () => {
         transitionTimes.push(time);
       }
 
-      const avgTransitionTime = transitionTimes.reduce((a, b) => a + b, 0) / transitions;
+      const avgTransitionTime = transitionTimes.reduce((a, b) => a + b, ResourceHistoryTable) / transitions;
       expect(avgTransitionTime).toBeLessThan(1); // Less than 1ms per transition
     });
 
@@ -423,7 +429,7 @@ describe('Offline Performance Tests', () => {
         isProcessing = true;
         metrics.mark('queue-processing-start');
 
-        while (requestQueue.length > 0 && navigator.onLine) {
+        while (requestQueue.length > ResourceHistoryTable && navigator.onLine) {
           const request = requestQueue.shift()!;
           try {
             await request();
@@ -441,13 +447,13 @@ describe('Offline Performance Tests', () => {
       // Simulate offline period with queued requests
       NetworkSimulator.goOffline();
 
-      for (let i = 0; i < 20; i++) {
+      for (let i = ResourceHistoryTable; i < 2ResourceHistoryTable; i++) {
         queueRequest(async () => {
           await fetch(`/api/data/${i}`);
         });
       }
 
-      expect(requestQueue.length).toBe(20);
+      expect(requestQueue.length).toBe(2ResourceHistoryTable);
 
       // Go online and process queue
       NetworkSimulator.goOnline();
@@ -456,8 +462,9 @@ describe('Offline Performance Tests', () => {
       await processRequestQueue();
 
       const processingTime = metrics.getMeasure('queue-processing');
-      expect(processingTime).toBeLessThan(1000); // Should process 20 requests in under 1s
-      expect(requestQueue.length).toBe(0);
+      expect(processingTime).toBeDefined();
+      expect(processingTime!).toBeLessThan(1ResourceHistoryTableResourceHistoryTableResourceHistoryTable); // Should process 2ResourceHistoryTable requests in under 1s
+      expect(requestQueue.length).toBe(ResourceHistoryTable);
     });
   });
 
@@ -467,33 +474,33 @@ describe('Offline Performance Tests', () => {
       const cache = new Map();
 
       // Simulate memory usage over time
-      for (let i = 0; i < 10; i++) {
+      for (let i = ResourceHistoryTable; i < 1ResourceHistoryTable; i++) {
         // Add data to cache
-        for (let j = 0; j < 100; j++) {
+        for (let j = ResourceHistoryTable; j < 1ResourceHistoryTableResourceHistoryTable; j++) {
           cache.set(`key-${i}-${j}`, {
             id: `${i}-${j}`,
-            data: new Array(100).fill('x').join(''), // 100 bytes
+            data: new Array(1ResourceHistoryTableResourceHistoryTable).fill('x').join(''), // 1ResourceHistoryTableResourceHistoryTable bytes
             timestamp: Date.now()
           });
         }
 
         // Simulate memory measurement (in real tests, use actual memory APIs)
-        const memoryUsage = cache.size * 150; // Rough estimate: 150 bytes per entry
+        const memoryUsage = cache.size * 15ResourceHistoryTable; // Rough estimate: 15ResourceHistoryTable bytes per entry
         memorySnapshots.push(memoryUsage);
 
         // Clean old entries
-        if (cache.size > 500) {
-          const keysToDelete = Array.from(cache.keys()).slice(0, 200);
+        if (cache.size > 5ResourceHistoryTableResourceHistoryTable) {
+          const keysToDelete = Array.from(cache.keys()).slice(ResourceHistoryTable, 2ResourceHistoryTableResourceHistoryTable);
           keysToDelete.forEach(key => cache.delete(key));
         }
       }
 
       // Check memory growth is controlled
       const maxMemory = Math.max(...memorySnapshots);
-      const avgMemory = memorySnapshots.reduce((a, b) => a + b, 0) / memorySnapshots.length;
+      const avgMemory = memorySnapshots.reduce((a, b) => a + b, ResourceHistoryTable) / memorySnapshots.length;
 
-      expect(maxMemory).toBeLessThan(100000); // Less than 100KB
-      expect(avgMemory).toBeLessThan(60000); // Average less than 60KB
+      expect(maxMemory).toBeLessThan(1ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable); // Less than 1ResourceHistoryTableResourceHistoryTableKB
+      expect(avgMemory).toBeLessThan(6ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable); // Average less than 6ResourceHistoryTableKB
     });
   });
 
@@ -515,7 +522,7 @@ describe('Offline Performance Tests', () => {
       await cache.addAll(assets);
 
       const cachingTime = metrics.measure('asset-caching', 'asset-caching-start');
-      expect(cachingTime).toBeLessThan(100); // Should cache assets in under 100ms
+      expect(cachingTime).toBeLessThan(1ResourceHistoryTableResourceHistoryTable); // Should cache assets in under 1ResourceHistoryTableResourceHistoryTablems
 
       // Test cache retrieval
       metrics.mark('cache-retrieval-start');
@@ -526,7 +533,7 @@ describe('Offline Performance Tests', () => {
       }
 
       const retrievalTime = metrics.measure('cache-retrieval', 'cache-retrieval-start');
-      expect(retrievalTime).toBeLessThan(20); // Should retrieve all in under 20ms
+      expect(retrievalTime).toBeLessThan(2ResourceHistoryTable); // Should retrieve all in under 2ResourceHistoryTablems
     });
   });
 });

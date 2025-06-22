@@ -35,7 +35,7 @@ export function useNetworkAwareFHIRResource<T extends FhirResource>(
     {
       enableAutoRetry: true,
       cacheStrategy: 'cache-first',
-      cacheDuration: 5 * 60 * 1000, // 5 minutes
+      cacheDuration: 5 * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable, // 5 minutes
       ...options,
     }
   );
@@ -57,7 +57,7 @@ export function useNetworkAwareFHIRSearch<T extends FhirResource>(
     {
       enableAutoRetry: true,
       cacheStrategy: networkStatus.saveData ? 'cache-first' : 'network-first',
-      cacheDuration: networkStatus.saveData ? 15 * 60 * 1000 : 5 * 60 * 1000,
+      cacheDuration: networkStatus.saveData ? 15 * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable : 5 * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable,
       ...options,
     }
   );
@@ -73,17 +73,18 @@ export function useNetworkAwareFHIRMutation<T extends FhirResource>(
 
   return useMutation<T, Error, Partial<T>>({
     mutationFn: async (data: Partial<T>) => {
-      if (!networkStatus.isOnline && enableOfflineQueue) {
+      if (!networkStatus.isConnected && enableOfflineQueue) {
         // Add to offline queue
         const taskId = addSyncTask({
           type: data.id ? 'update' : 'create',
-          resource: 'fhir',
+          resource: resourceType,
           data: {
             ...data,
             resourceType,
           },
           priority: 'normal',
           conflictResolution,
+          maxRetries: 3,
         });
 
         // Return optimistic response
@@ -117,7 +118,7 @@ export function useNetworkAwareFHIRMutation<T extends FhirResource>(
       }
     },
     onError: (error, variables) => {
-      if (networkStatus.isOnline || !enableOfflineQueue) {
+      if (networkStatus.isConnected || !enableOfflineQueue) {
         return;
       }
 
@@ -152,7 +153,7 @@ export function useNetworkAwareFHIRDelete(
 
   return useMutation<void, Error, string>({
     mutationFn: async (id: string) => {
-      if (!networkStatus.isOnline && enableOfflineQueue) {
+      if (!networkStatus.isConnected && enableOfflineQueue) {
         // Add to offline queue
         addSyncTask({
           type: 'delete',
@@ -178,7 +179,7 @@ export function useNetworkAwareFHIRDelete(
       queryClient.removeQueries({ queryKey: ['fhir', resourceType, id] });
     },
     onError: (error, id) => {
-      if (networkStatus.isOnline || !enableOfflineQueue) {
+      if (networkStatus.isConnected || !enableOfflineQueue) {
         return;
       }
 
@@ -212,7 +213,7 @@ export function useNetworkAwareFHIRBatch(
 
   return useMutation<Bundle, Error, Bundle>({
     mutationFn: async (bundle: Bundle) => {
-      if (!networkStatus.isOnline && enableOfflineQueue) {
+      if (!networkStatus.isConnected && enableOfflineQueue) {
         // Split bundle into individual tasks for offline queue
         bundle.entry?.forEach((entry) => {
           if (entry.request && entry.resource) {
@@ -236,7 +237,7 @@ export function useNetworkAwareFHIRBatch(
           entry: bundle.entry?.map((entry) => ({
             ...entry,
             response: {
-              status: '202 Accepted',
+              status: '2ResourceHistoryTable2 Accepted',
               location: entry.fullUrl,
             },
           })),

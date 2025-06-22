@@ -1,23 +1,15 @@
 // Offline Testing Suite - Main Export File
 // This file provides a centralized export for all offline testing utilities
 
-// Core test utilities
-export * from './service-worker-test-utils';
-export * from './network-simulation-utils';
-export * from './sync-conflict-test-utils';
-
-// Test configuration
-export * from './offline-test.config';
-
-// Convenience exports for common test scenarios
-export { setupOfflineTests, offlineTestConfig } from './offline-test.config';
-export { 
+// Import everything we need first
+import { setupOfflineTests, offlineTestConfig } from './offline-test.config';
+import { 
   ServiceWorkerTestUtils, 
-  setupServiceWorkerTests,
+  setupServiceWorkerTests as setupSW,
   mockServiceWorkerLifecycle,
   createMockFetchEvent 
 } from './service-worker-test-utils';
-export { 
+import { 
   NetworkSimulator,
   setupNetworkSimulation,
   createOfflineAwareFetch,
@@ -26,7 +18,7 @@ export {
   waitForOnline,
   waitForOffline
 } from './network-simulation-utils';
-export {
+import {
   SyncConflictSimulator,
   createSyncTestScenario,
   defaultMergeStrategies,
@@ -36,17 +28,35 @@ export {
   type MergeStrategy
 } from './sync-conflict-test-utils';
 
+// Re-export everything (excluding conflicting names)
+export {
+  ServiceWorkerTestUtils,
+  mockServiceWorkerLifecycle,
+  createMockFetchEvent,
+  type MockServiceWorkerRegistration,
+  type MockServiceWorker,
+  type ExtendableEvent,
+  type FetchEvent,
+  type ExtendableMessageEvent,
+  type SyncManager
+} from './service-worker-test-utils';
+
+export * from './network-simulation-utils';
+export * from './sync-conflict-test-utils';
+export * from './offline-test.config';
+
+// Export setupServiceWorkerTests with explicit name to avoid conflicts
+export { setupServiceWorkerTests as setupServiceWorkerTests } from './service-worker-test-utils';
+
 // Combined setup function for comprehensive offline testing
 export function setupComprehensiveOfflineTests() {
   setupOfflineTests();
-  setupServiceWorkerTests();
+  setupSW();
   setupNetworkSimulation();
 }
 
 // Helper to create a complete offline test environment
 export function createOfflineTestEnvironment() {
-  const networkSimulator = NetworkSimulator;
-  const serviceWorkerUtils = ServiceWorkerTestUtils;
   const syncSimulator = new SyncConflictSimulator();
   
   // Register default merge strategies
@@ -55,20 +65,20 @@ export function createOfflineTestEnvironment() {
   });
 
   return {
-    network: networkSimulator,
-    serviceWorker: serviceWorkerUtils,
+    network: NetworkSimulator,
+    serviceWorker: ServiceWorkerTestUtils,
     sync: syncSimulator,
     
     // Convenience methods
-    goOffline: () => networkSimulator.goOffline(),
-    goOnline: () => networkSimulator.goOnline(),
-    simulateSlowNetwork: () => networkSimulator.simulateSlowConnection(),
-    simulateFastNetwork: () => networkSimulator.simulateFastConnection(),
+    goOffline: () => NetworkSimulator.goOffline(),
+    goOnline: () => NetworkSimulator.goOnline(),
+    simulateSlowNetwork: () => NetworkSimulator.simulateSlowConnection(),
+    simulateFastNetwork: () => NetworkSimulator.simulateFastConnection(),
     
     // Cleanup
     cleanup: () => {
-      networkSimulator.restore();
-      serviceWorkerUtils.cleanup();
+      NetworkSimulator.restore();
+      ServiceWorkerTestUtils.cleanup();
       syncSimulator.clear();
     }
   };
@@ -81,7 +91,7 @@ export const testDataFactories = {
     mrn: `MRN${Date.now()}`,
     firstName: 'Test',
     lastName: 'Patient',
-    dateOfBirth: '1990-01-01',
+    dateOfBirth: '199ResourceHistoryTable-ResourceHistoryTable1-ResourceHistoryTable1',
     gender: 'other' as const,
     status: 'active' as const,
     createdAt: new Date().toISOString(),
@@ -110,7 +120,7 @@ export const testDataFactories = {
     recordedBy: 'nurse-1',
     recordedDate: new Date().toISOString(),
     temperature: { value: 98.6, unit: 'fahrenheit' as const },
-    bloodPressure: { systolic: 120, diastolic: 80, unit: 'mmHg' as const },
+    bloodPressure: { systolic: 12ResourceHistoryTable, diastolic: 8ResourceHistoryTable, unit: 'mmHg' as const },
     heartRate: { value: 72, unit: 'bpm' as const },
     ...overrides
   }),
@@ -120,7 +130,7 @@ export const testDataFactories = {
     type,
     resource,
     timestamp: new Date().toISOString(),
-    retries: 0,
+    retries: ResourceHistoryTable,
     status: 'pending' as const
   })
 };
@@ -184,7 +194,7 @@ export const performanceBenchmarks = {
     return {
       totalDuration: duration,
       perItemDuration,
-      itemsPerSecond: 1000 / perItemDuration
+      itemsPerSecond: 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable / perItemDuration
     };
   },
 

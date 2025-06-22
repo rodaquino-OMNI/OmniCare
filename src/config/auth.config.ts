@@ -111,7 +111,7 @@ export const MFA_REQUIRED_ROLES = [
  * Session timeout by role (in milliseconds)
  * More sensitive roles have shorter session timeouts
  */
-export const ROLE_SESSION_TIMEOUTS = {
+export const ROLE_SESSION_TIMEOUTS: Record<string, number> = {
   physician: 15 * 60 * 1000, // 15 minutes
   nursing_staff: 20 * 60 * 1000, // 20 minutes
   administrative_staff: 30 * 60 * 1000, // 30 minutes
@@ -119,7 +119,9 @@ export const ROLE_SESSION_TIMEOUTS = {
   pharmacist: 15 * 60 * 1000, // 15 minutes
   laboratory_technician: 25 * 60 * 1000, // 25 minutes
   radiology_technician: 25 * 60 * 1000, // 25 minutes
-  patient: 60 * 60 * 1000 // 60 minutes for patients
+  patient: 60 * 60 * 1000, // 60 minutes for patients
+  billing_staff: 30 * 60 * 1000, // 30 minutes
+  receptionist: 45 * 60 * 1000 // 45 minutes
 };
 
 /**

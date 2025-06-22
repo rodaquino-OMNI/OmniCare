@@ -7,8 +7,9 @@
 import { AuditService } from '../../src/services/audit.service';
 import { ComplianceService } from '../../src/services/compliance.service';
 import { ValidationService } from '../../src/services/validation.service';
-import { User, Permission, UserRole, AuditLogEntry, SecurityEvent } from '../../src/types/auth.types';
+import { User, Permission, UserRole, AuditLogEntry, SecurityEvent, UserRoles } from '../../src/types/auth.types';
 import { Patient, Observation, MedicationRequest } from '@medplum/fhirtypes';
+import { validationService } from '../../src/services/validation.service';
 
 // Mock dependencies
 jest.mock('../../src/utils/logger', () => ({
@@ -25,7 +26,7 @@ describe('HIPAA Compliance Test Suite', () => {
 
   beforeEach(() => {
     auditService = new AuditService();
-    complianceService = new ComplianceService(auditService);
+    complianceService = new ComplianceService(auditService, validationService);
     validationService = new ValidationService();
     jest.clearAllMocks();
   });
@@ -58,7 +59,9 @@ describe('HIPAA Compliance Test Suite', () => {
       );
 
       const auditLogs = await auditService.searchAuditLogs('');
+      expect(auditLogs).toHaveLength(1);
       const logEntry = auditLogs[0];
+      expect(logEntry).toBeDefined();
 
       // Verify sensitive data is encrypted
       expect(logEntry.additionalData?.ssn).toMatch(/^encrypted:/);
@@ -97,27 +100,27 @@ describe('HIPAA Compliance Test Suite', () => {
     it('should enforce data access permissions by role', async () => {
       const testCases = [
         {
-          role: UserRole.PATIENT,
+          role: UserRoles.PATIENT,
           permission: Permission.VIEW_OWN_RECORDS,
           shouldHave: true
         },
         {
-          role: UserRole.PATIENT,
+          role: UserRoles.PATIENT,
           permission: Permission.VIEW_PATIENT_RECORDS,
           shouldHave: false
         },
         {
-          role: UserRole.PHYSICIAN,
+          role: UserRoles.PHYSICIAN,
           permission: Permission.VIEW_PATIENT_RECORDS,
           shouldHave: true
         },
         {
-          role: UserRole.NURSE,
+          role: UserRoles.NURSING_STAFF,
           permission: Permission.DOCUMENT_VITAL_SIGNS,
           shouldHave: true
         },
         {
-          role: UserRole.PHARMACIST,
+          role: UserRoles.PHARMACIST,
           permission: Permission.DISPENSE_MEDICATIONS,
           shouldHave: true
         }
@@ -159,6 +162,7 @@ describe('HIPAA Compliance Test Suite', () => {
       expect(auditLogs).toHaveLength(1);
       
       const logEntry = auditLogs[0];
+      expect(logEntry).toBeDefined();
       expect(logEntry.userId).toBe(testAccess.userId);
       expect(logEntry.action).toBe(testAccess.action);
       expect(logEntry.resource).toBe(testAccess.resource);
@@ -181,7 +185,9 @@ describe('HIPAA Compliance Test Suite', () => {
       );
 
       const auditLogs = await auditService.searchAuditLogs('');
+      expect(auditLogs).toHaveLength(1);
       const logEntry = auditLogs[0];
+      expect(logEntry).toBeDefined();
       
       expect(logEntry.success).toBe(false);
       expect(logEntry.errorMessage).toBe('Insufficient permissions for accessing patient record');
@@ -208,6 +214,8 @@ describe('HIPAA Compliance Test Suite', () => {
       
       // Verify all IDs are unique
       auditLogs.forEach(log => {
+        expect(log).toBeDefined();
+        expect(log.id).toBeDefined();
         expect(auditIds.has(log.id)).toBe(false);
         auditIds.add(log.id);
         
@@ -228,6 +236,8 @@ describe('HIPAA Compliance Test Suite', () => {
       );
 
       const originalLogs = await auditService.searchAuditLogs('');
+      expect(originalLogs).toHaveLength(1);
+      expect(originalLogs[0]).toBeDefined();
       const originalLog = { ...originalLogs[0] };
 
       // Attempt to modify the log (this should not affect the stored version)
@@ -236,7 +246,9 @@ describe('HIPAA Compliance Test Suite', () => {
 
       // Retrieve logs again to verify integrity
       const retrievedLogs = await auditService.searchAuditLogs('');
+      expect(retrievedLogs).toHaveLength(1);
       const retrievedLog = retrievedLogs[0];
+      expect(retrievedLog).toBeDefined();
 
       expect(retrievedLog.action).toBe(originalLog.action);
       expect(retrievedLog.success).toBe(originalLog.success);
@@ -273,6 +285,7 @@ describe('HIPAA Compliance Test Suite', () => {
       
       // Verify all failed attempts are logged with correct details
       failedLogins.forEach(log => {
+        expect(log).toBeDefined();
         expect(log.userId).toBe(suspiciousUserId);
         expect(log.success).toBe(false);
         expect(log.ipAddress).toBe(ipAddress);
@@ -330,7 +343,10 @@ describe('HIPAA Compliance Test Suite', () => {
       });
 
       expect(sessionLogs).toHaveLength(3);
-      expect(sessionLogs.map(log => log.action)).toEqual([
+      expect(sessionLogs.map(log => {
+        expect(log).toBeDefined();
+        return log.action;
+      })).toEqual([
         'session_start',
         'session_activity', 
         'session_end'
@@ -418,19 +434,15 @@ describe('HIPAA Compliance Test Suite', () => {
         true
       );
 
-      const report = await complianceService.generateHIPAAComplianceReport(
+      const report = await complianceService.generateComplianceAuditReport(
         startDate,
         endDate,
-        generatedBy,
-        false // Don't include patient data
+        { includeDetails: false }
       );
 
-      expect(report.reportId).toMatch(/^hipaa_\d+_[a-z0-9]+$/);
-      expect(report.reportType).toBe('HIPAA_ACCESS_LOG');
-      expect(report.generatedBy).toBe(generatedBy);
-      expect(report.dateRange.start).toEqual(startDate);
-      expect(report.dateRange.end).toEqual(endDate);
-      expect(report.createdAt).toBeInstanceOf(Date);
+      expect(report.period.startDate).toEqual(startDate);
+      expect(report.period.endDate).toEqual(endDate);
+      expect(report.generatedAt).toBeInstanceOf(Date);
       expect(report.summary).toBeDefined();
     });
   });
@@ -493,6 +505,8 @@ describe('HIPAA Compliance Test Suite', () => {
 
       // Verify events are tracked (this would normally be stored in a database)
       expect(criticalEvents).toHaveLength(2);
+      expect(criticalEvents[0]).toBeDefined();
+      expect(criticalEvents[1]).toBeDefined();
       expect(criticalEvents[0].severity).toBe('CRITICAL');
       expect(criticalEvents[1].severity).toBe('HIGH');
     });
@@ -525,11 +539,19 @@ describe('HIPAA Compliance Test Suite', () => {
       expect(bulkAccess).toHaveLength(50);
       
       // Analyze for potential breach indicators
-      const uniqueResources = new Set(bulkAccess.map(log => log.resourceId));
+      const uniqueResources = new Set(bulkAccess.map(log => {
+        expect(log).toBeDefined();
+        expect(log.resourceId).toBeDefined();
+        return log.resourceId;
+      }));
       expect(uniqueResources.size).toBe(50); // Accessed 50 different patient records
       
       // All accesses from same IP (potential indicator)
-      const uniqueIPs = new Set(bulkAccess.map(log => log.ipAddress));
+      const uniqueIPs = new Set(bulkAccess.map(log => {
+        expect(log).toBeDefined();
+        expect(log.ipAddress).toBeDefined();
+        return log.ipAddress;
+      }));
       expect(uniqueIPs.size).toBe(1);
     });
 
@@ -556,6 +578,7 @@ describe('HIPAA Compliance Test Suite', () => {
       });
 
       expect(exportLogs).toHaveLength(1);
+      expect(exportLogs[0]).toBeDefined();
       expect(exportLogs[0].additionalData).toBeDefined();
       expect(exportLogs[0].resource).toBe('Patient');
     });
@@ -607,17 +630,25 @@ describe('HIPAA Compliance Test Suite', () => {
       // Test filtering by user
       const user1Logs = await auditService.searchAuditLogs('', { userId: 'user1' });
       expect(user1Logs).toHaveLength(1);
+      expect(user1Logs[0]).toBeDefined();
       expect(user1Logs[0].userId).toBe('user1');
 
       // Test filtering by success status
       const failedLogs = await auditService.searchAuditLogs('', { success: false });
       expect(failedLogs.length).toBeGreaterThan(0);
-      expect(failedLogs.every(log => log.success === false)).toBe(true);
+      expect(failedLogs.every(log => {
+        expect(log).toBeDefined();
+        return log.success === false;
+      })).toBe(true);
 
       // Test filtering by IP address
       const ipLogs = await auditService.searchAuditLogs('', { ipAddress: '192.168.1.1' });
       expect(ipLogs.length).toBeGreaterThan(0);
-      expect(ipLogs.every(log => log.ipAddress === '192.168.1.1')).toBe(true);
+      expect(ipLogs.every(log => {
+        expect(log).toBeDefined();
+        expect(log.ipAddress).toBeDefined();
+        return log.ipAddress === '192.168.1.1';
+      })).toBe(true);
     });
   });
 });

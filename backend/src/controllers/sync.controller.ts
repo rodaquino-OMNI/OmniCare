@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { syncService, SyncRequest } from '@/services/sync.service';
 import logger from '@/utils/logger';
-import { AppError, handleError } from '@/utils/error.utils';
+import { AppError } from '@/utils/error.utils';
 
 // ===============================
 // VALIDATION SCHEMAS
@@ -161,8 +161,8 @@ export class SyncController {
    */
   async getConflicts(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user?.id || 'anonymous';
-      const { resolved = 'false' } = req.query;
+      const _userId = req.user?.id || 'anonymous';
+      const { resolved: _resolved = 'false' } = req.query;
 
       // TODO: Implement conflict retrieval logic
       // For now, return empty array
@@ -232,7 +232,7 @@ export class SyncController {
    * Get sync configuration
    * GET /api/sync/config
    */
-  async getConfig(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getConfig(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       // Return sync configuration
       res.json({
@@ -276,7 +276,7 @@ export class SyncController {
    * Health check for sync service
    * GET /api/sync/health
    */
-  async healthCheck(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async healthCheck(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       res.json({
         success: true,

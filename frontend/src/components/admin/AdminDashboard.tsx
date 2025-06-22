@@ -72,7 +72,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ userRole, userName }) =
               status: 'Active'
             }
           ],
-          revenueThisMonth: 248750.50,
+          revenueThisMonth: 24875ResourceHistoryTable.5ResourceHistoryTable,
           patientSatisfactionScore: 4.2,
           averageWaitTime: 18
         };
@@ -189,7 +189,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ userRole, userName }) =
 
   if (loading) {
     return (
-      <div style={{ position: 'relative', minHeight: 400 }}>
+      <div style={{ position: 'relative', minHeight: 4ResourceHistoryTableResourceHistoryTable }}>
         <LoadingOverlay visible={loading} />
       </div>
     );
@@ -201,7 +201,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ userRole, userName }) =
       <Paper p="md" withBorder>
         <Group justify="space-between">
           <div>
-            <Text size="xl" fw={700}>OmniCare EMR - Administrative Dashboard</Text>
+            <Text size="xl" fw={7ResourceHistoryTableResourceHistoryTable}>OmniCare EMR - Administrative Dashboard</Text>
             <Text c="dimmed">Welcome back, {userName} ({userRole})</Text>
           </div>
           <div>
@@ -222,48 +222,48 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ userRole, userName }) =
         <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md">
           <Card shadow="sm" padding="lg" radius="md" withBorder>
             <Group justify="space-between" mb="xs">
-              <Text size="sm" c="dimmed" fw={500}>
+              <Text size="sm" c="dimmed" fw={5ResourceHistoryTableResourceHistoryTable}>
                 Patients Registered Today
               </Text>
-              <IconUsers size={20} className="text-gray-400" />
+              <IconUsers size={2ResourceHistoryTable} className="text-gray-4ResourceHistoryTableResourceHistoryTable" />
             </Group>
-            <Text size="lg" fw={700}>
+            <Text size="lg" fw={7ResourceHistoryTableResourceHistoryTable}>
               {metrics.patientsRegisteredToday}
             </Text>
           </Card>
 
           <Card shadow="sm" padding="lg" radius="md" withBorder>
             <Group justify="space-between" mb="xs">
-              <Text size="sm" c="dimmed" fw={500}>
+              <Text size="sm" c="dimmed" fw={5ResourceHistoryTableResourceHistoryTable}>
                 Appointments Today
               </Text>
-              <IconCalendar size={20} className="text-gray-400" />
+              <IconCalendar size={2ResourceHistoryTable} className="text-gray-4ResourceHistoryTableResourceHistoryTable" />
             </Group>
-            <Text size="lg" fw={700}>
+            <Text size="lg" fw={7ResourceHistoryTableResourceHistoryTable}>
               {metrics.appointmentsToday}
             </Text>
           </Card>
 
           <Card shadow="sm" padding="lg" radius="md" withBorder>
             <Group justify="space-between" mb="xs">
-              <Text size="sm" c="dimmed" fw={500}>
+              <Text size="sm" c="dimmed" fw={5ResourceHistoryTableResourceHistoryTable}>
                 Revenue This Month
               </Text>
-              <IconCurrencyDollar size={20} className="text-gray-400" />
+              <IconCurrencyDollar size={2ResourceHistoryTable} className="text-gray-4ResourceHistoryTableResourceHistoryTable" />
             </Group>
-            <Text size="lg" fw={700}>
+            <Text size="lg" fw={7ResourceHistoryTableResourceHistoryTable}>
               ${metrics.revenueThisMonth.toLocaleString()}
             </Text>
           </Card>
 
           <Card shadow="sm" padding="lg" radius="md" withBorder>
             <Group justify="space-between" mb="xs">
-              <Text size="sm" c="dimmed" fw={500}>
+              <Text size="sm" c="dimmed" fw={5ResourceHistoryTableResourceHistoryTable}>
                 Pending Claims
               </Text>
-              <IconFileText size={20} className="text-gray-400" />
+              <IconFileText size={2ResourceHistoryTable} className="text-gray-4ResourceHistoryTableResourceHistoryTable" />
             </Group>
-            <Text size="lg" fw={700}>
+            <Text size="lg" fw={7ResourceHistoryTableResourceHistoryTable}>
               {metrics.pendingClaims}
             </Text>
           </Card>
@@ -271,9 +271,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ userRole, userName }) =
       )}
 
       {/* System Alerts */}
-      {metrics?.systemAlerts && metrics.systemAlerts.length > 0 && (
+      {metrics?.systemAlerts && metrics.systemAlerts.length > ResourceHistoryTable && (
         <Card shadow="sm" padding="lg" radius="md" withBorder>
-          <Text size="lg" fw={600} mb="md">
+          <Text size="lg" fw={6ResourceHistoryTableResourceHistoryTable} mb="md">
             System Alerts
           </Text>
           <Stack gap="sm">
@@ -301,7 +301,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ userRole, userName }) =
 
       {/* Administrative Modules */}
       <Card shadow="sm" padding="lg" radius="md" withBorder>
-        <Text size="lg" fw={600} mb="md">
+        <Text size="lg" fw={6ResourceHistoryTableResourceHistoryTable} mb="md">
           Administrative Modules
         </Text>
         <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
@@ -316,10 +316,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ userRole, userName }) =
                 <Card shadow="sm" padding="md" radius="md" withBorder className="hover:shadow-md transition-shadow">
                   <Group gap="sm">
                     <ActionIcon color={module.color} variant="light" size="lg">
-                      <IconComponent size={20} />
+                      <IconComponent size={2ResourceHistoryTable} />
                     </ActionIcon>
                     <div style={{ flex: 1 }}>
-                      <Text size="sm" fw={500}>
+                      <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>
                         {module.name}
                       </Text>
                       <Text size="xs" c="dimmed" mt={2}>
@@ -338,7 +338,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ userRole, userName }) =
       <Grid>
         <Grid.Col span={{ base: 12, lg: 6 }}>
           <Card shadow="sm" padding="lg" radius="md" withBorder>
-            <Text size="lg" fw={600} mb="md">
+            <Text size="lg" fw={6ResourceHistoryTableResourceHistoryTable} mb="md">
               Quick Actions
             </Text>
             <Stack gap="sm">
@@ -360,7 +360,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ userRole, userName }) =
 
         <Grid.Col span={{ base: 12, lg: 6 }}>
           <Card shadow="sm" padding="lg" radius="md" withBorder>
-            <Text size="lg" fw={600} mb="md">
+            <Text size="lg" fw={6ResourceHistoryTableResourceHistoryTable} mb="md">
               Performance Metrics
             </Text>
             {metrics && (
@@ -368,21 +368,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ userRole, userName }) =
                 <div>
                   <Group justify="space-between">
                     <Text size="sm" c="dimmed">Patient Satisfaction</Text>
-                    <Text size="sm" fw={500}>{metrics.patientSatisfactionScore}/5.0</Text>
+                    <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>{metrics.patientSatisfactionScore}/5.ResourceHistoryTable</Text>
                   </Group>
                 </div>
                 
                 <div>
                   <Group justify="space-between">
                     <Text size="sm" c="dimmed">Average Wait Time</Text>
-                    <Text size="sm" fw={500}>{metrics.averageWaitTime} min</Text>
+                    <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>{metrics.averageWaitTime} min</Text>
                   </Group>
                 </div>
 
                 <div>
                   <Group justify="space-between">
                     <Text size="sm" c="dimmed">Claims Processing</Text>
-                    <Text size="sm" fw={500}>92% Success Rate</Text>
+                    <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>92% Success Rate</Text>
                   </Group>
                 </div>
               </Stack>

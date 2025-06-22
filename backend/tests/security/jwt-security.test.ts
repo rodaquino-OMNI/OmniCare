@@ -98,6 +98,11 @@ describe('JWT Security Tests', () => {
       const tokens = jwtService.generateTokens(testUser);
       const [header, payload, signature] = tokens.accessToken.split('.');
       
+      // Ensure payload exists before processing
+      if (!payload) {
+        throw new Error('Invalid JWT token structure');
+      }
+      
       // Decode and modify payload
       const decodedPayload = JSON.parse(Buffer.from(payload, 'base64url').toString());
       decodedPayload.role = UserRoles.SYSTEM_ADMINISTRATOR; // Escalate privileges

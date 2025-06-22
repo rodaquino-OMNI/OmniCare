@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { syncController } from '@/controllers/sync.controller';
 import { authenticate } from '@/middleware/auth.middleware';
-import { validate } from '@/middleware/validation.middleware';
+// import { validate } from '@/middleware/validation.middleware';
 import { RateLimiters } from '@/middleware/rate-limit.middleware';
 
 const router = Router();

@@ -58,7 +58,7 @@ export function OfflinePatientList() {
         // Get all patients
         results = await query<Patient>('Patient')
           .orderBy('name.family')
-          .limit(50)
+          .limit(5ResourceHistoryTable)
           .toArray();
       }
 
@@ -97,7 +97,7 @@ export function OfflinePatientList() {
 
   // Format patient name
   const formatPatientName = (patient: Patient): string => {
-    const name = patient.name?.[0];
+    const name = patient.name?.[ResourceHistoryTable];
     if (!name) return 'Unknown Patient';
     return `${name.given?.join(' ') || ''} ${name.family || ''}`.trim();
   };
@@ -119,7 +119,7 @@ export function OfflinePatientList() {
 
   if (!isInitialized) {
     return (
-      <div style={{ textAlign: 'center', padding: 50 }}>
+      <div style={{ textAlign: 'center', padding: 5ResourceHistoryTable }}>
         <Loader />
         <Text mt="md">Initializing offline storage...</Text>
       </div>
@@ -131,7 +131,7 @@ export function OfflinePatientList() {
       {/* Header */}
       <Group justify="space-between" mb="md">
         <Group>
-          <Text size="xl" fw={700}>Patients</Text>
+          <Text size="xl" fw={7ResourceHistoryTableResourceHistoryTable}>Patients</Text>
           <Badge 
             color={isOnline ? 'green' : 'orange'}
             leftSection={isOnline ? <IconCloud size={14} /> : <IconCloudOff size={14} />}
@@ -202,7 +202,7 @@ export function OfflinePatientList() {
                 <Table.Td>{formatPatientName(patient)}</Table.Td>
                 <Table.Td>
                   <Text size="sm" c="dimmed">
-                    {patient.identifier?.[0]?.value || 'N/A'}
+                    {patient.identifier?.[ResourceHistoryTable]?.value || 'N/A'}
                   </Text>
                 </Table.Td>
                 <Table.Td>{formatBirthDate(patient.birthDate)}</Table.Td>
@@ -250,7 +250,7 @@ export function OfflinePatientList() {
       </Table>
 
       {/* Empty state */}
-      {!loading && patients.length === 0 && (
+      {!loading && patients.length === ResourceHistoryTable && (
         <Text size="sm" c="dimmed" ta="center" mt="xl">
           {searchTerm ? 'No patients found matching your search' : 'No patients stored offline'}
         </Text>

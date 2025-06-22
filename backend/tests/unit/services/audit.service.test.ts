@@ -1,16 +1,26 @@
+// Mock uuid for deterministic testing - must be before imports
+let mockCounter = 0;
+const mockUuidV4 = () => {
+  mockCounter++;
+  return `00000000-0000-4000-8000-${mockCounter.toString().padStart(12, '0')}`;
+};
+
+jest.mock('uuid', () => ({
+  v4: mockUuidV4
+}));
+
+// Mock crypto for hashing
+const mockHash = {
+  update: jest.fn().mockReturnThis(),
+  digest: jest.fn().mockReturnValue('mockedhash')
+};
+
+jest.mock('crypto', () => ({
+  createHash: jest.fn(() => mockHash)
+}));
+
 import { AuditService } from '../../../src/services/audit.service';
 import { AuditLogEntry, SecurityEvent, ComplianceReport } from '../../../src/types/auth.types';
-
-// Mock crypto for deterministic testing
-jest.mock('crypto', () => ({
-  randomBytes: jest.fn().mockReturnValue({
-    toString: jest.fn().mockReturnValue('mockedrandom123')
-  }),
-  createHash: jest.fn().mockReturnValue({
-    update: jest.fn().mockReturnThis(),
-    digest: jest.fn().mockReturnValue('mockedhash')
-  })
-}));
 
 // Mock console.log to avoid test output pollution
 jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -21,6 +31,7 @@ describe('AuditService', () => {
   let originalEnv: NodeJS.ProcessEnv;
 
   beforeEach(() => {
+    mockCounter = 0; // Reset counter for each test
     originalEnv = process.env;
     process.env = { ...originalEnv, AUDIT_ENCRYPTION_KEY: 'test-key-123' };
     auditService = new AuditService();
@@ -505,6 +516,10 @@ describe('AuditService', () => {
   describe('audit ID generation', () => {
     it('should generate unique audit IDs', async () => {
       const ids = new Set();
+      const eventSpy = jest.fn((entry) => {
+        ids.add(entry.id);
+      });
+      auditService.on('auditEntry', eventSpy);
       
       for (let i = 0; i < 10; i++) {
         await auditService.logUserAction(
@@ -602,13 +617,13 @@ describe('AuditService', () => {
       const invalidStartDate = new Date('invalid');
       const endDate = new Date();
       
-      expect(() => 
+      await expect(
         auditService.generateHipaaComplianceReport(
           invalidStartDate,
           endDate,
           'admin'
         )
-      ).not.toThrow();
+      ).rejects.toThrow('Invalid date parameters provided');
     });
 
     it('should handle empty search results', async () => {

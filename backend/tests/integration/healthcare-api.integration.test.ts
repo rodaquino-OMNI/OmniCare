@@ -62,7 +62,7 @@ describe('Healthcare API Integration Tests', () => {
           { system: 'phone' as const, value: '555-0123', use: 'mobile' as const }
         ],
         address: [{
-          use: 'home',
+          use: 'home' as const,
           line: ['123 Test St'],
           city: 'Test City',
           state: 'TS',
@@ -269,9 +269,16 @@ describe('Healthcare API Integration Tests', () => {
         }
       ];
 
-      const batchRequest = {
-        type: 'batch' as const,
-        resources: batchResources,
+      const batchRequest: Bundle = {
+        resourceType: 'Bundle',
+        type: 'batch',
+        entry: batchResources.map((resource, index) => ({
+          request: {
+            method: 'POST',
+            url: resource.resourceType
+          },
+          resource
+        })),
         timestamp: new Date().toISOString()
       };
 
@@ -289,9 +296,16 @@ describe('Healthcare API Integration Tests', () => {
         }
       ];
 
-      const transactionRequest = {
-        type: 'transaction' as const,
-        resources: transactionResources,
+      const transactionRequest: Bundle = {
+        resourceType: 'Bundle',
+        type: 'transaction',
+        entry: transactionResources.map((resource, index) => ({
+          request: {
+            method: 'POST',
+            url: resource.resourceType
+          },
+          resource
+        })),
         timestamp: new Date().toISOString()
       };
 
@@ -307,7 +321,8 @@ describe('Healthcare API Integration Tests', () => {
         await medplumService.readResource('InvalidResourceType' as any, 'invalid-id');
       } catch (error) {
         expect(error).toBeDefined();
-        expect(error.message).toContain('FHIR Error');
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        expect(errorMessage).toContain('FHIR Error');
       }
     });
 
@@ -335,6 +350,9 @@ describe('Healthcare API Integration Tests', () => {
       } catch (error) {
         // Timeout or other network error is acceptable
         expect(error).toBeDefined();
+        // Type-safe error handling
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        expect(errorMessage).toBeDefined();
       }
     });
   });
@@ -384,7 +402,8 @@ describe('Healthcare API Integration Tests', () => {
       const practitioner = await fhirResourcesService.createPractitioner(practitionerData);
       testPractitionerId = practitioner.id!;
     } catch (error) {
-      logger.warn('Failed to setup test data:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.warn('Failed to setup test data:', errorMessage);
     }
   }
 
@@ -402,7 +421,8 @@ describe('Healthcare API Integration Tests', () => {
         await medplumService.deleteResource('Practitioner', testPractitionerId);
       }
     } catch (error) {
-      logger.warn('Failed to cleanup test data:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.warn('Failed to cleanup test data:', errorMessage);
     }
   }
 });

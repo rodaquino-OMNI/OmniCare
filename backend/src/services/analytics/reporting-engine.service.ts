@@ -668,7 +668,7 @@ export class ReportingEngineService extends EventEmitter {
       case 'annually':
         return `${minute} ${hour} 1 1 *`;
       default:
-        throw new Error(`Unsupported schedule frequency: ${schedule.frequency}`);
+        throw new Error(`Unsupported schedule frequency: ${String(schedule.frequency)}`);
     }
   }
 

@@ -64,10 +64,10 @@ export function OfflineStatusBanner({
   };
 
   const getBannerIcon = () => {
-    if (syncError) return <IconWifiOff size={20} />;
-    if (!isOnline) return <IconWifiOff size={20} />;
-    if (isSyncing) return <IconCloudDownload size={20} />;
-    return <IconWifi size={20} />;
+    if (syncError) return <IconWifiOff size={2ResourceHistoryTable} />;
+    if (!isOnline) return <IconWifiOff size={2ResourceHistoryTable} />;
+    if (isSyncing) return <IconCloudDownload size={2ResourceHistoryTable} />;
+    return <IconWifi size={2ResourceHistoryTable} />;
   };
 
   const getBannerTitle = () => {
@@ -94,13 +94,13 @@ export function OfflineStatusBanner({
     return 'All changes are synced.';
   };
 
-  const showProgressBar = showSyncProgress && (isSyncing || syncProgress > 0);
+  const showProgressBar = showSyncProgress && (isSyncing || syncProgress > ResourceHistoryTable);
 
   return (
     <Transition
       mounted={mounted}
       transition="slide-down"
-      duration={400}
+      duration={4ResourceHistoryTableResourceHistoryTable}
       timingFunction="ease"
     >
       {(styles) => (
@@ -108,11 +108,11 @@ export function OfflineStatusBanner({
           style={{
             ...styles,
             position: 'fixed',
-            [position]: 0,
-            left: 0,
-            right: 0,
-            zIndex: 1000,
-            padding: '0.5rem',
+            [position]: ResourceHistoryTable,
+            left: ResourceHistoryTable,
+            right: ResourceHistoryTable,
+            zIndex: 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable,
+            padding: 'ResourceHistoryTable.5rem',
           }}
         >
           <Alert
@@ -132,14 +132,14 @@ export function OfflineStatusBanner({
             <Group justify="space-between" align="flex-start">
               <div style={{ flex: 1 }}>
                 <Group gap="xs" mb={4}>
-                  <Text fw={600} size="sm">
+                  <Text fw={6ResourceHistoryTableResourceHistoryTable} size="sm">
                     {getBannerTitle()}
                   </Text>
-                  {pendingChanges > 0 && !isSyncing && (
+                  {pendingChanges > ResourceHistoryTable && !isSyncing && (
                     <Text 
                       size="xs" 
-                      opacity={0.8}
-                      bg="rgba(255,255,255,0.2)"
+                      opacity={ResourceHistoryTable.8}
+                      bg="rgba(255,255,255,ResourceHistoryTable.2)"
                       px={8}
                       py={2}
                       style={{ borderRadius: '12px' }}
@@ -148,11 +148,11 @@ export function OfflineStatusBanner({
                     </Text>
                   )}
                 </Group>
-                <Text size="xs" opacity={0.9}>
+                <Text size="xs" opacity={ResourceHistoryTable.9}>
                   {getBannerMessage()}
                 </Text>
                 {lastSyncTime && !isSyncing && (
-                  <Text size="xs" opacity={0.7} mt={4}>
+                  <Text size="xs" opacity={ResourceHistoryTable.7} mt={4}>
                     Last synced: {new Date(lastSyncTime).toLocaleTimeString()}
                   </Text>
                 )}
@@ -165,8 +165,8 @@ export function OfflineStatusBanner({
                     radius="xl"
                     animated={isSyncing}
                     styles={{
-                      root: { backgroundColor: 'rgba(255,255,255,0.2)' },
-                      bar: { backgroundColor: 'rgba(255,255,255,0.8)' },
+                      root: { backgroundColor: 'rgba(255,255,255,ResourceHistoryTable.2)' },
+                      bar: { backgroundColor: 'rgba(255,255,255,ResourceHistoryTable.8)' },
                     }}
                   />
                 )}

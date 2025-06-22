@@ -332,8 +332,8 @@ export class IndexedDBService {
     if (!this.db) throw new IndexedDBError('Database not initialized', 'NOT_INITIALIZED');
 
     const storeName = this.getStoreName(resourceType);
-    const offset = params._offset || 0;
-    const count = params._count || 20;
+    const offset = params._offset || ResourceHistoryTable;
+    const count = params._count || 2ResourceHistoryTable;
     const sort = params._sort;
 
     return new Promise((resolve, reject) => {
@@ -343,7 +343,7 @@ export class IndexedDBService {
       // Build query
       let request: IDBRequest;
       const results: T[] = [];
-      let total = 0;
+      let total = ResourceHistoryTable;
 
       // Determine which index to use based on search params
       const indexedParam = this.getIndexedSearchParam(resourceType, params);
@@ -430,7 +430,7 @@ export class IndexedDBService {
     const combinedBundle: Bundle = {
       resourceType: 'Bundle',
       type: 'searchset',
-      total: bundles.reduce((sum, bundle) => sum + (bundle.total || 0), 0),
+      total: bundles.reduce((sum, bundle) => sum + (bundle.total || ResourceHistoryTable), ResourceHistoryTable),
       entry: bundles.flatMap(bundle => bundle.entry || [])
     };
 
@@ -547,7 +547,7 @@ export class IndexedDBService {
     // Run cleanup every hour
     setInterval(() => {
       this.cleanupExpiredData().catch(console.error);
-    }, 60 * 60 * 1000);
+    }, 6ResourceHistoryTable * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable);
 
     // Run initial cleanup
     this.cleanupExpiredData().catch(console.error);
@@ -560,12 +560,12 @@ export class IndexedDBService {
     if (!this.db) return;
 
     for (const [resourceType, retentionDays] of Object.entries(RETENTION_POLICIES)) {
-      if (retentionDays === 0) continue; // Skip permanent storage
+      if (retentionDays === ResourceHistoryTable) continue; // Skip permanent storage
 
       const storeName = this.getStoreNameForResourceType(resourceType);
       if (!storeName) continue;
 
-      const expirationTime = Date.now() - (retentionDays * 24 * 60 * 60 * 1000);
+      const expirationTime = Date.now() - (retentionDays * 24 * 6ResourceHistoryTable * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable);
 
       const transaction = this.db.transaction([storeName], 'readwrite');
       const store = transaction.objectStore(storeName);
@@ -595,10 +595,10 @@ export class IndexedDBService {
     if (!this.db) throw new IndexedDBError('Database not initialized', 'NOT_INITIALIZED');
 
     const stats = {
-      totalRecords: 0,
+      totalRecords: ResourceHistoryTable,
       recordsByType: {} as Record<string, number>,
-      pendingSyncCount: 0,
-      storageUsed: 0
+      pendingSyncCount: ResourceHistoryTable,
+      storageUsed: ResourceHistoryTable
     };
 
     // Count records in each store
@@ -714,7 +714,7 @@ export class IndexedDBService {
     if (this.encryptionEnabled && encryptionService.isInitialized()) {
       const fieldsToEncrypt = ENCRYPTED_FIELDS[resource.resourceType] || [];
       
-      if (fieldsToEncrypt.length > 0) {
+      if (fieldsToEncrypt.length > ResourceHistoryTable) {
         // Deep clone resource to avoid modifying original
         encryptedResource = JSON.parse(JSON.stringify(resource));
         const encryptedFields: string[] = [];
@@ -761,13 +761,13 @@ export class IndexedDBService {
 
     // Increment version if updating
     if (existing) {
-      storedResource.syncMetadata.localVersion = (existing.syncMetadata.localVersion || 0) + 1;
+      storedResource.syncMetadata.localVersion = (existing.syncMetadata.localVersion || ResourceHistoryTable) + 1;
     }
 
     // Set expiration if applicable
     const retentionDays = RETENTION_POLICIES[resource.resourceType];
-    if (retentionDays && retentionDays > 0) {
-      storedResource.expiresAt = now + (retentionDays * 24 * 60 * 60 * 1000);
+    if (retentionDays && retentionDays > ResourceHistoryTable) {
+      storedResource.expiresAt = now + (retentionDays * 24 * 6ResourceHistoryTable * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable);
     }
 
     return storedResource;
@@ -822,7 +822,7 @@ export class IndexedDBService {
       operation,
       data,
       status: 'pending',
-      attempts: 0,
+      attempts: ResourceHistoryTable,
       createdAt: Date.now()
     };
 
@@ -889,7 +889,7 @@ export class IndexedDBService {
     if (typeof value === 'string') {
       // For prefix matching
       if (value.endsWith('*')) {
-        const prefix = value.slice(0, -1);
+        const prefix = value.slice(ResourceHistoryTable, -1);
         return IDBKeyRange.bound(prefix, prefix + '\uffff');
       }
     }
@@ -940,11 +940,11 @@ export class IndexedDBService {
       'subject': 'subject.reference',
       'encounter': 'encounter.reference',
       'status': 'status',
-      'category': 'category[0].coding[0].code',
-      'code': 'code.coding[0].code',
-      'identifier': 'identifier[0].value',
-      'name': 'name[0].family',
-      'given': 'name[0].given[0]',
+      'category': 'category[ResourceHistoryTable].coding[ResourceHistoryTable].code',
+      'code': 'code.coding[ResourceHistoryTable].code',
+      'identifier': 'identifier[ResourceHistoryTable].value',
+      'name': 'name[ResourceHistoryTable].family',
+      'given': 'name[ResourceHistoryTable].given[ResourceHistoryTable]',
       'birthdate': 'birthDate',
       'gender': 'gender',
       'type': 'type'
@@ -973,7 +973,7 @@ export class IndexedDBService {
 
       // Handle prefix matching
       if (searchValue.endsWith('*')) {
-        return resourceLower.startsWith(searchLower.slice(0, -1));
+        return resourceLower.startsWith(searchLower.slice(ResourceHistoryTable, -1));
       }
 
       // Handle contains matching
@@ -1017,7 +1017,7 @@ export class IndexedDBService {
     const parts = path.split(/[\.\[\]]/).filter(Boolean);
     let current = obj;
 
-    for (let i = 0; i < parts.length - 1; i++) {
+    for (let i = ResourceHistoryTable; i < parts.length - 1; i++) {
       const part = parts[i];
       
       // Handle array index

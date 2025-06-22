@@ -10,6 +10,11 @@ const createJestConfig = nextJest({
 const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   setupFiles: ['<rootDir>/test-utils/env.setup.js'],
+  globals: {
+    'ts-jest': {
+      tsconfig: '<rootDir>/tsconfig.test.json'
+    }
+  },
   testEnvironment: 'jsdom',
   collectCoverageFrom: [
     'src/**/*.{js,jsx,ts,tsx}',
@@ -63,6 +68,10 @@ const customJestConfig = {
     '<rootDir>/coverage/',
     '<rootDir>/dist/',
     '<rootDir>/build/',
+    '<rootDir>/tests/e2e/global-setup.ts',
+    '<rootDir>/tests/e2e/global-teardown.ts',
+    '<rootDir>/test-utils/global-setup.js',
+    '<rootDir>/test-utils/global-teardown.js',
   ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
@@ -138,10 +147,12 @@ const customJestConfig = {
       classNameTemplate: '{classname}',
       titleTemplate: '{title}'
     }],
-    ['jest-html-reporters', {
-      publicPath: './test-results',
-      filename: 'frontend-report.html',
-      expand: true
+    ['jest-html-reporter', {
+      pageTitle: 'Frontend Test Report',
+      outputPath: './test-results/frontend-report.html',
+      includeFailureMsg: true,
+      includeConsoleLog: true,
+      theme: 'darkTheme'
     }]
   ],
   // Test environment options
@@ -154,7 +165,7 @@ const customJestConfig = {
     enableGlobally: false,
   },
   // Snapshot testing
-  snapshotSerializers: ['enzyme-to-json/serializer'],
+  // Removed enzyme-to-json as we're using React Testing Library
   // Custom matchers
   testResultsProcessor: '<rootDir>/test-utils/test-results-processor.js',
 };

@@ -33,7 +33,7 @@ describe('Analytics Controller', () => {
       body: {},
       user: {
         id: 'test-user-1',
-        role: 'admin',
+        role: 'administrative_staff',
         permissions: ['analytics:read', 'analytics:write']
       }
     };
@@ -584,7 +584,7 @@ describe('Analytics Controller', () => {
     it('should handle insufficient permissions', async () => {
       mockRequest.user = {
         id: 'test-user-1',
-        role: 'nurse',
+        role: 'nursing_staff',
         permissions: ['patient:read']
       };
 

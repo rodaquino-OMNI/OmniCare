@@ -667,7 +667,7 @@ describe('FHIR Controller', () => {
     it('should check user permissions for resource access', async () => {
       mockRequest.user = {
         id: 'test-user-1',
-        role: 'nurse',
+        role: 'nursing_staff',
         permissions: ['patient:read'] // No write permission
       };
 

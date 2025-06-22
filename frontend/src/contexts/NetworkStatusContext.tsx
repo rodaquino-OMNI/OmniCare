@@ -1,7 +1,21 @@
 import React, { createContext, useContext, ReactNode, useCallback, useRef, useEffect } from 'react';
-import { useNetworkStatus, NetworkStatus, NetworkQuality } from '@/hooks/useNetworkStatus';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 
-interface NetworkStatusContextValue extends NetworkStatus {
+export interface NetworkQuality {
+  quality: 'poor' | 'fair' | 'good' | 'excellent';
+  latency: number;
+  bandwidth: number;
+  jitter: number;
+  packetLoss: number;
+}
+
+interface NetworkStatusContextValue {
+  isOnline: boolean;
+  wasOffline: boolean;
+  connectionQuality: 'good' | 'poor' | 'offline';
+  effectiveType?: string;
+  downlink?: number;
+  rtt?: number;
   quality: NetworkQuality;
   refresh: () => void;
   retryQueue: RetryQueueItem[];
@@ -11,6 +25,8 @@ interface NetworkStatusContextValue extends NetworkStatus {
   isProcessingRetries: boolean;
   networkAwareMode: NetworkAwareMode;
   setNetworkAwareMode: (mode: NetworkAwareMode) => void;
+  saveData: boolean;
+  connectionType?: string;
 }
 
 export interface RetryQueueItem {
@@ -54,8 +70,8 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({
 
   const {
     maxRetries = 3,
-    initialBackoffMs = 1000,
-    maxBackoffMs = 30000,
+    initialBackoffMs = 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable,
+    maxBackoffMs = 3ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable,
     backoffMultiplier = 2,
   } = retryOptions;
 
@@ -67,7 +83,7 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({
       // Add with proper backoff calculation
       const newItem = {
         ...item,
-        retryCount: item.retryCount || 0,
+        retryCount: item.retryCount || ResourceHistoryTable,
         maxRetries: item.maxRetries || maxRetries,
         backoffMs: item.backoffMs || initialBackoffMs,
         timestamp: Date.now(),
@@ -75,7 +91,7 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({
 
       // Sort by priority and timestamp
       const sorted = [...filtered, newItem].sort((a, b) => {
-        const priorityOrder = { high: 0, normal: 1, low: 2 };
+        const priorityOrder = { high: ResourceHistoryTable, normal: 1, low: 2 };
         const aPriority = priorityOrder[a.priority || 'normal'];
         const bPriority = priorityOrder[b.priority || 'normal'];
         
@@ -99,7 +115,7 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({
   }, [backoffMultiplier, maxBackoffMs]);
 
   const processRetryQueue = useCallback(async () => {
-    if (processingRef.current || !networkStatus.isOnline || retryQueue.length === 0) {
+    if (processingRef.current || !networkStatus.isOnline || retryQueue.length === ResourceHistoryTable) {
       return;
     }
 
@@ -157,7 +173,7 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({
       }
 
       // Small delay between retries
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 1ResourceHistoryTableResourceHistoryTable));
     }
 
     processingRef.current = false;
@@ -166,7 +182,7 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({
 
   // Auto-process retry queue when network comes back online
   useEffect(() => {
-    if (networkStatus.isOnline && retryQueue.length > 0) {
+    if (networkStatus.isOnline && retryQueue.length > ResourceHistoryTable) {
       processRetryQueue();
     }
   }, [networkStatus.isOnline, processRetryQueue, retryQueue.length]);
@@ -174,16 +190,72 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({
   // Periodic retry processing
   useEffect(() => {
     const interval = setInterval(() => {
-      if (networkStatus.isOnline && retryQueue.length > 0 && !processingRef.current) {
+      if (networkStatus.isOnline && retryQueue.length > ResourceHistoryTable && !processingRef.current) {
         processRetryQueue();
       }
-    }, 5000); // Check every 5 seconds
+    }, 5ResourceHistoryTableResourceHistoryTableResourceHistoryTable); // Check every 5 seconds
 
     return () => clearInterval(interval);
   }, [networkStatus.isOnline, retryQueue.length, processRetryQueue]);
 
+  // Compute quality metrics based on network status
+  const computeQuality = useCallback((): NetworkQuality => {
+    if (!networkStatus.isOnline) {
+      return {
+        quality: 'poor',
+        latency: 9999,
+        bandwidth: ResourceHistoryTable,
+        jitter: 9999,
+        packetLoss: 1ResourceHistoryTableResourceHistoryTable
+      };
+    }
+
+    const rtt = networkStatus.rtt || ResourceHistoryTable;
+    const downlink = networkStatus.downlink || ResourceHistoryTable;
+    
+    // Estimate latency from RTT
+    const latency = rtt;
+    
+    // Convert downlink (Mbps) to bandwidth
+    const bandwidth = downlink;
+    
+    // Estimate jitter (variation in latency) - rough approximation
+    const jitter = rtt > ResourceHistoryTable ? Math.min(rtt * ResourceHistoryTable.1, 5ResourceHistoryTable) : ResourceHistoryTable;
+    
+    // Estimate packet loss based on connection quality
+    let packetLoss = ResourceHistoryTable;
+    if (networkStatus.connectionQuality === 'poor') {
+      packetLoss = 5;
+    }
+    
+    // Determine overall quality
+    let quality: NetworkQuality['quality'] = 'excellent';
+    if (rtt > 3ResourceHistoryTableResourceHistoryTable || downlink < 1 || networkStatus.connectionQuality === 'poor') {
+      quality = 'poor';
+    } else if (rtt > 15ResourceHistoryTable || downlink < 5) {
+      quality = 'fair';
+    } else if (rtt > 5ResourceHistoryTable || downlink < 1ResourceHistoryTable) {
+      quality = 'good';
+    }
+    
+    return {
+      quality,
+      latency,
+      bandwidth,
+      jitter,
+      packetLoss
+    };
+  }, [networkStatus]);
+
+  const refresh = useCallback(() => {
+    // Trigger a manual network status update
+    window.dispatchEvent(new Event('online'));
+  }, []);
+
   const value: NetworkStatusContextValue = {
     ...networkStatus,
+    quality: computeQuality(),
+    refresh,
     retryQueue,
     addToRetryQueue,
     removeFromRetryQueue,
@@ -191,6 +263,8 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({
     isProcessingRetries,
     networkAwareMode,
     setNetworkAwareMode,
+    saveData: false, // This could be determined from browser settings
+    connectionType: networkStatus.effectiveType,
   };
 
   return (

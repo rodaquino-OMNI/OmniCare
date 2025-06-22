@@ -670,7 +670,7 @@ export class FHIRResourcesService {
         warnings: [],
       };
 
-      if (result.issue) {
+      if (result && 'issue' in result && Array.isArray(result.issue)) {
         result.issue.forEach((issue: any) => {
           if (issue.severity === 'error' || issue.severity === 'fatal') {
             validationResult.errors.push({
@@ -725,6 +725,127 @@ export class FHIRResourcesService {
       return result;
     } catch (error) {
       logger.error('Failed to get patient everything:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Process a FHIR Bundle (transaction or batch)
+   */
+  async processBundle(bundle: Bundle): Promise<Bundle> {
+    try {
+      logger.fhir('Processing bundle', {
+        bundleType: bundle.type,
+        entryCount: bundle.entry?.length || 0,
+      });
+
+      // Validate bundle structure
+      if (!bundle.entry || bundle.entry.length === 0) {
+        throw new Error('Bundle must contain at least one entry');
+      }
+
+      const responseEntries = [];
+
+      for (const entry of bundle.entry) {
+        if (!entry.request) {
+          throw new Error('Bundle entry must contain a request');
+        }
+
+        const { method, url } = entry.request;
+        const resource = entry.resource;
+
+        try {
+          let result;
+          let status = '200';
+          let location = '';
+
+          switch (method?.toUpperCase()) {
+            case 'POST':
+              if (resource) {
+                result = await medplumService.createResource(resource);
+                status = '201';
+                location = `${resource.resourceType}/${result.id}`;
+              }
+              break;
+            case 'PUT':
+              if (resource) {
+                result = await medplumService.updateResource(resource);
+                status = '200';
+              }
+              break;
+            case 'GET':
+              if (url) {
+                const urlParts = url.split('/');
+                const resourceType = urlParts[0];
+                const id = urlParts[1];
+                if (resourceType && id) {
+                  result = await medplumService.readResource(resourceType as any, id);
+                  status = '200';
+                }
+              }
+              break;
+            case 'DELETE':
+              if (url) {
+                const urlParts = url.split('/');
+                const resourceType = urlParts[0];
+                const id = urlParts[1];
+                if (resourceType && id) {
+                  await medplumService.deleteResource(resourceType as any, id);
+                  status = '204';
+                }
+              }
+              break;
+            default:
+              throw new Error(`Unsupported HTTP method: ${method}`);
+          }
+
+          responseEntries.push({
+            response: {
+              status,
+              location: location || undefined,
+            },
+            resource: result,
+          });
+
+        } catch (entryError) {
+          // For batch bundles, continue with other entries on error
+          // For transaction bundles, this would typically rollback all changes
+          const errorMessage = (entryError as Error)?.message || 'Unknown error';
+          responseEntries.push({
+            response: {
+              status: '400',
+              outcome: {
+                resourceType: 'OperationOutcome' as const,
+                issue: [{
+                  severity: 'error' as const,
+                  code: 'exception' as const,
+                  diagnostics: errorMessage,
+                }],
+              },
+            },
+          });
+
+          if (bundle.type === 'transaction') {
+            // For transactions, fail the entire bundle on any error
+            throw entryError;
+          }
+        }
+      }
+
+      const responseBundle: Bundle = {
+        resourceType: 'Bundle',
+        type: bundle.type === 'batch' ? 'batch-response' : 'transaction-response',
+        entry: responseEntries as any,
+      };
+
+      logger.fhir('Bundle processed successfully', {
+        bundleType: bundle.type,
+        processedEntries: responseEntries.length,
+      });
+
+      return responseBundle;
+    } catch (error) {
+      logger.error('Failed to process bundle:', error);
       throw error;
     }
   }

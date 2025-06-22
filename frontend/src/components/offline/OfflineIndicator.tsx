@@ -60,7 +60,7 @@ export function OfflineIndicator() {
       </Popover.Target>
 
       <Popover.Dropdown>
-        <Stack spacing="sm">
+        <Stack gap="sm">
           {/* Connection Status */}
           <Group justify="space-between">
             <Text size="sm" fw={500}>Connection Status</Text>
@@ -88,7 +88,7 @@ export function OfflineIndicator() {
                 value={(progress.completed / progress.total) * 100}
                 size="sm"
                 striped
-                animate
+                animated
               />
               <Text size="xs" c="dimmed">
                 {progress.completed} of {progress.total} items
@@ -132,7 +132,7 @@ export function OfflineIndicator() {
                   Clear
                 </Button>
               </Group>
-              <Stack spacing={4}>
+              <Stack gap={4}>
                 {syncErrors.slice(0, 3).map((error, index) => (
                   <Text key={index} size="xs" c="dimmed">
                     {error.resourceType}/{error.resourceId}: {error.error}

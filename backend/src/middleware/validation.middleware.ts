@@ -16,7 +16,7 @@ export function validate(
   schema: z.ZodSchema<any>,
   property: 'body' | 'query' | 'params' = 'body'
 ) {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
     try {
       const dataToValidate = req[property];
       const validatedData = schema.parse(dataToValidate);
@@ -200,7 +200,7 @@ export function validateFileUpload(
   allowedTypes: string[] = ['image/jpeg', 'image/png', 'application/pdf'],
   maxSize: number = 5 * 1024 * 1024 // 5MB
 ) {
-  return (req: Request & { file?: any; files?: any }, res: Response, next: NextFunction): void => {
+  return (req: Request & { file?: any; files?: any }, _res: Response, next: NextFunction): void => {
     if (!req.file && !req.files) {
       return next(new AppError('No file uploaded', 400));
     }
@@ -229,7 +229,7 @@ export function validateFileUpload(
  * Validate request headers
  */
 export function validateHeaders(requiredHeaders: string[]) {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
     const missingHeaders = requiredHeaders.filter(header => !req.headers[header.toLowerCase()]);
     
     if (missingHeaders.length > 0) {
@@ -244,7 +244,7 @@ export function validateHeaders(requiredHeaders: string[]) {
  * Validate content type
  */
 export function validateContentType(allowedTypes: string[]) {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
     const contentType = req.headers['content-type'];
     
     if (!contentType) {
@@ -265,7 +265,7 @@ export function validateContentType(allowedTypes: string[]) {
  * Sanitize request data
  */
 export function sanitizeInput() {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
     // Remove any potentially dangerous characters from string inputs
     const sanitizeObject = (obj: any): any => {
       if (typeof obj === 'string') {

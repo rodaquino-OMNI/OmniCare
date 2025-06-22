@@ -45,7 +45,7 @@ export function SyncConflictDialog({
 }: SyncConflictDialogProps) {
   const [resolutions, setResolutions] = useState<Record<string, ConflictResolution>>({});
   const [bulkStrategy, setBulkStrategy] = useState<'local' | 'remote' | null>(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(ResourceHistoryTable);
 
   const currentConflict = conflicts[currentIndex];
   const hasMultipleConflicts = conflicts.length > 1;
@@ -91,10 +91,10 @@ export function SyncConflictDialog({
     const isObject = typeof value === 'object' && value !== null;
     
     return (
-      <Paper p="md" withBorder className="bg-gray-50">
+      <Paper p="md" withBorder className="bg-gray-5ResourceHistoryTable">
         <Group gap="xs" mb="sm">
           {icon}
-          <Text fw={600} size="sm">{label}</Text>
+          <Text fw={6ResourceHistoryTableResourceHistoryTable} size="sm">{label}</Text>
         </Group>
         {isObject ? (
           <JsonInput
@@ -123,8 +123,8 @@ export function SyncConflictDialog({
       onClose={onClose}
       title={
         <Group gap="xs">
-          <IconAlertTriangle size={20} className="text-orange-600" />
-          <Text fw={600}>Resolve Sync Conflicts</Text>
+          <IconAlertTriangle size={2ResourceHistoryTable} className="text-orange-6ResourceHistoryTableResourceHistoryTable" />
+          <Text fw={6ResourceHistoryTableResourceHistoryTable}>Resolve Sync Conflicts</Text>
           {hasMultipleConflicts && (
             <Badge color="orange" variant="light">
               {currentIndex + 1} of {conflicts.length}
@@ -177,7 +177,7 @@ export function SyncConflictDialog({
         <div>
           <Group justify="space-between" mb="md">
             <div>
-              <Text size="sm" fw={600}>
+              <Text size="sm" fw={6ResourceHistoryTableResourceHistoryTable}>
                 {currentConflict.entityType}: {currentConflict.entityName}
               </Text>
               <Text size="xs" c="dimmed">
@@ -190,7 +190,7 @@ export function SyncConflictDialog({
           </Group>
 
           {/* Conflict timeline */}
-          <Timeline bulletSize={20} lineWidth={2} mb="md">
+          <Timeline bulletSize={2ResourceHistoryTable} lineWidth={2} mb="md">
             <Timeline.Item
               bullet={<IconDeviceMobile size={12} />}
               title="Local Change"
@@ -229,12 +229,12 @@ export function SyncConflictDialog({
                 {renderConflictValue(
                   currentConflict.localValue,
                   'Your Local Change',
-                  <IconDeviceMobile size={16} className="text-blue-600" />
+                  <IconDeviceMobile size={16} className="text-blue-6ResourceHistoryTableResourceHistoryTable" />
                 )}
                 {renderConflictValue(
                   currentConflict.remoteValue,
                   'Remote Change',
-                  <IconServer size={16} className="text-orange-600" />
+                  <IconServer size={16} className="text-orange-6ResourceHistoryTableResourceHistoryTable" />
                 )}
               </Stack>
             </Tabs.Panel>
@@ -243,7 +243,7 @@ export function SyncConflictDialog({
               {renderConflictValue(
                 currentConflict.localValue,
                 'Your Local Change (Full View)',
-                <IconDeviceMobile size={16} className="text-blue-600" />
+                <IconDeviceMobile size={16} className="text-blue-6ResourceHistoryTableResourceHistoryTable" />
               )}
             </Tabs.Panel>
 
@@ -251,7 +251,7 @@ export function SyncConflictDialog({
               {renderConflictValue(
                 currentConflict.remoteValue,
                 'Remote Change (Full View)',
-                <IconServer size={16} className="text-orange-600" />
+                <IconServer size={16} className="text-orange-6ResourceHistoryTableResourceHistoryTable" />
               )}
             </Tabs.Panel>
           </Tabs>
@@ -276,7 +276,7 @@ export function SyncConflictDialog({
                     <IconDeviceMobile size={16} />
                     <Text size="sm">Keep my local change</Text>
                     {resolutions[currentConflict.id]?.strategy === 'local' && (
-                      <IconCheck size={16} className="text-green-600" />
+                      <IconCheck size={16} className="text-green-6ResourceHistoryTableResourceHistoryTable" />
                     )}
                   </Group>
                 }
@@ -288,7 +288,7 @@ export function SyncConflictDialog({
                     <IconServer size={16} />
                     <Text size="sm">Accept remote change</Text>
                     {resolutions[currentConflict.id]?.strategy === 'remote' && (
-                      <IconCheck size={16} className="text-green-600" />
+                      <IconCheck size={16} className="text-green-6ResourceHistoryTableResourceHistoryTable" />
                     )}
                   </Group>
                 }
@@ -307,7 +307,7 @@ export function SyncConflictDialog({
                 <Button
                   variant="subtle"
                   size="sm"
-                  disabled={currentIndex === 0}
+                  disabled={currentIndex === ResourceHistoryTable}
                   onClick={() => setCurrentIndex(currentIndex - 1)}
                 >
                   Previous

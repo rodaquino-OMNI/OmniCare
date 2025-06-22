@@ -1,4 +1,4 @@
-import { Patient as FHIRPatient } from '@medplum/fhirtypes';
+// import { Patient as FHIRPatient } from '@medplum/fhirtypes';
 
 import { 
   FHIRResource, 

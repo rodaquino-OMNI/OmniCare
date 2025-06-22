@@ -164,7 +164,7 @@ export class ClinicalQualityMeasuresService extends EventEmitter {
    * Perform quality gap analysis
    */
   async performGapAnalysis(
-    facilityId: string,
+    _facilityId: string,
     measureIds: string[]
   ): Promise<QualityGapAnalysis[]> {
     const gapAnalyses: QualityGapAnalysis[] = [];
@@ -258,7 +258,7 @@ export class ClinicalQualityMeasuresService extends EventEmitter {
    * Get real-time quality metrics dashboard
    */
   async getQualityDashboard(
-    facilityId: string
+    _facilityId: string
   ): Promise<{
     summary: {
       totalMeasures: number;
@@ -339,7 +339,7 @@ export class ClinicalQualityMeasuresService extends EventEmitter {
 
   private async calculateSingleMeasure(
     measure: ClinicalQualityMeasure,
-    facilityId: string,
+    _facilityId: string,
     period: { start: Date; end: Date }
   ): Promise<ClinicalQualityMeasure> {
     // Mock calculation - in real implementation, this would query the database
@@ -362,7 +362,7 @@ export class ClinicalQualityMeasuresService extends EventEmitter {
     };
   }
 
-  private calculateTrend(measureId: string, currentRate: number): 'Improving' | 'Stable' | 'Declining' {
+  private calculateTrend(_measureId: string, _currentRate: number): 'Improving' | 'Stable' | 'Declining' {
     // Mock trend calculation - would use historical data in real implementation
     const random = Math.random();
     if (random < 0.4) return 'Improving';
@@ -401,7 +401,7 @@ export class ClinicalQualityMeasuresService extends EventEmitter {
     return impactedPatients * baseRevenuePerPatient * 0.1; // 10% revenue impact
   }
 
-  private async suggestInterventions(measure: ClinicalQualityMeasure, gap: number): Promise<QualityGapAnalysis['interventions']> {
+  private async suggestInterventions(measure: ClinicalQualityMeasure, _gap: number): Promise<QualityGapAnalysis['interventions']> {
     const interventions: QualityGapAnalysis['interventions'] = [];
 
     if (measure.category === 'Process') {

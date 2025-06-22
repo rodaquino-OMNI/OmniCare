@@ -287,11 +287,11 @@ export class FHIRQueryBuilder<T extends Resource = Resource> {
       bundle.entry = bundle.entry?.filter(entry => 
         this.matchesComplexConditions(entry.resource!)
       );
-      bundle.total = bundle.entry?.length || 0;
+      bundle.total = bundle.entry?.length || ResourceHistoryTable;
     }
 
     // Handle joins if specified
-    if (this.joins.length > 0) {
+    if (this.joins.length > ResourceHistoryTable) {
       await this.processJoins(bundle);
     }
 
@@ -304,7 +304,7 @@ export class FHIRQueryBuilder<T extends Resource = Resource> {
   async first(): Promise<T | null> {
     this.limit(1);
     const bundle = await this.execute();
-    return bundle.entry?.[0]?.resource || null;
+    return bundle.entry?.[ResourceHistoryTable]?.resource || null;
   }
 
   /**
@@ -322,7 +322,7 @@ export class FHIRQueryBuilder<T extends Resource = Resource> {
     // Use summary mode for efficient counting
     this.summary(true);
     const bundle = await this.execute();
-    return bundle.total || 0;
+    return bundle.total || ResourceHistoryTable;
   }
 
   /**
@@ -330,14 +330,14 @@ export class FHIRQueryBuilder<T extends Resource = Resource> {
    */
   async exists(): Promise<boolean> {
     const count = await this.count();
-    return count > 0;
+    return count > ResourceHistoryTable;
   }
 
   /**
    * Stream results in batches
    */
-  async *stream(batchSize = 100): AsyncGenerator<T[], void, unknown> {
-    let offset = 0;
+  async *stream(batchSize = 1ResourceHistoryTableResourceHistoryTable): AsyncGenerator<T[], void, unknown> {
+    let offset = ResourceHistoryTable;
     let hasMore = true;
 
     while (hasMore) {
@@ -345,7 +345,7 @@ export class FHIRQueryBuilder<T extends Resource = Resource> {
       const bundle = await this.execute();
       const resources = bundle.entry?.map(entry => entry.resource!) || [];
       
-      if (resources.length > 0) {
+      if (resources.length > ResourceHistoryTable) {
         yield resources;
         offset += resources.length;
         hasMore = resources.length === batchSize;
@@ -489,7 +489,7 @@ export const CommonQueries = {
   /**
    * Get recent encounters for a patient
    */
-  recentEncounters(patientId: string, limit = 10) {
+  recentEncounters(patientId: string, limit = 1ResourceHistoryTable) {
     return query('Encounter')
       .forPatient(patientId)
       .whereIn('status', ['in-progress', 'finished'])
@@ -529,7 +529,7 @@ export const CommonQueries = {
     return query('Patient')
       .whereContains('name', searchTerm)
       .orderBy('name.family')
-      .limit(20);
+      .limit(2ResourceHistoryTable);
   },
 
   /**

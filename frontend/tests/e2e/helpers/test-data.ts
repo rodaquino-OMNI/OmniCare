@@ -272,7 +272,7 @@ export function generateMockLabOrder() {
       'No special instructions',
       'Patient on anticoagulants'
     ]),
-    collectionDate: faker.date.future({ days: 7 }).toISOString().split('T')[0]
+    collectionDate: faker.date.future({ years: 0.02 }).toISOString().split('T')[0] // ~7 days
   };
 }
 
@@ -404,9 +404,26 @@ export function generateErrorScenarios() {
 }
 
 /**
+ * Get all test patient IDs for cleanup
+ */
+export function getAllTestPatientIds(): string[] {
+  // Return list of all test patient IDs that should be cleaned up
+  const patientIds = [
+    'test-patient-001',
+    'test-patient-002', 
+    'test-patient-003',
+    'test-patient-004',
+    'test-patient-005'
+  ];
+  
+  return patientIds.concat([`test-run-${TEST_RUN_ID}`]);
+}
+
+/**
  * Clean up test data (for use in teardown)
  */
 export function getTestDataCleanupIds(): string[] {
   // Return list of IDs that should be cleaned up after tests
   return [`test-run-${TEST_RUN_ID}`];
 }
+

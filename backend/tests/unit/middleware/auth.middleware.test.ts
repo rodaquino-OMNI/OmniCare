@@ -272,7 +272,7 @@ describe('Auth Middleware', () => {
       mockRequest.headers = {
         authorization: 'Bearer invalid.token'
       };
-      mockRequest.ip = '192.168.1.100';
+      (mockRequest as any).ip = '192.168.1.100';
       mockRequest.get = jest.fn().mockReturnValue('Mozilla/5.0');
 
       mockJwt.verify.mockImplementation(() => {
@@ -443,7 +443,7 @@ describe('Auth Middleware', () => {
     });
 
     it('should allow access with required role', async () => {
-      const middleware = requireRole(['physician']);
+      const middleware = requireRole('physician');
 
       await middleware(
         mockRequest as Request,
@@ -455,7 +455,7 @@ describe('Auth Middleware', () => {
     });
 
     it('should allow access with one of multiple required roles', async () => {
-      const middleware = requireRole(['physician', 'nurse']);
+      const middleware = requireRole('physician', 'nursing_staff');
 
       await middleware(
         mockRequest as Request,
@@ -467,7 +467,7 @@ describe('Auth Middleware', () => {
     });
 
     it('should deny access without required role', async () => {
-      const middleware = requireRole(['admin']);
+      const middleware = requireRole('administrative_staff');
 
       await middleware(
         mockRequest as Request,
@@ -487,7 +487,7 @@ describe('Auth Middleware', () => {
     it('should handle unauthenticated user', async () => {
       mockRequest.user = undefined;
 
-      const middleware = requireRole(['physician']);
+      const middleware = requireRole('physician');
 
       await middleware(
         mockRequest as Request,
@@ -509,7 +509,7 @@ describe('Auth Middleware', () => {
         // No role property
       };
 
-      const middleware = requireRole(['physician']);
+      const middleware = requireRole('physician');
 
       await middleware(
         mockRequest as Request,
@@ -527,7 +527,7 @@ describe('Auth Middleware', () => {
     });
 
     it('should log role access denied events', async () => {
-      const middleware = requireRole(['admin']);
+      const middleware = requireRole('administrative_staff');
 
       await middleware(
         mockRequest as Request,
@@ -541,7 +541,7 @@ describe('Auth Middleware', () => {
           userId: 'user-123',
           username: 'testuser',
           currentRole: 'physician',
-          requiredRoles: ['admin']
+          requiredRoles: ['administrative_staff']
         })
       );
     });
@@ -629,7 +629,7 @@ describe('Auth Middleware', () => {
       mockRequest.headers = {
         authorization: 'Bearer invalid.token'
       };
-      mockRequest.ip = '192.168.1.100';
+      (mockRequest as any).ip = '192.168.1.100';
 
       mockJwt.verify.mockImplementation(() => {
         throw new jwt.JsonWebTokenError('invalid token');

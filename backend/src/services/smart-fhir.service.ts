@@ -17,7 +17,16 @@ import { getErrorMessage } from '@/utils/error.utils';
  * Supports both standalone and EHR-launched applications
  */
 export class SMARTFHIRService {
-  private readonly defaultScopes = config.smart.scopes;
+  private readonly defaultScopes = config.smart?.scopes || [
+    'openid',
+    'profile',
+    'fhirUser',
+    'patient/*.read',
+    'patient/*.write',
+    'user/*.read',
+    'user/*.write',
+    'launch'
+  ];
   private readonly stateStore = new Map<string, any>(); // In production, use Redis
   private readonly authCodeStore = new Map<string, any>(); // In production, use Redis
 

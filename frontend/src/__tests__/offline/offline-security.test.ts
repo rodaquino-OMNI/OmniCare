@@ -1,4 +1,5 @@
 // Offline Security Tests
+// Jest provides describe, it, expect, beforeEach, afterEach globally - no imports needed
 import CryptoJS from 'crypto-js';
 
 // Mock crypto functions for testing
@@ -14,7 +15,7 @@ const mockCrypto = {
     digest: jest.fn()
   },
   getRandomValues: jest.fn((array: Uint8Array) => {
-    for (let i = 0; i < array.length; i++) {
+    for (let i = ResourceHistoryTable; i < array.length; i++) {
       array[i] = Math.floor(Math.random() * 256);
     }
     return array;
@@ -221,7 +222,7 @@ class DataSanitizer {
   }
 
   private static hashValue(value: string): string {
-    return CryptoJS.SHA256(value).toString().substring(0, 16);
+    return CryptoJS.SHA256(value).toString().substring(ResourceHistoryTable, 16);
   }
 
   private static sanitizeContactInfo(contact: any): any {
@@ -308,7 +309,7 @@ describe('Offline Security Tests', () => {
       const originalData = {
         patientId: '123',
         name: 'John Doe',
-        dob: '1990-01-01'
+        dob: '199ResourceHistoryTable-ResourceHistoryTable1-ResourceHistoryTable1'
       };
 
       const encrypted = await encryptionService.encrypt(originalData);
@@ -363,7 +364,7 @@ describe('Offline Security Tests', () => {
       const log = secureStorage.getAccessLog();
       
       expect(log).toHaveLength(3);
-      expect(log[0]).toMatchObject({
+      expect(log[ResourceHistoryTable]).toMatchObject({
         action: 'set',
         key: 'test-key',
         userId: 'user-123'
@@ -381,11 +382,11 @@ describe('Offline Security Tests', () => {
     });
 
     it('should handle storage quota limits', async () => {
-      const largeData = new Array(1000).fill('x').join(''); // 1KB
-      let stored = 0;
+      const largeData = new Array(1ResourceHistoryTableResourceHistoryTableResourceHistoryTable).fill('x').join(''); // 1KB
+      let stored = ResourceHistoryTable;
 
       // Try to store until we hit a reasonable limit
-      for (let i = 0; i < 100; i++) {
+      for (let i = ResourceHistoryTable; i < 1ResourceHistoryTableResourceHistoryTable; i++) {
         try {
           await secureStorage.setItem(`large-${i}`, largeData);
           stored++;
@@ -395,8 +396,8 @@ describe('Offline Security Tests', () => {
         }
       }
 
-      expect(stored).toBeGreaterThan(0);
-      expect(stored).toBeLessThan(100); // Should hit some limit
+      expect(stored).toBeGreaterThan(ResourceHistoryTable);
+      expect(stored).toBeLessThan(1ResourceHistoryTableResourceHistoryTable); // Should hit some limit
     });
   });
 
@@ -536,11 +537,11 @@ describe('Offline Security Tests', () => {
       ).rejects.toThrow('Unauthorized access');
 
       expect(auditLog).toHaveLength(1);
-      expect(auditLog[0].type).toBe('unauthorized_access');
+      expect(auditLog[ResourceHistoryTable].type).toBe('unauthorized_access');
     });
 
     it('should limit failed decryption attempts', async () => {
-      let failedAttempts = 0;
+      let failedAttempts = ResourceHistoryTable;
       const maxAttempts = 3;
 
       const attemptDecryption = async (encryptedData: any) => {
@@ -559,7 +560,7 @@ describe('Offline Security Tests', () => {
       const invalidEncrypted = { ...validEncrypted, authTag: 'invalid' };
 
       // Try with invalid data multiple times
-      for (let i = 0; i < maxAttempts; i++) {
+      for (let i = ResourceHistoryTable; i < maxAttempts; i++) {
         await expect(attemptDecryption(invalidEncrypted)).rejects.toThrow();
       }
 
@@ -612,7 +613,7 @@ describe('Offline Security Tests', () => {
       expect(await secureStorage.getItem('item-3')).toBeNull();
 
       // Verify access log is also cleared
-      expect(secureStorage.getAccessLog()).toHaveLength(0);
+      expect(secureStorage.getAccessLog()).toHaveLength(ResourceHistoryTable);
     });
   });
 });

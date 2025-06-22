@@ -220,12 +220,12 @@ export const usePatientStore = create<PatientState>((set, get) => ({
           bValue = new Date(b.updatedAt);
           break;
         default:
-          return 0;
+          return ResourceHistoryTable;
       }
 
       if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
       if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
-      return 0;
+      return ResourceHistoryTable;
     });
 
     set({ filteredPatients: filtered });
@@ -295,11 +295,11 @@ export const usePatientStore = create<PatientState>((set, get) => ({
       
       // Warm up cache with frequently accessed patients
       const frequentPatientIds = patients
-        .filter(p => p.lastVisit && new Date(p.lastVisit) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
-        .slice(0, 10)
+        .filter(p => p.lastVisit && new Date(p.lastVisit) > new Date(Date.now() - 7 * 24 * 6ResourceHistoryTable * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable))
+        .slice(ResourceHistoryTable, 1ResourceHistoryTable)
         .map(p => p.id);
       
-      if (frequentPatientIds.length > 0) {
+      if (frequentPatientIds.length > ResourceHistoryTable) {
         patientCacheService.warmupCache(frequentPatientIds);
       }
       
@@ -400,7 +400,7 @@ function calculateAge(dateOfBirth: string): number {
   let age = today.getFullYear() - birthDate.getFullYear();
   const monthDiff = today.getMonth() - birthDate.getMonth();
   
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+  if (monthDiff < ResourceHistoryTable || (monthDiff === ResourceHistoryTable && today.getDate() < birthDate.getDate())) {
     age--;
   }
   

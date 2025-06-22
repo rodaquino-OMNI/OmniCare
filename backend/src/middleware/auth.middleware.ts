@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+// import jwt from 'jsonwebtoken';
 
 import { JWTAuthService } from '@/auth/jwt.service';
 import { hasPermission, hasHigherRole } from '@/auth/role-permissions';
-import config from '@/config';
+// import config from '@/config';
 import { AuditService } from '@/services/audit.service';
 import { SessionManager } from '@/services/session.service';
 import { smartFHIRService } from '@/services/smart-fhir.service';

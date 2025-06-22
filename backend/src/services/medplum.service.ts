@@ -1,15 +1,30 @@
 // Import types properly for TypeScript
 import { 
   Bundle, 
-  Patient, 
-  Practitioner, 
-  Organization, 
   Resource, 
   ResourceType 
 } from '@medplum/fhirtypes';
 
+import config from '../config';
+import { FHIRSearchParams, BundleRequest } from '../types/fhir';
+import logger from '../utils/logger';
+import { getErrorMessage, isFHIRError, getFHIRErrorMessage, isError } from '../utils/error.utils';
+
 // Import MedplumClient only if not in test environment
-let MedplumClient: any;
+interface MedplumClientInterface {
+  startClientLogin(clientId: string, clientSecret: string): Promise<void>;
+  readResource(resourceType: string, id: string): Promise<Resource>;
+  createResource(resource: Resource): Promise<Resource>;
+  updateResource(resource: Resource): Promise<Resource>;
+  deleteResource(resourceType: string, id: string): Promise<void>;
+  searchResources(resourceType: string, params: Record<string, unknown>): Promise<unknown>;
+  executeBatch(bundle: Bundle): Promise<Bundle>;
+  get(path: string): Promise<unknown>;
+  graphql(query: string, variables?: string): Promise<unknown>;
+  validateResource(resource: Resource): Promise<unknown>;
+}
+
+let MedplumClient: new (options: Record<string, unknown>) => MedplumClientInterface;
 
 if (process.env.NODE_ENV !== 'test') {
   try {
@@ -17,36 +32,45 @@ if (process.env.NODE_ENV !== 'test') {
     MedplumClient = medplumCore.MedplumClient;
   } catch (error) {
     // Mock MedplumClient for environments where Medplum isn't available
-    MedplumClient = class MockMedplumClient {
-      constructor(options: any) {}
-      async startClientLogin(clientId: string, clientSecret: string) { return Promise.resolve(); }
+    MedplumClient = class MockMedplumClient implements MedplumClientInterface {
+      constructor(_options: Record<string, unknown>) {}
+      async startClientLogin(_clientId: string, _clientSecret: string) { return Promise.resolve(); }
       async readResource(resourceType: string, id: string) { 
-        return Promise.resolve({ resourceType, id, active: true }); 
+        return Promise.resolve({ resourceType, id, active: true } as Resource); 
       }
-      async createResource(resource: any) { 
+      async createResource(resource: Resource) { 
         return Promise.resolve({ ...resource, id: `mock-${Date.now()}` }); 
       }
-      async updateResource(resource: any) { 
+      async updateResource(resource: Resource) { 
         return Promise.resolve(resource); 
       }
-      async deleteResource(resourceType: string, id: string) { 
+      async deleteResource(_resourceType: string, _id: string) { 
         return Promise.resolve(); 
       }
-      async searchResources(resourceType: string, params: any) { 
-        return Promise.resolve({ resourceType: 'Bundle', type: 'searchset', entry: [] }); 
+      async searchResources(_resourceType: string, _params: Record<string, unknown>) { 
+        return Promise.resolve({ resourceType: 'Bundle' as const, type: 'searchset' as const, entry: [] } as Bundle); 
       }
-      async executeBatch(bundle: any) {
-        return Promise.resolve({ resourceType: 'Bundle', type: 'batch-response', entry: [] });
+      async executeBatch(_bundle: Bundle) {
+        return Promise.resolve({ resourceType: 'Bundle' as const, type: 'batch-response' as const, entry: [] } as Bundle);
+      }
+      async get(_url: string, _options?: any) {
+        return Promise.resolve({});
+      }
+      async graphql(_query: string, _variables?: any) {
+        return Promise.resolve({});
+      }
+      async validateResource(_resource: Resource) {
+        return Promise.resolve({ resourceType: 'OperationOutcome', issue: [] });
       }
     };
   }
 } else {
   // Mock for tests
-  MedplumClient = class MockMedplumClient {
-    constructor(options: any) {}
-    async startClientLogin(clientId: string, clientSecret: string) { return Promise.resolve(); }
+  MedplumClient = class MockMedplumClient implements MedplumClientInterface {
+    constructor(_options: any) {}
+    async startClientLogin(_clientId: string, _clientSecret: string) { return Promise.resolve(); }
     async readResource(resourceType: string, id: string) { 
-      return Promise.resolve({ resourceType, id, active: true }); 
+      return Promise.resolve({ resourceType, id, active: true } as Resource); 
     }
     async createResource(resource: any) { 
       return Promise.resolve({ ...resource, id: `mock-${Date.now()}` }); 
@@ -54,22 +78,26 @@ if (process.env.NODE_ENV !== 'test') {
     async updateResource(resource: any) { 
       return Promise.resolve(resource); 
     }
-    async deleteResource(resourceType: string, id: string) { 
+    async deleteResource(_resourceType: string, _id: string) { 
       return Promise.resolve(); 
     }
-    async searchResources(resourceType: string, params: any) { 
-      return Promise.resolve({ resourceType: 'Bundle', type: 'searchset', entry: [] }); 
+    async searchResources(_resourceType: string, _params: any) { 
+      return Promise.resolve({ resourceType: 'Bundle' as const, type: 'searchset' as const, entry: [] } as Bundle); 
     }
-    async executeBatch(bundle: any) {
-      return Promise.resolve({ resourceType: 'Bundle', type: 'batch-response', entry: [] });
+    async executeBatch(_bundle: any) {
+      return Promise.resolve({ resourceType: 'Bundle' as const, type: 'batch-response' as const, entry: [] } as Bundle);
+    }
+    async get(_url: string, _options?: any) {
+      return Promise.resolve({});
+    }
+    async graphql(_query: string, _variables?: any) {
+      return Promise.resolve({});
+    }
+    async validateResource(_resource: any) {
+      return Promise.resolve({ resourceType: 'OperationOutcome', issue: [] });
     }
   };
 }
-
-import config from '../config';
-import { FHIRSearchParams, BundleRequest } from '../types/fhir';
-import logger from '../utils/logger';
-import { getErrorMessage, isFHIRError, getFHIRErrorMessage, isError } from '../utils/error.utils';
 
 /**
  * Medplum FHIR Server Integration Service
@@ -77,7 +105,7 @@ import { getErrorMessage, isFHIRError, getFHIRErrorMessage, isError } from '../u
  * resource management, search operations, and batch processing.
  */
 export class MedplumService {
-  private medplum: any;
+  private medplum: MedplumClientInterface;
   private isInitialized = false;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
@@ -127,7 +155,10 @@ export class MedplumService {
         const delay = Math.pow(2, this.reconnectAttempts) * 1000;
         setTimeout(() => this.initialize(), delay);
       } else {
-        throw new Error(`Failed to establish Medplum connection after ${this.maxReconnectAttempts} attempts`);
+        logger.error('Failed to initialize Medplum FHIR server after multiple attempts', { 
+          error: getErrorMessage(error) 
+        });
+        throw new Error('Failed to initialize Medplum FHIR server');
       }
     }
   }
@@ -137,7 +168,7 @@ export class MedplumService {
    */
   private async testConnection(): Promise<void> {
     try {
-      const response = await this.medplum.readResource('Patient', 'test-patient-id').catch(() => null);
+      await this.medplum.readResource('Patient', 'test-patient-id').catch(() => null);
       logger.debug('Connection test completed successfully');
     } catch (error) {
       logger.warn('Connection test failed, but proceeding...');
@@ -163,11 +194,19 @@ export class MedplumService {
       logger.debug(`Creating ${resource.resourceType} resource`);
       const result = await this.medplum.createResource(resource);
       
-      logger.info(`Successfully created ${resource.resourceType} with ID: ${result.id}`);
-      return result;
+      logger.fhir('Resource created successfully', {
+        resourceType: resource.resourceType,
+        id: result.id,
+        meta: result.meta
+      });
+      return result as T;
     } catch (error) {
-      logger.error(`Failed to create ${resource.resourceType} resource:`, error);
-      throw this.handleFHIRError(error);
+      logger.error('Failed to create resource', { 
+        resourceType: resource.resourceType, 
+        error: getErrorMessage(error),
+        fhirError: isFHIRError(error) ? getFHIRErrorMessage(error) : undefined
+      });
+      throw new Error('Failed to create resource');
     }
   }
 
@@ -179,13 +218,18 @@ export class MedplumService {
     
     try {
       logger.debug(`Reading ${resourceType} resource with ID: ${id}`);
-      const result = await this.medplum.readResource(resourceType as any, id);
+      const result = await this.medplum.readResource(resourceType, id);
       
       logger.debug(`Successfully retrieved ${resourceType} with ID: ${id}`);
       return result as T;
     } catch (error) {
-      logger.error(`Failed to read ${resourceType} resource with ID ${id}:`, error);
-      throw this.handleFHIRError(error);
+      logger.error('Failed to read resource', { 
+        resourceType, 
+        id, 
+        error: getErrorMessage(error),
+        fhirError: isFHIRError(error) ? getFHIRErrorMessage(error) : undefined
+      });
+      throw new Error('Failed to read resource');
     }
   }
 
@@ -196,18 +240,27 @@ export class MedplumService {
     this.ensureInitialized();
     
     if (!resource.id) {
-      throw new Error('Resource must have an ID to be updated');
+      throw new Error('Resource must have an ID for update');
     }
 
     try {
       logger.debug(`Updating ${resource.resourceType} resource with ID: ${resource.id}`);
       const result = await this.medplum.updateResource(resource);
       
-      logger.info(`Successfully updated ${resource.resourceType} with ID: ${result.id}`);
-      return result;
+      logger.fhir('Resource updated successfully', {
+        resourceType: resource.resourceType,
+        id: resource.id,
+        meta: result.meta
+      });
+      return result as T;
     } catch (error) {
-      logger.error(`Failed to update ${resource.resourceType} resource:`, error);
-      throw this.handleFHIRError(error);
+      logger.error('Failed to update resource', { 
+        resourceType: resource.resourceType, 
+        id: resource.id,
+        error: getErrorMessage(error),
+        fhirError: isFHIRError(error) ? getFHIRErrorMessage(error) : undefined
+      });
+      throw new Error('Failed to update resource');
     }
   }
 
@@ -219,12 +272,17 @@ export class MedplumService {
     
     try {
       logger.debug(`Deleting ${resourceType} resource with ID: ${id}`);
-      await this.medplum.deleteResource(resourceType as any, id);
+      await this.medplum.deleteResource(resourceType, id);
       
-      logger.info(`Successfully deleted ${resourceType} with ID: ${id}`);
+      logger.fhir('Resource deleted successfully', { resourceType, id });
     } catch (error) {
-      logger.error(`Failed to delete ${resourceType} resource with ID ${id}:`, error);
-      throw this.handleFHIRError(error);
+      logger.error('Failed to delete resource', { 
+        resourceType, 
+        id,
+        error: getErrorMessage(error),
+        fhirError: isFHIRError(error) ? getFHIRErrorMessage(error) : undefined
+      });
+      throw new Error('Failed to delete resource');
     }
   }
 
@@ -241,7 +299,7 @@ export class MedplumService {
       logger.debug(`Searching ${resourceType} resources with params:`, searchParams);
       
       // Convert search params to format expected by searchResources
-      const convertedParams: Record<string, any> = {};
+      const convertedParams: Record<string, unknown> = {};
       
       // Handle standard search parameters
       Object.entries(searchParams).forEach(([key, value]) => {
@@ -251,7 +309,7 @@ export class MedplumService {
       });
 
       // Use searchResources method which returns ResourceArray with bundle
-      const resourceArray = await this.medplum.searchResources(resourceType as any, convertedParams);
+      const resourceArray = await this.medplum.searchResources(resourceType, convertedParams);
       
       // Extract resources from the ResourceArray structure
       const resources = Array.isArray(resourceArray) ? resourceArray : 
@@ -271,47 +329,62 @@ export class MedplumService {
       logger.debug(`Search returned ${resources.length} results for ${resourceType}`);
       return bundle;
     } catch (error) {
-      logger.error(`Failed to search ${resourceType} resources:`, error);
-      throw this.handleFHIRError(error);
+      logger.error('Failed to search resources', { 
+        resourceType,
+        error: getErrorMessage(error),
+        fhirError: isFHIRError(error) ? getFHIRErrorMessage(error) : undefined
+      });
+      throw new Error('Failed to search resources');
     }
   }
 
   /**
    * Execute a batch or transaction bundle
    */
-  async executeBatch(bundleRequest: BundleRequest): Promise<Bundle> {
+  async executeBatch(bundleRequest: BundleRequest | Bundle): Promise<Bundle> {
     this.ensureInitialized();
     
     try {
-      logger.debug(`Executing ${bundleRequest.type} bundle with ${bundleRequest.resources.length} resources`);
+      // Handle both Bundle and BundleRequest types
+      let bundle: Bundle;
       
-      const bundle: Bundle = {
-        resourceType: 'Bundle',
-        type: bundleRequest.type,
-        timestamp: bundleRequest.timestamp || new Date().toISOString(),
-        entry: bundleRequest.resources.map((resource, index) => ({
-          request: {
-            method: resource.id ? 'PUT' : 'POST',
-            url: resource.id ? `${resource.resourceType}/${resource.id}` : resource.resourceType,
-          },
-          resource: resource,
-        })),
-      };
+      if ('entry' in bundleRequest) {
+        // Already a Bundle
+        bundle = bundleRequest as Bundle;
+        logger.debug(`Executing ${bundle.type} bundle with ${bundle.entry?.length || 0} entries`);
+      } else {
+        // BundleRequest needs conversion
+        const req = bundleRequest as BundleRequest;
+        logger.debug(`Executing ${req.type} bundle with ${req.resources?.length || 0} resources`);
+        
+        bundle = {
+          resourceType: 'Bundle',
+          type: req.type,
+          timestamp: req.timestamp || new Date().toISOString(),
+          entry: req.resources.map((resource, _index) => ({
+            request: {
+              method: resource.id ? 'PUT' : 'POST',
+              url: resource.id ? `${resource.resourceType}/${resource.id}` : resource.resourceType,
+            },
+            resource: resource,
+          })),
+        };
+      }
 
       const result = await this.medplum.executeBatch(bundle);
       
-      logger.info(`Successfully executed ${bundleRequest.type} bundle`);
+      logger.info(`Successfully executed ${bundle.type} bundle`);
       return result;
     } catch (error) {
       logger.error(`Failed to execute batch bundle:`, error);
-      throw this.handleFHIRError(error);
+      throw new Error('Failed to execute batch operation');
     }
   }
 
   /**
    * Get FHIR capability statement
    */
-  async getCapabilityStatement(): Promise<any> {
+  async getCapabilityStatement(): Promise<Record<string, unknown>> {
     this.ensureInitialized();
     
     try {
@@ -319,7 +392,7 @@ export class MedplumService {
       const result = await this.medplum.get('metadata');
       
       logger.debug('Successfully retrieved capability statement');
-      return result;
+      return result as Record<string, unknown>;
     } catch (error) {
       logger.error('Failed to retrieve capability statement:', error);
       throw this.handleFHIRError(error);
@@ -329,7 +402,7 @@ export class MedplumService {
   /**
    * Execute GraphQL query
    */
-  async graphql(query: string, variables?: Record<string, any>): Promise<any> {
+  async graphql(query: string, variables?: Record<string, unknown>): Promise<Record<string, unknown>> {
     this.ensureInitialized();
     
     try {
@@ -337,7 +410,7 @@ export class MedplumService {
       const result = await this.medplum.graphql(query, variables ? JSON.stringify(variables) : undefined);
       
       logger.debug('GraphQL query executed successfully');
-      return result;
+      return result as Record<string, unknown>;
     } catch (error) {
       logger.error('Failed to execute GraphQL query:', error);
       throw this.handleFHIRError(error);
@@ -347,7 +420,7 @@ export class MedplumService {
   /**
    * Subscribe to resource changes
    */
-  async createSubscription(criteria: string, channelType: string, endpoint?: string): Promise<any> {
+  async createSubscription(criteria: string, channelType: string, endpoint?: string): Promise<Resource> {
     this.ensureInitialized();
     
     try {
@@ -359,7 +432,7 @@ export class MedplumService {
         reason: 'OmniCare EMR Integration',
         criteria,
         channel: {
-          type: channelType as any,
+          type: channelType as "message" | "email" | "rest-hook" | "websocket" | "sms",
           endpoint,
           payload: 'application/fhir+json',
           header: endpoint ? [`Authorization: Bearer ${config.medplum.clientSecret}`] : undefined
@@ -369,7 +442,7 @@ export class MedplumService {
       const result = await this.medplum.createResource(subscription);
       
       logger.info(`Successfully created subscription with ID: ${result.id}`);
-      return result;
+      return result as Resource;
     } catch (error) {
       logger.error('Failed to create subscription:', error);
       throw this.handleFHIRError(error);
@@ -379,7 +452,7 @@ export class MedplumService {
   /**
    * Validate a FHIR resource
    */
-  async validateResource<T extends Resource>(resource: T): Promise<any> {
+  async validateResource<T extends Resource>(resource: T): Promise<Record<string, unknown>> {
     this.ensureInitialized();
     
     try {
@@ -387,7 +460,7 @@ export class MedplumService {
       const result = await this.medplum.validateResource(resource);
       
       logger.debug(`Validation completed for ${resource.resourceType}`);
-      return result;
+      return result as Record<string, unknown>;
     } catch (error) {
       logger.error(`Failed to validate ${resource.resourceType} resource:`, error);
       throw this.handleFHIRError(error);
@@ -410,32 +483,36 @@ export class MedplumService {
   /**
    * Get health status of the Medplum service
    */
-  async getHealthStatus(): Promise<{ status: string; details: any }> {
+  async getHealthStatus(): Promise<{ status: string; details: Record<string, unknown> }> {
     try {
       if (!this.isInitialized) {
-        return { status: 'DOWN', details: { reason: 'Not initialized' } };
+        return { 
+          status: 'DOWN', 
+          details: { 
+            initialized: false,
+            serverUrl: config.medplum.baseUrl
+          } 
+        };
       }
 
       // Test with a simple metadata call
-      const start = Date.now();
       await this.medplum.get('metadata');
-      const responseTime = Date.now() - start;
 
       return {
         status: 'UP',
         details: {
-          responseTime: `${responseTime}ms`,
-          baseUrl: config.medplum.baseUrl,
-          selfHosted: config.medplum.selfHosted,
-          initialized: this.isInitialized,
+          initialized: true,
+          serverUrl: config.medplum.baseUrl,
+          lastCheckTime: new Date().toISOString(),
         },
       };
     } catch (error) {
       return {
         status: 'DOWN',
         details: {
+          initialized: true,
+          serverUrl: config.medplum.baseUrl,
           error: getErrorMessage(error),
-          reconnectAttempts: this.reconnectAttempts,
         },
       };
     }
@@ -447,7 +524,7 @@ export class MedplumService {
   async shutdown(): Promise<void> {
     logger.info('Shutting down Medplum service...');
     this.isInitialized = false;
-    // Additional cleanup if needed
+    logger.info('Medplum FHIR server connection closed');
   }
 }
 

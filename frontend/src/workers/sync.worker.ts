@@ -3,7 +3,41 @@
  * Handles offline synchronization in the background
  */
 
+/// <reference lib="webworker" />
+import '@/types/service-worker';
 import { offlineSyncService, SyncOptions, SyncProgress, SyncError } from '@/services/offline-sync.service';
+
+// Error type utilities
+interface ErrorLike {
+  message: string;
+  name?: string;
+  stack?: string;
+}
+
+/**
+ * Type guard to check if an error is Error-like
+ */
+function isErrorLike(error: unknown): error is ErrorLike {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    typeof (error as any).message === 'string'
+  );
+}
+
+/**
+ * Safely get error message from unknown error
+ */
+function getErrorMessage(error: unknown): string {
+  if (isErrorLike(error)) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  return 'An unknown error occurred';
+}
 
 // Message types for worker communication
 interface WorkerMessage {
@@ -80,9 +114,10 @@ async function initialize(): Promise<void> {
 
     isInitialized = true;
     console.log('Sync worker initialized');
-  } catch (error) {
-    console.error('Failed to initialize sync worker:', error);
-    throw error;
+  } catch (error: unknown) {
+    const errorMessage = getErrorMessage(error);
+    console.error('Failed to initialize sync worker:', errorMessage);
+    throw new Error(`Sync worker initialization failed: ${errorMessage}`);
   }
 }
 
@@ -197,7 +232,7 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
         break;
 
       case 'cleanup':
-        const { daysToKeep = 30 } = payload || {};
+        const { daysToKeep = 3ResourceHistoryTable } = payload || {};
         await offlineSyncService.cleanup(daysToKeep);
         response = {
           type: 'cleanup',
@@ -230,11 +265,11 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
           error: `Unknown message type: ${type}`
         };
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     response = {
       type,
       success: false,
-      error: error.message || 'Operation failed'
+      error: getErrorMessage(error)
     };
   }
 
@@ -256,7 +291,7 @@ self.addEventListener('sync', async (event: any) => {
           }
           
           await offlineSyncService.sync({
-            batchSize: 20, // Smaller batches for background sync
+            batchSize: 2ResourceHistoryTable, // Smaller batches for background sync
             maxRetries: 5  // More retries in background
           });
           
@@ -264,16 +299,17 @@ self.addEventListener('sync', async (event: any) => {
             type: 'background-sync-completed',
             success: true
           });
-        } catch (error) {
-          console.error('Background sync failed:', error);
+        } catch (error: unknown) {
+          const errorMessage = getErrorMessage(error);
+          console.error('Background sync failed:', errorMessage);
           postMessage({
             type: 'background-sync-failed',
             success: false,
-            error: error.message
+            error: errorMessage
           });
           
           // Re-throw to retry later
-          throw error;
+          throw new Error(`Background sync failed: ${errorMessage}`);
         }
       })()
     );
@@ -297,15 +333,15 @@ self.addEventListener('periodicsync', async (event: any) => {
           // Check if we have pending changes
           const status = offlineSyncService.getSyncStatus();
           
-          if (status.pendingChanges > 0 || status.failedChanges > 0) {
+          if (status.pendingChanges > ResourceHistoryTable || status.failedChanges > ResourceHistoryTable) {
             await offlineSyncService.sync({
-              batchSize: 50,
+              batchSize: 5ResourceHistoryTable,
               conflictResolution: 'last-write-wins'
             });
           }
           
           // Cleanup old data
-          await offlineSyncService.cleanup(30);
+          await offlineSyncService.cleanup(3ResourceHistoryTable);
           
           postMessage({
             type: 'periodic-sync-completed',
@@ -315,12 +351,13 @@ self.addEventListener('periodicsync', async (event: any) => {
               failedChanges: status.failedChanges
             }
           });
-        } catch (error) {
-          console.error('Periodic sync failed:', error);
+        } catch (error: unknown) {
+          const errorMessage = getErrorMessage(error);
+          console.error('Periodic sync failed:', errorMessage);
           postMessage({
             type: 'periodic-sync-failed',
             success: false,
-            error: error.message
+            error: errorMessage
           });
         }
       })()

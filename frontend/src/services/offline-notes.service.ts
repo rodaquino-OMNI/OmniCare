@@ -163,7 +163,7 @@ export class OfflineNotesService {
       if (this.isOnline) {
         this.syncOfflineNotes();
       }
-    }, 5 * 60 * 1000);
+    }, 5 * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable);
   }
 
   public stopAutoSync(): void {
@@ -287,7 +287,7 @@ export class OfflineNotesService {
     );
   }
 
-  public async getRecentDrafts(limit: number = 10): Promise<OfflineNote[]> {
+  public async getRecentDrafts(limit: number = 1ResourceHistoryTable): Promise<OfflineNote[]> {
     if (!this.db) await this.initializeDB();
 
     const transaction = this.db!.transaction([NOTES_STORE], 'readonly');
@@ -329,7 +329,7 @@ export class OfflineNotesService {
       action,
       timestamp: new Date().toISOString(),
       status: 'pending',
-      attempts: 0,
+      attempts: ResourceHistoryTable,
       lastAttempt: null,
       error: null
     };
@@ -456,7 +456,7 @@ export class OfflineNotesService {
       };
 
       // Add attachments if any
-      if (note.attachments && note.attachments.length > 0) {
+      if (note.attachments && note.attachments.length > ResourceHistoryTable) {
         docRef.content = [
           ...docRef.content,
           ...note.attachments.map(att => ({
@@ -511,7 +511,7 @@ export class OfflineNotesService {
 
       // Update server note
       serverNote.description = note.title;
-      serverNote.content[0].attachment.data = btoa(note.content);
+      serverNote.content[ResourceHistoryTable].attachment.data = btoa(note.content);
       serverNote.meta = {
         ...serverNote.meta,
         lastUpdated: note.updatedAt
@@ -593,8 +593,8 @@ export class OfflineNotesService {
         // Discard local changes, use server version
         const serverNote = note.conflictData.serverNote;
         note.title = serverNote.description || '';
-        note.content = serverNote.content[0]?.attachment?.data ? 
-          atob(serverNote.content[0].attachment.data) : '';
+        note.content = serverNote.content[ResourceHistoryTable]?.attachment?.data ? 
+          atob(serverNote.content[ResourceHistoryTable].attachment.data) : '';
         note.status = 'synced';
         note.serverVersion = serverNote.meta?.versionId;
         note.conflictData = undefined;
@@ -735,14 +735,14 @@ export class OfflineNotesService {
 
   private getNoteTypeCode(noteType: string): string {
     const noteTypeCodes: Record<string, string> = {
-      'progress': '11506-3',
+      'progress': '115ResourceHistoryTable6-3',
       'admission': '18842-5',
       'discharge': '18842-5',
-      'procedure': '28570-0',
+      'procedure': '2857ResourceHistoryTable-ResourceHistoryTable',
       'consultation': '11488-4',
       'nursing': '34815-3'
     };
-    return noteTypeCodes[noteType] || '11506-3';
+    return noteTypeCodes[noteType] || '115ResourceHistoryTable6-3';
   }
 
   // ===============================

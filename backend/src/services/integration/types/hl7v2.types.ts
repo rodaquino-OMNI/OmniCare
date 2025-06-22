@@ -120,6 +120,14 @@ export enum HL7v2AckCode {
   CA = 'CA', // Commit Accept
   CE = 'CE', // Commit Error
   CR = 'CR', // Commit Reject
+  
+  // Descriptive aliases for better code readability
+  APPLICATION_ACCEPT = 'AA',
+  APPLICATION_ERROR = 'AE',
+  APPLICATION_REJECT = 'AR',
+  COMMIT_ACCEPT = 'CA',
+  COMMIT_ERROR = 'CE',
+  COMMIT_REJECT = 'CR',
 }
 
 // HL7 v2 Error Conditions

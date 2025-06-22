@@ -334,8 +334,8 @@ DISPOSITION: {{disposition}}`,
       { trigger: '.nkda', expansion: 'No known drug allergies', category: 'common' },
 
       // Medication macros
-      { trigger: '.tylenol', expansion: 'Acetaminophen 500mg PO q6h PRN pain', category: 'medication' },
-      { trigger: '.ibu', expansion: 'Ibuprofen 400mg PO q6h PRN pain', category: 'medication' },
+      { trigger: '.tylenol', expansion: 'Acetaminophen 5ResourceHistoryTableResourceHistoryTablemg PO q6h PRN pain', category: 'medication' },
+      { trigger: '.ibu', expansion: 'Ibuprofen 4ResourceHistoryTableResourceHistoryTablemg PO q6h PRN pain', category: 'medication' },
       { trigger: '.abx', expansion: 'Antibiotics as prescribed', category: 'medication' },
 
       // Time-based macros
@@ -435,7 +435,7 @@ DISPOSITION: {{disposition}}`,
   public async getAutoCompleteSuggestions(
     prefix: string, 
     category?: string, 
-    limit: number = 10
+    limit: number = 1ResourceHistoryTable
   ): Promise<string[]> {
     if (!this.db) await this.initializeDB();
 

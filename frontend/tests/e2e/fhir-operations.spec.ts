@@ -73,7 +73,7 @@ test.describe('FHIR Operations - Comprehensive Integration', () => {
         await helpers.navigation.navigateToPatient(testPatient.id);
         
         await page.getByRole('button', { name: /edit patient/i }).click();
-        await helpers.modal.waitForModal(/edit patient/i);
+        await helpers.modal.waitForModal('edit patient');
       });
 
       await test.step('Update patient information', async () => {
@@ -249,7 +249,7 @@ test.describe('FHIR Operations - Comprehensive Integration', () => {
         await page.getByText(testLabResult.testName).click();
         
         // Should show FHIR Observation details
-        await helpers.modal.waitForModal(/lab result details/i);
+        await helpers.modal.waitForModal('lab result details');
         
         // Verify FHIR structure
         for (const result of testLabResult.results) {
@@ -408,7 +408,7 @@ test.describe('FHIR Operations - Comprehensive Integration', () => {
         if (await editButton.isVisible()) {
           await editButton.click();
           
-          await helpers.modal.waitForModal(/edit medication/i);
+          await helpers.modal.waitForModal('edit medication');
           
           // Change dosage
           const dosageInput = page.getByLabel(/dosage/i);

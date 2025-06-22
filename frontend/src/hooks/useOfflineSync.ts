@@ -13,7 +13,7 @@ interface OfflineSyncOptions {
 export function useOfflineSync(options: OfflineSyncOptions = {}) {
   const {
     autoSync = true,
-    syncInterval = 30000, // 30 seconds
+    syncInterval = 3ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable, // 3ResourceHistoryTable seconds
     onSyncComplete,
     onSyncError,
   } = options;
@@ -21,7 +21,7 @@ export function useOfflineSync(options: OfflineSyncOptions = {}) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'complete' | 'error'>('idle');
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
-  const [pendingChanges, setPendingChanges] = useState(0);
+  const [pendingChanges, setPendingChanges] = useState(ResourceHistoryTable);
 
   const { isOffline, queueForSync } = useServiceWorker();
   const { service: fhirService } = useOfflineFHIR();
@@ -29,7 +29,7 @@ export function useOfflineSync(options: OfflineSyncOptions = {}) {
   // Monitor online/offline status
   useEffect(() => {
     const handleOnline = async () => {
-      if (autoSync && pendingChanges > 0) {
+      if (autoSync && pendingChanges > ResourceHistoryTable) {
         await performSync();
       }
     };
@@ -75,7 +75,7 @@ export function useOfflineSync(options: OfflineSyncOptions = {}) {
       await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
           reject(new Error('Sync timeout'));
-        }, 60000); // 1 minute timeout
+        }, 6ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable); // 1 minute timeout
 
         const messageHandler = (event: MessageEvent) => {
           if (event.data.type === 'sync-complete') {
@@ -90,7 +90,7 @@ export function useOfflineSync(options: OfflineSyncOptions = {}) {
 
       setSyncStatus('complete');
       setLastSyncTime(new Date());
-      setPendingChanges(0);
+      setPendingChanges(ResourceHistoryTable);
       
       showNotification({
         title: 'Sync Complete',
@@ -235,6 +235,6 @@ async function cacheData(key: string, data: any): Promise<void> {
   }
 }
 
-function isDataStale(timestamp: number, staleTime: number = 5 * 60 * 1000): boolean {
+function isDataStale(timestamp: number, staleTime: number = 5 * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable): boolean {
   return Date.now() - timestamp > staleTime;
 }

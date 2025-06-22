@@ -35,7 +35,7 @@ export interface FHIRResource extends BaseModel {
     status: 'generated' | 'extensions' | 'additional' | 'empty';
     div: string;
   };
-  contained?: any[];
+  contained?: FHIRResource[];
   extension?: Array<{
     url: string;
     valueString?: string;
@@ -44,11 +44,11 @@ export interface FHIRResource extends BaseModel {
     valueBoolean?: boolean;
     valueInteger?: number;
     valueDecimal?: number;
-    [key: string]: any;
+    [key: string]: unknown;
   }>;
   modifierExtension?: Array<{
     url: string;
-    [key: string]: any;
+    [key: string]: unknown;
   }>;
 }
 
@@ -121,14 +121,16 @@ export interface Reference {
   display?: string;
 }
 
+export interface Coding {
+  system?: string;
+  version?: string;
+  code?: string;
+  display?: string;
+  userSelected?: boolean;
+}
+
 export interface CodeableConcept {
-  coding?: Array<{
-    system?: string;
-    version?: string;
-    code?: string;
-    display?: string;
-    userSelected?: boolean;
-  }>;
+  coding?: Coding[];
   text?: string;
 }
 
@@ -409,6 +411,11 @@ export function formatHumanName(name: HumanName): string {
 }
 
 export function formatAddress(address: Address): string {
+  // Use text field if provided
+  if (address.text) {
+    return address.text;
+  }
+  
   const parts: string[] = [];
   if (address.line && address.line.length > 0) {
     parts.push(address.line.join(', '));
@@ -416,12 +423,19 @@ export function formatAddress(address: Address): string {
   if (address.city) {
     parts.push(address.city);
   }
+  
+  // Combine state and postal code
+  const stateZip: string[] = [];
   if (address.state) {
-    parts.push(address.state);
+    stateZip.push(address.state);
   }
   if (address.postalCode) {
-    parts.push(address.postalCode);
+    stateZip.push(address.postalCode);
   }
+  if (stateZip.length > 0) {
+    parts.push(stateZip.join(' '));
+  }
+  
   if (address.country) {
     parts.push(address.country);
   }

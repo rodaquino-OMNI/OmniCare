@@ -4,6 +4,10 @@ import dotenv from 'dotenv';
 // Load test environment variables
 dotenv.config({ path: '.env.test' });
 
+// Make crypto available globally for tests that might need it
+import * as cryptoModule from 'crypto';
+(global as any).crypto = cryptoModule;
+
 // Mock console methods for cleaner test output
 global.console = {
   ...console,
@@ -59,12 +63,13 @@ jest.mock('winston', () => ({
     debug: jest.fn(),
   })),
   format: {
-    combine: jest.fn(),
-    timestamp: jest.fn(),
-    errors: jest.fn(),
-    json: jest.fn(),
-    colorize: jest.fn(),
-    simple: jest.fn(),
+    combine: jest.fn(() => ({})),
+    timestamp: jest.fn(() => ({})),
+    errors: jest.fn(() => ({})),
+    json: jest.fn(() => ({})),
+    colorize: jest.fn(() => ({})),
+    simple: jest.fn(() => ({})),
+    printf: jest.fn(() => ({})),
   },
   transports: {
     Console: jest.fn(),

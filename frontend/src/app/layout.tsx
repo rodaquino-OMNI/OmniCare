@@ -62,7 +62,7 @@ export default function RootLayout({
         <ColorSchemeScript />
         <link rel="icon" href="/favicon.ico" />
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#0091FF" />
+        <meta name="theme-color" content="#ResourceHistoryTableResourceHistoryTable91FF" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="OmniCare EMR" />

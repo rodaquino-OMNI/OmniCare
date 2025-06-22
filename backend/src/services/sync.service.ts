@@ -93,7 +93,7 @@ export class SyncService {
       await auditService.logAccess({
         userId,
         action: 'sync',
-        resourceType: 'Bundle',
+        resource: 'Bundle',
         resourceId: syncRequest.clientId,
         metadata: {
           operationCount: syncRequest.operations.length,
@@ -171,7 +171,7 @@ export class SyncService {
           return await this.processDelete(operation, userId);
         
         default:
-          throw new Error(`Unknown operation: ${operation.operation}`);
+          throw new Error(`Unknown operation: ${String(operation.operation)}`);
       }
     } catch (error: any) {
       return {
@@ -210,7 +210,7 @@ export class SyncService {
       await auditService.logAccess({
         userId,
         action: 'create',
-        resourceType: created.resourceType,
+        resource: created.resourceType,
         resourceId: created.id!,
         metadata: { syncOperation: true }
       });
@@ -288,7 +288,7 @@ export class SyncService {
       await auditService.logAccess({
         userId,
         action: 'update',
-        resourceType: updated.resourceType,
+        resource: updated.resourceType,
         resourceId: updated.id!,
         metadata: { syncOperation: true }
       });
@@ -343,7 +343,7 @@ export class SyncService {
       await auditService.logAccess({
         userId,
         action: 'delete',
-        resourceType: operation.resourceType,
+        resource: operation.resourceType,
         resourceId: operation.resourceId,
         metadata: { syncOperation: true }
       });
@@ -409,7 +409,7 @@ export class SyncService {
           }
         }
       } catch (error) {
-        logger.error(`Failed to get ${resourceType} changes since ${since}`, { error });
+        logger.error(`Failed to get ${resourceType} changes since ${String(since)}`, { error });
       }
     }
 
@@ -535,7 +535,7 @@ export class SyncService {
     const parts = token.split('-');
     if (parts.length !== 3) return false;
     
-    const timestamp = parseInt(parts[1], 10);
+    const timestamp = parseInt(parts[1] ?? '0', 10);
     const age = Date.now() - timestamp;
     
     // Token expires after 24 hours
@@ -545,7 +545,7 @@ export class SyncService {
   /**
    * Get sync status for a client
    */
-  async getSyncStatus(clientId: string, userId: string): Promise<any> {
+  async getSyncStatus(clientId: string, userId?: string): Promise<any> {
     // TODO: Implement sync status tracking
     return {
       clientId,

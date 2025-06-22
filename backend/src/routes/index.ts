@@ -4,13 +4,11 @@ import { authController } from '@/controllers/auth.controller';
 import { fhirController } from '@/controllers/fhir.controller';
 import { 
   authenticate, 
-  optionalAuthenticate, 
   requireScope, 
   requirePatientAccess, 
   requireResourceAccess, 
   requireAdmin,
-  auditLog,
-  AuthMiddleware,
+  auditLog
 } from '@/middleware/auth.middleware';
 import networkRoutes from './network.routes';
 import syncRoutes from './sync.routes';
@@ -50,6 +48,19 @@ router.post('/auth/introspect', authController.introspect.bind(authController));
 // Internal API authentication
 router.post('/auth/login', authController.login.bind(authController));
 router.post('/auth/refresh', authController.refreshToken.bind(authController));
+router.post('/auth/logout', authController.logout.bind(authController));
+router.get('/auth/me', 
+  authenticate,
+  authController.getCurrentUser.bind(authController)
+);
+router.post('/auth/setup-mfa',
+  authenticate,
+  authController.setupMfa.bind(authController)
+);
+router.post('/auth/verify-mfa',
+  authenticate,
+  authController.verifyMfa.bind(authController)
+);
 
 // ===============================
 // FHIR METADATA ROUTES

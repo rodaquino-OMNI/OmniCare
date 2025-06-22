@@ -1,4 +1,6 @@
 // Service Worker Testing Utilities
+// Jest is available globally - no imports needed
+
 // Mock Response constructor for Node.js test environment
 if (typeof Response === 'undefined') {
   global.Response = class Response {
@@ -6,21 +8,100 @@ if (typeof Response === 'undefined') {
     status = this.options.status || 200;
     statusText = this.options.statusText || 'OK';
     ok = this.status >= 200 && this.status < 300;
+    headers = new Map(Object.entries(this.options.headers || {}));
     json() { return Promise.resolve(JSON.parse(this.body)); }
     text() { return Promise.resolve(this.body); }
     clone() { return new Response(this.body, this.options); }
   } as any;
 }
 
+// Mock Service Worker type definitions
+export interface Client {
+  frameType: 'auxiliary' | 'top-level' | 'nested' | 'none';
+  id: string;
+  type: 'window' | 'worker' | 'sharedworker';
+  url: string;
+  postMessage(message: any, transfer?: Transferable[]): void;
+}
+
+export interface ExtendableEvent extends Event {
+  waitUntil(promise: Promise<any>): void;
+}
+
+export interface FetchEvent extends ExtendableEvent {
+  request: Request;
+  clientId: string;
+  resultingClientId: string;
+  replacesClientId: string;
+  handled: Promise<undefined>;
+  preloadResponse: Promise<any | undefined>;
+  respondWith(response: Response | Promise<Response>): void;
+}
+
+export interface ExtendableMessageEvent extends ExtendableEvent {
+  data: any;
+  origin: string;
+  lastEventId: string;
+  source: Client | ServiceWorker | MockServiceWorker | MessagePort | null;
+  ports: readonly MessagePort[];
+}
+
+export interface SyncManager {
+  getTags(): Promise<string[]>;
+  register(tag: string): Promise<void>;
+}
+
+// Mock ExtendableEvent implementation
+export class MockExtendableEvent implements ExtendableEvent {
+  type: string;
+  promises: Promise<any>[] = [];
+  
+  constructor(type: string) {
+    this.type = type;
+  }
+  
+  waitUntil(promise: Promise<any>): void {
+    this.promises.push(promise);
+  }
+  
+  // Event interface properties
+  bubbles = false;
+  cancelBubble = false;
+  cancelable = false;
+  composed = false;
+  currentTarget = null;
+  defaultPrevented = false;
+  eventPhase = 0;
+  isTrusted = true;
+  returnValue = true;
+  srcElement = null;
+  target = null;
+  timeStamp = Date.now();
+  readonly NONE = 0 as const;
+  readonly CAPTURING_PHASE = 1 as const;
+  readonly AT_TARGET = 2 as const;
+  readonly BUBBLING_PHASE = 3 as const;
+  
+  composedPath(): EventTarget[] { return []; }
+  initEvent(): void {}
+  preventDefault(): void {}
+  stopImmediatePropagation(): void {}
+  stopPropagation(): void {}
+}
+
+// Note: ExtendableEvent is a type interface, not a constructor
+// MockExtendableEvent provides the implementation for testing
+
 // Mock Service Worker registration
-export interface MockServiceWorkerRegistration extends ServiceWorkerRegistration {
+export interface MockServiceWorkerRegistration {
   installing: MockServiceWorker | null;
   waiting: MockServiceWorker | null;
   active: MockServiceWorker | null;
   navigationPreload: any;
   updateViaCache: 'imports' | 'all' | 'none';
-  update: jest.Mock<Promise<void>>;
-  unregister: jest.Mock<Promise<boolean>>;
+  scope: string;
+  update: jest.Mock;
+  unregister: jest.Mock;
   showNotification: jest.Mock;
   getNotifications: jest.Mock;
   addEventListener: jest.Mock;
@@ -34,16 +115,19 @@ export interface MockServiceWorkerRegistration extends ServiceWorkerRegistration
   cookies: any;
   taskQueue: any;
   dispatchEvent: jest.Mock;
+  onupdatefound: ((this: ServiceWorkerRegistration, ev: Event) => any) | null;
 }
 
-export interface MockServiceWorker extends ServiceWorker {
+export interface MockServiceWorker {
   state: ServiceWorkerState;
   scriptURL: string;
   postMessage: jest.Mock;
   addEventListener: jest.Mock;
   removeEventListener: jest.Mock;
-  onstatechange: ((this: ServiceWorker, ev: Event) => any) | null;
+  onstatechange: ((this: MockServiceWorker, ev: Event) => any) | null;
   dispatchEvent: jest.Mock;
+  onerror: ((this: MockServiceWorker, ev: ErrorEvent) => any) | null;
+  onmessage: ((this: MockServiceWorker, ev: MessageEvent) => any) | null;
 }
 
 export class ServiceWorkerTestUtils {
@@ -61,7 +145,7 @@ export class ServiceWorkerTestUtils {
       postMessage: jest.fn(),
       addEventListener: jest.fn((event, callback) => {
         if (event === 'message') {
-          this.messageListeners.set(callback.toString(), callback);
+          ServiceWorkerTestUtils.messageListeners.set(callback.toString(), callback);
         }
       }),
       removeEventListener: jest.fn(),
@@ -79,15 +163,15 @@ export class ServiceWorkerTestUtils {
   static createMockRegistration(
     activeWorker?: MockServiceWorker
   ): MockServiceWorkerRegistration {
-    const registration: MockServiceWorkerRegistration = {
+    const registration = {
       installing: null,
       waiting: null,
       active: activeWorker || this.createMockServiceWorker(),
       navigationPreload: {},
-      updateViaCache: 'imports',
+      updateViaCache: 'imports' as const,
       scope: '/',
-      update: jest.fn(() => Promise.resolve()),
-      unregister: jest.fn(() => Promise.resolve(true)),
+      update: jest.fn().mockResolvedValue(undefined),
+      unregister: jest.fn().mockResolvedValue(true),
       showNotification: jest.fn(),
       getNotifications: jest.fn(() => Promise.resolve([])),
       addEventListener: jest.fn((event, callback) => {
@@ -97,7 +181,10 @@ export class ServiceWorkerTestUtils {
       }),
       removeEventListener: jest.fn(),
       pushManager: {} as PushManager,
-      sync: {} as SyncManager,
+      sync: {
+        getTags: jest.fn(() => Promise.resolve([])),
+        register: jest.fn(() => Promise.resolve())
+      } as any,
       index: {} as any,
       paymentManager: {} as any,
       periodicSync: {} as any,
@@ -106,7 +193,7 @@ export class ServiceWorkerTestUtils {
       taskQueue: {} as any,
       dispatchEvent: jest.fn(),
       onupdatefound: null
-    } as MockServiceWorkerRegistration;
+    };
 
     this.mockRegistration = registration;
     return registration;
@@ -149,7 +236,7 @@ export class ServiceWorkerTestUtils {
     setTimeout(() => {
       if (installing.state === 'installing') {
         (installing as any).state = 'installed';
-        installing.onstatechange?.(new Event('statechange'));
+        installing.onstatechange?.call(installing, new Event('statechange'));
       }
     }, 100);
   }
@@ -162,21 +249,21 @@ export class ServiceWorkerTestUtils {
 
     const worker = this.mockRegistration.installing;
     (worker as any).state = 'activating';
-    worker.onstatechange?.(new Event('statechange'));
+    worker.onstatechange?.call(worker, new Event('statechange'));
 
     setTimeout(() => {
       (worker as any).state = 'activated';
-      worker.onstatechange?.(new Event('statechange'));
+      worker.onstatechange?.call(worker, new Event('statechange'));
       this.mockRegistration!.active = worker;
       this.mockRegistration!.installing = null;
     }, 100);
   }
 
   // Simulate service worker message
-  static simulateMessage(data: any, source?: ServiceWorker) {
+  static simulateMessage(data: any, source?: ServiceWorker | MockServiceWorker) {
     const messageEvent = new MessageEvent('message', {
       data,
-      source: source || this.mockWorker || undefined,
+      source: (source || this.mockWorker || undefined) as MessageEventSource,
       origin: window.location.origin
     });
 
@@ -387,7 +474,7 @@ export function mockServiceWorkerLifecycle() {
 export function createMockFetchEvent(
   request: Request,
   clientId?: string
-): FetchEvent {
+): any {
   const respondWith = jest.fn();
   const waitUntil = jest.fn();
 

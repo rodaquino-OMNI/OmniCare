@@ -9,6 +9,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
+
 import config from '@/config';
 import logger from '@/utils/logger';
 import routes from '@/routes';
@@ -90,7 +91,7 @@ app.use((req, res, next) => {
 });
 
 // Health check endpoint
-app.get('/ping', (req, res) => {
+app.get('/ping', (_req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
@@ -102,7 +103,7 @@ app.get('/ping', (req, res) => {
 app.use('/', routes);
 
 // SMART configuration endpoint
-app.get('/.well-known/smart_configuration', (req, res) => {
+app.get('/.well-known/smart_configuration', (_req, res) => {
   const smartConfig = {
     authorization_endpoint: config.smart.authorizationUrl,
     token_endpoint: config.smart.tokenUrl,
@@ -132,7 +133,7 @@ app.get('/.well-known/smart_configuration', (req, res) => {
 });
 
 // Error handling
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   logger.error('Unhandled application error:', {
     error: err.message,
     stack: err.stack,

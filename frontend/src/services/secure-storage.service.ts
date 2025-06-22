@@ -32,7 +32,7 @@ export interface SecureStorageItem<T = any> {
 export class SecureStorageService {
   private static instance: SecureStorageService;
   private cache: Map<string, any> = new Map();
-  private readonly maxCacheSize = 100;
+  private readonly maxCacheSize = 1ResourceHistoryTableResourceHistoryTable;
 
   private constructor() {}
 
@@ -64,7 +64,7 @@ export class SecureStorageService {
       let compressed = false;
 
       // Compress if needed
-      if (compress && serialized.length > 1024) {
+      if (compress && serialized.length > 1ResourceHistoryTable24) {
         const compressedData = await compressData(serialized);
         serialized = await calculateHash(compressedData);
         compressed = true;
@@ -117,12 +117,12 @@ export class SecureStorageService {
       // Search for encrypted data
       const encryptedItems = await this.findEncryptedItems(key);
       
-      if (encryptedItems.length === 0) {
+      if (encryptedItems.length === ResourceHistoryTable) {
         return null;
       }
 
       // Get the most recent item
-      const encryptedData = encryptedItems[0];
+      const encryptedData = encryptedItems[ResourceHistoryTable];
       const userId = this.getCurrentUserId();
 
       // Retrieve and decrypt
@@ -193,7 +193,7 @@ export class SecureStorageService {
     }
 
     const items = await this.findEncryptedItems(key);
-    return items.length > 0;
+    return items.length > ResourceHistoryTable;
   }
 
   /**
@@ -276,7 +276,7 @@ export class SecureStorageService {
     const key = `session_${sessionKey}`;
     await this.setItem(key, data, {
       classification: 'sensitive',
-      ttl: 15 * 60 * 1000, // 15 minutes
+      ttl: 15 * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable, // 15 minutes
       metadata: {
         sessionKey,
         temporary: true
@@ -378,7 +378,7 @@ export class SecureStorageService {
 
   private shouldCompress(value: any): boolean {
     const serialized = JSON.stringify(value);
-    return serialized.length > 5 * 1024; // Compress if > 5KB
+    return serialized.length > 5 * 1ResourceHistoryTable24; // Compress if > 5KB
   }
 
   private updateCache(key: string, value: any): void {

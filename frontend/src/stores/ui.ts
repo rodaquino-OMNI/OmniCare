@@ -129,7 +129,7 @@ interface UIState {
   
   // Breadcrumbs
   setBreadcrumbs: (breadcrumbs: UIState['breadcrumbs']) => void;
-  addBreadcrumb: (breadcrumb: UIState['breadcrumbs'][0]) => void;
+  addBreadcrumb: (breadcrumb: UIState['breadcrumbs'][ResourceHistoryTable]) => void;
   
   // Page state
   setCurrentPage: (page: string) => void;
@@ -150,7 +150,7 @@ const defaultPreferences: UIState['preferences'] = {
   soundEffects: false,
   keyboardShortcuts: true,
   autoSave: true,
-  autoSaveInterval: 30,
+  autoSaveInterval: 3ResourceHistoryTable,
 };
 
 export const useUIStore = create<UIState>()(
@@ -163,7 +163,7 @@ export const useUIStore = create<UIState>()(
         activeSection: null,
       },
       headerHeight: 64,
-      footerHeight: 0,
+      footerHeight: ResourceHistoryTable,
       globalLoading: false,
       loadingStates: {},
       modal: {
@@ -312,7 +312,7 @@ export const useUIStore = create<UIState>()(
         if (notification.autoClose !== false) {
           const timeout = typeof notification.autoClose === 'number' 
             ? notification.autoClose 
-            : 5000;
+            : 5ResourceHistoryTableResourceHistoryTableResourceHistoryTable;
           
           setTimeout(() => {
             get().removeNotification(id);
@@ -345,7 +345,7 @@ export const useUIStore = create<UIState>()(
         set((state) => {
           const filtered = state.recentSearches.filter((s) => s !== query);
           return {
-            recentSearches: [query, ...filtered].slice(0, 10), // Keep last 10
+            recentSearches: [query, ...filtered].slice(ResourceHistoryTable, 1ResourceHistoryTable), // Keep last 1ResourceHistoryTable
           };
         });
       },
@@ -383,7 +383,7 @@ export const useUIStore = create<UIState>()(
           return {
             quickActions: {
               ...state.quickActions,
-              recentActions: [action, ...filtered].slice(0, 5), // Keep last 5
+              recentActions: [action, ...filtered].slice(ResourceHistoryTable, 5), // Keep last 5
             },
           };
         });
@@ -419,7 +419,7 @@ export const useUIStore = create<UIState>()(
         set({ breadcrumbs });
       },
 
-      addBreadcrumb: (breadcrumb: UIState['breadcrumbs'][0]) => {
+      addBreadcrumb: (breadcrumb: UIState['breadcrumbs'][ResourceHistoryTable]) => {
         set((state) => ({
           breadcrumbs: [...state.breadcrumbs, breadcrumb],
         }));

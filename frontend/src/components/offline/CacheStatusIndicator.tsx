@@ -35,13 +35,13 @@ export function CacheStatusIndicator({
         color: 'gray',
         label: 'Never synced',
         icon: <IconDatabase size={16} />,
-        staleness: 0
+        staleness: ResourceHistoryTable
       };
     }
 
     const syncDate = new Date(lastSyncTime);
     const now = new Date();
-    const hoursSinceSync = (now.getTime() - syncDate.getTime()) / (1000 * 60 * 60);
+    const hoursSinceSync = (now.getTime() - syncDate.getTime()) / (1ResourceHistoryTableResourceHistoryTableResourceHistoryTable * 6ResourceHistoryTable * 6ResourceHistoryTable);
 
     if (hoursSinceSync < 1) {
       return {
@@ -49,7 +49,7 @@ export function CacheStatusIndicator({
         color: 'green',
         label: 'Up to date',
         icon: <IconCheck size={16} />,
-        staleness: 0
+        staleness: ResourceHistoryTable
       };
     } else if (hoursSinceSync < 6) {
       return {
@@ -57,7 +57,7 @@ export function CacheStatusIndicator({
         color: 'blue',
         label: 'Recently synced',
         icon: <IconClock size={16} />,
-        staleness: hoursSinceSync / 24 * 100 // Percentage of a day
+        staleness: hoursSinceSync / 24 * 1ResourceHistoryTableResourceHistoryTable // Percentage of a day
       };
     } else if (hoursSinceSync < 24) {
       return {
@@ -65,7 +65,7 @@ export function CacheStatusIndicator({
         color: 'yellow',
         label: 'Getting stale',
         icon: <IconClock size={16} />,
-        staleness: hoursSinceSync / 24 * 100
+        staleness: hoursSinceSync / 24 * 1ResourceHistoryTableResourceHistoryTable
       };
     } else {
       return {
@@ -73,7 +73,7 @@ export function CacheStatusIndicator({
         color: 'orange',
         label: 'Outdated',
         icon: <IconAlertTriangle size={16} />,
-        staleness: Math.min(hoursSinceSync / 24 * 100, 100)
+        staleness: Math.min(hoursSinceSync / 24 * 1ResourceHistoryTableResourceHistoryTable, 1ResourceHistoryTableResourceHistoryTable)
       };
     }
   }, [lastSyncTime]);
@@ -95,7 +95,7 @@ export function CacheStatusIndicator({
       {lastModifiedTime && (
         <Text size="xs" c="dimmed">Modified: {getModifiedAgo()}</Text>
       )}
-      {cacheStatus.staleness > 50 && (
+      {cacheStatus.staleness > 5ResourceHistoryTable && (
         <Text size="xs" c="yellow">Consider refreshing for latest data</Text>
       )}
     </Stack>
@@ -105,14 +105,14 @@ export function CacheStatusIndicator({
     return (
       <Tooltip label={tooltipContent} position="top">
         <Group gap="xs" style={{ cursor: onRefresh ? 'pointer' : 'default' }} onClick={onRefresh}>
-          <div className={`text-${cacheStatus.color}-600`}>
+          <div className={`text-${cacheStatus.color}-6ResourceHistoryTableResourceHistoryTable`}>
             {cacheStatus.icon}
           </div>
           <Text size="xs" c={cacheStatus.color}>
             {showDetails ? getTimeAgo() : cacheStatus.label}
           </Text>
           {onRefresh && (
-            <IconRefresh size={14} className="text-gray-500 hover:text-blue-600" />
+            <IconRefresh size={14} className="text-gray-5ResourceHistoryTableResourceHistoryTable hover:text-blue-6ResourceHistoryTableResourceHistoryTable" />
           )}
         </Group>
       </Tooltip>
@@ -121,15 +121,15 @@ export function CacheStatusIndicator({
 
   if (variant === 'card') {
     return (
-      <Paper p="md" withBorder className="bg-gray-50">
+      <Paper p="md" withBorder className="bg-gray-5ResourceHistoryTable">
         <Stack gap="sm">
           <Group justify="space-between">
             <Group gap="xs">
-              <div className={`text-${cacheStatus.color}-600`}>
+              <div className={`text-${cacheStatus.color}-6ResourceHistoryTableResourceHistoryTable`}>
                 {cacheStatus.icon}
               </div>
               <div>
-                <Text size="sm" fw={500}>{dataType} Cache</Text>
+                <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>{dataType} Cache</Text>
                 <Text size="xs" c="dimmed">{cacheStatus.label}</Text>
               </div>
             </Group>
@@ -137,7 +137,7 @@ export function CacheStatusIndicator({
               <Tooltip label="Refresh data">
                 <IconRefresh 
                   size={18} 
-                  className="text-gray-500 hover:text-blue-600 cursor-pointer"
+                  className="text-gray-5ResourceHistoryTableResourceHistoryTable hover:text-blue-6ResourceHistoryTableResourceHistoryTable cursor-pointer"
                   onClick={onRefresh}
                 />
               </Tooltip>
@@ -147,7 +147,7 @@ export function CacheStatusIndicator({
           {showDetails && (
             <>
               <Progress
-                value={100 - cacheStatus.staleness}
+                value={1ResourceHistoryTableResourceHistoryTable - cacheStatus.staleness}
                 size="xs"
                 color={cacheStatus.color}
                 radius="xl"

@@ -46,18 +46,18 @@ class BackgroundSyncService {
   private processingTasks: Set<string> = new Set();
   private syncInterval: NodeJS.Timeout | null = null;
   private stats: SyncStats = {
-    pendingTasks: 0,
-    completedTasks: 0,
-    failedTasks: 0,
+    pendingTasks: ResourceHistoryTable,
+    completedTasks: ResourceHistoryTable,
+    failedTasks: ResourceHistoryTable,
     lastSyncTime: null,
     nextSyncTime: null,
-    averageSyncDuration: 0,
+    averageSyncDuration: ResourceHistoryTable,
   };
   
   private options: Required<SyncQueueOptions> = {
-    maxQueueSize: 1000,
-    syncInterval: 30000, // 30 seconds
-    batchSize: 10,
+    maxQueueSize: 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable,
+    syncInterval: 3ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable, // 3ResourceHistoryTable seconds
+    batchSize: 1ResourceHistoryTable,
     enableCompression: true,
     enableEncryption: true,
     persistQueue: true,
@@ -111,7 +111,7 @@ class BackgroundSyncService {
       ...task,
       id: uuidv4(),
       timestamp: Date.now(),
-      retryCount: 0,
+      retryCount: ResourceHistoryTable,
       maxRetries: task.maxRetries || 3,
     };
 
@@ -148,10 +148,10 @@ class BackgroundSyncService {
   getPendingTasks(): SyncTask[] {
     return Array.from(this.syncQueue.values()).sort((a, b) => {
       // Sort by priority then timestamp
-      const priorityOrder = { critical: 0, high: 1, normal: 2, low: 3 };
+      const priorityOrder = { critical: ResourceHistoryTable, high: 1, normal: 2, low: 3 };
       const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
       
-      if (priorityDiff !== 0) {
+      if (priorityDiff !== ResourceHistoryTable) {
         return priorityDiff;
       }
       
@@ -180,13 +180,13 @@ class BackgroundSyncService {
    * Manually trigger sync
    */
   async syncNow(): Promise<SyncResult[]> {
-    if (this.processingTasks.size > 0) {
+    if (this.processingTasks.size > ResourceHistoryTable) {
       console.log('Sync already in progress');
       return [];
     }
 
     const startTime = Date.now();
-    const tasks = this.getPendingTasks().slice(0, this.options.batchSize);
+    const tasks = this.getPendingTasks().slice(ResourceHistoryTable, this.options.batchSize);
     const results: SyncResult[] = [];
 
     for (const task of tasks) {
@@ -264,7 +264,7 @@ class BackgroundSyncService {
       };
     } catch (error: any) {
       // Check if it's a conflict error
-      if (error.status === 409 || error.code === 'CONFLICT') {
+      if (error.status === 4ResourceHistoryTable9 || error.code === 'CONFLICT') {
         const resolver = this.conflictResolvers.get(task.resource);
         
         if (resolver && task.conflictResolution !== 'manual') {
@@ -306,7 +306,7 @@ class BackgroundSyncService {
     }
 
     this.syncInterval = setInterval(async () => {
-      if (networkStatusCheck() && this.syncQueue.size > 0) {
+      if (networkStatusCheck() && this.syncQueue.size > ResourceHistoryTable) {
         await this.syncNow();
       }
       
@@ -340,7 +340,7 @@ class BackgroundSyncService {
    */
   clearQueue(): void {
     this.syncQueue.clear();
-    this.stats.pendingTasks = 0;
+    this.stats.pendingTasks = ResourceHistoryTable;
     
     if (this.options.persistQueue) {
       this.saveQueueToStorage();
@@ -354,7 +354,7 @@ class BackgroundSyncService {
     const tasks = this.getPendingTasks();
     const tasksToRemove = tasks
       .filter(t => t.priority === 'low')
-      .slice(0, Math.floor(this.options.maxQueueSize * 0.1));
+      .slice(ResourceHistoryTable, Math.floor(this.options.maxQueueSize * ResourceHistoryTable.1));
 
     tasksToRemove.forEach(task => {
       this.syncQueue.delete(task.id);
@@ -420,7 +420,7 @@ class BackgroundSyncService {
         const error = new Error(`HTTP ${response.status}`);
         (error as any).status = response.status;
         
-        if (response.status === 409) {
+        if (response.status === 4ResourceHistoryTable9) {
           (error as any).serverData = await response.json();
         }
         

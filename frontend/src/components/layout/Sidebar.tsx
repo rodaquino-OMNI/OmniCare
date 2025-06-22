@@ -53,32 +53,32 @@ export function Sidebar() {
 
   if (!isOpen) return null;
 
-  const sidebarWidth = isCollapsed ? 80 : 280;
+  const sidebarWidth = isCollapsed ? 8ResourceHistoryTable : 28ResourceHistoryTable;
 
   return (
     <>
       {/* Desktop Sidebar */}
       <Paper
-        className="fixed left-0 top-0 h-full z-30 border-r border-gray-200"
+        className="fixed left-ResourceHistoryTable top-ResourceHistoryTable h-full z-3ResourceHistoryTable border-r border-gray-2ResourceHistoryTableResourceHistoryTable"
         style={{ width: sidebarWidth }}
         shadow="sm"
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between p-4 border-b border-gray-2ResourceHistoryTableResourceHistoryTable">
             {!isCollapsed && (
               <Group gap="sm">
                 <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                  <Text c="white" fw={700} size="sm">
+                  <Text c="white" fw={7ResourceHistoryTableResourceHistoryTable} size="sm">
                     O
                   </Text>
                 </div>
                 <div>
-                  <Text fw={600} size="sm" className="text-gray-800">
+                  <Text fw={6ResourceHistoryTableResourceHistoryTable} size="sm" className="text-gray-8ResourceHistoryTableResourceHistoryTable">
                     {APP_NAME}
                   </Text>
                   <Text size="xs" c="dimmed">
-                    v1.0.0
+                    v1.ResourceHistoryTable.ResourceHistoryTable
                   </Text>
                 </div>
               </Group>
@@ -99,7 +99,7 @@ export function Sidebar() {
 
           {/* User Info */}
           {user && (
-            <div className="p-4 border-b border-gray-200">
+            <div className="p-4 border-b border-gray-2ResourceHistoryTableResourceHistoryTable">
               <Group gap="sm">
                 <Avatar
                   size={isCollapsed ? 'sm' : 'md'}
@@ -107,12 +107,12 @@ export function Sidebar() {
                   alt={`${user.firstName} ${user.lastName}`}
                   color="primary"
                 >
-                  {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                  {user.firstName.charAt(ResourceHistoryTable)}{user.lastName.charAt(ResourceHistoryTable)}
                 </Avatar>
                 
                 {!isCollapsed && (
-                  <div className="flex-1 min-w-0">
-                    <Text fw={500} size="sm" truncate>
+                  <div className="flex-1 min-w-ResourceHistoryTable">
+                    <Text fw={5ResourceHistoryTableResourceHistoryTable} size="sm" truncate>
                       {user.firstName} {user.lastName}
                     </Text>
                     <Badge
@@ -130,11 +130,11 @@ export function Sidebar() {
 
           {/* Quick Actions */}
           {!isCollapsed && (
-            <div className="p-4 border-b border-gray-200">
+            <div className="p-4 border-b border-gray-2ResourceHistoryTableResourceHistoryTable">
               <Stack gap="xs">
-                <UnstyledButton className="w-full p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                <UnstyledButton className="w-full p-2 rounded-lg hover:bg-gray-5ResourceHistoryTable transition-colors">
                   <Group gap="sm">
-                    <IconSearch size={16} className="text-gray-600" />
+                    <IconSearch size={16} className="text-gray-6ResourceHistoryTableResourceHistoryTable" />
                     <Text size="sm" c="dimmed">
                       Search patients...
                     </Text>
@@ -170,11 +170,11 @@ export function Sidebar() {
           </ScrollArea>
 
           {/* Footer */}
-          <div className="p-4 border-t border-gray-200">
+          <div className="p-4 border-t border-gray-2ResourceHistoryTableResourceHistoryTable">
             <Stack gap="xs">
               {!isCollapsed && (
                 <Text size="xs" c="dimmed" ta="center">
-                  © 2024 OmniCare EMR
+                  © 2ResourceHistoryTable24 OmniCare EMR
                 </Text>
               )}
               
@@ -200,7 +200,7 @@ export function Sidebar() {
       </Paper>
 
       {/* Spacer for main content */}
-      <div style={{ width: sidebarWidth, flexShrink: 0 }} />
+      <div style={{ width: sidebarWidth, flexShrink: ResourceHistoryTable }} />
     </>
   );
 }
@@ -220,7 +220,7 @@ function NavigationItemComponent({
   openSections,
   onToggleSection,
 }: NavigationItemComponentProps) {
-  const hasChildren = item.children && item.children.length > 0;
+  const hasChildren = item.children && item.children.length > ResourceHistoryTable;
   const isActive = pathname === item.path;
   const isOpen = openSections.includes(item.path);
   const isParentActive = hasChildren && item.children?.some(child => pathname === child.path);
@@ -232,15 +232,15 @@ function NavigationItemComponent({
           onClick={() => onToggleSection(item.path)}
           className={`w-full p-3 rounded-lg transition-colors ${
             isParentActive
-              ? 'bg-primary/10 text-primary'
-              : 'hover:bg-gray-50'
+              ? 'bg-primary/1ResourceHistoryTable text-primary'
+              : 'hover:bg-gray-5ResourceHistoryTable'
           }`}
         >
           <Group justify="space-between">
             <Group gap="sm">
-              <item.icon size={20} />
+              <item.icon size={2ResourceHistoryTable} />
               {!isCollapsed && (
-                <Text size="sm" fw={isParentActive ? 500 : 400}>
+                <Text size="sm" fw={isParentActive ? 5ResourceHistoryTableResourceHistoryTable : 4ResourceHistoryTableResourceHistoryTable}>
                   {item.label}
                 </Text>
               )}
@@ -250,8 +250,8 @@ function NavigationItemComponent({
               <IconChevronRight
                 size={16}
                 style={{
-                  transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
-                  transition: 'transform 0.2s',
+                  transform: isOpen ? 'rotate(9ResourceHistoryTabledeg)' : 'rotate(ResourceHistoryTabledeg)',
+                  transition: 'transform ResourceHistoryTable.2s',
                 }}
               />
             )}
@@ -289,7 +289,7 @@ function NavigationItemComponent({
         component={Link}
         href={item.path}
         label={!isCollapsed ? item.label : ''}
-        leftSection={<item.icon size={20} />}
+        leftSection={<item.icon size={2ResourceHistoryTable} />}
         active={isActive}
         className="rounded-lg"
       />

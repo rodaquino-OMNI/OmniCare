@@ -74,6 +74,7 @@ describe('LoginForm', () => {
       canPrescribeMedications: false,
       canViewLabResults: false,
       canManageSystem: false,
+      canManageBilling: false,
     });
 
     jest.clearAllMocks();

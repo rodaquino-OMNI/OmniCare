@@ -110,7 +110,7 @@ export class OfflineFHIRService extends FHIRService {
         return {
           resourceType: 'Bundle',
           type: 'searchset',
-          total: 0,
+          total: ResourceHistoryTable,
           entry: [],
         };
       },
@@ -241,7 +241,7 @@ export class OfflineFHIRService extends FHIRService {
       const referenceEndpoints = [
         '/api/medications/catalog',
         '/api/lab/tests',
-        '/api/reference/icd10',
+        '/api/reference/icd1ResourceHistoryTable',
         '/api/reference/procedures',
       ];
 

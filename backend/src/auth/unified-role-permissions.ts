@@ -266,7 +266,7 @@ export function getRoleInfo(role: UserRole): Omit<RolePermissions, 'permissions'
     };
   }
   
-  const { permissions, ...info } = roleInfo;
+  const { permissions: _permissions, ...info } = roleInfo;
   return info;
 }
 

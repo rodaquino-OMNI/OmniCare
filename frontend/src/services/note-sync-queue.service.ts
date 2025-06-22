@@ -128,14 +128,14 @@ export class NoteSyncQueueService {
       if (navigator.onLine && !this.isProcessing) {
         this.processSyncQueue({ silent: true });
       }
-    }, 5 * 60 * 1000);
+    }, 5 * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable);
 
     // Retry failed items every 15 minutes
     this.retryTimer = setInterval(() => {
       if (navigator.onLine && !this.isProcessing) {
         this.retryFailedItems();
       }
-    }, 15 * 60 * 1000);
+    }, 15 * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable);
   }
 
   // ===============================
@@ -156,7 +156,7 @@ export class NoteSyncQueueService {
       priority: options.priority || 'normal',
       timestamp: new Date().toISOString(),
       status: 'pending',
-      attempts: 0,
+      attempts: ResourceHistoryTable,
       maxAttempts: options.maxRetries || 3,
       metadata: {}
     };
@@ -202,10 +202,10 @@ export class NoteSyncQueueService {
     const index = store.index('status');
     
     const counts = {
-      pending: 0,
-      processing: 0,
-      completed: 0,
-      failed: 0
+      pending: ResourceHistoryTable,
+      processing: ResourceHistoryTable,
+      completed: ResourceHistoryTable,
+      failed: ResourceHistoryTable
     };
 
     const statuses: Array<keyof typeof counts> = ['pending', 'processing', 'completed', 'failed'];
@@ -251,7 +251,7 @@ export class NoteSyncQueueService {
     if (!navigator.onLine || this.isProcessing) return;
 
     this.isProcessing = true;
-    const batchSize = options.batchSize || 10;
+    const batchSize = options.batchSize || 1ResourceHistoryTable;
 
     try {
       if (!options.silent) {
@@ -267,8 +267,8 @@ export class NoteSyncQueueService {
       // Get pending items sorted by priority and timestamp
       const pendingItems = await this.getPendingItems(batchSize);
       
-      let successCount = 0;
-      let failureCount = 0;
+      let successCount = ResourceHistoryTable;
+      let failureCount = ResourceHistoryTable;
 
       for (const item of pendingItems) {
         try {
@@ -294,10 +294,10 @@ export class NoteSyncQueueService {
         notifications.update({
           id: 'sync-progress',
           title: 'Sync Complete',
-          message: `${successCount} items synced successfully${failureCount > 0 ? `, ${failureCount} failed` : ''}`,
-          color: failureCount > 0 ? 'yellow' : 'green',
+          message: `${successCount} items synced successfully${failureCount > ResourceHistoryTable ? `, ${failureCount} failed` : ''}`,
+          color: failureCount > ResourceHistoryTable ? 'yellow' : 'green',
           loading: false,
-          autoClose: 3000
+          autoClose: 3ResourceHistoryTableResourceHistoryTableResourceHistoryTable
         });
       }
 
@@ -423,12 +423,12 @@ export class NoteSyncQueueService {
     for (const item of failedItems) {
       if (item.attempts < item.maxAttempts) {
         item.status = 'pending';
-        item.attempts = 0; // Reset attempts
+        item.attempts = ResourceHistoryTable; // Reset attempts
         await this.updateQueueItem(item);
       }
     }
 
-    if (failedItems.length > 0) {
+    if (failedItems.length > ResourceHistoryTable) {
       this.processSyncQueue({ silent: true });
     }
   }
@@ -451,14 +451,14 @@ export class NoteSyncQueueService {
     });
 
     // Sort by priority (high -> normal -> low) and timestamp
-    const priorityOrder = { high: 0, normal: 1, low: 2 };
+    const priorityOrder = { high: ResourceHistoryTable, normal: 1, low: 2 };
     items.sort((a, b) => {
       const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
-      if (priorityDiff !== 0) return priorityDiff;
+      if (priorityDiff !== ResourceHistoryTable) return priorityDiff;
       return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
     });
 
-    return items.slice(0, limit);
+    return items.slice(ResourceHistoryTable, limit);
   }
 
   private async updateQueueItem(item: SyncQueueItem): Promise<void> {

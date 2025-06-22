@@ -5,7 +5,7 @@
 
 import { faker } from '@faker-js/faker';
 import { OmniCarePractitioner, PractitionerCredentials, BoardCertification, PractitionerSchedule } from '../../../src/models/practitioner.model';
-import { HumanName, Address, ContactPoint, CodeableConcept } from '../../../src/models/base.model';
+import { HumanName, Address, ContactPoint, CodeableConcept, Identifier } from '../../../src/models/base.model';
 import { HealthcareFaker } from './patient-generator';
 
 export interface PractitionerGeneratorOptions {
@@ -86,6 +86,8 @@ export class PractitionerGenerator {
     const practitioner: OmniCarePractitioner = {
       resourceType: 'Practitioner',
       id: `practitioner-${faker.string.uuid()}`,
+      createdAt: new Date(),
+      updatedAt: new Date(),
       active: true,
       identifier: this.generateIdentifiers(role),
       name: this.generateName(firstName, lastName, role),
@@ -119,8 +121,8 @@ export class PractitionerGenerator {
     return practitioner;
   }
 
-  private static generateIdentifiers(role: string) {
-    const identifiers = [
+  private static generateIdentifiers(role: string): Identifier[] {
+    const identifiers: Identifier[] = [
       {
         use: 'usual' as const,
         type: {

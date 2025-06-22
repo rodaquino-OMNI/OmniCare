@@ -77,7 +77,7 @@ export function PatientHeader({
         ]);
         
         setAllergies(allergiesData);
-        setConditions(conditionsData.filter(c => c.clinicalStatus?.coding?.[0]?.code === 'active'));
+        setConditions(conditionsData.filter(c => c.clinicalStatus?.coding?.[ResourceHistoryTable]?.code === 'active'));
       } catch (error) {
         console.error('Error loading patient data:', error);
       } finally {
@@ -118,7 +118,7 @@ export function PatientHeader({
     allergy.reaction?.some(r => r.severity === 'severe')
   );
 
-  const hasActiveConditions = conditions.length > 0;
+  const hasActiveConditions = conditions.length > ResourceHistoryTable;
 
   if (compact) {
     return (
@@ -132,7 +132,7 @@ export function PatientHeader({
             />
             <div>
               <Group gap="sm" align="center">
-                <Text fw={600} size="lg" className="text-gray-800">
+                <Text fw={6ResourceHistoryTableResourceHistoryTable} size="lg" className="text-gray-8ResourceHistoryTableResourceHistoryTable">
                   {fullName}
                 </Text>
                 <Badge color={genderColor} size="sm" variant="light">
@@ -166,7 +166,7 @@ export function PatientHeader({
           </Group>
           
           {showActions && (
-            <Menu shadow="md" width={200}>
+            <Menu shadow="md" width={2ResourceHistoryTableResourceHistoryTable}>
               <Menu.Target>
                 <ActionIcon variant="light" size="sm">
                   <IconMoreHorizontal size={16} />
@@ -209,7 +209,7 @@ export function PatientHeader({
             />
             <div>
               <Group gap="md" align="center" mb="xs">
-                <Text fw={700} size="xl" className="text-gray-800">
+                <Text fw={7ResourceHistoryTableResourceHistoryTable} size="xl" className="text-gray-8ResourceHistoryTableResourceHistoryTable">
                   {fullName}
                 </Text>
                 <Badge color={genderColor} size="md" variant="light">
@@ -259,7 +259,7 @@ export function PatientHeader({
                   Print
                 </Button>
               )}
-              <Menu shadow="md" width={200}>
+              <Menu shadow="md" width={2ResourceHistoryTableResourceHistoryTable}>
                 <Menu.Target>
                   <ActionIcon variant="light" size="lg">
                     <IconMoreHorizontal size={18} />
@@ -287,12 +287,12 @@ export function PatientHeader({
         {/* Contact Information */}
         <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="lg">
           {phone && (
-            <Paper p="md" className="bg-blue-50 border border-blue-200">
+            <Paper p="md" className="bg-blue-5ResourceHistoryTable border border-blue-2ResourceHistoryTableResourceHistoryTable">
               <Group gap="sm">
-                <IconPhone size={20} className="text-blue-600" />
+                <IconPhone size={2ResourceHistoryTable} className="text-blue-6ResourceHistoryTableResourceHistoryTable" />
                 <div>
-                  <Text size="xs" c="dimmed" fw={500}>PHONE</Text>
-                  <Text size="sm" fw={500} className="text-blue-800">
+                  <Text size="xs" c="dimmed" fw={5ResourceHistoryTableResourceHistoryTable}>PHONE</Text>
+                  <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable} className="text-blue-8ResourceHistoryTableResourceHistoryTable">
                     {phone}
                   </Text>
                 </div>
@@ -301,12 +301,12 @@ export function PatientHeader({
           )}
           
           {email && (
-            <Paper p="md" className="bg-green-50 border border-green-200">
+            <Paper p="md" className="bg-green-5ResourceHistoryTable border border-green-2ResourceHistoryTableResourceHistoryTable">
               <Group gap="sm">
-                <IconMail size={20} className="text-green-600" />
+                <IconMail size={2ResourceHistoryTable} className="text-green-6ResourceHistoryTableResourceHistoryTable" />
                 <div>
-                  <Text size="xs" c="dimmed" fw={500}>EMAIL</Text>
-                  <Text size="sm" fw={500} className="text-green-800" truncate>
+                  <Text size="xs" c="dimmed" fw={5ResourceHistoryTableResourceHistoryTable}>EMAIL</Text>
+                  <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable} className="text-green-8ResourceHistoryTableResourceHistoryTable" truncate>
                     {email}
                   </Text>
                 </div>
@@ -315,13 +315,13 @@ export function PatientHeader({
           )}
           
           {address && (
-            <Paper p="md" className="bg-purple-50 border border-purple-200">
+            <Paper p="md" className="bg-purple-5ResourceHistoryTable border border-purple-2ResourceHistoryTableResourceHistoryTable">
               <Group gap="sm" align="flex-start">
-                <IconMapPin size={20} className="text-purple-600 mt-1" />
+                <IconMapPin size={2ResourceHistoryTable} className="text-purple-6ResourceHistoryTableResourceHistoryTable mt-1" />
                 <div>
-                  <Text size="xs" c="dimmed" fw={500}>ADDRESS</Text>
-                  <Text size="sm" fw={500} className="text-purple-800">
-                    {address.line?.[0]}
+                  <Text size="xs" c="dimmed" fw={5ResourceHistoryTableResourceHistoryTable}>ADDRESS</Text>
+                  <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable} className="text-purple-8ResourceHistoryTableResourceHistoryTable">
+                    {address.line?.[ResourceHistoryTable]}
                     {address.city && (
                       <><br />{address.city}, {address.state} {address.postalCode}</>
                     )}
@@ -331,11 +331,11 @@ export function PatientHeader({
             </Paper>
           )}
           
-          <Paper p="md" className="bg-orange-50 border border-orange-200">
+          <Paper p="md" className="bg-orange-5ResourceHistoryTable border border-orange-2ResourceHistoryTableResourceHistoryTable">
             <Group gap="sm">
-              <IconHeart size={20} className="text-orange-600" />
+              <IconHeart size={2ResourceHistoryTable} className="text-orange-6ResourceHistoryTableResourceHistoryTable" />
               <div>
-                <Text size="xs" c="dimmed" fw={500}>STATUS</Text>
+                <Text size="xs" c="dimmed" fw={5ResourceHistoryTableResourceHistoryTable}>STATUS</Text>
                 <Badge 
                   color={patient.active ? 'green' : 'red'} 
                   variant="filled" 
@@ -366,11 +366,11 @@ export function PatientHeader({
                         allergy.criticality === 'high' || 
                         allergy.reaction?.some(r => r.severity === 'severe')
                       )
-                      .slice(0, 3)
+                      .slice(ResourceHistoryTable, 3)
                       .map((allergy, index) => (
                         <Badge key={index} color="red" size="sm" variant="filled">
                           {allergy.code?.text || 
-                           allergy.code?.coding?.[0]?.display || 
+                           allergy.code?.coding?.[ResourceHistoryTable]?.display || 
                            'Unknown Allergy'}
                         </Badge>
                       ))}
@@ -385,11 +385,11 @@ export function PatientHeader({
               
               {hasActiveConditions && (
                 <div>
-                  <Text size="sm" fw={500} mb="xs" className="text-gray-700">
+                  <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable} mb="xs" className="text-gray-7ResourceHistoryTableResourceHistoryTable">
                     Active Conditions
                   </Text>
                   <Group gap="xs">
-                    {conditions.slice(0, 4).map((condition, index) => (
+                    {conditions.slice(ResourceHistoryTable, 4).map((condition, index) => (
                       <Badge 
                         key={index} 
                         color="blue" 
@@ -397,7 +397,7 @@ export function PatientHeader({
                         variant="light"
                       >
                         {condition.code?.text || 
-                         condition.code?.coding?.[0]?.display || 
+                         condition.code?.coding?.[ResourceHistoryTable]?.display || 
                          'Unknown Condition'}
                       </Badge>
                     ))}

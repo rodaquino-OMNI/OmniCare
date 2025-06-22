@@ -58,8 +58,8 @@ describe('EHR Connectivity Integration Tests', () => {
 
       // Test data structure compatibility
       expect(mockEpicResponse.resourceType).toBe('Patient');
-      expect(mockEpicResponse.identifier[0].system).toContain('oid');
-      expect(mockEpicResponse.name[0].family).toBe('Epic');
+      expect(mockEpicResponse.identifier?.[0]?.system).toContain('oid');
+      expect(mockEpicResponse.name?.[0]?.family).toBe('Epic');
 
       // Verify FHIR R4 compliance
       const validationResult = await fhirResourcesService.validateResource(mockEpicResponse);
@@ -103,8 +103,8 @@ describe('EHR Connectivity Integration Tests', () => {
       };
 
       expect(epicPatientWithExtensions.extension).toBeDefined();
-      expect(epicPatientWithExtensions.extension.length).toBe(2);
-      expect(epicPatientWithExtensions.extension[0].url).toContain('us-core-race');
+      expect(epicPatientWithExtensions.extension?.length).toBe(2);
+      expect(epicPatientWithExtensions.extension?.[0]?.url).toContain('us-core-race');
     });
 
     test('should synchronize Epic appointments with OmniCare', async () => {
@@ -152,7 +152,7 @@ describe('EHR Connectivity Integration Tests', () => {
       };
 
       expect(omnicareAppointment.extension).toBeDefined();
-      expect(omnicareAppointment.extension.find(ext => ext.valueString === 'Epic')).toBeDefined();
+      expect(omnicareAppointment.extension?.find(ext => ext.valueString === 'Epic')).toBeDefined();
     });
   });
 
@@ -199,10 +199,10 @@ describe('EHR Connectivity Integration Tests', () => {
       };
 
       expect(mockCernerResponse.resourceType).toBe('Bundle');
-      expect(mockCernerResponse.entry[0].resource.resourceType).toBe('Patient');
+      expect(mockCernerResponse.entry?.[0]?.resource?.resourceType).toBe('Patient');
       
-      const cernerPatient = mockCernerResponse.entry[0].resource;
-      expect(cernerPatient.identifier[0].system).toContain('cerner.com');
+      const cernerPatient = mockCernerResponse.entry?.[0]?.resource;
+      expect(cernerPatient?.identifier?.[0]?.system).toContain('cerner.com');
     });
 
     test('should handle Cerner-specific observation format', () => {
@@ -242,8 +242,8 @@ describe('EHR Connectivity Integration Tests', () => {
         component: [] // Cerner-specific structure
       };
 
-      expect(cernerObservation.code.coding[0].system).toBe('http://loinc.org');
-      expect(cernerObservation.valueQuantity.value).toBe(120);
+      expect(cernerObservation.code?.coding?.[0]?.system).toBe('http://loinc.org');
+      expect(cernerObservation.valueQuantity?.value).toBe(120);
     });
   });
 
@@ -344,8 +344,8 @@ describe('EHR Connectivity Integration Tests', () => {
 
       // Patient matching logic
       const isMatch = (
-        epicPatient.name[0].family === cernerPatient.name[0].family &&
-        epicPatient.name[0].given[0] === cernerPatient.name[0].given[0] &&
+        epicPatient.name?.[0]?.family === cernerPatient.name?.[0]?.family &&
+        epicPatient.name?.[0]?.given?.[0] === cernerPatient.name?.[0]?.given?.[0] &&
         epicPatient.birthDate === cernerPatient.birthDate &&
         epicPatient.gender === cernerPatient.gender
       );
@@ -381,8 +381,8 @@ describe('EHR Connectivity Integration Tests', () => {
         ]
       };
 
-      expect(masterPatient.identifier.length).toBe(3);
-      expect(masterPatient.extension[0].extension.length).toBe(2);
+      expect(masterPatient.identifier?.length).toBe(3);
+      expect(masterPatient.extension?.[0]?.extension?.length).toBe(2);
     });
 
     test('should handle conflicting data from multiple EHRs', () => {
@@ -560,7 +560,8 @@ describe('EHR Connectivity Integration Tests', () => {
       });
       testPatientId = testPatient.id!;
     } catch (error) {
-      logger.warn('Failed to setup test patient for EHR tests:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.warn('Failed to setup test patient for EHR tests:', errorMessage);
     }
   }
 
@@ -570,7 +571,8 @@ describe('EHR Connectivity Integration Tests', () => {
       try {
         await medplumService.deleteResource('Patient', testPatientId);
       } catch (error) {
-        logger.warn('Failed to cleanup EHR test patient:', error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.warn('Failed to cleanup EHR test patient:', errorMessage);
       }
     }
   });

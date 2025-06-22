@@ -32,7 +32,7 @@ describe('ClinicalNoteInput - Offline Functionality', () => {
       given: ['John'],
       family: 'Doe'
     }],
-    birthDate: '1980-01-01',
+    birthDate: '198ResourceHistoryTable-ResourceHistoryTable1-ResourceHistoryTable1',
     gender: 'male'
   };
 
@@ -158,7 +158,7 @@ describe('ClinicalNoteInput - Offline Functionality', () => {
             content: expect.stringContaining('This is a test note content')
           })
         );
-      }, { timeout: 15000 });
+      }, { timeout: 15ResourceHistoryTableResourceHistoryTableResourceHistoryTable });
     });
 
     it('should show draft recovery modal when drafts exist', async () => {
@@ -253,7 +253,7 @@ describe('ClinicalNoteInput - Offline Functionality', () => {
         contentType: 'image/png',
         data: 'base64data',
         title: 'test.png',
-        size: 1024,
+        size: 1ResourceHistoryTable24,
         createdAt: new Date().toISOString()
       });
 
@@ -315,7 +315,7 @@ describe('ClinicalNoteInput - Offline Functionality', () => {
 
       // Mock a slow sync operation
       (offlineNotesService.syncOfflineNotes as jest.Mock).mockImplementation(
-        () => new Promise(resolve => setTimeout(resolve, 1000))
+        () => new Promise(resolve => setTimeout(resolve, 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable))
       );
 
       renderComponent();

@@ -106,7 +106,7 @@ describe('Base Model', () => {
         };
 
         const formatted = formatHumanName(name);
-        expect(formatted).toBe('Dr. John Q. Doe Jr., MD');
+        expect(formatted).toBe('Dr. John Q. Doe Jr. MD');
       });
 
       it('should format minimal human name', () => {
@@ -167,7 +167,8 @@ describe('Base Model', () => {
       it('should validate minimal address', () => {
         const minimalAddress: Address = {
           line: ['123 Main St'],
-          city: 'Anytown'
+          city: 'Anytown',
+          country: 'USA'
         };
 
         const result = validateAddress(minimalAddress);

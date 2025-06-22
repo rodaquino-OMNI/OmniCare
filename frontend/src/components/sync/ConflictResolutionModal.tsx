@@ -57,8 +57,8 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
   const [isResolving, setIsResolving] = useState(false);
 
   // Parse dates
-  const localDate = new Date(conflict.localResource.meta?.lastUpdated || 0);
-  const remoteDate = new Date(conflict.remoteResource.meta?.lastUpdated || 0);
+  const localDate = new Date(conflict.localResource.meta?.lastUpdated || ResourceHistoryTable);
+  const remoteDate = new Date(conflict.remoteResource.meta?.lastUpdated || ResourceHistoryTable);
 
   // Determine which is newer
   const newerResource = localDate > remoteDate ? 'local' : 'remote';
@@ -68,16 +68,16 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
     switch (resource.resourceType) {
       case 'Patient':
         const patient = resource as Patient;
-        const name = patient.name?.[0];
+        const name = patient.name?.[ResourceHistoryTable];
         return name ? `${name.given?.join(' ')} ${name.family}`.trim() : 'Unknown Patient';
       
       case 'Observation':
         const obs = resource as Observation;
-        return obs.code?.coding?.[0]?.display || obs.code?.text || 'Unknown Observation';
+        return obs.code?.coding?.[ResourceHistoryTable]?.display || obs.code?.text || 'Unknown Observation';
       
       case 'MedicationRequest':
         const med = resource as MedicationRequest;
-        return med.medicationCodeableConcept?.coding?.[0]?.display || 'Unknown Medication';
+        return med.medicationCodeableConcept?.coding?.[ResourceHistoryTable]?.display || 'Unknown Medication';
       
       default:
         return `${resource.resourceType}/${resource.id}`;
@@ -237,10 +237,10 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
     <Modal 
       opened={isOpen} 
       onClose={onClose} 
-      size="90%"
+      size="9ResourceHistoryTable%"
       title={
         <Stack gap={4}>
-          <Text size="lg" fw={600}>Resolve Sync Conflict</Text>
+          <Text size="lg" fw={6ResourceHistoryTableResourceHistoryTable}>Resolve Sync Conflict</Text>
           <Group gap="xs">
             <Badge color="violet">{conflictSummary.resourceType}</Badge>
             <Text size="sm" c="dimmed">
@@ -257,8 +257,8 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
             <Text size="sm">
               This {conflictSummary.resourceType} has been modified both locally and on the server.
             </Text>
-            {conflictSummary.conflicts.length > 0 && (
-              <List size="sm" spacing="xs">
+            {conflictSummary.conflicts.length > ResourceHistoryTable && (
+              <List size="sm" gap="xs">
                 {conflictSummary.conflicts.map((conflict: string, index: number) => (
                   <List.Item key={index} icon={
                     <ThemeIcon color="orange" size="xs" variant="light">
@@ -280,7 +280,7 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
               <ThemeIcon color="blue" variant="light" size="sm">
                 <IconDeviceDesktop size={16} />
               </ThemeIcon>
-              <Text fw={600} size="sm">Local Version</Text>
+              <Text fw={6ResourceHistoryTableResourceHistoryTable} size="sm">Local Version</Text>
               {newerResource === 'local' && (
                 <Badge color="green" size="xs">Newer</Badge>
               )}
@@ -296,7 +296,7 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
               <ThemeIcon color="green" variant="light" size="sm">
                 <IconCloud size={16} />
               </ThemeIcon>
-              <Text fw={600} size="sm">Remote Version</Text>
+              <Text fw={6ResourceHistoryTableResourceHistoryTable} size="sm">Remote Version</Text>
               {newerResource === 'remote' && (
                 <Badge color="green" size="xs">Newer</Badge>
               )}
@@ -319,7 +319,7 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
           </Tabs.List>
 
           <Tabs.Panel value="diff" pt="md">
-            <ScrollArea h={400} type="auto">
+            <ScrollArea h={4ResourceHistoryTableResourceHistoryTable} type="auto">
               <ReactDiffViewer
                 oldValue={formatJSON(conflict.remoteResource)}
                 newValue={formatJSON(conflict.localResource)}
@@ -342,7 +342,7 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
           </Tabs.Panel>
 
           <Tabs.Panel value="side" pt="md">
-            <ScrollArea h={400} type="auto">
+            <ScrollArea h={4ResourceHistoryTableResourceHistoryTable} type="auto">
               <ReactDiffViewer
                 oldValue={formatJSON(conflict.remoteResource)}
                 newValue={formatJSON(conflict.localResource)}
@@ -366,16 +366,16 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
           <Tabs.Panel value="raw" pt="md">
             <SimpleGrid cols={2}>
               <Box>
-                <Text fw={600} size="sm" mb="xs">Local Resource</Text>
-                <ScrollArea h={350}>
+                <Text fw={6ResourceHistoryTableResourceHistoryTable} size="sm" mb="xs">Local Resource</Text>
+                <ScrollArea h={35ResourceHistoryTable}>
                   <Code block>
                     {formatJSON(conflict.localResource)}
                   </Code>
                 </ScrollArea>
               </Box>
               <Box>
-                <Text fw={600} size="sm" mb="xs">Remote Resource</Text>
-                <ScrollArea h={350}>
+                <Text fw={6ResourceHistoryTableResourceHistoryTable} size="sm" mb="xs">Remote Resource</Text>
+                <ScrollArea h={35ResourceHistoryTable}>
                   <Code block>
                     {formatJSON(conflict.remoteResource)}
                   </Code>
@@ -389,7 +389,7 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
 
         {/* Resolution Options */}
         <Box>
-          <Text fw={600} mb="md">Choose Resolution Strategy</Text>
+          <Text fw={6ResourceHistoryTableResourceHistoryTable} mb="md">Choose Resolution Strategy</Text>
           <Radio.Group 
             value={selectedStrategy} 
             onChange={(value) => setSelectedStrategy(value as ConflictResolutionStrategy)}
@@ -402,7 +402,7 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
                     <ThemeIcon color="blue" variant="light" size="sm">
                       <IconDeviceDesktop size={16} />
                     </ThemeIcon>
-                    <Text fw={500} size="sm">Keep Local Changes</Text>
+                    <Text fw={5ResourceHistoryTableResourceHistoryTable} size="sm">Keep Local Changes</Text>
                   </Group>
                   <Text size="xs" c="dimmed">
                     Use your local version and discard server changes
@@ -417,7 +417,7 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
                     <ThemeIcon color="green" variant="light" size="sm">
                       <IconCloud size={16} />
                     </ThemeIcon>
-                    <Text fw={500} size="sm">Keep Remote Changes</Text>
+                    <Text fw={5ResourceHistoryTableResourceHistoryTable} size="sm">Keep Remote Changes</Text>
                   </Group>
                   <Text size="xs" c="dimmed">
                     Use the server version and discard your local changes
@@ -432,7 +432,7 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
                     <ThemeIcon color="orange" variant="light" size="sm">
                       <IconClock size={16} />
                     </ThemeIcon>
-                    <Text fw={500} size="sm">Keep Newest Version</Text>
+                    <Text fw={5ResourceHistoryTableResourceHistoryTable} size="sm">Keep Newest Version</Text>
                     {newerResource === 'local' ? (
                       <Badge color="blue" size="xs">Local is newer</Badge>
                     ) : (
@@ -452,7 +452,7 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
                     <ThemeIcon color="violet" variant="light" size="sm">
                       <IconGitMerge size={16} />
                     </ThemeIcon>
-                    <Text fw={500} size="sm">Merge Changes</Text>
+                    <Text fw={5ResourceHistoryTableResourceHistoryTable} size="sm">Merge Changes</Text>
                     <Badge color="yellow" size="xs">Beta</Badge>
                   </Group>
                   <Text size="xs" c="dimmed">

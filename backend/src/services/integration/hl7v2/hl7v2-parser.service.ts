@@ -61,16 +61,16 @@ export class HL7v2ParserService {
       }
 
       // Parse MSH segment first to get encoding characters
-      const mshSegment = this.parseMSHSegment(segmentStrings[0], parsingOptions);
+      const mshSegment = this.parseMSHSegment(segmentStrings[0] || '', parsingOptions);
       
       // Update parsing options with encoding characters from MSH
-      if (mshSegment.fields.length > 1) {
+      if (mshSegment.fields.length > 1 && mshSegment.fields[1]) {
         const encodingChars = mshSegment.fields[1].value as string;
-        if (encodingChars.length >= 4) {
-          parsingOptions.componentSeparator = encodingChars[0];
-          parsingOptions.repetitionSeparator = encodingChars[1];
-          parsingOptions.escapeCharacter = encodingChars[2];
-          parsingOptions.subcomponentSeparator = encodingChars[3];
+        if (encodingChars && encodingChars.length >= 4) {
+          parsingOptions.componentSeparator = encodingChars[0] || '^';
+          parsingOptions.repetitionSeparator = encodingChars[1] || '~';
+          parsingOptions.escapeCharacter = encodingChars[2] || '\\';
+          parsingOptions.subcomponentSeparator = encodingChars[3] || '&';
         }
       }
 
@@ -141,10 +141,10 @@ export class HL7v2ParserService {
     for (let i = 1; i < parts.length; i++) {
       if (i === 1) {
         // Encoding characters field
-        fields.push({ value: parts[i] });
+        fields.push({ value: parts[i] || '' });
       } else {
         // Regular field parsing
-        const field = this.parseField(parts[i], options);
+        const field = this.parseField(parts[i] || '', options);
         fields.push(field);
       }
     }
@@ -168,13 +168,13 @@ export class HL7v2ParserService {
 
     // Skip the segment type (index 0)
     for (let i = 1; i < parts.length; i++) {
-      const fieldString = parts[i];
+      const fieldString = parts[i] || '';
       const field = this.parseField(fieldString, options);
       fields.push(field);
     }
 
     return {
-      segmentType,
+      segmentType: segmentType || '',
       fields
     };
   }
@@ -191,7 +191,7 @@ export class HL7v2ParserService {
     }
 
     // Check for repetitions first
-    if (fieldString.includes(options.repetitionSeparator)) {
+    if (options.repetitionSeparator && fieldString.includes(options.repetitionSeparator)) {
       const repetitions = fieldString.split(options.repetitionSeparator);
       const repetitionFields: HL7v2Field[] = [];
       
@@ -206,7 +206,7 @@ export class HL7v2ParserService {
     }
 
     // Check for components
-    if (fieldString.includes(options.componentSeparator)) {
+    if (options.componentSeparator && fieldString.includes(options.componentSeparator)) {
       const componentStrings = fieldString.split(options.componentSeparator);
       const components: HL7v2Component[] = [];
       
@@ -239,7 +239,7 @@ export class HL7v2ParserService {
     }
 
     // Check for subcomponents
-    if (componentString.includes(options.subcomponentSeparator)) {
+    if (options.subcomponentSeparator && componentString.includes(options.subcomponentSeparator)) {
       const subcomponentStrings = componentString.split(options.subcomponentSeparator);
       const subcomponents: HL7v2Subcomponent[] = [];
       
@@ -308,15 +308,15 @@ export class HL7v2ParserService {
     let triggerEvent = '';
     let messageStructure = '';
     
-    if (fields.length > 7 && fields[7].value) {
+    if (fields.length > 7 && fields[7] && fields[7].value) {
       const msgTypeField = fields[7];
-      if (msgTypeField.components && msgTypeField.components.length > 0) {
-        messageType = this.getComponentValue(msgTypeField.components[0]);
-        if (msgTypeField.components.length > 1) {
-          triggerEvent = this.getComponentValue(msgTypeField.components[1]);
+      if (msgTypeField && msgTypeField.components && msgTypeField.components.length > 0) {
+        messageType = this.getComponentValue(msgTypeField.components[0]) || '';
+        if (msgTypeField.components.length > 1 && msgTypeField.components[1]) {
+          triggerEvent = this.getComponentValue(msgTypeField.components[1]) || '';
         }
-        if (msgTypeField.components.length > 2) {
-          messageStructure = this.getComponentValue(msgTypeField.components[2]);
+        if (msgTypeField.components.length > 2 && msgTypeField.components[2]) {
+          messageStructure = this.getComponentValue(msgTypeField.components[2]) || '';
         }
       } else {
         // Simple string format like "ADT^A01"
@@ -359,7 +359,11 @@ export class HL7v2ParserService {
     }
     
     const field = fields[index];
-    if (field.components && field.components.length > 0) {
+    if (!field) {
+      return undefined;
+    }
+    
+    if (field.components && field.components.length > 0 && field.components[0]) {
       return this.getComponentValue(field.components[0]);
     }
     
@@ -369,9 +373,13 @@ export class HL7v2ParserService {
   /**
    * Get component value as string
    */
-  private getComponentValue(component: HL7v2Component): string {
-    if (component.subcomponents && component.subcomponents.length > 0) {
-      return component.subcomponents[0].value;
+  private getComponentValue(component: HL7v2Component | undefined): string {
+    if (!component) {
+      return '';
+    }
+    
+    if (component.subcomponents && component.subcomponents.length > 0 && component.subcomponents[0]) {
+      return String(component.subcomponents[0].value || '');
     }
     
     return String(component.value || '');
@@ -420,7 +428,7 @@ export class HL7v2ParserService {
   validateMessage(
     message: HL7v2Message,
     config: Partial<HL7v2ValidationConfig> = {}
-  ): ValidationResult {
+  ): IntegrationValidationResult {
     const validationConfig = { ...this.defaultValidationConfig, ...config };
     const errors: any[] = [];
     const warnings: any[] = [];

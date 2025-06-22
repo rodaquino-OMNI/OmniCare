@@ -49,14 +49,13 @@ import {
   IconRefresh,
   IconUpload,
   IconFile,
-  IconMerge,
+  IconGitMerge as IconMerge,
   IconDatabaseOff,
   IconWifi,
   IconWifiOff
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { 
-  DocumentEditor,
   Document,
   NoteDisplay,
   useMedplum
@@ -122,14 +121,14 @@ const NOTE_TYPES = [
 // Helper function to get LOINC code for note type
 const getNoteTypeCode = (noteType: string): string => {
   const noteTypeCodes: Record<string, string> = {
-    'progress': '11506-3',
+    'progress': '115ResourceHistoryTable6-3',
     'admission': '18842-5',
     'discharge': '18842-5',
-    'procedure': '28570-0',
+    'procedure': '2857ResourceHistoryTable-ResourceHistoryTable',
     'consultation': '11488-4',
     'nursing': '34815-3'
   };
-  return noteTypeCodes[noteType] || '11506-3';
+  return noteTypeCodes[noteType] || '115ResourceHistoryTable6-3';
 };
 
 export function ClinicalNoteInput({
@@ -218,12 +217,12 @@ export function ClinicalNoteInput({
       clearTimeout(autoSaveTimer.current);
     }
     
-    // Auto-save after 10 seconds of inactivity for offline mode
+    // Auto-save after 1ResourceHistoryTable seconds of inactivity for offline mode
     autoSaveTimer.current = setTimeout(() => {
       if (noteContent.trim() && hasUnsavedChanges) {
         autoSave();
       }
-    }, isOnline ? 30000 : 10000); // Faster auto-save when offline
+    }, isOnline ? 3ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable : 1ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable); // Faster auto-save when offline
 
     return () => {
       if (autoSaveTimer.current) {
@@ -272,7 +271,7 @@ export function ClinicalNoteInput({
       const searchParams: Record<string, string> = {
         patient: patient.id || '',
         _sort: '-date',
-        _count: '10'
+        _count: '1ResourceHistoryTable'
       };
       
       if (encounterId) {
@@ -300,7 +299,7 @@ export function ClinicalNoteInput({
   const checkDraftRecovery = async () => {
     try {
       const drafts = await offlineNotesService.recoverDrafts(patient.id || '');
-      if (drafts.length > 0) {
+      if (drafts.length > ResourceHistoryTable) {
         setDraftRecoveryOptions(drafts);
         setShowRecoveryModal(true);
       }
@@ -332,7 +331,7 @@ export function ClinicalNoteInput({
       
       // Check for conflicts
       const conflicts = await offlineNotesService.getConflictedNotes();
-      if (conflicts.length > 0) {
+      if (conflicts.length > ResourceHistoryTable) {
         setConflictedNotes(conflicts);
         notifications.show({
           title: 'Sync Conflicts',
@@ -389,7 +388,7 @@ export function ClinicalNoteInput({
           title: 'Auto-saved',
           message: 'Note saved as draft',
           color: 'blue',
-          autoClose: 2000
+          autoClose: 2ResourceHistoryTableResourceHistoryTableResourceHistoryTable
         });
       }
     } catch (err: unknown) {
@@ -433,7 +432,7 @@ export function ClinicalNoteInput({
 
         if (status === 'signed') {
           saved.status = 'signed';
-          await offlineNotesService.updateDraft(saved.id, { status: 'signed' });
+          // Status is already updated in the saved object
         }
 
         notifications.show({
@@ -470,7 +469,7 @@ export function ClinicalNoteInput({
         const docRef: DocumentReference = {
           resourceType: 'DocumentReference',
           id: noteId,
-          status: status === 'signed' || status === 'amended' ? 'current' : status === 'entered-in-error' ? 'entered-in-error' : 'draft',
+          status: status === 'signed' || status === 'amended' ? 'current' : status === 'entered-in-error' ? 'entered-in-error' : 'current',
           docStatus: status === 'signed' ? 'final' : 'preliminary',
           type: {
             coding: [{
@@ -498,7 +497,7 @@ export function ClinicalNoteInput({
         };
 
         // Add attachments if any
-        if (attachments.length > 0) {
+        if (attachments.length > ResourceHistoryTable) {
           docRef.content = [
             ...docRef.content,
             ...attachments.map(att => ({
@@ -521,8 +520,17 @@ export function ClinicalNoteInput({
         if (offlineNote) {
           offlineNote.id = savedDoc.id || offlineNote.id;
           offlineNote.status = 'synced';
-          offlineNote.serverVersion = savedDoc.meta?.versionId;
-          await offlineNotesService.updateDraft(offlineNote.id, offlineNote);
+          offlineNote.serverVersion = savedDoc.meta?.versionId ? parseInt(savedDoc.meta.versionId) : undefined;
+          // Update only the NoteDraft fields
+          await offlineNotesService.updateDraft(offlineNote.id, {
+            patientId: offlineNote.patientId,
+            encounterId: offlineNote.encounterId,
+            noteType: offlineNote.noteType,
+            title: offlineNote.title,
+            content: offlineNote.content,
+            tags: offlineNote.tags,
+            attachments: offlineNote.attachments
+          });
         }
 
         if (onSave) {
@@ -679,11 +687,11 @@ export function ClinicalNoteInput({
         <Group justify="space-between" align="flex-start">
           <div className="flex-1">
             <Group gap="md" mb="sm">
-              <IconNotes size={24} className="text-blue-600" />
+              <IconNotes size={24} className="text-blue-6ResourceHistoryTableResourceHistoryTable" />
               <div>
-                <Text fw={600} size="lg">Clinical Documentation</Text>
+                <Text fw={6ResourceHistoryTableResourceHistoryTable} size="lg">Clinical Documentation</Text>
                 <Text size="sm" c="dimmed">
-                  Patient: {patient.name?.[0]?.given?.[0]} {patient.name?.[0]?.family}
+                  Patient: {patient.name?.[ResourceHistoryTable]?.given?.[ResourceHistoryTable]} {patient.name?.[ResourceHistoryTable]?.family}
                 </Text>
               </div>
             </Group>
@@ -695,7 +703,7 @@ export function ClinicalNoteInput({
                 value={selectedNoteType}
                 onChange={(value) => value && setSelectedNoteType(value)}
                 size="sm"
-                style={{ minWidth: 150 }}
+                style={{ minWidth: 15ResourceHistoryTable }}
               />
               
               <TextInput
@@ -703,7 +711,7 @@ export function ClinicalNoteInput({
                 value={noteTitle}
                 onChange={(e) => setNoteTitle(e.currentTarget.value)}
                 size="sm"
-                style={{ flex: 1, minWidth: 200 }}
+                style={{ flex: 1, minWidth: 2ResourceHistoryTableResourceHistoryTable }}
               />
             </Group>
           </div>
@@ -736,7 +744,7 @@ export function ClinicalNoteInput({
               </Badge>
             )}
             
-            {conflictedNotes.length > 0 && (
+            {conflictedNotes.length > ResourceHistoryTable && (
               <Badge 
                 color="yellow" 
                 variant="filled"
@@ -787,15 +795,12 @@ export function ClinicalNoteInput({
         <Tabs.Panel value="compose" pt="md">
           <Card shadow="sm" padding="lg" withBorder>
             {documentReference ? (
-              <DocumentEditor
-                reference={createReference(documentReference)}
-                onSave={async (doc: DocumentReference) => {
-                  const content = doc.content?.[0]?.attachment?.data;
-                  if (content) {
-                    setNoteContent(atob(content));
-                  }
-                  await saveNote('draft');
-                }}
+              <Textarea
+                value={noteContent}
+                onChange={(e) => setNoteContent(e.currentTarget.value)}
+                placeholder="Enter clinical note content..."
+                minRows={1ResourceHistoryTable}
+                autosize
               />
             ) : (
               <Stack gap="md">
@@ -819,11 +824,11 @@ export function ClinicalNoteInput({
                 />
                 
                 {/* Attachments Section */}
-                {attachments.length > 0 && (
+                {attachments.length > ResourceHistoryTable && (
                   <Paper p="sm" withBorder>
                     <Group gap="xs" mb="xs">
                       <IconFile size={16} />
-                      <Text size="sm" fw={500}>Attachments</Text>
+                      <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>Attachments</Text>
                     </Group>
                     <Stack gap="xs">
                       {attachments.map(attachment => (
@@ -867,15 +872,25 @@ export function ClinicalNoteInput({
         <Tabs.Panel value="preview" pt="md">
           <Card shadow="sm" padding="lg" withBorder>
             {documentReference ? (
-              <Document
-                reference={createReference(documentReference)}
-                onEdit={() => setActiveTab('compose')}
-              />
+              <Stack gap="md">
+                <Group justify="space-between">
+                  <Title order={4}>{documentReference.description || 'Clinical Note'}</Title>
+                  <Button 
+                    variant="light" 
+                    size="sm" 
+                    leftSection={<IconEdit size={16} />}
+                    onClick={() => setActiveTab('compose')}
+                  >
+                    Edit
+                  </Button>
+                </Group>
+                <Text>{noteContent || 'No content available'}</Text>
+              </Stack>
             ) : (
               <Stack gap="md">
                 <Group justify="space-between" align="flex-start">
                   <div>
-                    <Text fw={600} size="lg">{noteTitle}</Text>
+                    <Text fw={6ResourceHistoryTableResourceHistoryTable} size="lg">{noteTitle}</Text>
                     <Text size="sm" c="dimmed">
                       {user?.firstName} {user?.lastName} ({user?.role}) • {formatDateTime(new Date())}
                     </Text>
@@ -893,7 +908,7 @@ export function ClinicalNoteInput({
                 
                 <Divider />
                 
-                <Paper p="md" className="bg-gray-50 rounded-lg">
+                <Paper p="md" className="bg-gray-5ResourceHistoryTable rounded-lg">
                   <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
                     {noteContent || 'No content to preview'}
                   </div>
@@ -907,31 +922,31 @@ export function ClinicalNoteInput({
           <Tabs.Panel value="history" pt="md">
             <Card shadow="sm" padding="lg" withBorder>
               <Stack gap="md">
-                <Text fw={600} size="lg">Previous Notes</Text>
+                <Text fw={6ResourceHistoryTableResourceHistoryTable} size="lg">Previous Notes</Text>
                 
-                {existingNotes.length === 0 ? (
+                {existingNotes.length === ResourceHistoryTable ? (
                   <Text c="dimmed" ta="center" py="xl">
                     No previous notes found
                   </Text>
                 ) : (
-                  <ScrollArea mah={400}>
+                  <ScrollArea mah={4ResourceHistoryTableResourceHistoryTable}>
                     <Stack gap="sm">
                       {existingNotes.map(docRef => (
                         <Paper
                           key={docRef.id}
                           p="md"
-                          className="border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50"
+                          className="border border-gray-2ResourceHistoryTableResourceHistoryTable rounded-lg cursor-pointer hover:bg-gray-5ResourceHistoryTable"
                           onClick={() => setSelectedHistoryNote(docRef)}
                         >
                           <Group justify="space-between" align="flex-start">
                             <div className="flex-1">
-                              <Text fw={500} size="sm">{docRef.description || 'Clinical Note'}</Text>
+                              <Text fw={5ResourceHistoryTableResourceHistoryTable} size="sm">{docRef.description || 'Clinical Note'}</Text>
                               <Text size="xs" c="dimmed">
-                                {docRef.type?.coding?.[0]?.display || 'Unknown Type'}
+                                {docRef.type?.coding?.[ResourceHistoryTable]?.display || 'Unknown Type'}
                               </Text>
                               <Group gap="md" mt="xs">
                                 <Text size="xs" c="dimmed">
-                                  {docRef.author?.[0]?.display || 'Unknown Author'}
+                                  {docRef.author?.[ResourceHistoryTable]?.display || 'Unknown Author'}
                                 </Text>
                                 <Text size="xs" c="dimmed">
                                   {formatDateTime(docRef.date || '')}
@@ -1020,16 +1035,16 @@ export function ClinicalNoteInput({
           </Alert>
           
           <div>
-            <Text fw={500} mb="xs">Note Title:</Text>
+            <Text fw={5ResourceHistoryTableResourceHistoryTable} mb="xs">Note Title:</Text>
             <Text size="sm" c="dimmed">{noteTitle}</Text>
           </div>
           
           <div>
-            <Text fw={500} mb="xs">Content Preview:</Text>
-            <Paper p="sm" className="bg-gray-50 rounded max-h-40 overflow-y-auto">
+            <Text fw={5ResourceHistoryTableResourceHistoryTable} mb="xs">Content Preview:</Text>
+            <Paper p="sm" className="bg-gray-5ResourceHistoryTable rounded max-h-4ResourceHistoryTable overflow-y-auto">
               <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
-                {noteContent.substring(0, 200)}
-                {noteContent.length > 200 && '...'}
+                {noteContent.substring(ResourceHistoryTable, 2ResourceHistoryTableResourceHistoryTable)}
+                {noteContent.length > 2ResourceHistoryTableResourceHistoryTable && '...'}
               </Text>
             </Paper>
           </div>
@@ -1054,14 +1069,29 @@ export function ClinicalNoteInput({
       >
         {selectedHistoryNote && (
           <Stack gap="md">
-            <Document
-              reference={createReference(selectedHistoryNote)}
-              onEdit={() => {
-                setDocumentReference(selectedHistoryNote);
-                setActiveTab('compose');
-                setSelectedHistoryNote(null);
-              }}
-            />
+            <Stack gap="sm">
+              <Text size="sm" c="dimmed">
+                {selectedHistoryNote.type?.coding?.[ResourceHistoryTable]?.display || 'Clinical Note'}
+              </Text>
+              <Text>
+                {selectedHistoryNote.content?.[ResourceHistoryTable]?.attachment?.data 
+                  ? atob(selectedHistoryNote.content[ResourceHistoryTable].attachment.data)
+                  : 'No content available'}
+              </Text>
+              <Group justify="flex-end">
+                <Button 
+                  variant="light"
+                  leftSection={<IconEdit size={16} />}
+                  onClick={() => {
+                    setDocumentReference(selectedHistoryNote);
+                    setActiveTab('compose');
+                    setSelectedHistoryNote(null);
+                  }}
+                >
+                  Edit Note
+                </Button>
+              </Group>
+            </Stack>
           </Stack>
         )}
       </Modal>
@@ -1079,18 +1109,18 @@ export function ClinicalNoteInput({
             Would you like to recover any of them?
           </Alert>
           
-          <ScrollArea mah={300}>
+          <ScrollArea mah={3ResourceHistoryTableResourceHistoryTable}>
             <Stack gap="sm">
               {draftRecoveryOptions.map(draft => (
                 <Paper
                   key={draft.id}
                   p="md"
                   withBorder
-                  className="cursor-pointer hover:bg-gray-50"
+                  className="cursor-pointer hover:bg-gray-5ResourceHistoryTable"
                   onClick={() => recoverDraft(draft)}
                 >
                   <Group justify="space-between" mb="xs">
-                    <Text fw={500} size="sm">{draft.title}</Text>
+                    <Text fw={5ResourceHistoryTableResourceHistoryTable} size="sm">{draft.title}</Text>
                     <Badge size="xs" color={getStatusColor(draft.status)}>
                       {draft.status}
                     </Badge>
@@ -1129,30 +1159,30 @@ export function ClinicalNoteInput({
           
           {selectedConflict ? (
             <Stack gap="md">
-              <Text fw={500}>{selectedConflict.title}</Text>
+              <Text fw={5ResourceHistoryTableResourceHistoryTable}>{selectedConflict.title}</Text>
               
               <Paper p="md" withBorder>
-                <Text size="sm" fw={500} mb="xs">Local Version (Your Changes)</Text>
+                <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable} mb="xs">Local Version (Your Changes)</Text>
                 <Text size="xs" c="dimmed" mb="xs">
                   Modified: {formatDateTime(selectedConflict.updatedAt)}
                 </Text>
-                <Paper p="sm" className="bg-gray-50">
+                <Paper p="sm" className="bg-gray-5ResourceHistoryTable">
                   <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
-                    {selectedConflict.content.substring(0, 300)}...
+                    {selectedConflict.content.substring(ResourceHistoryTable, 3ResourceHistoryTableResourceHistoryTable)}...
                   </Text>
                 </Paper>
               </Paper>
               
               {selectedConflict.conflictData && (
                 <Paper p="md" withBorder>
-                  <Text size="sm" fw={500} mb="xs">Server Version</Text>
+                  <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable} mb="xs">Server Version</Text>
                   <Text size="xs" c="dimmed" mb="xs">
                     Modified: {formatDateTime(selectedConflict.conflictData.serverNote.meta?.lastUpdated || '')}
                   </Text>
-                  <Paper p="sm" className="bg-gray-50">
+                  <Paper p="sm" className="bg-gray-5ResourceHistoryTable">
                     <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
-                      {selectedConflict.conflictData.serverNote.content[0]?.attachment?.data ? 
-                        atob(selectedConflict.conflictData.serverNote.content[0].attachment.data).substring(0, 300) : ''}...
+                      {selectedConflict.conflictData.serverNote.content[ResourceHistoryTable]?.attachment?.data ? 
+                        atob(selectedConflict.conflictData.serverNote.content[ResourceHistoryTable].attachment.data).substring(ResourceHistoryTable, 3ResourceHistoryTableResourceHistoryTable) : ''}...
                     </Text>
                   </Paper>
                 </Paper>
@@ -1195,18 +1225,18 @@ export function ClinicalNoteInput({
               </Group>
             </Stack>
           ) : (
-            <ScrollArea mah={400}>
+            <ScrollArea mah={4ResourceHistoryTableResourceHistoryTable}>
               <Stack gap="sm">
                 {conflictedNotes.map(note => (
                   <Paper
                     key={note.id}
                     p="md"
                     withBorder
-                    className="cursor-pointer hover:bg-gray-50"
+                    className="cursor-pointer hover:bg-gray-5ResourceHistoryTable"
                     onClick={() => setSelectedConflict(note)}
                   >
                     <Group justify="space-between" mb="xs">
-                      <Text fw={500}>{note.title}</Text>
+                      <Text fw={5ResourceHistoryTableResourceHistoryTable}>{note.title}</Text>
                       <Badge color="yellow" size="sm">Conflict</Badge>
                     </Group>
                     <Text size="xs" c="dimmed">
@@ -1239,7 +1269,7 @@ export function ClinicalNoteInput({
           color="orange"
           title="Working Offline"
           onClose={() => {}}
-          style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 1000 }}
+          style={{ position: 'fixed', bottom: 2ResourceHistoryTable, right: 2ResourceHistoryTable, zIndex: 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable }}
         >
           Your notes are being saved locally and will sync when you're back online.
         </Notification>

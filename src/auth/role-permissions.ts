@@ -263,6 +263,57 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
       'Cannot view audit logs or system reports',
       'All access is limited to personal health information only'
     ]
+  },
+
+  [UserRole.BILLING_STAFF]: {
+    role: UserRole.BILLING_STAFF,
+    description: 'Billing, insurance processing, and financial management',
+    permissions: [
+      // Billing and Financial Functions
+      Permission.MANAGE_BILLING,
+      Permission.PROCESS_INSURANCE,
+      
+      // Patient Information - Limited
+      Permission.VIEW_PATIENT_DEMOGRAPHICS,
+      Permission.VIEW_PATIENT_RECORDS, // Limited to billing-related information
+      
+      // Administrative Functions
+      Permission.GENERATE_REPORTS, // Financial reports only
+      Permission.SCHEDULE_APPOINTMENTS // For billing follow-ups
+    ],
+    restrictions: [
+      'Cannot access clinical notes or medical documentation',
+      'Cannot create or modify medical records',
+      'Cannot prescribe medications or create medical orders',
+      'Cannot view lab or imaging results',
+      'Patient record access limited to billing-related information',
+      'Report generation limited to financial and billing reports'
+    ]
+  },
+
+  [UserRole.RECEPTIONIST]: {
+    role: UserRole.RECEPTIONIST,
+    description: 'Front desk operations, appointment scheduling, and patient check-in',
+    permissions: [
+      // Administrative Functions
+      Permission.SCHEDULE_APPOINTMENTS,
+      Permission.CREATE_PATIENT_RECORDS, // Basic registration only
+      
+      // Patient Information - Limited
+      Permission.VIEW_PATIENT_DEMOGRAPHICS,
+      Permission.EDIT_PATIENT_DEMOGRAPHICS,
+      
+      // Limited Clinical Access
+      Permission.VIEW_PATIENT_RECORDS // Very limited - scheduling info only
+    ],
+    restrictions: [
+      'Cannot access clinical notes or medical documentation',
+      'Cannot view lab or imaging results',
+      'Cannot access billing or insurance information',
+      'Cannot create medical orders or prescriptions',
+      'Cannot modify clinical records',
+      'Patient record access limited to demographic and scheduling information'
+    ]
   }
 };
 
@@ -316,6 +367,8 @@ export const ROLE_HIERARCHY: Record<UserRole, number> = {
   [UserRole.LABORATORY_TECHNICIAN]: 50,
   [UserRole.RADIOLOGY_TECHNICIAN]: 50,
   [UserRole.ADMINISTRATIVE_STAFF]: 30,
+  [UserRole.BILLING_STAFF]: 25,
+  [UserRole.RECEPTIONIST]: 20,
   [UserRole.PATIENT]: 10
 };
 

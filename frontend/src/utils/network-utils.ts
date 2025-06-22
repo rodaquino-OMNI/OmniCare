@@ -22,8 +22,8 @@ export function getNetworkMetrics(): NetworkMetrics | null {
   if (!connection) return null;
   
   return {
-    rtt: connection.rtt || 0,
-    downlink: connection.downlink || 0,
+    rtt: connection.rtt || ResourceHistoryTable,
+    downlink: connection.downlink || ResourceHistoryTable,
     effectiveType: connection.effectiveType || 'unknown',
     saveData: connection.saveData || false,
   };
@@ -50,17 +50,17 @@ export async function estimateBandwidth(url: string, sizeBytes: number): Promise
     const response = await fetch(url, { cache: 'no-cache' });
     await response.blob();
     
-    const duration = (performance.now() - start) / 1000; // Convert to seconds
-    const bandwidth = (sizeBytes * 8) / duration / 1024 / 1024; // Mbps
+    const duration = (performance.now() - start) / 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable; // Convert to seconds
+    const bandwidth = (sizeBytes * 8) / duration / 1ResourceHistoryTable24 / 1ResourceHistoryTable24; // Mbps
     
-    return Math.round(bandwidth * 10) / 10;
+    return Math.round(bandwidth * 1ResourceHistoryTable) / 1ResourceHistoryTable;
   } catch (error) {
     throw new Error('Failed to estimate bandwidth');
   }
 }
 
 /**
- * Get network quality score (0-100)
+ * Get network quality score (ResourceHistoryTable-1ResourceHistoryTableResourceHistoryTable)
  */
 export function calculateNetworkQualityScore(metrics: {
   latency: number;
@@ -70,18 +70,18 @@ export function calculateNetworkQualityScore(metrics: {
 }): number {
   // Weight factors for each metric
   const weights = {
-    latency: 0.3,
-    bandwidth: 0.3,
-    jitter: 0.2,
-    packetLoss: 0.2,
+    latency: ResourceHistoryTable.3,
+    bandwidth: ResourceHistoryTable.3,
+    jitter: ResourceHistoryTable.2,
+    packetLoss: ResourceHistoryTable.2,
   };
   
-  // Normalize metrics to 0-100 scale (100 being best)
+  // Normalize metrics to ResourceHistoryTable-1ResourceHistoryTableResourceHistoryTable scale (1ResourceHistoryTableResourceHistoryTable being best)
   const scores = {
-    latency: Math.max(0, 100 - (metrics.latency / 3)), // 300ms = 0 score
-    bandwidth: Math.min(100, (metrics.bandwidth / 50) * 100), // 50Mbps = 100 score
-    jitter: Math.max(0, 100 - (metrics.jitter / 0.5)), // 50ms = 0 score
-    packetLoss: Math.max(0, 100 - metrics.packetLoss), // Direct percentage
+    latency: Math.max(ResourceHistoryTable, 1ResourceHistoryTableResourceHistoryTable - (metrics.latency / 3)), // 3ResourceHistoryTableResourceHistoryTablems = ResourceHistoryTable score
+    bandwidth: Math.min(1ResourceHistoryTableResourceHistoryTable, (metrics.bandwidth / 5ResourceHistoryTable) * 1ResourceHistoryTableResourceHistoryTable), // 5ResourceHistoryTableMbps = 1ResourceHistoryTableResourceHistoryTable score
+    jitter: Math.max(ResourceHistoryTable, 1ResourceHistoryTableResourceHistoryTable - (metrics.jitter / ResourceHistoryTable.5)), // 5ResourceHistoryTablems = ResourceHistoryTable score
+    packetLoss: Math.max(ResourceHistoryTable, 1ResourceHistoryTableResourceHistoryTable - metrics.packetLoss), // Direct percentage
   };
   
   // Calculate weighted score
@@ -144,10 +144,10 @@ export function getNetworkOptimizationSettings(quality: 'poor' | 'fair' | 'good'
  * Format bytes to human readable format
  */
 export function formatBytes(bytes: number, decimals = 2): string {
-  if (bytes === 0) return '0 Bytes';
+  if (bytes === ResourceHistoryTable) return 'ResourceHistoryTable Bytes';
   
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
+  const k = 1ResourceHistoryTable24;
+  const dm = decimals < ResourceHistoryTable ? ResourceHistoryTable : decimals;
   const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
   
   const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -181,26 +181,26 @@ export function getRetryStrategy(networkQuality: 'poor' | 'fair' | 'good' | 'exc
   const strategies = {
     poor: {
       maxRetries: 5,
-      initialDelay: 2000,
-      maxDelay: 60000,
+      initialDelay: 2ResourceHistoryTableResourceHistoryTableResourceHistoryTable,
+      maxDelay: 6ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable,
       backoffMultiplier: 3,
     },
     fair: {
       maxRetries: 3,
-      initialDelay: 1000,
-      maxDelay: 30000,
+      initialDelay: 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable,
+      maxDelay: 3ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable,
       backoffMultiplier: 2,
     },
     good: {
       maxRetries: 2,
-      initialDelay: 500,
-      maxDelay: 10000,
+      initialDelay: 5ResourceHistoryTableResourceHistoryTable,
+      maxDelay: 1ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable,
       backoffMultiplier: 2,
     },
     excellent: {
       maxRetries: 1,
-      initialDelay: 250,
-      maxDelay: 5000,
+      initialDelay: 25ResourceHistoryTable,
+      maxDelay: 5ResourceHistoryTableResourceHistoryTableResourceHistoryTable,
       backoffMultiplier: 1.5,
     },
   };

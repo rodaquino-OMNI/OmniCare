@@ -58,8 +58,8 @@ export const useOfflineStore = create<OfflineState>()(
       isOfflineEnabled: true,
       autoSync: true,
       syncInterval: 5, // 5 minutes
-      maxCacheSize: 250 * 1024 * 1024, // 250MB
-      cacheSize: 0,
+      maxCacheSize: 25ResourceHistoryTable * 1ResourceHistoryTable24 * 1ResourceHistoryTable24, // 25ResourceHistoryTableMB
+      cacheSize: ResourceHistoryTable,
       retentionDays: 7,
       syncOnCellular: false,
       backgroundSync: true,
@@ -129,7 +129,7 @@ export const useOfflineStore = create<OfflineState>()(
         
         // Reset state
         set({
-          cacheSize: 0,
+          cacheSize: ResourceHistoryTable,
           cacheMetadata: {}
         });
       },
@@ -154,7 +154,7 @@ export const useOfflineStore = create<OfflineState>()(
       validateCache: () => {
         const { cacheMetadata, retentionDays } = get();
         const now = new Date();
-        const retentionMs = retentionDays * 24 * 60 * 60 * 1000;
+        const retentionMs = retentionDays * 24 * 6ResourceHistoryTable * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable;
         
         // Mark stale entries
         const updatedMetadata: Record<string, CacheMetadata> = {};

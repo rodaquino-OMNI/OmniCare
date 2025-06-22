@@ -15,7 +15,6 @@ import {
   UserRoles,
   AuthToken, 
   MfaSetup,
-  SessionInfo,
   Permission
 } from '@/types/auth.types';
 

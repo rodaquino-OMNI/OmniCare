@@ -328,8 +328,8 @@ if (typeof window !== 'undefined') {
       const currentStore = useAuthStore.getState();
       if (currentStore.isAuthenticated && currentStore.tokens) {
         // Check if token is close to expiring (refresh 5 minutes before expiry)
-        const expiryTime = Date.now() + (currentStore.tokens.expiresIn * 1000);
-        const refreshThreshold = 5 * 60 * 1000; // 5 minutes
+        const expiryTime = Date.now() + (currentStore.tokens.expiresIn * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable);
+        const refreshThreshold = 5 * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable; // 5 minutes
         
         if (expiryTime - Date.now() < refreshThreshold) {
           currentStore.refreshAuth();
@@ -337,6 +337,6 @@ if (typeof window !== 'undefined') {
       } else {
         clearInterval(refreshInterval);
       }
-    }, 60000); // Check every minute
+    }, 6ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable); // Check every minute
   }
 }

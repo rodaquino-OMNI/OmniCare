@@ -1,6 +1,7 @@
 export { OfflineStatusBanner } from './OfflineStatusBanner';
 export { SyncProgressIndicator } from './SyncProgressIndicator';
 export { OfflineIndicator } from './OfflineIndicator';
+export { OfflineIndicator as default } from './OfflineIndicator';
 export { SyncConflictDialog } from './SyncConflictDialog';
 export { OfflineSettings } from './OfflineSettings';
 export { CacheStatusIndicator } from './CacheStatusIndicator';

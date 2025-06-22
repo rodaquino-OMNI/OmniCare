@@ -1,23 +1,26 @@
 import path from 'path';
-
 import winston from 'winston';
+import config from '../config';
 
-// Import config with fallback for tests
-let config: any;
-try {
-  const configModule = require('../config');
-  config = configModule.default || configModule;
-  // Ensure config is properly structured
-  if (!config || !config.server) {
-    throw new Error('Invalid config structure');
-  }
-} catch (error) {
-  // Mock config for tests
-  config = {
-    server: { env: process.env.NODE_ENV || 'test' },
-    logging: { level: 'info', file: '/tmp/test.log' }
-  };
+// Type definitions for structured logging metadata
+type LogMetadata = Record<string, unknown> | object;
+
+interface CustomLogMethods {
+  fhir: (message: string, meta?: LogMetadata) => void;
+  security: (message: string, meta?: LogMetadata) => void;
+  performance: (message: string, meta?: LogMetadata) => void;
+  audit: (message: string, meta?: LogMetadata) => void;
+  integration: (message: string, meta?: LogMetadata) => void;
 }
+
+// Fallback config for tests and environments where config import fails
+const fallbackConfig = {
+  server: { env: process.env.NODE_ENV || 'test' },
+  logging: { level: 'info', file: '/tmp/test.log' }
+};
+
+// Use imported config or fallback
+const loggerConfig = config || fallbackConfig;
 
 // Custom format for structured logging
 const customFormat = winston.format.combine(
@@ -34,8 +37,9 @@ const consoleFormat = winston.format.combine(
     format: 'HH:mm:ss',
   }),
   winston.format.colorize(),
-  winston.format.printf(({ timestamp, level, message, ...meta }) => {
-    return `${timestamp} [${level}]: ${message} ${Object.keys(meta).length ? JSON.stringify(meta, null, 2) : ''}`;
+  winston.format.printf(({ timestamp, level, message, ...meta }: winston.Logform.TransformableInfo) => {
+    const metaStr = Object.keys(meta).length ? JSON.stringify(meta, null, 2) : '';
+    return `${String(timestamp)} [${String(level)}]: ${String(message)} ${metaStr}`;
   })
 );
 
@@ -45,23 +49,23 @@ const transports: winston.transport[] = [];
 // Console transport for all environments
 transports.push(
   new winston.transports.Console({
-    level: config.server.env === 'development' ? 'debug' : 'info',
-    format: config.server.env === 'development' ? consoleFormat : customFormat,
+    level: loggerConfig.server.env === 'development' ? 'debug' : 'info',
+    format: loggerConfig.server.env === 'development' ? consoleFormat : customFormat,
     handleExceptions: true,
     handleRejections: true,
   })
 );
 
 // File transport for production
-if (config.server.env === 'production') {
+if (loggerConfig.server.env === 'production') {
   // Ensure logs directory exists
-  const logDir = path.dirname(config.logging.file);
+  const logDir = path.dirname(loggerConfig.logging.file);
   
   transports.push(
     // General log file
     new winston.transports.File({
-      filename: config.logging.file,
-      level: config.logging.level,
+      filename: loggerConfig.logging.file,
+      level: loggerConfig.logging.level,
       format: customFormat,
       maxsize: 10 * 1024 * 1024, // 10MB
       maxFiles: 5,
@@ -86,47 +90,39 @@ if (config.server.env === 'production') {
 
 // Create the logger instance
 const logger = winston.createLogger({
-  level: config.logging.level,
+  level: loggerConfig.logging.level,
   format: customFormat,
   transports,
   exitOnError: false,
 });
 
-// Add custom logging methods for different contexts
-interface CustomLogger extends winston.Logger {
-  fhir: (message: string, meta?: any) => void;
-  security: (message: string, meta?: any) => void;
-  performance: (message: string, meta?: any) => void;
-  audit: (message: string, meta?: any) => void;
-  integration: (message: string, meta?: any) => void;
-}
-
 // Extend logger with custom methods
+type CustomLogger = winston.Logger & CustomLogMethods;
 const customLogger = logger as CustomLogger;
 
-customLogger.fhir = (message: string, meta?: any) => {
+customLogger.fhir = (message: string, meta?: LogMetadata) => {
   logger.info(message, { context: 'FHIR', ...meta });
 };
 
-customLogger.security = (message: string, meta?: any) => {
+customLogger.security = (message: string, meta?: LogMetadata) => {
   logger.warn(message, { context: 'SECURITY', ...meta });
 };
 
-customLogger.performance = (message: string, meta?: any) => {
+customLogger.performance = (message: string, meta?: LogMetadata) => {
   logger.info(message, { context: 'PERFORMANCE', ...meta });
 };
 
-customLogger.audit = (message: string, meta?: any) => {
+customLogger.audit = (message: string, meta?: LogMetadata) => {
   logger.info(message, { context: 'AUDIT', ...meta });
 };
 
-customLogger.integration = (message: string, meta?: any) => {
+customLogger.integration = (message: string, meta?: LogMetadata) => {
   logger.info(message, { context: 'INTEGRATION', ...meta });
 };
 
 // Handle uncaught exceptions and rejections
-process.on('uncaughtException', (error) => {
-  logger.error('Uncaught Exception:', error);
+process.on('uncaughtException', (err) => {
+  logger.error('Uncaught Exception:', err);
   process.exit(1);
 });
 

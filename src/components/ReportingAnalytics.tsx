@@ -8,8 +8,8 @@ import {
   UsersIcon,
   CurrencyDollarIcon,
   ClockIcon,
-  TrendingUpIcon,
-  TrendingDownIcon,
+  ArrowArrowTrendingUpIcon,
+  ArrowArrowTrendingDownIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
@@ -285,7 +285,7 @@ const ReportingAnalytics: React.FC<ReportingAnalyticsProps> = ({ userRole, facil
                       <dd className="flex items-baseline">
                         <div className="text-2xl font-semibold text-gray-900">{dashboardMetrics.dailyRegistrations}</div>
                         <div className="ml-2 flex items-baseline text-sm font-semibold text-green-600">
-                          <TrendingUpIcon className="self-center flex-shrink-0 h-4 w-4 text-green-500" />
+                          <ArrowTrendingUpIcon className="self-center flex-shrink-0 h-4 w-4 text-green-500" />
                           <span className="sr-only">Increased by</span>
                           12%
                         </div>
@@ -308,7 +308,7 @@ const ReportingAnalytics: React.FC<ReportingAnalyticsProps> = ({ userRole, facil
                       <dd className="flex items-baseline">
                         <div className="text-2xl font-semibold text-gray-900">{dashboardMetrics.dailyAppointments}</div>
                         <div className="ml-2 flex items-baseline text-sm font-semibold text-green-600">
-                          <TrendingUpIcon className="self-center flex-shrink-0 h-4 w-4 text-green-500" />
+                          <ArrowTrendingUpIcon className="self-center flex-shrink-0 h-4 w-4 text-green-500" />
                           <span className="sr-only">Increased by</span>
                           8%
                         </div>
@@ -331,7 +331,7 @@ const ReportingAnalytics: React.FC<ReportingAnalyticsProps> = ({ userRole, facil
                       <dd className="flex items-baseline">
                         <div className="text-2xl font-semibold text-gray-900">${dashboardMetrics.dailyRevenue.toLocaleString()}</div>
                         <div className="ml-2 flex items-baseline text-sm font-semibold text-red-600">
-                          <TrendingDownIcon className="self-center flex-shrink-0 h-4 w-4 text-red-500" />
+                          <ArrowTrendingDownIcon className="self-center flex-shrink-0 h-4 w-4 text-red-500" />
                           <span className="sr-only">Decreased by</span>
                           3%
                         </div>
@@ -354,7 +354,7 @@ const ReportingAnalytics: React.FC<ReportingAnalyticsProps> = ({ userRole, facil
                       <dd className="flex items-baseline">
                         <div className="text-2xl font-semibold text-gray-900">{dashboardMetrics.averageWaitTime}min</div>
                         <div className="ml-2 flex items-baseline text-sm font-semibold text-green-600">
-                          <TrendingDownIcon className="self-center flex-shrink-0 h-4 w-4 text-green-500" />
+                          <ArrowTrendingDownIcon className="self-center flex-shrink-0 h-4 w-4 text-green-500" />
                           <span className="sr-only">Decreased by</span>
                           15%
                         </div>

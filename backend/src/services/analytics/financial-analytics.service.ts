@@ -94,7 +94,7 @@ export interface FinancialForecast {
 }
 
 export class FinancialAnalyticsService extends EventEmitter {
-  private historicalData: Map<string, any[]> = new Map();
+  private _historicalData: Map<string, any[]> = new Map();
   private benchmarks: Map<string, number> = new Map();
 
   constructor() {
@@ -279,8 +279,8 @@ export class FinancialAnalyticsService extends EventEmitter {
    * Analyze profitability by service line
    */
   async getServiceLineProfitability(
-    facilityId: string,
-    period: { start: Date; end: Date }
+    _facilityId: string,
+    _period: { start: Date; end: Date }
   ): Promise<{
     serviceLines: Array<{
       serviceLineName: string;
@@ -356,8 +356,8 @@ export class FinancialAnalyticsService extends EventEmitter {
   }
 
   private async calculateRevenueMetrics(
-    facilityId: string,
-    period: { start: Date; end: Date }
+    _facilityId: string,
+    _period: { start: Date; end: Date }
   ): Promise<RevenueMetrics> {
     // Mock implementation - would query actual financial data
     const grossCharges = 5000000;
@@ -379,8 +379,8 @@ export class FinancialAnalyticsService extends EventEmitter {
   }
 
   private async analyzePayerMix(
-    facilityId: string,
-    period: { start: Date; end: Date }
+    _facilityId: string,
+    _period: { start: Date; end: Date }
   ): Promise<PayerMix[]> {
     return [
       {
@@ -426,7 +426,7 @@ export class FinancialAnalyticsService extends EventEmitter {
     ];
   }
 
-  private async analyzeAccountsReceivable(facilityId: string): Promise<ARAnalysis> {
+  private async analyzeAccountsReceivable(_facilityId: string): Promise<ARAnalysis> {
     const totalAR = 1250000;
     
     return {
@@ -447,8 +447,8 @@ export class FinancialAnalyticsService extends EventEmitter {
   }
 
   private async analyzeDenials(
-    facilityId: string,
-    period: { start: Date; end: Date }
+    _facilityId: string,
+    _period: { start: Date; end: Date }
   ): Promise<DenialAnalysis> {
     return {
       totalDenials: 425,
@@ -495,7 +495,7 @@ export class FinancialAnalyticsService extends EventEmitter {
     };
   }
 
-  private async getRevenueTrends(facilityId: string, months: number): Promise<any[]> {
+  private async getRevenueTrends(_facilityId: string, months: number): Promise<any[]> {
     const trends = [];
     const now = new Date();
     
@@ -517,9 +517,9 @@ export class FinancialAnalyticsService extends EventEmitter {
 
   private async calculateFinancialKPIs(
     revenue: RevenueMetrics,
-    payerMix: PayerMix[],
-    ar: ARAnalysis,
-    denials: DenialAnalysis
+    _payerMix: PayerMix[],
+    _ar: ARAnalysis,
+    _denials: DenialAnalysis
   ): Promise<any[]> {
     const kpis = [
       {
@@ -561,9 +561,9 @@ export class FinancialAnalyticsService extends EventEmitter {
   }
 
   private async calculateProviderProductivity(
-    facilityId: string,
-    period: { start: Date; end: Date },
-    providerId?: string
+    _facilityId: string,
+    _period: { start: Date; end: Date },
+    _providerId?: string
   ): Promise<ProductivityMetrics[]> {
     // Mock provider productivity data
     return [
@@ -655,7 +655,7 @@ export class FinancialAnalyticsService extends EventEmitter {
     });
   }
 
-  private async getHistoricalRevenue(facilityId: string, months: number): Promise<any[]> {
+  private async getHistoricalRevenue(_facilityId: string, months: number): Promise<any[]> {
     const data = [];
     const now = new Date();
     
@@ -673,7 +673,7 @@ export class FinancialAnalyticsService extends EventEmitter {
     return data;
   }
 
-  private calculateSeasonality(historicalData: any[]): number[] {
+  private calculateSeasonality(_historicalData: any[]): number[] {
     // Mock seasonality calculation - would use actual statistical analysis
     return [1.0, 0.95, 1.02, 1.05, 1.03, 0.98, 0.92, 0.88, 1.08, 1.12, 1.05, 0.97];
   }
@@ -719,7 +719,7 @@ export class FinancialAnalyticsService extends EventEmitter {
     };
   }
 
-  private identifyKeyDrivers(historicalData: any[]): any[] {
+  private identifyKeyDrivers(_historicalData: any[]): any[] {
     return [
       {
         driver: 'Patient Volume',

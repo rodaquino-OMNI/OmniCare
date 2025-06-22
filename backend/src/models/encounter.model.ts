@@ -1,4 +1,4 @@
-import { Encounter as FHIREncounter } from '@medplum/fhirtypes';
+// import { Encounter as FHIREncounter } from '@medplum/fhirtypes';
 
 import { 
   FHIRResource, 

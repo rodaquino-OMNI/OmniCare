@@ -91,7 +91,8 @@ export class JWTAuthService {
       accessToken,
       refreshToken,
       expiresIn: this.getTokenExpiryTime(AUTH_CONFIG.jwt.accessTokenExpiry),
-      tokenType: 'Bearer'
+      tokenType: 'Bearer',
+      sessionId
     };
   }
 

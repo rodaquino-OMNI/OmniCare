@@ -1,5 +1,5 @@
 import { directTrustService } from '../../src/services/integration/direct/direct-trust.service';
-import { DirectMessage, DirectMessageStatus, DirectAddress } from '../../src/services/integration/types/direct.types';
+import { DirectMessage, DirectMessageStatus, DirectAddress, DirectMessagePriority, DirectMessageType } from '../../src/services/integration/types/direct.types';
 import logger from '../../src/utils/logger';
 
 /**
@@ -7,7 +7,7 @@ import logger from '../../src/utils/logger';
  * Tests secure messaging protocols for healthcare provider communication
  */
 describe('Direct Trust Integration Tests', () => {
-  let testMessageId: string;
+  let testMessageId: string = 'test-msg-001';
 
   beforeAll(async () => {
     // Direct Trust service initializes automatically in constructor
@@ -87,13 +87,17 @@ describe('Direct Trust Integration Tests', () => {
     test('should create valid Direct message structure', () => {
       const sender: DirectAddress = {
         address: 'sender@omnicare.direct',
-        name: 'Dr. John Sender'
+        displayName: 'Dr. John Sender',
+        type: 'provider',
+        verified: true
       };
 
       const recipients: DirectAddress[] = [
         {
           address: 'recipient@clinic.direct',
-          name: 'Dr. Jane Recipient'
+          displayName: 'Dr. Jane Recipient',
+          type: 'provider',
+          verified: true
         }
       ];
 
@@ -103,7 +107,7 @@ describe('Direct Trust Integration Tests', () => {
         subject: 'Patient Referral - John Doe',
         body: 'Please find attached the referral information for patient John Doe.',
         attachments: [],
-        priority: 'normal'
+        priority: DirectMessagePriority.NORMAL
       };
 
       expect(directMessage.sender?.address).toBe('sender@omnicare.direct');
@@ -120,11 +124,15 @@ describe('Direct Trust Integration Tests', () => {
         body: 'Please find the lab results attached.',
         attachments: [
           {
+            id: 'attachment-001',
             filename: 'lab_results.pdf',
             contentType: 'application/pdf',
             size: 1024 * 50, // 50KB
             content: Buffer.from('Mock PDF content'),
-            encrypted: false
+            checksum: 'mock-checksum-value',
+            checksumAlgorithm: 'SHA-256',
+            encrypted: false,
+            signed: true
           }
         ]
       };
@@ -136,11 +144,15 @@ describe('Direct Trust Integration Tests', () => {
 
     test('should enforce message size limits', () => {
       const largeAttachment = {
+        id: 'attachment-large-001',
         filename: 'large_file.pdf',
         contentType: 'application/pdf',
         size: 1024 * 1024 * 30, // 30MB - exceeds typical limit
         content: Buffer.alloc(1024 * 1024 * 30),
-        encrypted: false
+        checksum: 'mock-large-checksum-value',
+        checksumAlgorithm: 'SHA-256',
+        encrypted: false,
+        signed: false
       };
 
       const messageWithLargeAttachment: Partial<DirectMessage> = {
@@ -208,8 +220,7 @@ describe('Direct Trust Integration Tests', () => {
         body: 'Testing message status tracking',
         status: DirectMessageStatus.PENDING,
         statusHistory: [],
-        created: new Date(),
-        updated: new Date()
+        created: new Date()
       };
 
       // Simulate status changes
@@ -222,7 +233,7 @@ describe('Direct Trust Integration Tests', () => {
 
       statusUpdates.forEach(status => {
         message.status = status;
-        message.updated = new Date();
+        // Status updated timestamp is tracked in statusHistory
         message.statusHistory?.push({
           status,
           timestamp: new Date(),
@@ -433,8 +444,8 @@ describe('Direct Trust Integration Tests', () => {
         recipients: [{ address: 'specialist@cardiology.direct' } as DirectAddress],
         subject: 'Patient Referral - URGENT: John Doe (DOB: 01/01/1980)',
         body: 'Referring patient for cardiac evaluation. Please see attached clinical summary.',
-        messageType: 'REFERRAL',
-        priority: 'urgent',
+        messageType: DirectMessageType.REFERRAL,
+        priority: DirectMessagePriority.URGENT,
         clinicalData: {
           patientId: 'patient-123',
           referralReason: 'Chest pain with EKG abnormalities',
@@ -443,9 +454,18 @@ describe('Direct Trust Integration Tests', () => {
         },
         attachments: [
           {
+            id: 'attachment-clinical-001',
             filename: 'clinical_summary.pdf',
             contentType: 'application/pdf',
-            classification: 'clinical-document'
+            size: 1024 * 100, // 100KB
+            content: Buffer.from('Mock clinical summary content'),
+            checksum: 'mock-clinical-checksum',
+            checksumAlgorithm: 'SHA-256',
+            encrypted: true,
+            signed: true,
+            metadata: {
+              classification: 'clinical-document'
+            }
           }
         ]
       };
@@ -458,7 +478,7 @@ describe('Direct Trust Integration Tests', () => {
     test('should handle care coordination messages', () => {
       const careCoordinationMessage = {
         id: 'care-coord-001',
-        messageType: 'CARE_COORDINATION',
+        messageType: DirectMessageType.CARE_PLAN,
         careTeam: [
           { role: 'Primary Care', address: 'primarycare@omnicare.direct' },
           { role: 'Cardiologist', address: 'cardio@specialist.direct' },
@@ -471,7 +491,7 @@ describe('Direct Trust Integration Tests', () => {
         }
       };
 
-      expect(careCoordinationMessage.messageType).toBe('CARE_COORDINATION');
+      expect(careCoordinationMessage.messageType).toBe(DirectMessageType.CARE_PLAN);
       expect(careCoordinationMessage.careTeam.length).toBe(3);
       expect(careCoordinationMessage.carePlanUpdate.changes.length).toBe(2);
     });

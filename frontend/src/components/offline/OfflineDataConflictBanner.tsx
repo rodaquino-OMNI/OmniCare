@@ -27,7 +27,7 @@ export function OfflineDataConflictBanner({
   const [opened, { toggle }] = useDisclosure(false);
   const [dismissed, setDismissed] = useState(false);
 
-  if (dismissed || conflicts.length === 0) {
+  if (dismissed || conflicts.length === ResourceHistoryTable) {
     return null;
   }
 
@@ -41,7 +41,7 @@ export function OfflineDataConflictBanner({
 
   return (
     <Alert
-      icon={<IconAlertTriangle size={20} />}
+      icon={<IconAlertTriangle size={2ResourceHistoryTable} />}
       color="orange"
       variant="light"
       withCloseButton={!!onDismiss}
@@ -54,7 +54,7 @@ export function OfflineDataConflictBanner({
       <Stack gap="sm">
         <Group justify="space-between" align="center">
           <div>
-            <Text fw={600} size="sm">
+            <Text fw={6ResourceHistoryTableResourceHistoryTable} size="sm">
               Data Sync Conflicts Detected
             </Text>
             <Text size="xs" c="dimmed">
@@ -85,9 +85,9 @@ export function OfflineDataConflictBanner({
         <Collapse in={opened}>
           <Stack gap="xs" pt="sm">
             {Object.entries(conflictsByType).map(([type, typeConflicts]) => (
-              <Paper key={type} p="sm" withBorder className="bg-orange-50 border-orange-200">
+              <Paper key={type} p="sm" withBorder className="bg-orange-5ResourceHistoryTable border-orange-2ResourceHistoryTableResourceHistoryTable">
                 <Group justify="space-between" mb="xs">
-                  <Text size="sm" fw={500}>
+                  <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>
                     {type}
                   </Text>
                   <Badge color="orange" size="sm" variant="light">
@@ -95,9 +95,9 @@ export function OfflineDataConflictBanner({
                   </Badge>
                 </Group>
                 <Stack gap="xs">
-                  {typeConflicts.slice(0, 3).map((conflict) => (
+                  {typeConflicts.slice(ResourceHistoryTable, 3).map((conflict) => (
                     <Group key={conflict.id} gap="xs" wrap="nowrap">
-                      <IconAlertTriangle size={14} className="text-orange-600" />
+                      <IconAlertTriangle size={14} className="text-orange-6ResourceHistoryTableResourceHistoryTable" />
                       <div style={{ flex: 1 }}>
                         <Text size="xs" truncate>
                           {conflict.entityName} - {conflict.field}

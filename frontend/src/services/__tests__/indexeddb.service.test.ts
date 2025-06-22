@@ -14,7 +14,7 @@ const mockPatient: Patient = {
   id: 'patient-123',
   meta: {
     versionId: '1',
-    lastUpdated: '2024-01-01T00:00:00Z'
+    lastUpdated: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ'
   },
   identifier: [{
     system: 'http://hospital.org/mrn',
@@ -25,7 +25,7 @@ const mockPatient: Patient = {
     family: 'Doe'
   }],
   gender: 'male',
-  birthDate: '1980-01-01'
+  birthDate: '198ResourceHistoryTable-ResourceHistoryTable1-ResourceHistoryTable1'
 };
 
 const mockObservation: Observation = {
@@ -42,7 +42,7 @@ const mockObservation: Observation = {
   subject: {
     reference: 'Patient/patient-123'
   },
-  effectiveDateTime: '2024-01-01T12:00:00Z',
+  effectiveDateTime: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1T12:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
   valueQuantity: {
     value: 72,
     unit: 'beats/minute',
@@ -143,7 +143,7 @@ describe('IndexedDB Service', () => {
         
         const result = await indexedDBService.updateResource(updated);
         
-        expect(result.name![0].given![0]).toBe('Jane');
+        expect(result.name![ResourceHistoryTable].given![ResourceHistoryTable]).toBe('Jane');
       });
 
       it('should reject updates to non-existent resources', async () => {
@@ -203,7 +203,7 @@ describe('IndexedDB Service', () => {
     it('should support pagination', async () => {
       const page1 = await indexedDBService.searchResources('Patient', {
         _count: 1,
-        _offset: 0
+        _offset: ResourceHistoryTable
       });
       
       expect(page1.entry).toHaveLength(1);
@@ -215,7 +215,7 @@ describe('IndexedDB Service', () => {
       });
       
       expect(page2.entry).toHaveLength(1);
-      expect(page2.entry![0].resource!.id).not.toBe(page1.entry![0].resource!.id);
+      expect(page2.entry![ResourceHistoryTable].resource!.id).not.toBe(page1.entry![ResourceHistoryTable].resource!.id);
     });
 
     it('should filter by indexed fields', async () => {
@@ -224,7 +224,7 @@ describe('IndexedDB Service', () => {
       });
       
       expect(bundle.total).toBe(1);
-      expect(bundle.entry![0].resource!.gender).toBe('female');
+      expect(bundle.entry![ResourceHistoryTable].resource!.gender).toBe('female');
     });
 
     it('should search across multiple resource types', async () => {
@@ -237,13 +237,13 @@ describe('IndexedDB Service', () => {
   describe('Query Builder', () => {
     beforeEach(async () => {
       // Create test patients
-      for (let i = 0; i < 5; i++) {
+      for (let i = ResourceHistoryTable; i < 5; i++) {
         await indexedDBService.createResource({
           resourceType: 'Patient',
           id: `patient-${i}`,
           name: [{ given: [`Test${i}`], family: 'User' }],
-          gender: i % 2 === 0 ? 'male' : 'female',
-          birthDate: `198${i}-01-01`
+          gender: i % 2 === ResourceHistoryTable ? 'male' : 'female',
+          birthDate: `198${i}-ResourceHistoryTable1-ResourceHistoryTable1`
         } as Patient);
       }
     });
@@ -256,16 +256,16 @@ describe('IndexedDB Service', () => {
         .toArray();
       
       expect(results).toHaveLength(2);
-      expect(results[0].gender).toBe('male');
+      expect(results[ResourceHistoryTable].gender).toBe('male');
     });
 
     it('should support complex conditions', async () => {
       const results = await query<Patient>('Patient')
         .whereIn('gender', ['male', 'female'])
-        .whereBetween('birthDate', '1982-01-01', '1984-12-31')
+        .whereBetween('birthDate', '1982-ResourceHistoryTable1-ResourceHistoryTable1', '1984-12-31')
         .toArray();
       
-      expect(results.length).toBeGreaterThan(0);
+      expect(results.length).toBeGreaterThan(ResourceHistoryTable);
     });
 
     it('should count resources', async () => {
@@ -278,7 +278,7 @@ describe('IndexedDB Service', () => {
 
     it('should check existence', async () => {
       const exists = await query<Patient>('Patient')
-        .whereEquals('id', 'patient-0')
+        .whereEquals('id', 'patient-ResourceHistoryTable')
         .exists();
       
       expect(exists).toBe(true);
@@ -292,7 +292,7 @@ describe('IndexedDB Service', () => {
       }
       
       expect(batches.length).toBe(3); // 5 patients / 2 per batch = 3 batches
-      expect(batches[0]).toHaveLength(2);
+      expect(batches[ResourceHistoryTable]).toHaveLength(2);
       expect(batches[2]).toHaveLength(1);
     });
   });
@@ -325,7 +325,7 @@ describe('IndexedDB Service', () => {
       // We can retrieve and verify it's decrypted correctly
       const retrieved = await indexedDBService.readResource<Patient>('Patient', patient.id!);
       
-      expect(retrieved?.telecom?.[0].value).toBe('555-1234');
+      expect(retrieved?.telecom?.[ResourceHistoryTable].value).toBe('555-1234');
     });
 
     it('should create search hashes for encrypted fields', async () => {
@@ -339,7 +339,7 @@ describe('IndexedDB Service', () => {
         name: 'Doe'
       });
       
-      expect(bundle.total).toBeGreaterThan(0);
+      expect(bundle.total).toBeGreaterThan(ResourceHistoryTable);
     });
   });
 
@@ -373,7 +373,7 @@ describe('IndexedDB Service', () => {
       expect(stats.totalRecords).toBe(2);
       expect(stats.recordsByType.patients).toBe(1);
       expect(stats.recordsByType.observations).toBe(1);
-      expect(stats.pendingSyncCount).toBe(0);
+      expect(stats.pendingSyncCount).toBe(ResourceHistoryTable);
     });
   });
 

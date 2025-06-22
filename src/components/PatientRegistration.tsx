@@ -41,11 +41,18 @@ const patientRegistrationSchema = yup.object({
       relationship: yup.string().required('Relationship is required'),
       phone: yup.string().matches(/^\(\d{3}\) \d{3}-\d{4}$/, 'Phone must be in format (XXX) XXX-XXXX').required('Phone is required')
     }),
+    insurance: yup.array().default([]),
     preferredLanguage: yup.string().required('Preferred language is required'),
     maritalStatus: yup.string().required('Marital status is required'),
-    employmentStatus: yup.string().required('Employment status is required')
+    employmentStatus: yup.string().required('Employment status is required'),
+    status: yup.string().default('Active')
   }),
   consentForms: yup.array().of(yup.string()).min(1, 'At least one consent form must be signed'),
+  emergencyContacts: yup.array().of(yup.object({
+    name: yup.string().required('Emergency contact name is required'),
+    relationship: yup.string().required('Relationship is required'),
+    phone: yup.string().matches(/^\(\d{3}\) \d{3}-\d{4}$/, 'Phone must be in format (XXX) XXX-XXXX').required('Phone is required')
+  })).min(1, 'At least one emergency contact is required'),
   insuranceVerification: yup.object({
     primaryInsuranceVerified: yup.boolean(),
     secondaryInsuranceVerified: yup.boolean(),
@@ -131,6 +138,7 @@ const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onComplete, o
 
       return () => clearTimeout(checkDuplicates);
     }
+    return undefined;
   }, [watchedFields.patient?.firstName, watchedFields.patient?.lastName, watchedFields.patient?.dateOfBirth]);
 
   const steps = [

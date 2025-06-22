@@ -3,6 +3,7 @@ import express from 'express';
 import { Validator } from '@medplum/core';
 import { readJson } from '@medplum/definitions';
 import routes from '../../backend/src/routes';
+import * as jwt from 'jsonwebtoken';
 
 // FHIR R4 resource types to test
 const FHIR_RESOURCE_TYPES = [

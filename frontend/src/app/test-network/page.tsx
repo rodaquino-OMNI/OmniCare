@@ -53,20 +53,20 @@ export default function TestNetworkPage() {
         <Card shadow="sm" p="lg">
           <Title order={3} mb="md">Network Status</Title>
           
-          <Group position="apart" mb="md">
+          <Group justify="space-between" mb="md">
             <Group>
               {networkStatus.isOnline ? (
                 <IconWifi size={24} color="green" />
               ) : (
                 <IconWifiOff size={24} color="red" />
               )}
-              <Text weight={500}>
+              <Text fw={5ResourceHistoryTableResourceHistoryTable}>
                 {networkStatus.isOnline ? 'Online' : 'Offline'}
               </Text>
             </Group>
             
             <Button
-              leftIcon={<IconRefresh size={16} />}
+              leftSection={<IconRefresh size={16} />}
               variant="light"
               size="sm"
               onClick={() => networkStatus.refresh()}
@@ -80,8 +80,8 @@ export default function TestNetworkPage() {
               <tr>
                 <td>Connection Quality</td>
                 <td>
-                  <Badge color={qualityBadgeColor[networkStatus.quality.quality]}>
-                    {networkStatus.quality.quality.toUpperCase()}
+                  <Badge color={qualityBadgeColor[networkStatus.connectionQuality as keyof typeof qualityBadgeColor] || 'gray'}>
+                    {networkStatus.connectionQuality.toUpperCase()}
                   </Badge>
                 </td>
               </tr>
@@ -125,12 +125,12 @@ export default function TestNetworkPage() {
         <Card shadow="sm" p="lg">
           <Title order={3} mb="md">Retry Queue</Title>
           
-          <Group position="apart" mb="md">
+          <Group justify="space-between" mb="md">
             <Text>
               Pending Retries: <strong>{networkStatus.retryQueue.length}</strong>
             </Text>
             <Button
-              leftIcon={<IconRefresh size={16} />}
+              leftSection={<IconRefresh size={16} />}
               variant="filled"
               size="sm"
               onClick={() => networkStatus.processRetryQueue()}
@@ -141,14 +141,14 @@ export default function TestNetworkPage() {
             </Button>
           </Group>
 
-          {networkStatus.retryQueue.length > 0 && (
+          {networkStatus.retryQueue.length > ResourceHistoryTable && (
             <Stack gap="xs">
-              {networkStatus.retryQueue.slice(0, 5).map((item) => (
+              {networkStatus.retryQueue.slice(ResourceHistoryTable, 5).map((item) => (
                 <Card key={item.id} p="xs" withBorder>
-                  <Group position="apart">
+                  <Group justify="space-between">
                     <div>
-                      <Text size="sm" weight={500}>{item.description}</Text>
-                      <Text size="xs" color="dimmed">
+                      <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>{item.description}</Text>
+                      <Text size="xs" c="dimmed">
                         Retry {item.retryCount}/{item.maxRetries} • Priority: {item.priority}
                       </Text>
                     </div>
@@ -164,7 +164,7 @@ export default function TestNetworkPage() {
                 </Card>
               ))}
               {networkStatus.retryQueue.length > 5 && (
-                <Text size="sm" color="dimmed" align="center">
+                <Text size="sm" c="dimmed" ta="center">
                   And {networkStatus.retryQueue.length - 5} more...
                 </Text>
               )}
@@ -176,10 +176,10 @@ export default function TestNetworkPage() {
         <Card shadow="sm" p="lg">
           <Title order={3} mb="md">Background Sync</Title>
           
-          <Group position="apart" mb="md">
+          <Group justify="space-between" mb="md">
             <IconDatabase size={24} />
             <Button
-              leftIcon={<IconRefresh size={16} />}
+              leftSection={<IconRefresh size={16} />}
               variant="light"
               size="sm"
               onClick={handleManualSync}
@@ -230,16 +230,16 @@ export default function TestNetworkPage() {
         <Card shadow="sm" p="lg">
           <Title order={3} mb="md">Network-Aware Image Loading</Title>
           
-          <Text size="sm" color="dimmed" mb="md">
+          <Text size="sm" c="dimmed" mb="md">
             This image adapts its quality based on network conditions
           </Text>
           
           <NetworkAwareImage
             sources={[
-              { src: '/api/images/sample-low.jpg', quality: 'low', width: 400 },
-              { src: '/api/images/sample-medium.jpg', quality: 'medium', width: 800 },
-              { src: '/api/images/sample-high.jpg', quality: 'high', width: 1200 },
-              { src: '/api/images/sample-original.jpg', quality: 'original', width: 2400 },
+              { src: '/api/images/sample-low.jpg', quality: 'low', width: 4ResourceHistoryTableResourceHistoryTable },
+              { src: '/api/images/sample-medium.jpg', quality: 'medium', width: 8ResourceHistoryTableResourceHistoryTable },
+              { src: '/api/images/sample-high.jpg', quality: 'high', width: 12ResourceHistoryTableResourceHistoryTable },
+              { src: '/api/images/sample-original.jpg', quality: 'original', width: 24ResourceHistoryTableResourceHistoryTable },
             ]}
             alt="Sample medical image"
             aspectRatio={16 / 9}
@@ -286,7 +286,7 @@ export default function TestNetworkPage() {
         position="bottom-right"
         showDetails
         autoHide
-        autoHideDelay={5000}
+        autoHideDelay={5ResourceHistoryTableResourceHistoryTableResourceHistoryTable}
       />
     </Container>
   );

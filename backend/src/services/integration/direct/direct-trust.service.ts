@@ -166,7 +166,7 @@ export class DirectTrustService {
       logger.info('SMTP transporter configured successfully');
     } catch (error) {
       this.connectionStatus.smtpConnected = false;
-      this.connectionStatus.errors.push(`SMTP connection failed: ${error}`);
+      this.connectionStatus.errors.push(`SMTP connection failed: ${String(error)}`);
       logger.error('Failed to setup SMTP transporter:', error);
       throw error;
     }
@@ -278,7 +278,7 @@ export class DirectTrustService {
       logger.info('Certificate validation completed');
     } catch (error) {
       this.connectionStatus.certificatesValid = false;
-      this.connectionStatus.errors.push(`Certificate validation failed: ${error}`);
+      this.connectionStatus.errors.push(`Certificate validation failed: ${String(error)}`);
       logger.error('Certificate validation failed:', error);
     }
   }
@@ -317,7 +317,7 @@ export class DirectTrustService {
       logger.info(`Trust bundle validation completed: ${validCount}/${trustAnchorCount} valid anchors`);
     } catch (error) {
       this.connectionStatus.trustBundleValid = false;
-      this.connectionStatus.errors.push(`Trust bundle validation failed: ${error}`);
+      this.connectionStatus.errors.push(`Trust bundle validation failed: ${String(error)}`);
       logger.error('Trust bundle validation failed:', error);
     }
   }

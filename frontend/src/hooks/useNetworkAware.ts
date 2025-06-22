@@ -38,7 +38,7 @@ export function useNetworkAware<T = any>(
     enableAutoRetry = true,
     priority = 'normal',
     cacheStrategy = 'network-first',
-    cacheDuration = 5 * 60 * 1000, // 5 minutes
+    cacheDuration = 5 * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable, // 5 minutes
     backgroundSync = true,
     optimizeForSaveData = true,
     qualityThreshold = 'fair',
@@ -64,7 +64,7 @@ export function useNetworkAware<T = any>(
     if (networkStatus.networkAwareMode === 'save-data') return true;
     
     if (networkStatus.networkAwareMode === 'auto') {
-      const qualityOrder = { poor: 0, fair: 1, good: 2, excellent: 3 };
+      const qualityOrder = { poor: ResourceHistoryTable, fair: 1, good: 2, excellent: 3 };
       const currentQuality = qualityOrder[networkStatus.quality.quality];
       const threshold = qualityOrder[qualityThreshold];
       return currentQuality < threshold;
@@ -119,7 +119,7 @@ export function useNetworkAware<T = any>(
         if (backgroundSync && networkStatus.isOnline && !isBackgroundSync) {
           backgroundSyncTimeoutRef.current = setTimeout(() => {
             performFetch(true);
-          }, 1000);
+          }, 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable);
         }
         
         return;

@@ -155,7 +155,7 @@ describe('Auth Store', () => {
     it('should handle login failure', async () => {
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
-        status: 401,
+        status: 4ResourceHistoryTable1,
         json: async () => ({ message: 'Login failed' }),
       });
 
@@ -234,10 +234,18 @@ describe('Auth Store', () => {
           tokens: {
             accessToken: 'token',
             refreshToken: 'refresh-token',
-            expiresIn: 3600,
+            expiresIn: 36ResourceHistoryTableResourceHistoryTable,
             tokenType: 'Bearer'
           },
-          permissions: ['permission1'],
+          permissions: [
+            {
+              id: 'permission1',
+              name: 'Test Permission',
+              description: 'A test permission',
+              resource: 'test',
+              action: 'read'
+            }
+          ],
           isAuthenticated: true,
         });
       });
@@ -273,7 +281,7 @@ describe('Auth Store', () => {
       tokens: {
         accessToken: 'new-access-token',
         refreshToken: 'new-refresh-token',
-        expiresIn: 3600,
+        expiresIn: 36ResourceHistoryTableResourceHistoryTable,
         tokenType: 'Bearer'
       },
       permissions: [
@@ -289,7 +297,7 @@ describe('Auth Store', () => {
           tokens: {
             accessToken: 'old-access-token',
             refreshToken: 'old-refresh-token',
-            expiresIn: 3600,
+            expiresIn: 36ResourceHistoryTableResourceHistoryTable,
             tokenType: 'Bearer'
           },
         });
@@ -339,7 +347,7 @@ describe('Auth Store', () => {
           tokens: {
             accessToken: 'invalid-access-token',
             refreshToken: 'invalid-refresh-token',
-            expiresIn: 3600,
+            expiresIn: 36ResourceHistoryTableResourceHistoryTable,
             tokenType: 'Bearer'
           },
           isAuthenticated: true,
@@ -360,7 +368,7 @@ describe('Auth Store', () => {
       // Mock the refresh failure
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
-        status: 401,
+        status: 4ResourceHistoryTable1,
         json: async () => ({ message: 'Token expired' }),
       });
       
@@ -382,7 +390,7 @@ describe('Auth Store', () => {
           tokens: {
             accessToken: 'old-access-token',
             refreshToken: 'old-refresh-token',
-            expiresIn: 3600,
+            expiresIn: 36ResourceHistoryTableResourceHistoryTable,
             tokenType: 'Bearer'
           },
         });

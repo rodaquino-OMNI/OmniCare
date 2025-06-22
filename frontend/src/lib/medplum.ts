@@ -174,9 +174,20 @@ export type FHIRResource =
 
 // Helper functions for common FHIR operations
 export const patientHelpers = {
+  // Get patient by ID
+  getPatient: async (patientId: string): Promise<Patient | null> => {
+    try {
+      const patient = await medplumClient.readResource('Patient', patientId);
+      return patient;
+    } catch (error) {
+      console.error('Error fetching patient:', error);
+      return null;
+    }
+  },
+
   // Get patient full name
   getFullName: (patient: Patient): string => {
-    const name = patient.name?.[0];
+    const name = patient.name?.[ResourceHistoryTable];
     if (!name) return 'Unknown Patient';
     
     const given = name.given?.join(' ') || '';
@@ -186,13 +197,13 @@ export const patientHelpers = {
 
   // Get patient age
   getAge: (patient: Patient): number => {
-    if (!patient.birthDate) return 0;
+    if (!patient.birthDate) return ResourceHistoryTable;
     const birthDate = new Date(patient.birthDate);
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    if (monthDiff < ResourceHistoryTable || (monthDiff === ResourceHistoryTable && today.getDate() < birthDate.getDate())) {
       age--;
     }
     
@@ -201,7 +212,7 @@ export const patientHelpers = {
 
   // Get patient identifier (MRN)
   getMRN: (patient: Patient): string => {
-    const mrn = patient.identifier?.find(id => id.type?.coding?.[0]?.code === 'MR');
+    const mrn = patient.identifier?.find(id => id.type?.coding?.[ResourceHistoryTable]?.code === 'MR');
     return mrn?.value || patient.id || 'Unknown';
   },
 
@@ -210,7 +221,7 @@ export const patientHelpers = {
     const telecom = patient.telecom || [];
     const phone = telecom.find(t => t.system === 'phone')?.value;
     const email = telecom.find(t => t.system === 'email')?.value;
-    const address = patient.address?.[0];
+    const address = patient.address?.[ResourceHistoryTable];
     
     return { phone, email, address };
   },
@@ -328,7 +339,7 @@ export const observationHelpers = {
     }
     if (observation.valueCodeableConcept) {
       return observation.valueCodeableConcept.text || 
-             observation.valueCodeableConcept.coding?.[0]?.display || 
+             observation.valueCodeableConcept.coding?.[ResourceHistoryTable]?.display || 
              'Unknown';
     }
     return 'No value';
@@ -336,7 +347,7 @@ export const observationHelpers = {
 
   // Get observation reference range
   getReferenceRange: (observation: Observation): string => {
-    const range = observation.referenceRange?.[0];
+    const range = observation.referenceRange?.[ResourceHistoryTable];
     if (!range) return '';
     
     const low = range.low?.value;
@@ -366,8 +377,8 @@ export const observationHelpers = {
 
   // Get observation category
   getCategory: (observation: Observation): string => {
-    return observation.category?.[0]?.coding?.[0]?.display || 
-           observation.category?.[0]?.coding?.[0]?.code || 
+    return observation.category?.[ResourceHistoryTable]?.coding?.[ResourceHistoryTable]?.display || 
+           observation.category?.[ResourceHistoryTable]?.coding?.[ResourceHistoryTable]?.code || 
            'Unknown';
   }
 };
@@ -378,7 +389,7 @@ export const medicationHelpers = {
   getName: (medicationRequest: MedicationRequest): string => {
     if (medicationRequest.medicationCodeableConcept) {
       return medicationRequest.medicationCodeableConcept.text ||
-             medicationRequest.medicationCodeableConcept.coding?.[0]?.display ||
+             medicationRequest.medicationCodeableConcept.coding?.[ResourceHistoryTable]?.display ||
              'Unknown Medication';
     }
     return 'Unknown Medication';
@@ -386,7 +397,7 @@ export const medicationHelpers = {
 
   // Get dosage instruction
   getDosageInstruction: (medicationRequest: MedicationRequest): string => {
-    const dosage = medicationRequest.dosageInstruction?.[0];
+    const dosage = medicationRequest.dosageInstruction?.[ResourceHistoryTable];
     if (!dosage) return 'No instructions';
     
     return dosage.text || 'See instructions';
@@ -403,7 +414,7 @@ export const medicationHelpers = {
       try {
         const practitioner = await medplumClient.readReference(medicationRequest.requester);
         if (practitioner.resourceType === 'Practitioner') {
-          const name = practitioner.name?.[0];
+          const name = practitioner.name?.[ResourceHistoryTable];
           const given = name?.given?.join(' ') || '';
           const family = name?.family || '';
           return `${given} ${family}`.trim() || 'Unknown Prescriber';
@@ -426,7 +437,7 @@ export const searchHelpers = {
       };
 
       // If query looks like an MRN (alphanumeric), search by identifier
-      if (/^[A-Z0-9]+$/i.test(query)) {
+      if (/^[A-ZResourceHistoryTable-9]+$/i.test(query)) {
         searchParams.identifier = query;
       } else {
         // Otherwise search by name
@@ -482,7 +493,7 @@ export const demoDataHelpers = {
         type: {
           coding: [{ code: 'MR', display: 'Medical Record Number' }]
         },
-        value: `MRN${Math.floor(Math.random() * 100000)}`
+        value: `MRN${Math.floor(Math.random() * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable)}`
       }
     ],
     name: [
@@ -493,7 +504,7 @@ export const demoDataHelpers = {
       }
     ],
     gender: 'male',
-    birthDate: '1980-01-15',
+    birthDate: '198ResourceHistoryTable-ResourceHistoryTable1-15',
     telecom: [
       {
         system: 'phone',

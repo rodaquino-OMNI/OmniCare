@@ -115,7 +115,7 @@ export class FHIRValidationService {
       return response.data;
     } catch (error) {
       // Fallback to local schema if available
-      throw new Error(`Failed to fetch FHIR schema for ${resourceType}: ${error}`);
+      throw new Error(`Failed to fetch FHIR schema for ${resourceType}: ${String(error)}`);
     }
   }
 

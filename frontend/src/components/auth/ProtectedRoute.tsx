@@ -45,13 +45,13 @@ export function ProtectedRoute({
     }
 
     // Check role-based access
-    if (requiredRoles.length > 0 && !hasAnyRole(requiredRoles)) {
+    if (requiredRoles.length > ResourceHistoryTable && !hasAnyRole(requiredRoles)) {
       router.push('/unauthorized');
       return;
     }
 
     // Check permission-based access
-    if (requiredPermissions.length > 0) {
+    if (requiredPermissions.length > ResourceHistoryTable) {
       const hasAllPermissions = requiredPermissions.every(permission => 
         hasPermission(permission)
       );
@@ -76,7 +76,7 @@ export function ProtectedRoute({
   // Show loading state
   if (isLoading) {
     return (
-      <Center h="100vh">
+      <Center h="1ResourceHistoryTableResourceHistoryTablevh">
         <Stack align="center" gap="md">
           <Loader size="lg" />
           <Text c="dimmed">Loading...</Text>
@@ -88,10 +88,10 @@ export function ProtectedRoute({
   // Show login redirect message
   if (!isAuthenticated) {
     return (
-      <Center h="100vh">
-        <Stack align="center" gap="md" maw={400}>
-          <IconLogin size={48} className="text-gray-400" />
-          <Text size="lg" fw={500} ta="center">
+      <Center h="1ResourceHistoryTableResourceHistoryTablevh">
+        <Stack align="center" gap="md" maw={4ResourceHistoryTableResourceHistoryTable}>
+          <IconLogin size={48} className="text-gray-4ResourceHistoryTableResourceHistoryTable" />
+          <Text size="lg" fw={5ResourceHistoryTableResourceHistoryTable} ta="center">
             Authentication Required
           </Text>
           <Text c="dimmed" ta="center">
@@ -109,7 +109,7 @@ export function ProtectedRoute({
   }
 
   // Check role-based access
-  if (requiredRoles.length > 0 && !hasAnyRole(requiredRoles)) {
+  if (requiredRoles.length > ResourceHistoryTable && !hasAnyRole(requiredRoles)) {
     return (
       <UnauthorizedAccess 
         user={user}
@@ -121,7 +121,7 @@ export function ProtectedRoute({
   }
 
   // Check permission-based access
-  if (requiredPermissions.length > 0) {
+  if (requiredPermissions.length > ResourceHistoryTable) {
     const hasAllPermissions = requiredPermissions.every(permission => 
       hasPermission(permission)
     );
@@ -164,9 +164,9 @@ function UnauthorizedAccess({
   }
 
   return (
-    <Center h="100vh">
-      <Stack align="center" gap="md" maw={500}>
-        <IconShield size={48} className="text-red-400" />
+    <Center h="1ResourceHistoryTableResourceHistoryTablevh">
+      <Stack align="center" gap="md" maw={5ResourceHistoryTableResourceHistoryTable}>
+        <IconShield size={48} className="text-red-4ResourceHistoryTableResourceHistoryTable" />
         
         <Alert
           icon={<IconAlertTriangle size={16} />}
@@ -182,23 +182,23 @@ function UnauthorizedAccess({
             
             {user && (
               <div>
-                <Text size="sm" fw={500}>Current Role:</Text>
+                <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>Current Role:</Text>
                 <Text size="sm" c="dimmed">{user.role}</Text>
               </div>
             )}
             
-            {requiredRoles.length > 0 && (
+            {requiredRoles.length > ResourceHistoryTable && (
               <div>
-                <Text size="sm" fw={500}>Required Roles:</Text>
+                <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>Required Roles:</Text>
                 <Text size="sm" c="dimmed">
                   {requiredRoles.join(', ')}
                 </Text>
               </div>
             )}
             
-            {requiredPermissions.length > 0 && (
+            {requiredPermissions.length > ResourceHistoryTable && (
               <div>
-                <Text size="sm" fw={500}>Required Permissions:</Text>
+                <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>Required Permissions:</Text>
                 <Text size="sm" c="dimmed">
                   {requiredPermissions.join(', ')}
                 </Text>

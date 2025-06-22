@@ -44,7 +44,7 @@ function DashboardContent() {
     {
       patient: 'John Doe',
       action: 'Lab results reviewed',
-      time: '10 minutes ago',
+      time: '1ResourceHistoryTable minutes ago',
       type: 'success',
     },
     {
@@ -70,19 +70,19 @@ function DashboardContent() {
   const upcomingAppointments = [
     {
       patient: 'Michael Davis',
-      time: '9:00 AM',
+      time: '9:ResourceHistoryTableResourceHistoryTable AM',
       type: 'Follow-up',
       status: 'confirmed',
     },
     {
       patient: 'Sarah Wilson',
-      time: '10:30 AM',
+      time: '1ResourceHistoryTable:3ResourceHistoryTable AM',
       type: 'Consultation',
       status: 'pending',
     },
     {
       patient: 'David Miller',
-      time: '2:00 PM',
+      time: '2:ResourceHistoryTableResourceHistoryTable PM',
       type: 'Procedure',
       status: 'confirmed',
     },
@@ -99,13 +99,13 @@ function DashboardContent() {
           {stats.map((stat) => (
             <Card key={stat.title} shadow="sm" padding="lg" radius="md" withBorder>
               <Group justify="space-between" mb="xs">
-                <Text size="sm" c="dimmed" fw={500}>
+                <Text size="sm" c="dimmed" fw={5ResourceHistoryTableResourceHistoryTable}>
                   {stat.title}
                 </Text>
-                <stat.icon size={20} className={`text-${stat.color}-500`} />
+                <stat.icon size={2ResourceHistoryTable} className={`text-${stat.color}-5ResourceHistoryTableResourceHistoryTable`} />
               </Group>
               
-              <Text size="xl" fw={700} className="text-gray-800">
+              <Text size="xl" fw={7ResourceHistoryTableResourceHistoryTable} className="text-gray-8ResourceHistoryTableResourceHistoryTable">
                 {stat.value}
               </Text>
               
@@ -123,20 +123,20 @@ function DashboardContent() {
         <Grid>
           {/* Today's Schedule */}
           <Grid.Col span={{ base: 12, lg: 6 }}>
-            <Card shadow="sm" padding="lg" radius="md" withBorder h="100%">
+            <Card shadow="sm" padding="lg" radius="md" withBorder h="1ResourceHistoryTableResourceHistoryTable%">
               <Group justify="space-between" mb="md">
-                <Text fw={600} size="lg">
+                <Text fw={6ResourceHistoryTableResourceHistoryTable} size="lg">
                   Today&apos;s Schedule
                 </Text>
-                <IconCalendar size={20} className="text-gray-500" />
+                <IconCalendar size={2ResourceHistoryTable} className="text-gray-5ResourceHistoryTableResourceHistoryTable" />
               </Group>
               
               <Stack gap="md">
                 {upcomingAppointments.map((appointment, index) => (
-                  <Paper key={index} p="sm" className="bg-gray-50 rounded-lg">
+                  <Paper key={index} p="sm" className="bg-gray-5ResourceHistoryTable rounded-lg">
                     <Group justify="space-between" align="flex-start">
                       <div>
-                        <Text fw={500} size="sm">
+                        <Text fw={5ResourceHistoryTableResourceHistoryTable} size="sm">
                           {appointment.patient}
                         </Text>
                         <Text size="xs" c="dimmed">
@@ -144,7 +144,7 @@ function DashboardContent() {
                         </Text>
                       </div>
                       <div className="text-right">
-                        <Text size="sm" fw={500}>
+                        <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>
                           {appointment.time}
                         </Text>
                         <Badge
@@ -164,28 +164,28 @@ function DashboardContent() {
 
           {/* Recent Activity */}
           <Grid.Col span={{ base: 12, lg: 6 }}>
-            <Card shadow="sm" padding="lg" radius="md" withBorder h="100%">
+            <Card shadow="sm" padding="lg" radius="md" withBorder h="1ResourceHistoryTableResourceHistoryTable%">
               <Group justify="space-between" mb="md">
-                <Text fw={600} size="lg">
+                <Text fw={6ResourceHistoryTableResourceHistoryTable} size="lg">
                   Recent Activity
                 </Text>
-                <IconChartLine size={20} className="text-gray-500" />
+                <IconChartLine size={2ResourceHistoryTable} className="text-gray-5ResourceHistoryTableResourceHistoryTable" />
               </Group>
               
               <Stack gap="md">
                 {recentActivities.map((activity, index) => (
                   <Group key={index} gap="sm">
                     <div className={`p-1 rounded-full ${
-                      activity.type === 'success' ? 'bg-green-100' :
-                      activity.type === 'warning' ? 'bg-yellow-100' :
-                      'bg-blue-100'
+                      activity.type === 'success' ? 'bg-green-1ResourceHistoryTableResourceHistoryTable' :
+                      activity.type === 'warning' ? 'bg-yellow-1ResourceHistoryTableResourceHistoryTable' :
+                      'bg-blue-1ResourceHistoryTableResourceHistoryTable'
                     }`}>
-                      {activity.type === 'success' && <IconCheck size={14} className="text-green-600" />}
-                      {activity.type === 'warning' && <IconAlertTriangle size={14} className="text-yellow-600" />}
-                      {activity.type === 'info' && <IconStethoscope size={14} className="text-blue-600" />}
+                      {activity.type === 'success' && <IconCheck size={14} className="text-green-6ResourceHistoryTableResourceHistoryTable" />}
+                      {activity.type === 'warning' && <IconAlertTriangle size={14} className="text-yellow-6ResourceHistoryTableResourceHistoryTable" />}
+                      {activity.type === 'info' && <IconStethoscope size={14} className="text-blue-6ResourceHistoryTableResourceHistoryTable" />}
                     </div>
                     <div className="flex-1">
-                      <Text size="sm" fw={500}>
+                      <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>
                         {activity.patient}
                       </Text>
                       <Text size="xs" c="dimmed">
@@ -203,34 +203,34 @@ function DashboardContent() {
 
           {/* Quick Actions */}
           <Grid.Col span={{ base: 12, lg: 4 }}>
-            <Card shadow="sm" padding="lg" radius="md" withBorder h="100%">
-              <Text fw={600} size="lg" mb="md">
+            <Card shadow="sm" padding="lg" radius="md" withBorder h="1ResourceHistoryTableResourceHistoryTable%">
+              <Text fw={6ResourceHistoryTableResourceHistoryTable} size="lg" mb="md">
                 Quick Actions
               </Text>
               
               <Stack gap="sm">
-                <Paper p="md" className="bg-primary/5 border border-primary/20 rounded-lg cursor-pointer hover:bg-primary/10 transition-colors">
+                <Paper p="md" className="bg-primary/5 border border-primary/2ResourceHistoryTable rounded-lg cursor-pointer hover:bg-primary/1ResourceHistoryTable transition-colors">
                   <Group gap="sm">
                     <IconUsers size={16} className="text-primary" />
-                    <Text size="sm" fw={500}>
+                    <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>
                       Add New Patient
                     </Text>
                   </Group>
                 </Paper>
                 
-                <Paper p="md" className="bg-green-50 border border-green-200 rounded-lg cursor-pointer hover:bg-green-100 transition-colors">
+                <Paper p="md" className="bg-green-5ResourceHistoryTable border border-green-2ResourceHistoryTableResourceHistoryTable rounded-lg cursor-pointer hover:bg-green-1ResourceHistoryTableResourceHistoryTable transition-colors">
                   <Group gap="sm">
-                    <IconPill size={16} className="text-green-600" />
-                    <Text size="sm" fw={500}>
+                    <IconPill size={16} className="text-green-6ResourceHistoryTableResourceHistoryTable" />
+                    <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>
                       Create Prescription
                     </Text>
                   </Group>
                 </Paper>
                 
-                <Paper p="md" className="bg-orange-50 border border-orange-200 rounded-lg cursor-pointer hover:bg-orange-100 transition-colors">
+                <Paper p="md" className="bg-orange-5ResourceHistoryTable border border-orange-2ResourceHistoryTableResourceHistoryTable rounded-lg cursor-pointer hover:bg-orange-1ResourceHistoryTableResourceHistoryTable transition-colors">
                   <Group gap="sm">
-                    <IconTestPipe size={16} className="text-orange-600" />
-                    <Text size="sm" fw={500}>
+                    <IconTestPipe size={16} className="text-orange-6ResourceHistoryTableResourceHistoryTable" />
+                    <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>
                       Order Lab Tests
                     </Text>
                   </Group>
@@ -241,62 +241,62 @@ function DashboardContent() {
 
           {/* Performance Metrics */}
           <Grid.Col span={{ base: 12, lg: 8 }}>
-            <Card shadow="sm" padding="lg" radius="md" withBorder h="100%">
-              <Text fw={600} size="lg" mb="md">
+            <Card shadow="sm" padding="lg" radius="md" withBorder h="1ResourceHistoryTableResourceHistoryTable%">
+              <Text fw={6ResourceHistoryTableResourceHistoryTable} size="lg" mb="md">
                 Performance Metrics
               </Text>
               
               <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="xl">
                 <div className="text-center">
                   <RingProgress
-                    size={120}
+                    size={12ResourceHistoryTable}
                     thickness={8}
                     sections={[{ value: 85, color: 'blue' }]}
                     label={
                       <Center>
-                        <Text c="blue" fw={700} size="xl">
+                        <Text c="blue" fw={7ResourceHistoryTableResourceHistoryTable} size="xl">
                           85%
                         </Text>
                       </Center>
                     }
                   />
-                  <Text size="sm" fw={500} mt="sm">
+                  <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable} mt="sm">
                     Patient Satisfaction
                   </Text>
                 </div>
                 
                 <div className="text-center">
                   <RingProgress
-                    size={120}
+                    size={12ResourceHistoryTable}
                     thickness={8}
                     sections={[{ value: 92, color: 'green' }]}
                     label={
                       <Center>
-                        <Text c="green" fw={700} size="xl">
+                        <Text c="green" fw={7ResourceHistoryTableResourceHistoryTable} size="xl">
                           92%
                         </Text>
                       </Center>
                     }
                   />
-                  <Text size="sm" fw={500} mt="sm">
+                  <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable} mt="sm">
                     On-Time Performance
                   </Text>
                 </div>
                 
                 <div className="text-center">
                   <RingProgress
-                    size={120}
+                    size={12ResourceHistoryTable}
                     thickness={8}
                     sections={[{ value: 78, color: 'orange' }]}
                     label={
                       <Center>
-                        <Text c="orange" fw={700} size="xl">
+                        <Text c="orange" fw={7ResourceHistoryTableResourceHistoryTable} size="xl">
                           78%
                         </Text>
                       </Center>
                     }
                   />
-                  <Text size="sm" fw={500} mt="sm">
+                  <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable} mt="sm">
                     Resource Utilization
                   </Text>
                 </div>

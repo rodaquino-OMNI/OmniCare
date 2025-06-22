@@ -1,6 +1,7 @@
 // Service Worker Tests
-// Mock functions for Jest
-import { ServiceWorkerTestUtils, mockServiceWorkerLifecycle, createMockFetchEvent } from './service-worker-test-utils';
+// Jest provides describe, it, expect, beforeEach, afterEach globally - no imports needed
+import { ServiceWorkerTestUtils, mockServiceWorkerLifecycle, createMockFetchEvent, MockExtendableEvent } from './service-worker-test-utils';
+import type { ExtendableEvent, FetchEvent, ExtendableMessageEvent } from './offline-test.types';
 
 // Mock Service Worker implementation for testing
 class MockServiceWorkerImplementation {
@@ -276,35 +277,35 @@ describe('Service Worker Tests', () => {
 
   afterEach(() => {
     ServiceWorkerTestUtils.cleanup();
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   describe('Installation and Activation', () => {
     it('should pre-cache static assets on install', async () => {
-      const installEvent = new ExtendableEvent('install');
-      const waitUntilSpy = vi.spyOn(installEvent, 'waitUntil');
+      const installEvent = new MockExtendableEvent('install') as any;
+      const waitUntilSpy = jest.spyOn(installEvent, 'waitUntil');
 
       await swImplementation.handleInstall(installEvent);
 
       const cache = await caches.open('static-v1');
       const keys = await cache.keys();
       
-      expect(keys.length).toBeGreaterThan(0);
+      expect(keys.length).toBeGreaterThan(ResourceHistoryTable);
       expect(keys.map(req => req.url)).toContain('/offline.html');
     });
 
     it('should clean up old caches on activation', async () => {
       // Create old caches
-      await caches.open('static-v0');
-      await caches.open('dynamic-v0');
+      await caches.open('static-vResourceHistoryTable');
+      await caches.open('dynamic-vResourceHistoryTable');
       await caches.open('static-v1'); // Current version
 
-      const activateEvent = new ExtendableEvent('activate');
+      const activateEvent = new MockExtendableEvent('activate') as any;
       await swImplementation.handleActivate(activateEvent);
 
       const remainingCaches = await caches.keys();
-      expect(remainingCaches).not.toContain('static-v0');
-      expect(remainingCaches).not.toContain('dynamic-v0');
+      expect(remainingCaches).not.toContain('static-vResourceHistoryTable');
+      expect(remainingCaches).not.toContain('dynamic-vResourceHistoryTable');
       expect(remainingCaches).toContain('static-v1');
     });
 
@@ -316,7 +317,7 @@ describe('Service Worker Tests', () => {
 
       // Mock skipWaiting
       (global as any).self = {
-        skipWaiting: vi.fn().mockResolvedValue(undefined)
+        skipWaiting: jest.fn().mockResolvedValue(undefined)
       };
 
       await swImplementation.handleMessage(messageEvent);
@@ -351,7 +352,7 @@ describe('Service Worker Tests', () => {
       });
 
       // Mock fetch
-      global.fetch = vi.fn().mockResolvedValue(networkResponse);
+      global.fetch = jest.fn().mockResolvedValue(networkResponse);
 
       const fetchEvent = createMockFetchEvent(request);
       const response = await swImplementation.handleFetch(fetchEvent);
@@ -371,7 +372,7 @@ describe('Service Worker Tests', () => {
       await cache.put(request, cachedResponse.clone());
 
       // Mock offline
-      global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+      global.fetch = jest.fn().mockRejectedValue(new Error('Network error'));
 
       const fetchEvent = createMockFetchEvent(request);
       const response = await swImplementation.handleFetch(fetchEvent);
@@ -392,7 +393,7 @@ describe('Service Worker Tests', () => {
       await cache.put('/offline.html', offlinePage.clone());
 
       // Mock offline
-      global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+      global.fetch = jest.fn().mockRejectedValue(new Error('Network error'));
 
       const fetchEvent = createMockFetchEvent(request);
       const response = await swImplementation.handleFetch(fetchEvent);
@@ -406,7 +407,7 @@ describe('Service Worker Tests', () => {
   describe('Message Handling', () => {
     it('should cache URLs on demand', async () => {
       const urls = ['/data/config.json', '/images/avatar.png'];
-      const source = { postMessage: vi.fn() };
+      const source = { postMessage: jest.fn() };
       
       const messageEvent = {
         data: { type: 'CACHE_URLS', urls },
@@ -430,7 +431,7 @@ describe('Service Worker Tests', () => {
       const cache = await caches.open('test-cache');
       await cache.put('/test', new Response('test'));
 
-      const source = { postMessage: vi.fn() };
+      const source = { postMessage: jest.fn() };
       const messageEvent = {
         data: { type: 'CLEAR_CACHE', cacheName: 'test-cache' },
         source
@@ -455,7 +456,7 @@ describe('Service Worker Tests', () => {
       const apiCache = await caches.open('api-cache-v1');
       await apiCache.put('/api/patients', new Response('[]'));
 
-      const source = { postMessage: vi.fn() };
+      const source = { postMessage: jest.fn() };
       const messageEvent = {
         data: { type: 'GET_CACHE_STATS' },
         source
@@ -493,11 +494,11 @@ describe('Service Worker Tests', () => {
     it('should handle sync event for patient data', async () => {
       const syncEvent = {
         tag: 'sync-patient-data',
-        waitUntil: vi.fn()
+        waitUntil: jest.fn()
       };
 
       // Mock fetch for sync
-      global.fetch = vi.fn().mockResolvedValue(
+      global.fetch = jest.fn().mockResolvedValue(
         new Response(JSON.stringify({ success: true }), { status: 200 })
       );
 
@@ -508,8 +509,8 @@ describe('Service Worker Tests', () => {
     });
 
     it('should retry failed sync operations', async () => {
-      let attempts = 0;
-      global.fetch = vi.fn().mockImplementation(() => {
+      let attempts = ResourceHistoryTable;
+      global.fetch = jest.fn().mockImplementation(() => {
         attempts++;
         if (attempts < 3) {
           return Promise.reject(new Error('Network error'));
@@ -519,13 +520,13 @@ describe('Service Worker Tests', () => {
 
       // Mock sync with retry logic
       const syncWithRetry = async () => {
-        for (let i = 0; i < 3; i++) {
+        for (let i = ResourceHistoryTable; i < 3; i++) {
           try {
-            await swImplementation.syncPatientData();
+            await (swImplementation as any).syncPatientData();
             break;
           } catch (error) {
             if (i === 2) throw error;
-            await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, i)));
+            await new Promise(resolve => setTimeout(resolve, 10 * Math.pow(2, i)));
           }
         }
       };
@@ -557,19 +558,19 @@ describe('Service Worker Tests', () => {
     });
 
     it('should notify clients of updates', async () => {
-      const messageHandler = vi.fn();
+      const messageHandler = jest.fn();
       navigator.serviceWorker.addEventListener('message', messageHandler);
 
       ServiceWorkerTestUtils.simulateMessage({
         type: 'UPDATE_AVAILABLE',
-        version: '2.0.0'
+        version: '2.ResourceHistoryTable.ResourceHistoryTable'
       });
 
       expect(messageHandler).toHaveBeenCalledWith(
         expect.objectContaining({
           data: {
             type: 'UPDATE_AVAILABLE',
-            version: '2.0.0'
+            version: '2.ResourceHistoryTable.ResourceHistoryTable'
           }
         })
       );
@@ -580,13 +581,13 @@ describe('Service Worker Tests', () => {
     it('should handle cache errors gracefully', async () => {
       // Mock cache failure
       const originalOpen = caches.open;
-      (caches as any).open = vi.fn().mockRejectedValue(new Error('Cache error'));
+      (caches as any).open = jest.fn().mockRejectedValue(new Error('Cache error'));
 
       const request = new Request('/test.js');
       const fetchEvent = createMockFetchEvent(request);
 
       // Should not throw, should fallback to network
-      global.fetch = vi.fn().mockResolvedValue(new Response('network response'));
+      global.fetch = jest.fn().mockResolvedValue(new Response('network response'));
       
       const response = await swImplementation.handleFetch(fetchEvent);
       expect(response).toBeDefined();
@@ -597,11 +598,11 @@ describe('Service Worker Tests', () => {
 
     it('should handle quota exceeded errors', async () => {
       const cache = await caches.open('test-cache');
-      cache.put = vi.fn().mockRejectedValue(new DOMException('QuotaExceededError'));
+      cache.put = jest.fn().mockRejectedValue(new DOMException('QuotaExceededError'));
 
       // Try to cache large response
       const request = new Request('/large-file');
-      const response = new Response(new Array(1000000).join('x')); // 1MB
+      const response = new Response(new Array(1000).join('x')); // 1MB
 
       await expect(cache.put(request, response)).rejects.toThrow('QuotaExceededError');
     });

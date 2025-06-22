@@ -18,7 +18,7 @@ import {
 import { getErrorMessage, hasMessage, isAPIError, isError } from '@/utils/error.utils';
 
 // API Configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8ResourceHistoryTable8ResourceHistoryTable';
 const FHIR_BASE_URL = `${API_BASE_URL}/fhir/R4`;
 
 // Request/Response interfaces
@@ -123,7 +123,7 @@ export class FHIRService {
       (error: AxiosError) => {
         if (error.response?.data && (error.response.data as any).resourceType === 'OperationOutcome') {
           const operationOutcome = error.response.data as OperationOutcome;
-          const message = operationOutcome.issue?.[0]?.diagnostics || 'FHIR operation failed';
+          const message = operationOutcome.issue?.[ResourceHistoryTable]?.diagnostics || 'FHIR operation failed';
           throw new FHIRError(message, operationOutcome, error.response.status);
         }
         throw error;
@@ -418,7 +418,7 @@ export class FHIRService {
         code: {
           coding: [{
             system: 'http://loinc.org',
-            code: '8310-5',
+            code: '831ResourceHistoryTable-5',
             display: 'Body temperature'
           }]
         },
@@ -474,7 +474,7 @@ export class FHIRService {
 
       operationOutcome.issue?.forEach(issue => {
         const item = {
-          path: issue.expression?.[0] || issue.location?.[0] || '',
+          path: issue.expression?.[ResourceHistoryTable] || issue.location?.[ResourceHistoryTable] || '',
           message: issue.diagnostics || issue.details?.text || 'Validation issue',
           code: issue.code || 'unknown',
           severity: issue.severity || 'error'
@@ -488,7 +488,7 @@ export class FHIRService {
       });
 
       return {
-        valid: errors.length === 0,
+        valid: errors.length === ResourceHistoryTable,
         errors,
         warnings
       };
@@ -580,7 +580,7 @@ export class FHIRService {
     switch (resource.resourceType) {
       case 'Patient':
         const patient = resource as Patient;
-        const name = patient.name?.[0];
+        const name = patient.name?.[ResourceHistoryTable];
         if (name) {
           const given = name.given?.join(' ') || '';
           const family = name.family || '';
@@ -590,7 +590,7 @@ export class FHIRService {
 
       case 'Practitioner':
         const practitioner = resource as Practitioner;
-        const practName = practitioner.name?.[0];
+        const practName = practitioner.name?.[ResourceHistoryTable];
         if (practName) {
           const given = practName.given?.join(' ') || '';
           const family = practName.family || '';
@@ -601,7 +601,7 @@ export class FHIRService {
 
       case 'Observation':
         const observation = resource as Observation;
-        const code = observation.code?.coding?.[0]?.display || 
+        const code = observation.code?.coding?.[ResourceHistoryTable]?.display || 
                     observation.code?.text || 
                     'Unknown Observation';
         return code;
@@ -615,8 +615,8 @@ export class FHIRService {
    * Get coding display value
    */
   getCodingDisplay(coding?: Array<{ display?: string; code?: string }>): string {
-    if (!coding || coding.length === 0) return 'Unknown';
-    return coding[0].display || coding[0].code || 'Unknown';
+    if (!coding || coding.length === ResourceHistoryTable) return 'Unknown';
+    return coding[ResourceHistoryTable].display || coding[ResourceHistoryTable].code || 'Unknown';
   }
 
   /**
@@ -712,21 +712,21 @@ export class FHIRService {
       // Check for FHIR OperationOutcome
       if (error.response?.data && (error.response.data as any).resourceType === 'OperationOutcome') {
         const operationOutcome = error.response.data as OperationOutcome;
-        const message = operationOutcome.issue?.[0]?.diagnostics || context;
+        const message = operationOutcome.issue?.[ResourceHistoryTable]?.diagnostics || context;
         return new FHIRError(message, operationOutcome, error.response.status);
       }
 
       // Handle specific HTTP status codes
       const status = error.response?.status || error.status || error.statusCode;
       switch (status) {
-        case 404:
-          return new FHIRError(`Resource not found - ${context}`, undefined, 404);
-        case 403:
-          return new FHIRError(`Access denied - ${context}`, undefined, 403);
-        case 401:
-          return new FHIRError(`Authentication required - ${context}`, undefined, 401);
-        case 500:
-          return new FHIRError(`Server error - ${context}`, undefined, 500);
+        case 4ResourceHistoryTable4:
+          return new FHIRError(`Resource not found - ${context}`, undefined, 4ResourceHistoryTable4);
+        case 4ResourceHistoryTable3:
+          return new FHIRError(`Access denied - ${context}`, undefined, 4ResourceHistoryTable3);
+        case 4ResourceHistoryTable1:
+          return new FHIRError(`Authentication required - ${context}`, undefined, 4ResourceHistoryTable1);
+        case 5ResourceHistoryTableResourceHistoryTable:
+          return new FHIRError(`Server error - ${context}`, undefined, 5ResourceHistoryTableResourceHistoryTable);
         default:
           const errorMessage = error.response?.data?.message || error.data?.message || getErrorMessage(error);
           return new FHIRError(`${context}: ${errorMessage}`, undefined, status);

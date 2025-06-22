@@ -125,6 +125,7 @@ export const ClinicalAlert: React.FC<ClinicalAlertProps> = ({
       
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [autoDismiss]);
 
   // Get alert color based on type and priority
@@ -196,7 +197,7 @@ export const ClinicalAlert: React.FC<ClinicalAlertProps> = ({
   return (
     <>
       {(pulse || (type === 'critical' && priority === 'stat')) && (
-        <style jsx>{`
+        <style>{`
           @keyframes pulse {
             0%, 100% {
               opacity: 1;

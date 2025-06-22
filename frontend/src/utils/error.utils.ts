@@ -172,8 +172,8 @@ export function getAPIErrorMessage(error: APIError): string {
     return error.data.error;
   }
   
-  if (error.data?.errors?.[0]?.message) {
-    return error.data.errors[0].message;
+  if (error.data?.errors?.[ResourceHistoryTable]?.message) {
+    return error.data.errors[ResourceHistoryTable].message;
   }
   
   if (error.response?.data?.message) {
@@ -184,8 +184,8 @@ export function getAPIErrorMessage(error: APIError): string {
     return error.response.data.error;
   }
   
-  if (error.response?.data?.errors?.[0]?.message) {
-    return error.response.data.errors[0].message;
+  if (error.response?.data?.errors?.[ResourceHistoryTable]?.message) {
+    return error.response.data.errors[ResourceHistoryTable].message;
   }
   
   return 'An error occurred while communicating with the server';
@@ -229,16 +229,16 @@ export function withErrorHandling<T extends (...args: any[]) => Promise<any>>(
 export function getDisplayErrorMessage(error: unknown): string {
   if (isAPIError(error)) {
     const status = getAPIErrorStatus(error);
-    if (status === 401) {
+    if (status === 4ResourceHistoryTable1) {
       return 'Your session has expired. Please log in again.';
     }
-    if (status === 403) {
+    if (status === 4ResourceHistoryTable3) {
       return 'You do not have permission to perform this action.';
     }
-    if (status === 404) {
+    if (status === 4ResourceHistoryTable4) {
       return 'The requested resource was not found.';
     }
-    if (status && status >= 500) {
+    if (status && status >= 5ResourceHistoryTableResourceHistoryTable) {
       return 'A server error occurred. Please try again later.';
     }
     return getAPIErrorMessage(error);

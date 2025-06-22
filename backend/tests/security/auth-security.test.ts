@@ -239,7 +239,13 @@ describe('Authentication Security Tests', () => {
 
       expect(authResponse.status).toBe(302);
       
-      const redirectUrl = new URL(authResponse.headers.location);
+      // Ensure location header exists before creating URL
+      const location = authResponse.headers.location;
+      if (!location) {
+        throw new Error('Expected location header in redirect response');
+      }
+      
+      const redirectUrl = new URL(location);
       const authCode = redirectUrl.searchParams.get('code');
       expect(authCode).toBeTruthy();
 

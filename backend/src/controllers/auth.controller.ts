@@ -6,7 +6,7 @@ import config from '@/config';
 import { AuditService } from '@/services/audit.service';
 import { SessionManager } from '@/services/session.service';
 import { smartFHIRService } from '@/services/smart-fhir.service';
-import { User, UserRole, UserRoles, LoginCredentials } from '@/types/auth.types';
+import { User, UserRoles, LoginCredentials } from '@/types/auth.types';
 import logger from '@/utils/logger';
 import { getErrorMessage } from '@/utils/error.utils';
 
@@ -155,10 +155,10 @@ export class AuthController {
       const {
         grant_type,
         code,
-        redirect_uri,
+        redirect_uri: _redirect_uri,
         client_id,
-        client_secret,
-        code_verifier,
+        client_secret: _client_secret,
+        code_verifier: _code_verifier,
         refresh_token,
       } = req.body;
 
@@ -195,7 +195,7 @@ export class AuthController {
    * Handle authorization code grant
    */
   private async handleAuthorizationCodeGrant(req: Request, res: Response): Promise<void> {
-    const { code, redirect_uri, client_id, code_verifier } = req.body;
+    const { code, redirect_uri, client_id, code_verifier: _code_verifier } = req.body;
 
     // Validate required parameters
     if (!code || !redirect_uri || !client_id) {
@@ -1117,7 +1117,7 @@ export class AuthController {
     }
   }
 
-  private async storeTempMfaSecret(userId: string, secret: string): Promise<void> {
+  private async storeTempMfaSecret(userId: string, _secret: string): Promise<void> {
     try {
       // TODO: Store temporary MFA secret (expires in 10 minutes)
       logger.info(`Stored temporary MFA secret for user ${userId}`);
@@ -1146,7 +1146,7 @@ export class AuthController {
     }
   }
 
-  private async enableUserMfa(userId: string, secret: string): Promise<void> {
+  private async enableUserMfa(userId: string, _secret: string): Promise<void> {
     try {
       // TODO: Enable MFA for user in database
       logger.info(`Enabled MFA for user ${userId}`);

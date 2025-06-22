@@ -1,20 +1,42 @@
 import React from 'react';
 
+// Type definitions for the form mock
+interface FormValues {
+  [key: string]: any;
+}
+
+interface FormErrors {
+  [key: string]: string | undefined;
+}
+
+interface FormTouched {
+  [key: string]: boolean;
+}
+
+interface ValidationRules {
+  [key: string]: (value: any) => string | undefined;
+}
+
+interface UseFormOptions {
+  initialValues?: FormValues;
+  validate?: ValidationRules;
+}
+
 // Mock useForm hook
-export const useForm = (options: any = {}) => {
-  const [values, setValues] = React.useState(options.initialValues || {});
-  const [errors, setErrors] = React.useState({});
-  const [touched, setTouched] = React.useState({});
+export const useForm = (options: UseFormOptions = {}) => {
+  const [values, setValues] = React.useState<FormValues>(options.initialValues || {});
+  const [errors, setErrors] = React.useState<FormErrors>({});
+  const [touched, setTouched] = React.useState<FormTouched>({});
 
   const getInputProps = (field: string) => ({
     value: values[field] || '',
     onChange: (event: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
-      setValues((prev: any) => ({ ...prev, [field]: newValue }));
+      setValues((prev) => ({ ...prev, [field]: newValue }));
       
       // Clear error when user types
       if (errors[field]) {
-        setErrors((prev: any) => {
+        setErrors((prev) => {
           const newErrors = { ...prev };
           delete newErrors[field];
           return newErrors;
@@ -22,20 +44,20 @@ export const useForm = (options: any = {}) => {
       }
     },
     onBlur: () => {
-      setTouched((prev: any) => ({ ...prev, [field]: true }));
+      setTouched((prev) => ({ ...prev, [field]: true }));
       
       // Run validation if provided
       if (options.validate && options.validate[field]) {
         const error = options.validate[field](values[field]);
         if (error) {
-          setErrors((prev: any) => ({ ...prev, [field]: error }));
+          setErrors((prev) => ({ ...prev, [field]: error }));
         }
       }
     },
     error: touched[field] ? errors[field] : undefined,
   });
 
-  const onSubmit = (handler: (values: any) => void) => {
+  const onSubmit = (handler: (values: FormValues) => void) => {
     return (event?: React.FormEvent) => {
       if (event) {
         event.preventDefault();
@@ -43,11 +65,11 @@ export const useForm = (options: any = {}) => {
 
       // Run all validations
       if (options.validate) {
-        const newErrors: any = {};
+        const newErrors: FormErrors = {};
         let hasErrors = false;
 
         Object.keys(options.validate).forEach((field) => {
-          const error = options.validate[field](values[field]);
+          const error = options.validate![field](values[field]);
           if (error) {
             newErrors[field] = error;
             hasErrors = true;
@@ -57,10 +79,10 @@ export const useForm = (options: any = {}) => {
         if (hasErrors) {
           setErrors(newErrors);
           setTouched(
-            Object.keys(options.validate).reduce((acc, field) => {
+            Object.keys(options.validate).reduce<FormTouched>((acc, field) => {
               acc[field] = true;
               return acc;
-            }, {} as any)
+            }, {})
           );
           return;
         }
@@ -71,11 +93,11 @@ export const useForm = (options: any = {}) => {
   };
 
   const setFieldValue = (field: string, value: any) => {
-    setValues((prev: any) => ({ ...prev, [field]: value }));
+    setValues((prev) => ({ ...prev, [field]: value }));
   };
 
   const setFieldError = (field: string, error: string) => {
-    setErrors((prev: any) => ({ ...prev, [field]: error }));
+    setErrors((prev) => ({ ...prev, [field]: error }));
   };
 
   const reset = () => {
@@ -87,9 +109,9 @@ export const useForm = (options: any = {}) => {
   const validate = () => {
     if (!options.validate) return {};
 
-    const newErrors: any = {};
+    const newErrors: FormErrors = {};
     Object.keys(options.validate).forEach((field) => {
-      const error = options.validate[field](values[field]);
+      const error = options.validate![field](values[field]);
       if (error) {
         newErrors[field] = error;
       }

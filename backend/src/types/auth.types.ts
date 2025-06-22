@@ -51,6 +51,7 @@ export interface User {
   passwordHash?: string;
   patient?: string;
   scope?: string[];
+  permissions?: string[];
   clientId?: string;
 }
 
@@ -188,6 +189,7 @@ export interface AuditLogEntry {
   action: string;
   resource: string;
   resourceId?: string;
+  patientId?: string;
   ipAddress: string;
   userAgent: string;
   timestamp: Date;

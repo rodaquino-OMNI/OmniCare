@@ -16,8 +16,8 @@ export function isError(value: unknown): value is Error {
       value !== null &&
       'message' in value &&
       'name' in value &&
-      typeof (value as any).message === 'string' &&
-      typeof (value as any).name === 'string'
+      typeof (value as Record<string, unknown>).message === 'string' &&
+      typeof (value as Record<string, unknown>).name === 'string'
     )
   );
 }
@@ -32,7 +32,7 @@ export function hasMessage(value: unknown): value is { message: string } {
     typeof value === 'object' &&
     value !== null &&
     'message' in value &&
-    typeof (value as any).message === 'string'
+    typeof (value as Record<string, unknown>).message === 'string'
   );
 }
 
@@ -46,7 +46,7 @@ export function hasCode(value: unknown): value is { code: string } {
     typeof value === 'object' &&
     value !== null &&
     'code' in value &&
-    typeof (value as any).code === 'string'
+    typeof (value as Record<string, unknown>).code === 'string'
   );
 }
 
@@ -82,7 +82,7 @@ export function getErrorCode(error: unknown): string | undefined {
   }
   
   if (isError(error) && 'code' in error) {
-    return (error as any).code;
+    return (error as Record<string, unknown>).code as string;
   }
   
   return undefined;
@@ -98,8 +98,8 @@ export function getErrorStack(error: unknown): string | undefined {
     return error.stack;
   }
   
-  if (typeof error === 'object' && error !== null && 'stack' in error && typeof (error as any).stack === 'string') {
-    return (error as any).stack;
+  if (typeof error === 'object' && error !== null && 'stack' in error && typeof (error as Record<string, unknown>).stack === 'string') {
+    return (error as Record<string, unknown>).stack as string;
   }
   
   return undefined;
@@ -133,7 +133,7 @@ export function normalizeError(error: unknown, context?: string): {
  */
 export function isErrorType<T extends Error>(
   error: unknown, 
-  errorType: new (...args: any[]) => T
+  errorType: new (...args: unknown[]) => T
 ): error is T {
   return error instanceof errorType;
 }
@@ -173,11 +173,14 @@ export function isFHIRError(error: unknown): error is FHIRError {
     return false;
   }
   
-  const err = error as any;
-  return (
-    (err.outcome && Array.isArray(err.outcome.issue)) ||
-    (err.response?.data?.resourceType === 'OperationOutcome')
-  );
+  const err = error as Record<string, unknown>;
+  const hasOutcome = err.outcome && typeof err.outcome === 'object' && err.outcome !== null && 
+                     'issue' in err.outcome && Array.isArray((err.outcome as any).issue);
+  const hasResponse = err.response && typeof err.response === 'object' && err.response !== null &&
+                      'data' in err.response && typeof (err.response as any).data === 'object' &&
+                      (err.response as any).data !== null && (err.response as any).data?.resourceType === 'OperationOutcome';
+  
+  return Boolean(hasOutcome || hasResponse);
 }
 
 /**
@@ -204,7 +207,7 @@ export function getFHIRErrorMessage(error: FHIRError): string {
  * @param fn - The async function to wrap
  * @returns A wrapped function that handles errors
  */
-export function withErrorHandling<T extends (...args: any[]) => Promise<any>>(
+export function withErrorHandling<T extends (...args: unknown[]) => Promise<unknown>>(
   fn: T,
   errorHandler?: (error: unknown) => void
 ): T {
@@ -248,7 +251,7 @@ export class AppError extends Error {
  * @param error - The error to handle
  * @param res - Express response object
  */
-export function handleError(error: unknown, res?: any): void {
+export function handleError(error: unknown, res?: { status: (code: number) => { json: (data: unknown) => void } }): void {
   if (res) {
     const statusCode = error instanceof AppError ? error.statusCode : 500;
     const message = getErrorMessage(error);

@@ -127,7 +127,7 @@ test.describe('Clinical Workflows - Complete Patient Care', () => {
         await page.getByRole('button', { name: /complete encounter/i }).click();
         
         // Electronic signature
-        await helpers.modal.waitForModal(/sign encounter/i);
+        await helpers.modal.waitForModal('sign encounter');
         
         await page.getByLabel(/electronic signature/i).fill('Dr. Sarah Johnson');
         await page.getByRole('button', { name: /sign encounter/i }).click();
@@ -158,7 +158,7 @@ test.describe('Clinical Workflows - Complete Patient Care', () => {
         if (await amendButton.isVisible()) {
           await amendButton.click();
           
-          await helpers.modal.waitForModal(/amend encounter/i);
+          await helpers.modal.waitForModal('amend encounter');
           
           // Add amendment reason
           await page.getByLabel(/reason for amendment/i).fill('Additional clinical findings noted');
@@ -310,7 +310,7 @@ test.describe('Clinical Workflows - Complete Patient Care', () => {
           await scheduleButton.click();
           
           // Should open scheduling workflow
-          await helpers.modal.waitForModal(/schedule/i);
+          await helpers.modal.waitForModal('schedule');
           
           // Cancel for this test
           await helpers.modal.closeModal();
@@ -375,7 +375,7 @@ test.describe('Clinical Workflows - Complete Patient Care', () => {
         if (await resultRow.isVisible()) {
           await resultRow.click();
           
-          await helpers.modal.waitForModal(/lab result details/i);
+          await helpers.modal.waitForModal('lab result details');
           
           // Verify result details
           for (const result of testLabResult.results) {
@@ -477,7 +477,7 @@ test.describe('Clinical Workflows - Complete Patient Care', () => {
       });
 
       await test.step('Review current medications', async () => {
-        await helpers.modal.waitForModal(/medication reconciliation/i);
+        await helpers.modal.waitForModal('medication reconciliation');
         
         // Should show all current medications
         if (testPatient.medications) {
@@ -616,7 +616,7 @@ test.describe('Clinical Workflows - Complete Patient Care', () => {
         if (await newTemplateButton.isVisible()) {
           await newTemplateButton.click();
           
-          await helpers.modal.waitForModal(/create template/i);
+          await helpers.modal.waitForModal('create template');
           
           await helpers.form.fillForm({
             templateName: 'Diabetes Follow-up',

@@ -1,4 +1,4 @@
-import { Practitioner as FHIRPractitioner } from '@medplum/fhirtypes';
+// import { Practitioner as FHIRPractitioner } from '@medplum/fhirtypes';
 
 import { 
   FHIRResource, 

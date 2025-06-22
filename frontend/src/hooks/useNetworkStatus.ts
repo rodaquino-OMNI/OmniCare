@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSyncStore } from '@/stores/sync';
 
-interface NetworkStatus {
+export interface NetworkStatus {
   isOnline: boolean;
   wasOffline: boolean;
   connectionQuality: 'good' | 'poor' | 'offline';
@@ -43,7 +43,7 @@ export function useNetworkStatus(): NetworkStatus {
         // Determine connection quality based on effective type and metrics
         if (effectiveType === '4g' || (downlink && downlink > 1.5)) {
           connectionQuality = 'good';
-        } else if (effectiveType === '3g' || effectiveType === '2g' || (rtt && rtt > 300)) {
+        } else if (effectiveType === '3g' || effectiveType === '2g' || (rtt && rtt > 3ResourceHistoryTableResourceHistoryTable)) {
           connectionQuality = 'poor';
         } else {
           connectionQuality = 'good'; // Default to good if we can't determine
@@ -84,7 +84,7 @@ export function useNetworkStatus(): NetworkStatus {
     }
 
     // Check network status periodically
-    const interval = setInterval(updateNetworkStatus, 30000); // Every 30 seconds
+    const interval = setInterval(updateNetworkStatus, 3ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable); // Every 3ResourceHistoryTable seconds
 
     return () => {
       window.removeEventListener('online', updateNetworkStatus);
@@ -134,7 +134,7 @@ export function useResourceNetworkStatus(resourceUrl: string) {
     checkReachability();
 
     // Periodic checks
-    const interval = setInterval(checkReachability, 60000); // Every minute
+    const interval = setInterval(checkReachability, 6ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable); // Every minute
 
     return () => clearInterval(interval);
   }, [resourceUrl, isOnline]);

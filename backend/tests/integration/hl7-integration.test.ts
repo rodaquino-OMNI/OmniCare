@@ -130,7 +130,8 @@ PID|1||123456789|||DOE^JOHN|||M|`;
         expect(parsedMessage).toBeDefined();
         // Parser should handle invalid dates gracefully
       } catch (error) {
-        expect(error.message).toContain('parsing failed');
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        expect(errorMessage).toContain('parsing failed');
       }
     });
   });
@@ -356,7 +357,8 @@ PID|1||${i.toString().padStart(9, '0')}|||DOE^PATIENT${i}|||M|`
       try {
         await medplumService.deleteResource('Patient', testPatientId);
       } catch (error) {
-        logger.warn('Failed to cleanup test patient:', error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.warn('Failed to cleanup test patient:', errorMessage);
       }
     }
   });

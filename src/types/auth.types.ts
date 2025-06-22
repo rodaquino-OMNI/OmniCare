@@ -3,6 +3,8 @@
  * HIPAA-Compliant Role-Based Access Control System
  */
 
+import { UserRole } from './unified-user-roles';
+
 export interface User {
   id: string;
   username: string;
@@ -16,6 +18,7 @@ export interface User {
   isActive: boolean;
   isMfaEnabled: boolean;
   mfaSecret?: string;
+  mfaSecretEncrypted?: string;
   lastLogin?: Date;
   passwordChangedAt: Date;
   failedLoginAttempts: number;
@@ -26,16 +29,9 @@ export interface User {
   updatedAt: Date;
 }
 
-export enum UserRole {
-  PHYSICIAN = 'physician',
-  NURSING_STAFF = 'nursing_staff',
-  ADMINISTRATIVE_STAFF = 'administrative_staff',
-  SYSTEM_ADMINISTRATOR = 'system_administrator',
-  PHARMACIST = 'pharmacist',
-  LABORATORY_TECHNICIAN = 'laboratory_technician',
-  RADIOLOGY_TECHNICIAN = 'radiology_technician',
-  PATIENT = 'patient'
-}
+// UserRole is now imported from unified-user-roles.ts
+// to maintain consistency across the codebase
+export { UserRole } from './unified-user-roles';
 
 export enum Permission {
   // Clinical Documentation
@@ -106,6 +102,7 @@ export interface AuthToken {
   refreshToken: string;
   expiresIn: number;
   tokenType: 'Bearer';
+  sessionId: string;
 }
 
 export interface LoginCredentials {

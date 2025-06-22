@@ -1,4 +1,5 @@
 import { showNotification } from '@mantine/notifications';
+import '@/types/service-worker';
 
 interface ServiceWorkerConfig {
   onUpdate?: () => void;
@@ -175,8 +176,14 @@ class ServiceWorkerManager {
     }
 
     try {
-      await this.registration.sync.register(tag);
-      console.log(`[ServiceWorker] Sync registered: ${tag}`);
+      // Check if registration has sync property and call register
+      const syncRegistration = this.registration.sync;
+      if (syncRegistration && typeof syncRegistration.register === 'function') {
+        await syncRegistration.register(tag);
+        console.log(`[ServiceWorker] Sync registered: ${tag}`);
+      } else {
+        console.warn('Sync registration method not available');
+      }
     } catch (error) {
       console.error('[ServiceWorker] Sync registration failed:', error);
     }
@@ -244,7 +251,7 @@ class ServiceWorkerManager {
         resolve(event.data);
       };
 
-      navigator.serviceWorker.controller.postMessage(
+      navigator.serviceWorker.controller!.postMessage(
         { type: 'get-cache-status' },
         [channel.port2]
       );

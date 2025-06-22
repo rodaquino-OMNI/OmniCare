@@ -3,6 +3,57 @@
  * Runs once before all tests start
  */
 
+// Polyfill ReadableStream before any modules are loaded
+if (typeof ReadableStream === 'undefined') {
+  try {
+    // Try to load from stream/web (Node.js 16.5+)
+    const streamWeb = require('stream/web');
+    global.ReadableStream = streamWeb.ReadableStream;
+    global.WritableStream = streamWeb.WritableStream;
+    global.TransformStream = streamWeb.TransformStream;
+  } catch (e) {
+    // Fallback for older Node.js versions
+    global.ReadableStream = class ReadableStream {
+      constructor() {
+        this.locked = false;
+      }
+      getReader() {
+        return {
+          read: () => Promise.resolve({ done: true, value: undefined }),
+          releaseLock: () => {},
+          closed: Promise.resolve(),
+          cancel: () => Promise.resolve()
+        };
+      }
+      cancel() {
+        return Promise.resolve();
+      }
+    };
+    global.WritableStream = class WritableStream {
+      constructor() {
+        this.locked = false;
+      }
+      getWriter() {
+        return {
+          write: () => Promise.resolve(),
+          close: () => Promise.resolve(),
+          abort: () => Promise.resolve(),
+          releaseLock: () => {},
+          closed: Promise.resolve(),
+          desiredSize: 1,
+          ready: Promise.resolve()
+        };
+      }
+    };
+    global.TransformStream = class TransformStream {
+      constructor() {
+        this.readable = new global.ReadableStream();
+        this.writable = new global.WritableStream();
+      }
+    };
+  }
+}
+
 const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');

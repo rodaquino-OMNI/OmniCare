@@ -16,12 +16,12 @@ import { patientCacheService } from './patient-cache.service';
 
 // Sync configuration
 const SYNC_CONFIG = {
-  WEBSOCKET_URL: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080/ws',
-  RECONNECT_DELAY: 5000,
+  WEBSOCKET_URL: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8ResourceHistoryTable8ResourceHistoryTable/ws',
+  RECONNECT_DELAY: 5ResourceHistoryTableResourceHistoryTableResourceHistoryTable,
   MAX_RECONNECT_ATTEMPTS: 5,
-  HEARTBEAT_INTERVAL: 30000,
-  BATCH_SYNC_SIZE: 20,
-  SYNC_DEBOUNCE: 1000
+  HEARTBEAT_INTERVAL: 3ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable,
+  BATCH_SYNC_SIZE: 2ResourceHistoryTable,
+  SYNC_DEBOUNCE: 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable
 };
 
 // Sync event types
@@ -89,12 +89,12 @@ export class PatientSyncService extends EventEmitter {
   private reconnectTimer?: NodeJS.Timeout;
   private heartbeatTimer?: NodeJS.Timeout;
   private syncTimer?: NodeJS.Timeout;
-  private reconnectAttempts = 0;
+  private reconnectAttempts = ResourceHistoryTable;
   private syncQueue: SyncEvent[] = [];
   private syncState: SyncState = {
     status: SyncStatus.DISCONNECTED,
     lastSync: null,
-    pendingSync: 0,
+    pendingSync: ResourceHistoryTable,
     errors: [],
     subscriptions: new Map()
   };
@@ -102,7 +102,7 @@ export class PatientSyncService extends EventEmitter {
     realTime: true,
     batchSync: true,
     conflictResolution: 'server',
-    syncInterval: 60000 // 1 minute
+    syncInterval: 6ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable // 1 minute
   };
 
   constructor(options?: SyncOptions) {
@@ -148,7 +148,7 @@ export class PatientSyncService extends EventEmitter {
 
       this.ws.onopen = () => {
         console.log('WebSocket connected');
-        this.reconnectAttempts = 0;
+        this.reconnectAttempts = ResourceHistoryTable;
         this.updateStatus(SyncStatus.CONNECTED);
         this.startHeartbeat();
         this.emit('sync:connected');
@@ -230,7 +230,7 @@ export class PatientSyncService extends EventEmitter {
   private startPeriodicSync(): void {
     this.syncTimer = setInterval(() => {
       this.performBatchSync();
-    }, this.options.syncInterval || 60000);
+    }, this.options.syncInterval || 6ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable);
   }
 
   /**
@@ -331,7 +331,7 @@ export class PatientSyncService extends EventEmitter {
    * Process sync queue
    */
   private async processQueue(): Promise<void> {
-    if (this.syncQueue.length === 0) return;
+    if (this.syncQueue.length === ResourceHistoryTable) return;
 
     this.updateStatus(SyncStatus.SYNCING);
     const events = [...this.syncQueue];
@@ -549,9 +549,9 @@ Events(patientId, patientEvents);
   private addError(error: SyncError): void {
     this.syncState.errors.push(error);
     
-    // Keep only last 50 errors
-    if (this.syncState.errors.length > 50) {
-      this.syncState.errors = this.syncState.errors.slice(-50);
+    // Keep only last 5ResourceHistoryTable errors
+    if (this.syncState.errors.length > 5ResourceHistoryTable) {
+      this.syncState.errors = this.syncState.errors.slice(-5ResourceHistoryTable);
     }
     
     this.emit('sync:error', error);
@@ -594,7 +594,7 @@ Events(patientId, patientEvents);
    */
   private chunkArray<T>(array: T[], size: number): T[][] {
     const chunks: T[][] = [];
-    for (let i = 0; i < array.length; i += size) {
+    for (let i = ResourceHistoryTable; i < array.length; i += size) {
       chunks.push(array.slice(i, i + size));
     }
     return chunks;

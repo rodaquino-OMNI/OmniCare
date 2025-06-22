@@ -147,8 +147,8 @@ export interface OperationalDashboard {
 }
 
 export class OperationalMetricsService extends EventEmitter {
-  private realTimeData: Map<string, any> = new Map();
-  private historicalMetrics: Map<string, any[]> = new Map();
+  private _realTimeData: Map<string, any> = new Map();
+  private _historicalMetrics: Map<string, any[]> = new Map();
   private benchmarks: Map<string, number> = new Map();
 
   constructor() {
@@ -386,7 +386,7 @@ export class OperationalMetricsService extends EventEmitter {
     return { insights, predictions };
   }
 
-  private async calculateCurrentPatientFlow(facilityId: string): Promise<any> {
+  private async calculateCurrentPatientFlow(_facilityId: string): Promise<any> {
     // Mock implementation - would integrate with real-time EHR data
     return {
       totalPatients: 127,
@@ -396,7 +396,7 @@ export class OperationalMetricsService extends EventEmitter {
     };
   }
 
-  private async identifyBottlenecks(facilityId: string): Promise<any[]> {
+  private async identifyBottlenecks(_facilityId: string): Promise<any[]> {
     return [
       {
         location: 'Check-in Desk',
@@ -419,7 +419,7 @@ export class OperationalMetricsService extends EventEmitter {
     ];
   }
 
-  private async getHourlyFlowData(facilityId: string, period?: any): Promise<any[]> {
+  private async getHourlyFlowData(_facilityId: string, _period?: any): Promise<any[]> {
     const hourlyData = [];
     
     for (let hour = 8; hour <= 18; hour++) {
@@ -436,9 +436,9 @@ export class OperationalMetricsService extends EventEmitter {
   }
 
   private async calculateStaffUtilization(
-    facilityId: string,
-    period: { start: Date; end: Date },
-    departmentId?: string
+    _facilityId: string,
+    _period: { start: Date; end: Date },
+    _departmentId?: string
   ): Promise<any[]> {
     return [
       {

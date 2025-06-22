@@ -21,7 +21,9 @@ export const TEST_PATIENTS = {
       zipCode: '62701'
     },
     mrn: 'MRN001234',
-    status: 'active'
+    status: 'active',
+    medications: [],
+    allergies: []
   },
 
   // Patient with multiple conditions
@@ -78,7 +80,9 @@ export const TEST_PATIENTS = {
       name: 'Sarah Johnson',
       relationship: 'mother',
       phone: '555-0789'
-    }
+    },
+    medications: [],
+    allergies: []
   },
 
   // Elderly patient
@@ -107,7 +111,9 @@ export const TEST_PATIENTS = {
     conditions: [
       { code: 'M79.3', description: 'Arthritis' },
       { code: 'I25.9', description: 'Chronic ischemic heart disease' }
-    ]
+    ],
+    medications: [],
+    allergies: []
   },
 
   // Inactive patient for testing archived records
@@ -127,7 +133,9 @@ export const TEST_PATIENTS = {
       zipCode: '62705'
     },
     mrn: 'MRN077889',
-    status: 'inactive'
+    status: 'inactive',
+    medications: [],
+    allergies: []
   }
 };
 
@@ -201,11 +209,11 @@ export const TEST_LAB_RESULTS = {
     resultDate: '2024-01-16',
     status: 'final',
     results: [
-      { name: 'White Blood Cells', value: '7.2', unit: 'K/uL', range: '4.5-11.0', status: 'normal' },
-      { name: 'Red Blood Cells', value: '4.8', unit: 'M/uL', range: '4.2-5.4', status: 'normal' },
-      { name: 'Hemoglobin', value: '14.5', unit: 'g/dL', range: '12.0-16.0', status: 'normal' },
-      { name: 'Hematocrit', value: '42.1', unit: '%', range: '36.0-46.0', status: 'normal' },
-      { name: 'Platelets', value: '285', unit: 'K/uL', range: '150-450', status: 'normal' }
+      { name: 'White Blood Cells', value: '7.2', unit: 'K/uL', range: '4.5-11.0', status: 'normal', critical: false },
+      { name: 'Red Blood Cells', value: '4.8', unit: 'M/uL', range: '4.2-5.4', status: 'normal', critical: false },
+      { name: 'Hemoglobin', value: '14.5', unit: 'g/dL', range: '12.0-16.0', status: 'normal', critical: false },
+      { name: 'Hematocrit', value: '42.1', unit: '%', range: '36.0-46.0', status: 'normal', critical: false },
+      { name: 'Platelets', value: '285', unit: 'K/uL', range: '150-450', status: 'normal', critical: false }
     ]
   },
 
@@ -220,9 +228,9 @@ export const TEST_LAB_RESULTS = {
     status: 'final',
     results: [
       { name: 'Glucose', value: '185', unit: 'mg/dL', range: '70-100', status: 'high', critical: true },
-      { name: 'Sodium', value: '142', unit: 'mEq/L', range: '136-145', status: 'normal' },
-      { name: 'Potassium', value: '4.1', unit: 'mEq/L', range: '3.5-5.1', status: 'normal' },
-      { name: 'Chloride', value: '101', unit: 'mEq/L', range: '98-107', status: 'normal' }
+      { name: 'Sodium', value: '142', unit: 'mEq/L', range: '136-145', status: 'normal', critical: false },
+      { name: 'Potassium', value: '4.1', unit: 'mEq/L', range: '3.5-5.1', status: 'normal', critical: false },
+      { name: 'Chloride', value: '101', unit: 'mEq/L', range: '98-107', status: 'normal', critical: false }
     ]
   }
 };

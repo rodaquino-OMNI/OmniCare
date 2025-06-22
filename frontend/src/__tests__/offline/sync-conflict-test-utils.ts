@@ -1,6 +1,75 @@
 // Sync and Conflict Resolution Testing Utilities
-import { vi } from 'vitest';
-import type { Patient, Encounter, Medication, VitalSigns } from '@/types';
+// Using Jest - vi is not needed, jest.fn() is available globally
+
+// Type definitions for testing (avoiding import issues)
+interface Patient {
+  id: string;
+  mrn: string;
+  firstName: string;
+  lastName: string; 
+  dateOfBirth: string;
+  gender: 'male' | 'female' | 'other';
+  phone?: string;
+  email?: string;
+  address?: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+  };
+  allergies: Array<{
+    id: string;
+    substance: string;
+    reaction: string;
+    severity: 'mild' | 'moderate' | 'severe';
+    onset?: string;
+  }>;
+  insurance: any[];
+  status: 'active' | 'inactive';
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Encounter {
+  id: string;
+  patientId: string;
+  type: 'inpatient' | 'outpatient' | 'emergency' | 'telemedicine';
+  status: 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
+  startTime: string;
+  endTime?: string;
+  providerId: string;
+  departmentId: string;
+  chiefComplaint?: string;
+  notes?: string;
+  diagnosis: Array<{
+    id: string;
+    code: string;
+    description: string;
+    type: 'primary' | 'secondary';
+    status: 'active' | 'resolved';
+  }>;
+  procedures: Array<{
+    id: string;
+    code: string;
+    description: string;
+    performedDate: string;
+    performerId: string;
+    status: 'completed' | 'cancelled';
+  }>;
+}
+
+interface VitalSigns {
+  id: string;
+  patientId: string;
+  recordedBy: string;
+  recordedDate: string;
+  temperature?: { value: number; unit: 'fahrenheit' | 'celsius' };
+  bloodPressure?: { systolic: number; diastolic: number; unit: 'mmHg' };
+  heartRate?: { value: number; unit: 'bpm' };
+  respiratoryRate?: { value: number; unit: 'bpm' };
+  oxygenSaturation?: { value: number; unit: '%' };
+}
 
 export interface SyncConflict<T = any> {
   id: string;
@@ -48,9 +117,9 @@ export class SyncConflictSimulator {
       mrn: 'MRN123456',
       firstName: 'John',
       lastName: 'Doe',
-      dateOfBirth: '1990-01-01',
+      dateOfBirth: '199ResourceHistoryTable-ResourceHistoryTable1-ResourceHistoryTable1',
       gender: 'male',
-      phone: '555-0100',
+      phone: '555-ResourceHistoryTable1ResourceHistoryTableResourceHistoryTable',
       email: 'john.doe@example.com',
       address: {
         street: '123 Main St',
@@ -62,18 +131,18 @@ export class SyncConflictSimulator {
       allergies: [],
       insurance: [],
       status: 'active',
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2024-01-01T00:00:00Z'
+      createdAt: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
+      updatedAt: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ'
     };
 
     const localVersion: Patient = {
       ...basePatient,
-      phone: '555-0123', // Local change
+      phone: '555-ResourceHistoryTable123', // Local change
       address: {
         ...basePatient.address!,
         street: '456 Oak Ave' // Local change
       },
-      updatedAt: '2024-01-02T10:00:00Z'
+      updatedAt: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable2T1ResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ'
     };
 
     const serverVersion: Patient = {
@@ -84,9 +153,9 @@ export class SyncConflictSimulator {
         substance: 'Penicillin',
         reaction: 'Rash',
         severity: 'moderate',
-        onset: '2024-01-02T08:00:00Z'
+        onset: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable2TResourceHistoryTable8:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ'
       }],
-      updatedAt: '2024-01-02T09:00:00Z'
+      updatedAt: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable2TResourceHistoryTable9:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ'
     };
 
     const conflict: SyncConflict<Patient> = {
@@ -110,7 +179,7 @@ export class SyncConflictSimulator {
       patientId: 'patient-123',
       type: 'outpatient',
       status: 'in-progress',
-      startTime: '2024-01-02T14:00:00Z',
+      startTime: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable2T14:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
       providerId: 'provider-456',
       departmentId: 'dept-789',
       chiefComplaint: 'Annual checkup',
@@ -121,11 +190,11 @@ export class SyncConflictSimulator {
     const localVersion: Encounter = {
       ...baseEncounter,
       status: 'completed',
-      endTime: '2024-01-02T15:00:00Z',
+      endTime: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable2T15:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
       notes: 'Patient doing well, follow up in 6 months',
       diagnosis: [{
         id: 'diag-1',
-        code: 'Z00.00',
+        code: 'ZResourceHistoryTableResourceHistoryTable.ResourceHistoryTableResourceHistoryTable',
         description: 'Encounter for general adult medical examination',
         type: 'primary',
         status: 'active'
@@ -138,7 +207,7 @@ export class SyncConflictSimulator {
         id: 'proc-1',
         code: '99213',
         description: 'Office visit, established patient',
-        performedDate: '2024-01-02T14:30:00Z',
+        performedDate: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable2T14:3ResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
         performerId: 'provider-456',
         status: 'completed'
       }]
@@ -164,9 +233,9 @@ export class SyncConflictSimulator {
       id: vitalId,
       patientId: 'patient-123',
       recordedBy: 'nurse-789',
-      recordedDate: '2024-01-02T14:15:00Z',
+      recordedDate: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable2T14:15:ResourceHistoryTableResourceHistoryTableZ',
       temperature: { value: 98.6, unit: 'fahrenheit' },
-      bloodPressure: { systolic: 120, diastolic: 80, unit: 'mmHg' },
+      bloodPressure: { systolic: 12ResourceHistoryTable, diastolic: 8ResourceHistoryTable, unit: 'mmHg' },
       heartRate: { value: 72, unit: 'bpm' }
     };
 
@@ -217,7 +286,7 @@ export class SyncConflictSimulator {
       ...operation,
       id: `sync-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       status: 'pending',
-      retryCount: 0
+      retryCount: ResourceHistoryTable
     };
 
     this.syncQueue.push(syncOp);
@@ -232,16 +301,16 @@ export class SyncConflictSimulator {
       operation.status = 'syncing';
       
       // Simulate processing
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 1ResourceHistoryTableResourceHistoryTable));
 
       // Check for conflicts
-      const hasConflict = Math.random() < 0.3; // 30% chance of conflict
+      const hasConflict = Math.random() < ResourceHistoryTable.3; // 3ResourceHistoryTable% chance of conflict
       
       if (hasConflict && operation.type === 'update') {
         operation.status = 'conflict';
         const conflict = this.createRandomConflict(operation.resourceType, operation.resource.id);
         operation.error = `Conflict detected: ${conflict.id}`;
-      } else if (Math.random() < 0.1) { // 10% chance of failure
+      } else if (Math.random() < ResourceHistoryTable.1) { // 1ResourceHistoryTable% chance of failure
         operation.status = 'failed';
         operation.error = 'Network error';
         operation.retryCount++;

@@ -93,7 +93,7 @@ export class OfflineAuditService {
     // Start periodic compliance checks
     setInterval(() => {
       this.performComplianceCheck();
-    }, 60 * 60 * 1000); // Every hour
+    }, 6ResourceHistoryTable * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable); // Every hour
   }
 
   /**
@@ -112,7 +112,7 @@ export class OfflineAuditService {
     }
 
     const entry: OfflineAuditEntry = {
-      id: 0, // Will be auto-incremented by IndexedDB
+      id: ResourceHistoryTable, // Will be auto-incremented by IndexedDB
       timestamp: new Date().toISOString(),
       action: eventType,
       description: `${event.action}: ${details}`,
@@ -172,7 +172,7 @@ export class OfflineAuditService {
       userId: context.userId,
       patientId: context.patientId,
       action: actionMap[eventType] || 'VIEW',
-      dataType: details.split(' ')[0] || 'Unknown',
+      dataType: details.split(' ')[ResourceHistoryTable] || 'Unknown',
       purpose: 'Clinical Care', // Would be passed in context
       authorized: eventType !== 'PHI_UNAUTHORIZED',
       offline: true
@@ -259,26 +259,26 @@ export class OfflineAuditService {
   }> {
     const entries = await offlineSecurityService.getAuditLog({ userId });
     const anomalies: string[] = [];
-    let riskScore = 0;
+    let riskScore = ResourceHistoryTable;
 
     // Check for unusual access times
     const accessTimes = entries.map(e => new Date(e.timestamp).getHours());
     const nightAccess = accessTimes.filter(hour => hour < 6 || hour > 22).length;
-    if (nightAccess > entries.length * 0.3) {
+    if (nightAccess > entries.length * ResourceHistoryTable.3) {
       anomalies.push('Unusual access times detected');
-      riskScore += 20;
+      riskScore += 2ResourceHistoryTable;
     }
 
     // Check for rapid consecutive accesses
     const rapidAccess = this.detectRapidAccess(entries);
     if (rapidAccess) {
       anomalies.push('Rapid consecutive data access detected');
-      riskScore += 30;
+      riskScore += 3ResourceHistoryTable;
     }
 
     // Check for access to multiple patients
     const patientAccess = this.countPatientAccess(entries);
-    if (patientAccess > 50) {
+    if (patientAccess > 5ResourceHistoryTable) {
       anomalies.push('High volume of patient record access');
       riskScore += 25;
     }
@@ -289,13 +289,13 @@ export class OfflineAuditService {
     ).length;
     if (failedAttempts > 5) {
       anomalies.push('Multiple failed access attempts');
-      riskScore += 40;
+      riskScore += 4ResourceHistoryTable;
     }
 
     return {
-      normal: anomalies.length === 0,
+      normal: anomalies.length === ResourceHistoryTable,
       anomalies,
-      riskScore: Math.min(riskScore, 100)
+      riskScore: Math.min(riskScore, 1ResourceHistoryTableResourceHistoryTable)
     };
   }
 
@@ -357,9 +357,9 @@ export class OfflineAuditService {
 
   private async savePHIAccessLogs(): Promise<void> {
     try {
-      // Keep only last 90 days
+      // Keep only last 9ResourceHistoryTable days
       const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - 90);
+      cutoff.setDate(cutoff.getDate() - 9ResourceHistoryTable);
       
       this.phiAccessLogs = this.phiAccessLogs.filter(log =>
         log.timestamp > cutoff
@@ -382,24 +382,24 @@ export class OfflineAuditService {
       totalAccess: entries.length,
       byUser: {} as Record<string, number>,
       byClassification: {
-        phi: 0,
-        sensitive: 0,
-        general: 0
+        phi: ResourceHistoryTable,
+        sensitive: ResourceHistoryTable,
+        general: ResourceHistoryTable
       },
-      encryptionEvents: 0,
-      decryptionEvents: 0,
-      accessDenied: 0,
-      securityViolations: 0,
-      itemsStored: 0,
-      itemsPurged: 0,
-      averageLifetime: 0
+      encryptionEvents: ResourceHistoryTable,
+      decryptionEvents: ResourceHistoryTable,
+      accessDenied: ResourceHistoryTable,
+      securityViolations: ResourceHistoryTable,
+      itemsStored: ResourceHistoryTable,
+      itemsPurged: ResourceHistoryTable,
+      averageLifetime: ResourceHistoryTable
     };
 
     // Process entries
     entries.forEach(entry => {
       // Count by user
       if (entry.userId) {
-        stats.byUser[entry.userId] = (stats.byUser[entry.userId] || 0) + 1;
+        stats.byUser[entry.userId] = (stats.byUser[entry.userId] || ResourceHistoryTable) + 1;
       }
 
       // Count by event type
@@ -454,17 +454,17 @@ export class OfflineAuditService {
   }
 
   private detectRapidAccess(entries: OfflineAuditEntry[]): boolean {
-    if (entries.length < 10) return false;
+    if (entries.length < 1ResourceHistoryTable) return false;
 
     const sorted = entries.sort((a, b) => 
       new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
 
-    let rapidCount = 0;
+    let rapidCount = ResourceHistoryTable;
     for (let i = 1; i < sorted.length; i++) {
       const timeDiff = new Date(sorted[i].timestamp).getTime() - 
                       new Date(sorted[i-1].timestamp).getTime();
-      if (timeDiff < 1000) { // Less than 1 second
+      if (timeDiff < 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable) { // Less than 1 second
         rapidCount++;
       }
     }
@@ -502,12 +502,12 @@ export class OfflineAuditService {
     // Check for old data that should be purged
     if (stats.oldestItem) {
       const age = now.getTime() - stats.oldestItem.getTime();
-      if (age > 90 * 24 * 60 * 60 * 1000) { // 90 days
+      if (age > 9ResourceHistoryTable * 24 * 6ResourceHistoryTable * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable) { // 9ResourceHistoryTable days
         await this.logEvent(
           'RETENTION_POLICY',
           'Old data detected for purging',
           undefined,
-          { age: Math.floor(age / (24 * 60 * 60 * 1000)) }
+          { age: Math.floor(age / (24 * 6ResourceHistoryTable * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable)) }
         );
       }
     }
@@ -546,8 +546,8 @@ export class OfflineAuditService {
     const encoder = new TextEncoder();
     const hash = await crypto.subtle.digest('SHA-256', encoder.encode(data));
     const bytes = new Uint8Array(hash);
-    return Array.from(bytes.slice(0, 8), byte => 
-      byte.toString(16).padStart(2, '0')
+    return Array.from(bytes.slice(ResourceHistoryTable, 8), byte => 
+      byte.toString(16).padStart(2, 'ResourceHistoryTable')
     ).join('');
   }
 

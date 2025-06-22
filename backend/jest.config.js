@@ -11,7 +11,9 @@ module.exports = {
     '/node_modules/',
     '/dist/',
     '/coverage/',
-    '\\.d\\.ts$'
+    '\\.d\\.ts$',
+    '<rootDir>/tests/global-setup.ts',
+    '<rootDir>/tests/global-teardown.ts'
   ],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
@@ -98,5 +100,22 @@ module.exports = {
     '\\.git'
   ],
   // Reporter configuration
-  reporters: ['default'],
+  reporters: [
+    'default',
+    ['jest-junit', {
+      outputDirectory: './test-results',
+      outputName: 'backend-junit.xml',
+      classNameTemplate: '{classname}',
+      titleTemplate: '{title}',
+      ancestorSeparator: ' › ',
+      usePathForSuiteName: 'true'
+    }],
+    ['jest-html-reporter', {
+      pageTitle: 'Backend Test Report',
+      outputPath: './test-results/backend-report.html',
+      includeFailureMsg: true,
+      includeConsoleLog: true,
+      theme: 'darkTheme'
+    }]
+  ],
 };

@@ -4,8 +4,14 @@
  * Express-based controller for analytics and reporting endpoints
  */
 
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
+
 import logger from '../utils/logger';
+import { ClinicalQualityMeasuresService } from '../services/analytics/clinical-quality-measures.service';
+import { FinancialAnalyticsService } from '../services/analytics/financial-analytics.service';
+import { OperationalMetricsService } from '../services/analytics/operational-metrics.service';
+import { PopulationHealthService } from '../services/analytics/population-health.service';
+import { ReportingEngineService } from '../services/analytics/reporting-engine.service';
 
 /**
  * Analytics Controller
@@ -13,261 +19,617 @@ import logger from '../utils/logger';
  */
 export class AnalyticsController {
   constructor() {
-    // Initialize any dependencies here
+    // Services are created lazily to allow for proper mocking
+  }
+
+  private getClinicalQualityService(): ClinicalQualityMeasuresService {
+    return new ClinicalQualityMeasuresService();
+  }
+
+  private getFinancialService(): FinancialAnalyticsService {
+    return new FinancialAnalyticsService();
+  }
+
+  private getOperationalService(): OperationalMetricsService {
+    return new OperationalMetricsService();
+  }
+
+  private getPopulationService(): PopulationHealthService {
+    return new PopulationHealthService();
+  }
+
+  private getReportingService(): ReportingEngineService {
+    return new ReportingEngineService();
+  }
+
+  private checkAuthentication(req: Request, res: Response): boolean {
+    if (!(req as any).user) {
+      res.status(401).json({
+        success: false,
+        error: 'Unauthorized',
+        message: 'Authentication required'
+      });
+      return false;
+    }
+    return true;
+  }
+
+  private checkPermissions(req: Request, res: Response, permission: string): boolean {
+    const user = (req as any).user;
+    if (!user.permissions.includes(permission)) {
+      res.status(403).json({
+        success: false,
+        error: 'Forbidden',
+        message: 'Insufficient permissions for analytics data'
+      });
+      return false;
+    }
+    return true;
+  }
+
+  private parseDate(dateString: string): Date | null {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    return isNaN(date.getTime()) ? null : date;
+  }
+
+  private validateDateRange(startDate: string, endDate: string, res: Response): boolean {
+    const start = this.parseDate(startDate);
+    const end = this.parseDate(endDate);
+    
+    if (!start || !end) {
+      res.status(400).json({
+        success: false,
+        error: 'Invalid date parameters',
+        message: 'startDate and endDate must be valid ISO dates'
+      });
+      return false;
+    }
+    
+    if (end <= start) {
+      res.status(400).json({
+        success: false,
+        error: 'Invalid date range',
+        message: 'End date must be after start date'
+      });
+      return false;
+    }
+    
+    return true;
+  }
+
+  private validatePagination(page: string, limit: string, res: Response): boolean {
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    
+    if (pageNum < 1 || limitNum < 1) {
+      res.status(400).json({
+        success: false,
+        error: 'Invalid pagination parameters',
+        message: 'Page must be >= 1 and limit must be > 0'
+      });
+      return false;
+    }
+    
+    return true;
   }
 
   // Clinical Quality Measures Endpoint
-  getClinicalQualityMeasures(req: Request, res: Response) {
+  async getClinicalQualityMeasures(req: Request, res: Response, next?: NextFunction) {
     try {
-      const { facilityId } = req.params;
-      const { startDate, endDate } = req.query;
+      if (!this.checkAuthentication(req, res)) return;
+      if (!this.checkPermissions(req, res, 'analytics:read')) return;
 
-      // Mock implementation for build compatibility
-      const mockData = {
-        facilityId,
-        measures: [],
-        period: { startDate, endDate },
-        timestamp: new Date()
-      };
+      const { startDate, endDate, measureSet } = req.query;
 
-      res.json({
+      if (startDate && endDate) {
+        if (!this.validateDateRange(startDate as string, endDate as string, res)) return;
+      }
+
+      const start = this.parseDate(startDate as string);
+      const end = this.parseDate(endDate as string);
+      
+      const measures = await this.getClinicalQualityService().calculateQualityMeasures({
+        startDate: start,
+        endDate: end,
+        measureSet: measureSet as string
+      });
+
+      res.status(200).json({
         success: true,
-        data: mockData
+        data: measures
       });
     } catch (error: unknown) {
       logger.error('Error fetching clinical quality measures:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch clinical quality measures'
+      if (next) {
+        next(error);
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to fetch clinical quality measures'
+        });
+      }
+    }
+  }
+
+  // Quality Measure Details Endpoint
+  async getQualityMeasureDetails(req: Request, res: Response, next?: NextFunction) {
+    try {
+      if (!this.checkAuthentication(req, res)) return;
+      if (!this.checkPermissions(req, res, 'analytics:read')) return;
+
+      const { measureId } = req.params;
+      
+      const details = await this.getClinicalQualityService().getQualityMeasureDetails(measureId);
+
+      res.status(200).json({
+        success: true,
+        data: details
       });
+    } catch (error: unknown) {
+      logger.error('Error fetching quality measure details:', error);
+      if (next) {
+        next(error);
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to fetch quality measure details'
+        });
+      }
     }
   }
 
   // Financial Analytics Endpoint
-  async getFinancialAnalytics(req: Request, res: Response) {
+  async getFinancialAnalytics(req: Request, res: Response, next?: NextFunction) {
     try {
+      if (!this.checkAuthentication(req, res)) return;
+      if (!this.checkPermissions(req, res, 'analytics:read')) return;
+
       const { facilityId } = req.params;
       const { startDate, endDate } = req.query;
 
-      // Mock implementation for build compatibility
-      const mockData = {
-        facilityId,
-        revenue: 0,
-        expenses: 0,
-        period: { startDate, endDate },
-        timestamp: new Date()
-      };
+      if (startDate && endDate) {
+        if (!this.validateDateRange(startDate as string, endDate as string, res)) return;
+      }
 
-      res.json({
+      const start = this.parseDate(startDate as string);
+      const end = this.parseDate(endDate as string);
+      
+      const financialData = await this.getFinancialService().getFinancialAnalytics({
+        facilityId,
+        startDate: start,
+        endDate: end
+      });
+
+      res.status(200).json({
         success: true,
-        data: mockData
+        data: financialData
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error fetching financial analytics:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch financial analytics'
+      if (next) {
+        next(error);
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to fetch financial analytics'
+        });
+      }
+    }
+  }
+
+  // Revenue Analytics Endpoint
+  async getRevenueAnalytics(req: Request, res: Response, next?: NextFunction) {
+    try {
+      if (!this.checkAuthentication(req, res)) return;
+      if (!this.checkPermissions(req, res, 'analytics:read')) return;
+
+      const { startDate, endDate, groupBy } = req.query;
+
+      if (startDate && endDate) {
+        if (!this.validateDateRange(startDate as string, endDate as string, res)) return;
+      }
+
+      const start = this.parseDate(startDate as string);
+      const end = this.parseDate(endDate as string);
+      
+      const revenueData = await this.getFinancialService().getRevenueAnalytics({
+        startDate: start,
+        endDate: end,
+        groupBy: groupBy as string
       });
+
+      res.status(200).json({
+        success: true,
+        data: revenueData
+      });
+    } catch (error: unknown) {
+      logger.error('Error fetching revenue analytics:', error);
+      if (next) {
+        next(error);
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to fetch revenue analytics'
+        });
+      }
+    }
+  }
+
+  // Cost Analytics Endpoint
+  async getCostAnalytics(req: Request, res: Response, next?: NextFunction) {
+    try {
+      if (!this.checkAuthentication(req, res)) return;
+      if (!this.checkPermissions(req, res, 'analytics:read')) return;
+      
+      const costData = await this.getFinancialService().getCostAnalytics();
+
+      res.status(200).json({
+        success: true,
+        data: costData
+      });
+    } catch (error: unknown) {
+      logger.error('Error fetching cost analytics:', error);
+      if (next) {
+        next(error);
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to fetch cost analytics'
+        });
+      }
     }
   }
 
   // Operational Metrics Endpoint
-  async getOperationalMetrics(req: Request, res: Response) {
+  async getOperationalMetrics(req: Request, res: Response, next?: NextFunction) {
     try {
-      const { facilityId } = req.params;
+      if (!this.checkAuthentication(req, res)) return;
+      if (!this.checkPermissions(req, res, 'analytics:read')) return;
 
-      // Mock implementation for build compatibility
-      const mockData = {
-        facilityId,
-        patientFlow: {},
-        staffUtilization: {},
-        appointments: {},
-        timestamp: new Date()
-      };
+      const { period, department } = req.query;
+      
+      const metrics = await this.getOperationalService().getOperationalMetrics({
+        period: period as string,
+        department: department as string
+      });
 
-      res.json({
+      res.status(200).json({
         success: true,
-        data: mockData
+        data: metrics
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error fetching operational metrics:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch operational metrics'
+      if (next) {
+        next(error);
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to fetch operational metrics'
+        });
+      }
+    }
+  }
+
+  // Performance Indicators Endpoint
+  async getPerformanceIndicators(req: Request, res: Response, next?: NextFunction) {
+    try {
+      if (!this.checkAuthentication(req, res)) return;
+      if (!this.checkPermissions(req, res, 'analytics:read')) return;
+      
+      const kpis = await this.getOperationalService().getKeyPerformanceIndicators();
+
+      res.status(200).json({
+        success: true,
+        data: kpis
       });
+    } catch (error: unknown) {
+      logger.error('Error fetching performance indicators:', error);
+      if (next) {
+        next(error);
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to fetch performance indicators'
+        });
+      }
     }
   }
 
   // Population Health Analytics Endpoint
-  async getPopulationHealthAnalytics(req: Request, res: Response) {
+  async getPopulationHealthAnalytics(req: Request, res: Response, next?: NextFunction) {
     try {
+      if (!this.checkAuthentication(req, res)) return;
+      if (!this.checkPermissions(req, res, 'analytics:read')) return;
+
       const { facilityId } = req.params;
       const { startDate, endDate } = req.query;
 
-      // Mock implementation for build compatibility
-      const mockData = {
-        facilityId,
-        populationMetrics: {},
-        riskStratification: {},
-        period: { startDate, endDate },
-        timestamp: new Date()
-      };
+      if (startDate && endDate) {
+        if (!this.validateDateRange(startDate as string, endDate as string, res)) return;
+      }
 
-      res.json({
+      const start = this.parseDate(startDate as string);
+      const end = this.parseDate(endDate as string);
+      
+      const populationData = await this.getPopulationService().getPopulationHealthAnalytics({
+        facilityId,
+        startDate: start,
+        endDate: end
+      });
+
+      res.status(200).json({
         success: true,
-        data: mockData
+        data: populationData
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error fetching population health analytics:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch population health analytics'
+      if (next) {
+        next(error);
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to fetch population health analytics'
+        });
+      }
+    }
+  }
+
+  // Population Health Metrics Endpoint (alias for test compatibility)
+  async getPopulationHealthMetrics(req: Request, res: Response, next?: NextFunction) {
+    try {
+      if (!this.checkAuthentication(req, res)) return;
+      if (!this.checkPermissions(req, res, 'analytics:read')) return;
+
+      const { population, riskLevel } = req.query;
+      
+      const populationData = await this.getPopulationService().getPopulationHealthMetrics({
+        population: population as string,
+        riskLevel: riskLevel as string
       });
+
+      res.status(200).json({
+        success: true,
+        data: populationData
+      });
+    } catch (error: unknown) {
+      logger.error('Error fetching population health metrics:', error);
+      if (next) {
+        next(error);
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to fetch population health metrics'
+        });
+      }
     }
   }
 
   // Reports Endpoint
-  async getReports(req: Request, res: Response) {
+  async getReports(req: Request, res: Response, next?: NextFunction) {
     try {
+      if (!this.checkAuthentication(req, res)) return;
+      if (!this.checkPermissions(req, res, 'analytics:read')) return;
+
       const { facilityId, type, status } = req.query;
+      
+      const reports = await this.getReportingService().getReports({
+        facilityId: facilityId as string,
+        type: type as string,
+        status: status as string
+      });
 
-      // Mock implementation for build compatibility
-      const mockData = {
-        reports: [],
-        filters: { facilityId, type, status },
-        timestamp: new Date()
-      };
-
-      res.json({
+      res.status(200).json({
         success: true,
-        data: mockData
+        data: reports
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error fetching reports:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch reports'
+      if (next) {
+        next(error);
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to fetch reports'
+        });
+      }
+    }
+  }
+
+  // Generate Report Endpoint
+  async generateReport(req: Request, res: Response, next?: NextFunction) {
+    try {
+      if (!this.checkAuthentication(req, res)) return;
+      if (!this.checkPermissions(req, res, 'analytics:read')) return;
+
+      const { reportType, parameters, format } = req.body;
+      const userId = (req as any).user?.id;
+
+      const supportedTypes = ['quality-measures', 'financial', 'operational', 'population-health'];
+      if (!supportedTypes.includes(reportType)) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid report type',
+          message: 'Supported report types: quality-measures, financial, operational, population-health'
+        });
+        return;
+      }
+      
+      const report = await this.getReportingService().generateCustomReport({
+        reportType,
+        parameters,
+        format,
+        userId
       });
+
+      res.status(200).json({
+        success: true,
+        data: report
+      });
+    } catch (error: unknown) {
+      logger.error('Error generating report:', error);
+      if (next) {
+        next(error);
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to generate report'
+        });
+      }
+    }
+  }
+
+  // Report History Endpoint
+  async getReportHistory(req: Request, res: Response, next?: NextFunction) {
+    try {
+      if (!this.checkAuthentication(req, res)) return;
+      if (!this.checkPermissions(req, res, 'analytics:read')) return;
+
+      const { page = '1', limit = '10' } = req.query;
+      const userId = (req as any).user?.id;
+
+      if (!this.validatePagination(page as string, limit as string, res)) return;
+      
+      const history = await this.getReportingService().getReportHistory({
+        userId,
+        page: parseInt(page as string),
+        limit: parseInt(limit as string)
+      });
+
+      res.status(200).json({
+        success: true,
+        data: history
+      });
+    } catch (error: unknown) {
+      logger.error('Error fetching report history:', error);
+      if (next) {
+        next(error);
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to fetch report history'
+        });
+      }
     }
   }
 
   // Create Custom Report Endpoint
-  async createCustomReport(req: Request, res: Response) {
+  async createCustomReport(req: Request, res: Response, next?: NextFunction) {
     try {
+      if (!this.checkAuthentication(req, res)) return;
+      if (!this.checkPermissions(req, res, 'analytics:write')) return;
+
       const reportConfig = req.body;
+      const userId = (req as any).user?.id;
+      
+      const report = await this.getReportingService().createCustomReport({
+        ...reportConfig,
+        userId
+      });
 
-      // Mock implementation for build compatibility
-      const mockReport = {
-        id: `report-${Date.now()}`,
-        config: reportConfig,
-        status: 'created',
-        timestamp: new Date()
-      };
-
-      res.json({
+      res.status(200).json({
         success: true,
-        data: mockReport
+        data: report
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error creating custom report:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to create custom report'
-      });
+      if (next) {
+        next(error);
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to create custom report'
+        });
+      }
     }
   }
 
   // Real-time Metrics Endpoint
-  async getRealTimeMetrics(req: Request, res: Response) {
+  async getRealTimeMetrics(req: Request, res: Response, next?: NextFunction) {
     try {
+      if (!this.checkAuthentication(req, res)) return;
+      if (!this.checkPermissions(req, res, 'analytics:read')) return;
+
       const { facilityId } = req.params;
+      
+      const realTimeData = await this.getOperationalService().getRealTimeMetrics({
+        facilityId
+      });
 
-      // Mock implementation for build compatibility
-      const mockData = {
-        facilityId,
-        realTimeMetrics: {
-          activePatients: 0,
-          waitingPatients: 0,
-          availableProviders: 0
-        },
-        timestamp: new Date()
-      };
-
-      res.json({
+      res.status(200).json({
         success: true,
-        data: mockData
+        data: realTimeData
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error fetching real-time metrics:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch real-time metrics'
-      });
+      if (next) {
+        next(error);
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to fetch real-time metrics'
+        });
+      }
     }
   }
 
   // Analytics Alerts Endpoint
-  async getAnalyticsAlerts(req: Request, res: Response) {
+  async getAnalyticsAlerts(req: Request, res: Response, next?: NextFunction) {
     try {
+      if (!this.checkAuthentication(req, res)) return;
+      if (!this.checkPermissions(req, res, 'analytics:read')) return;
+
       const { facilityId } = req.params;
+      
+      const alerts = await this.getOperationalService().getAnalyticsAlerts({
+        facilityId
+      });
 
-      // Mock implementation for build compatibility
-      const mockData = {
-        facilityId,
-        alerts: [],
-        timestamp: new Date()
-      };
-
-      res.json({
+      res.status(200).json({
         success: true,
-        data: mockData
+        data: alerts
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error fetching analytics alerts:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch analytics alerts'
-      });
+      if (next) {
+        next(error);
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to fetch analytics alerts'
+        });
+      }
     }
   }
 
   // Benchmark Comparisons Endpoint
-  async getBenchmarkComparisons(req: Request, res: Response) {
+  async getBenchmarkComparisons(req: Request, res: Response, next?: NextFunction) {
     try {
+      if (!this.checkAuthentication(req, res)) return;
+      if (!this.checkPermissions(req, res, 'analytics:read')) return;
+
       const { facilityId } = req.params;
       const { category } = req.query;
+      
+      const benchmarks = await this.getOperationalService().getBenchmarkComparisons({
+        facilityId,
+        category: category as string
+      });
 
-      // Mock benchmark data for build compatibility
-      const benchmarks = {
-        clinical: {
-          diabetesControl: { current: 73.5, benchmark: 75.0, percentile: 45 },
-          hypertensionControl: { current: 68.2, benchmark: 70.0, percentile: 42 },
-          patientSatisfaction: { current: 4.2, benchmark: 4.5, percentile: 38 }
-        },
-        financial: {
-          collectionRate: { current: 92.5, benchmark: 95.0, percentile: 48 },
-          daysInAR: { current: 45, benchmark: 35, percentile: 25 },
-          denialRate: { current: 8.5, benchmark: 5.0, percentile: 20 }
-        },
-        operational: {
-          waitTime: { current: 18, benchmark: 15, percentile: 35 },
-          patientThroughput: { current: 85, benchmark: 95, percentile: 40 },
-          staffUtilization: { current: 87.5, benchmark: 85.0, percentile: 65 }
-        }
-      };
-
-      const result = category ? benchmarks[category as keyof typeof benchmarks] : benchmarks;
-
-      res.json({
+      res.status(200).json({
         success: true,
-        data: result
+        data: benchmarks
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error fetching benchmark comparisons:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch benchmark comparisons'
-      });
+      if (next) {
+        next(error);
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to fetch benchmark comparisons'
+        });
+      }
     }
   }
 }

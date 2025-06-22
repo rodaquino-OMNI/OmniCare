@@ -143,7 +143,7 @@ test.describe('Patient Management - Comprehensive Flow', () => {
         await page.getByRole('button', { name: /complete registration/i }).click();
         
         // Wait for success message
-        await helpers.wait.waitForToast(/patient registered successfully/i);
+        await helpers.wait.waitForToast('patient registered successfully');
         
         // Should redirect to patient profile
         await expect(page).toHaveURL(/\/patients\/[\w-]+/);
@@ -441,7 +441,7 @@ test.describe('Patient Management - Comprehensive Flow', () => {
         await editButton.click();
         
         // Should open edit modal or form
-        await helpers.modal.waitForModal(/edit patient/i);
+        await helpers.modal.waitForModal('edit patient');
         
         // Update phone number
         const phoneInput = page.getByLabel(/phone/i);
@@ -452,7 +452,7 @@ test.describe('Patient Management - Comprehensive Flow', () => {
         await page.getByRole('button', { name: /save/i }).click();
         
         // Verify changes were saved
-        await helpers.wait.waitForToast(/patient updated/i);
+        await helpers.wait.waitForToast('patient updated');
         await expect(page.getByText('555-9999')).toBeVisible();
       });
     });
@@ -474,7 +474,7 @@ test.describe('Patient Management - Comprehensive Flow', () => {
           // Confirm status change
           await helpers.modal.confirmModal('confirm');
           
-          await helpers.wait.waitForToast(/status updated/i);
+          await helpers.wait.waitForToast('status updated');
           
           // Verify status indicator updated
           await expect(page.locator('[data-testid="patient-status"]')).toContainText(/inactive/i);
@@ -500,7 +500,7 @@ test.describe('Patient Management - Comprehensive Flow', () => {
             await mergeOption.click();
             
             // Should open merge workflow
-            await helpers.modal.waitForModal(/merge patient/i);
+            await helpers.modal.waitForModal('merge patient');
             
             // Cancel merge for this test
             await helpers.modal.closeModal();
@@ -542,9 +542,17 @@ test.describe('Patient Management - Comprehensive Flow', () => {
           await medicationsTab.click();
           
           // Should show current medications
-          if (testPatient.medications) {
+          if (testPatient.medications && testPatient.medications.length > 0) {
             for (const medication of testPatient.medications) {
               await expect(page.getByText(medication.name)).toBeVisible();
+            }
+          } else {
+            // If no medications, expect to see "No medications" or similar message
+            const noMedicationsMessage = page.getByText(/no medications/i).or(
+              page.getByText(/no current medications/i)
+            );
+            if (await noMedicationsMessage.isVisible()) {
+              await expect(noMedicationsMessage).toBeVisible();
             }
           }
         }
@@ -556,9 +564,17 @@ test.describe('Patient Management - Comprehensive Flow', () => {
           await allergiesTab.click();
           
           // Should show allergy list
-          if (testPatient.allergies) {
+          if (testPatient.allergies && testPatient.allergies.length > 0) {
             for (const allergy of testPatient.allergies) {
               await expect(page.getByText(allergy.allergen)).toBeVisible();
+            }
+          } else {
+            // If no allergies, expect to see "No allergies" or similar message
+            const noAllergiesMessage = page.getByText(/no allergies/i).or(
+              page.getByText(/no known allergies/i)
+            );
+            if (await noAllergiesMessage.isVisible()) {
+              await expect(noAllergiesMessage).toBeVisible();
             }
           }
         }

@@ -28,7 +28,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     { id: '7', name: 'view_lab_results', description: 'View laboratory results', resource: 'DiagnosticReport', action: 'read' },
     { id: '8', name: 'manage_encounters', description: 'Manage patient encounters', resource: 'Encounter', action: 'write' },
     { id: '9', name: 'administer_medications', description: 'Administer medications to patients', resource: 'MedicationAdministration', action: 'create' },
-    { id: '10', name: 'record_vital_signs', description: 'Record patient vital signs', resource: 'Observation', action: 'create' }
+    { id: '1ResourceHistoryTable', name: 'record_vital_signs', description: 'Record patient vital signs', resource: 'Observation', action: 'create' }
   ],
   
   admin: [
@@ -57,7 +57,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     { id: '3', name: 'create_prescriptions', description: 'Create medication prescriptions', resource: 'MedicationRequest', action: 'create' },
     { id: '18', name: 'dispense_medications', description: 'Dispense medications', resource: 'MedicationDispense', action: 'create' },
     { id: '19', name: 'verify_prescriptions', description: 'Verify medication prescriptions', resource: 'MedicationRequest', action: 'verify' },
-    { id: '20', name: 'drug_interaction_check', description: 'Check drug interactions', resource: 'MedicationRequest', action: 'analyze' }
+    { id: '2ResourceHistoryTable', name: 'drug_interaction_check', description: 'Check drug interactions', resource: 'MedicationRequest', action: 'analyze' }
   ],
   
   lab_tech: [
@@ -90,7 +90,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     { id: '1', name: 'view_patient_records', description: 'View patient medical records', resource: 'Patient', action: 'read' },
     { id: '2', name: 'edit_patient_records', description: 'Edit patient medical records', resource: 'Patient', action: 'write' },
     { id: '11', name: 'manage_appointments', description: 'Manage patient appointments', resource: 'Appointment', action: 'write' },
-    { id: '30', name: 'patient_checkin', description: 'Check in patients', resource: 'Encounter', action: 'checkin' }
+    { id: '3ResourceHistoryTable', name: 'patient_checkin', description: 'Check in patients', resource: 'Encounter', action: 'checkin' }
   ]
 };
 

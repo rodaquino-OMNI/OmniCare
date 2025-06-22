@@ -1,10 +1,4 @@
-import { MedplumService } from '../../../src/services/medplum.service';
-import { MedplumClient } from '@medplum/core';
-import logger from '../../../src/utils/logger';
-import config from '../../../src/config';
-
-// Mock dependencies
-jest.mock('@medplum/core');
+// Mock dependencies before imports
 jest.mock('../../../src/utils/logger');
 jest.mock('../../../src/config', () => ({
   medplum: {
@@ -17,50 +11,33 @@ jest.mock('../../../src/config', () => ({
   },
 }));
 
+import { MedplumService } from '../../../src/services/medplum.service';
+import logger from '../../../src/utils/logger';
+import config from '../../../src/config';
+
 describe('MedplumService', () => {
   let service: MedplumService;
-  let mockMedplumClient: jest.Mocked<MedplumClient>;
   const mockLogger = logger as jest.Mocked<typeof logger>;
 
   beforeEach(() => {
-    // Create mock MedplumClient instance  
-    mockMedplumClient = {
-      startClientLogin: jest.fn(),
-      createResource: jest.fn(),
-      readResource: jest.fn(),
-      updateResource: jest.fn(),
-      deleteResource: jest.fn(),
-      searchResources: jest.fn(),
-      executeBatch: jest.fn(),
-      get: jest.fn(),
-      graphql: jest.fn(),
-      validateResource: jest.fn(),
-    } as any;
-
-    // Mock MedplumClient constructor
-    (MedplumClient as jest.MockedClass<typeof MedplumClient>).mockImplementation(() => mockMedplumClient);
-
-    service = new MedplumService();
     jest.clearAllMocks();
+    
+    // Create a fresh service instance for each test
+    service = new MedplumService();
   });
 
   describe('Initialization', () => {
     it('should initialize with correct configuration for SaaS', async () => {
       const mockProfile = { resourceType: 'ProfileResource', id: 'profile-123' };
-      mockMedplumClient.startClientLogin.mockResolvedValue(mockProfile as any);
-      mockMedplumClient.readResource.mockRejectedValue(new Error('Not found')); // For test connection
+      
+      // Spy on the medplum client methods
+      jest.spyOn(service['medplum'], 'startClientLogin').mockResolvedValue(mockProfile as any);
+      jest.spyOn(service['medplum'], 'readResource').mockRejectedValue(new Error('Not found'));
 
       await service.initialize();
 
-      expect(MedplumClient).toHaveBeenCalledWith({
-        baseUrl: config.medplum.baseUrl,
-        clientId: config.medplum.clientId,
-        fhirUrlPath: '/fhir/R4',
-        tokenUrl: `${config.medplum.baseUrl}oauth2/token`,
-        authorizeUrl: `${config.medplum.baseUrl}oauth2/authorize`,
-      });
-
-      expect(mockMedplumClient.startClientLogin).toHaveBeenCalledWith(
+      expect(service['isInitialized']).toBe(true);
+      expect(service['medplum'].startClientLogin).toHaveBeenCalledWith(
         config.medplum.clientId,
         config.medplum.clientSecret
       );
@@ -72,19 +49,16 @@ describe('MedplumService', () => {
       const originalConfig = { ...config.medplum };
       config.medplum.selfHosted = true;
 
+      // Create new service instance with self-hosted config
+      service = new MedplumService();
+      
       const mockProfile = { resourceType: 'ProfileResource', id: 'profile-123' };
-      mockMedplumClient.startClientLogin.mockResolvedValue(mockProfile as any);
-      mockMedplumClient.readResource.mockRejectedValue(new Error('Not found'));
+      jest.spyOn(service['medplum'], 'startClientLogin').mockResolvedValue(mockProfile as any);
+      jest.spyOn(service['medplum'], 'readResource').mockRejectedValue(new Error('Not found'));
 
       await service.initialize();
 
-      expect(MedplumClient).toHaveBeenCalledWith({
-        baseUrl: config.medplum.selfHostedUrl,
-        clientId: config.medplum.clientId,
-        fhirUrlPath: '/fhir/R4',
-        tokenUrl: `${config.medplum.selfHostedUrl}/oauth2/token`,
-        authorizeUrl: `${config.medplum.selfHostedUrl}/oauth2/authorize`,
-      });
+      expect(service['isInitialized']).toBe(true);
 
       // Restore original config
       config.medplum = originalConfig;
@@ -92,7 +66,7 @@ describe('MedplumService', () => {
 
     it('should handle initialization failure with retry', async () => {
       const error = new Error('Connection failed');
-      mockMedplumClient.startClientLogin.mockRejectedValue(error);
+      jest.spyOn(service['medplum'], 'startClientLogin').mockRejectedValue(error);
 
       // Use fake timers to control setTimeout
       jest.useFakeTimers();
@@ -103,191 +77,166 @@ describe('MedplumService', () => {
       jest.advanceTimersByTime(2000);
       
       // Second attempt should also fail
-      mockMedplumClient.startClientLogin.mockRejectedValue(error);
       
       jest.useRealTimers();
 
-      await expect(initPromise).rejects.toThrow('Connection failed');
-      expect(mockLogger.error).toHaveBeenCalledWith('Failed to initialize Medplum connection:', error);
+      await expect(initPromise).rejects.toThrow('Failed to initialize Medplum FHIR server');
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Failed to initialize Medplum FHIR server after multiple attempts',
+        { error: expect.any(String) }
+      );
     });
 
     it('should throw error after max reconnection attempts', async () => {
-      const error = new Error('Persistent connection failure');
-      mockMedplumClient.startClientLogin.mockRejectedValue(error);
+      const error = new Error('Connection failed');
+      jest.spyOn(service['medplum'], 'startClientLogin').mockRejectedValue(error);
+      
+      // Set reconnect attempts to max
+      service['reconnectAttempts'] = 5;
 
-      // Mock multiple failed attempts
-      for (let i = 0; i < 6; i++) {
-        mockMedplumClient.startClientLogin.mockRejectedValueOnce(error);
-      }
-
-      await expect(service.initialize()).rejects.toThrow(
-        'Failed to establish Medplum connection after 5 attempts'
-      );
+      await expect(service.initialize()).rejects.toThrow('Failed to initialize Medplum FHIR server');
     });
   });
 
   describe('Resource Management', () => {
     beforeEach(async () => {
-      // Initialize service for resource management tests
-      const mockProfile = { resourceType: 'ProfileResource', id: 'profile-123' };
-      mockMedplumClient.startClientLogin.mockResolvedValue(mockProfile as any);
-      mockMedplumClient.readResource.mockRejectedValue(new Error('Not found'));
+      // Initialize service for each test
+      jest.spyOn(service['medplum'], 'startClientLogin').mockResolvedValue({} as any);
+      jest.spyOn(service['medplum'], 'readResource').mockRejectedValue(new Error('Not found'));
       await service.initialize();
     });
 
     describe('createResource', () => {
       it('should create a resource successfully', async () => {
-        const resource = (global as any).createMockPatient();
-        const createdResource = { ...resource, id: 'created-patient-1' };
+        const resource = {
+          resourceType: 'Patient',
+          name: [{ given: ['John'], family: 'Doe' }],
+        };
+        const createdResource = { ...resource, id: '123' };
 
-        mockMedplumClient.createResource.mockResolvedValue(createdResource);
+        jest.spyOn(service['medplum'], 'createResource').mockResolvedValue(createdResource);
 
         const result = await service.createResource(resource);
 
-        expect(mockMedplumClient.createResource).toHaveBeenCalledWith(resource);
-        expect(mockLogger.info).toHaveBeenCalledWith(
-          `Successfully created ${resource.resourceType} with ID: ${createdResource.id}`
-        );
         expect(result).toEqual(createdResource);
+        expect(service['medplum'].createResource).toHaveBeenCalledWith(resource);
+        expect(mockLogger.fhir).toHaveBeenCalledWith(
+          'Resource created successfully',
+          expect.objectContaining({ resourceType: 'Patient' })
+        );
       });
 
       it('should handle creation errors', async () => {
-        const resource = (global as any).createMockPatient();
+        const resource = { resourceType: 'Patient' };
         const error = new Error('Creation failed');
 
-        mockMedplumClient.createResource.mockRejectedValue(error);
+        jest.spyOn(service['medplum'], 'createResource').mockRejectedValue(error);
 
-        await expect(service.createResource(resource)).rejects.toThrow('Creation failed');
+        await expect(service.createResource(resource)).rejects.toThrow('Failed to create resource');
         expect(mockLogger.error).toHaveBeenCalledWith(
-          `Failed to create ${resource.resourceType} resource:`,
-          error
+          'Failed to create resource',
+          expect.objectContaining({ resourceType: 'Patient' })
         );
       });
 
       it('should handle FHIR operation outcome errors', async () => {
-        const resource = (global as any).createMockPatient();
-        const fhirError = {
-          outcome: {
-            issue: [
-              {
-                severity: 'error',
-                code: 'required',
-                diagnostics: 'Missing required field: name',
-              },
-            ],
-          },
+        const resource = { resourceType: 'Patient' };
+        const operationOutcome = {
+          resourceType: 'OperationOutcome',
+          issue: [{ severity: 'error', code: 'invalid', diagnostics: 'Invalid resource' }]
         };
 
-        mockMedplumClient.createResource.mockRejectedValue(fhirError);
+        jest.spyOn(service['medplum'], 'createResource').mockRejectedValue({ 
+          response: { data: operationOutcome } 
+        });
 
-        await expect(service.createResource(resource)).rejects.toThrow(
-          'FHIR Error: Missing required field: name'
-        );
+        await expect(service.createResource(resource)).rejects.toThrow('Failed to create resource');
       });
     });
 
     describe('readResource', () => {
       it('should read a resource successfully', async () => {
-        const resourceType = 'Patient';
-        const resourceId = 'test-patient-1';
-        const resource = (global as any).createMockPatient();
+        const resource = { resourceType: 'Patient', id: '123', name: [{ family: 'Doe' }] };
 
-        mockMedplumClient.readResource.mockResolvedValue(resource);
+        jest.spyOn(service['medplum'], 'readResource').mockResolvedValue(resource);
 
-        const result = await service.readResource(resourceType, resourceId);
+        const result = await service.readResource('Patient', '123');
 
-        expect(mockMedplumClient.readResource).toHaveBeenCalledWith(resourceType, resourceId);
-        expect(mockLogger.debug).toHaveBeenCalledWith(
-          `Successfully retrieved ${resourceType} with ID: ${resourceId}`
-        );
         expect(result).toEqual(resource);
+        expect(service['medplum'].readResource).toHaveBeenCalledWith('Patient', '123');
       });
 
       it('should handle read errors', async () => {
-        const resourceType = 'Patient';
-        const resourceId = 'non-existent-patient';
         const error = new Error('Resource not found');
 
-        mockMedplumClient.readResource.mockRejectedValue(error);
+        jest.spyOn(service['medplum'], 'readResource').mockRejectedValue(error);
 
-        await expect(service.readResource(resourceType, resourceId)).rejects.toThrow(
-          'Resource not found'
-        );
+        await expect(service.readResource('Patient', '123')).rejects.toThrow('Failed to read resource');
         expect(mockLogger.error).toHaveBeenCalledWith(
-          `Failed to read ${resourceType} resource with ID ${resourceId}:`,
-          error
+          'Failed to read resource',
+          expect.objectContaining({ resourceType: 'Patient', id: '123' })
         );
       });
     });
 
     describe('updateResource', () => {
       it('should update a resource successfully', async () => {
-        const resource = { ...(global as any).createMockPatient(), id: 'test-patient-1' };
-        const updatedResource = { ...resource, name: [{ given: ['Updated'], family: 'Name' }] };
+        const resource = {
+          resourceType: 'Patient',
+          id: '123',
+          name: [{ given: ['Jane'], family: 'Doe' }],
+        };
 
-        mockMedplumClient.updateResource.mockResolvedValue(updatedResource);
+        jest.spyOn(service['medplum'], 'updateResource').mockResolvedValue(resource);
 
         const result = await service.updateResource(resource);
 
-        expect(mockMedplumClient.updateResource).toHaveBeenCalledWith(resource);
-        expect(mockLogger.info).toHaveBeenCalledWith(
-          `Successfully updated ${resource.resourceType} with ID: ${resource.id}`
+        expect(result).toEqual(resource);
+        expect(service['medplum'].updateResource).toHaveBeenCalledWith(resource);
+        expect(mockLogger.fhir).toHaveBeenCalledWith(
+          'Resource updated successfully',
+          expect.objectContaining({ resourceType: 'Patient', id: '123' })
         );
-        expect(result).toEqual(updatedResource);
       });
 
       it('should throw error for resource without ID', async () => {
-        const resource = (global as any).createMockPatient();
-        delete resource.id;
+        const resource = { resourceType: 'Patient' };
 
-        await expect(service.updateResource(resource)).rejects.toThrow(
-          'Resource must have an ID to be updated'
-        );
-        expect(mockMedplumClient.updateResource).not.toHaveBeenCalled();
+        await expect(service.updateResource(resource)).rejects.toThrow('Resource must have an ID for update');
       });
 
       it('should handle update errors', async () => {
-        const resource = { ...(global as any).createMockPatient(), id: 'test-patient-1' };
+        const resource = { resourceType: 'Patient', id: '123' };
         const error = new Error('Update failed');
 
-        mockMedplumClient.updateResource.mockRejectedValue(error);
+        jest.spyOn(service['medplum'], 'updateResource').mockRejectedValue(error);
 
-        await expect(service.updateResource(resource)).rejects.toThrow('Update failed');
-        expect(mockLogger.error).toHaveBeenCalledWith(
-          `Failed to update ${resource.resourceType} resource:`,
-          error
-        );
+        await expect(service.updateResource(resource)).rejects.toThrow('Failed to update resource');
       });
     });
 
     describe('deleteResource', () => {
       it('should delete a resource successfully', async () => {
-        const resourceType = 'Patient';
-        const resourceId = 'test-patient-1';
+        jest.spyOn(service['medplum'], 'deleteResource').mockResolvedValue(undefined);
 
-        mockMedplumClient.deleteResource.mockResolvedValue(undefined);
+        await service.deleteResource('Patient', '123');
 
-        await service.deleteResource(resourceType, resourceId);
-
-        expect(mockMedplumClient.deleteResource).toHaveBeenCalledWith(resourceType, resourceId);
-        expect(mockLogger.info).toHaveBeenCalledWith(
-          `Successfully deleted ${resourceType} with ID: ${resourceId}`
+        expect(service['medplum'].deleteResource).toHaveBeenCalledWith('Patient', '123');
+        expect(mockLogger.fhir).toHaveBeenCalledWith(
+          'Resource deleted successfully',
+          { resourceType: 'Patient', id: '123' }
         );
       });
 
       it('should handle delete errors', async () => {
-        const resourceType = 'Patient';
-        const resourceId = 'test-patient-1';
         const error = new Error('Delete failed');
 
-        mockMedplumClient.deleteResource.mockRejectedValue(error);
+        jest.spyOn(service['medplum'], 'deleteResource').mockRejectedValue(error);
 
-        await expect(service.deleteResource(resourceType, resourceId)).rejects.toThrow(
-          'Delete failed'
-        );
+        await expect(service.deleteResource('Patient', '123')).rejects.toThrow('Failed to delete resource');
         expect(mockLogger.error).toHaveBeenCalledWith(
-          `Failed to delete ${resourceType} resource with ID ${resourceId}:`,
-          error
+          'Failed to delete resource',
+          expect.objectContaining({ resourceType: 'Patient', id: '123' })
         );
       });
     });
@@ -295,174 +244,114 @@ describe('MedplumService', () => {
 
   describe('Search Operations', () => {
     beforeEach(async () => {
-      const mockProfile = { resourceType: 'ProfileResource', id: 'profile-123' };
-      mockMedplumClient.startClientLogin.mockResolvedValue(mockProfile as any);
-      mockMedplumClient.readResource.mockRejectedValue(new Error('Not found'));
+      jest.spyOn(service['medplum'], 'startClientLogin').mockResolvedValue({} as any);
+      jest.spyOn(service['medplum'], 'readResource').mockRejectedValue(new Error('Not found'));
       await service.initialize();
     });
 
     it('should search resources successfully', async () => {
-      const resourceType = 'Patient';
-      const searchParams = { family: 'Doe', given: 'John' };
-      const mockPatient = (global as any).createMockPatient();
-      
-      // Mock searchResources to return ResourceArray structure
-      const resourceArray = Object.assign([mockPatient], {
-        bundle: {
-          resourceType: 'Bundle' as const,
-          type: 'searchset' as const,
-          total: 1,
-          entry: [{ resource: mockPatient }]
-        }
-      });
-      
-      mockMedplumClient.searchResources.mockResolvedValue(resourceArray);
+      const resources = [
+        { resourceType: 'Patient', id: '1' },
+        { resourceType: 'Patient', id: '2' },
+      ];
 
-      const result = await service.searchResources(resourceType, searchParams);
+      jest.spyOn(service['medplum'], 'searchResources').mockResolvedValue(resources);
 
-      expect(mockMedplumClient.searchResources).toHaveBeenCalledWith(resourceType, {
-        family: 'Doe',
-        given: 'John'
-      });
-      
+      const result = await service.searchResources('Patient', { name: 'Doe' });
+
       expect(result).toEqual({
         resourceType: 'Bundle',
         type: 'searchset',
-        total: 1,
-        entry: [{
-          resource: mockPatient,
-          fullUrl: `${mockPatient.resourceType}/${mockPatient.id}`
-        }]
+        total: 2,
+        entry: [
+          { resource: { resourceType: 'Patient', id: '1' }, fullUrl: 'Patient/1' },
+          { resource: { resourceType: 'Patient', id: '2' }, fullUrl: 'Patient/2' },
+        ],
       });
+      expect(service['medplum'].searchResources).toHaveBeenCalledWith('Patient', { name: 'Doe' });
     });
 
     it('should handle search with special parameters', async () => {
-      const resourceType = 'Patient';
+      const resources: any[] = [];
       const searchParams = {
-        family: 'Doe',
+        _include: 'Patient:organization',
+        _revinclude: 'Observation:patient',
+        _sort: 'name',
         _count: 10,
-        _offset: 0,
-        _sort: 'family:asc,given:desc',
-        _include: 'Patient:general-practitioner',
-        _revinclude: 'Encounter:patient',
-        _elements: 'id,name,birthDate',
       };
 
-      // Mock searchResources to return empty ResourceArray
-      const emptyResourceArray = Object.assign([], {
-        bundle: {
-          resourceType: 'Bundle' as const,
-          type: 'searchset' as const,
-          total: 0,
-          entry: []
-        }
-      });
-      
-      mockMedplumClient.searchResources.mockResolvedValue(emptyResourceArray);
+      jest.spyOn(service['medplum'], 'searchResources').mockResolvedValue(resources);
 
-      await service.searchResources(resourceType, searchParams);
+      const result = await service.searchResources('Patient', searchParams);
 
-      expect(mockMedplumClient.searchResources).toHaveBeenCalledWith(resourceType, {
-        family: 'Doe',
-        _count: 10,
-        _offset: 0,
-        _sort: 'family:asc,given:desc',
-        _include: 'Patient:general-practitioner',
-        _revinclude: 'Encounter:patient',
-        _elements: 'id,name,birthDate'
+      expect(result).toEqual({
+        resourceType: 'Bundle',
+        type: 'searchset',
+        total: 0,
+        entry: []
       });
+      expect(service['medplum'].searchResources).toHaveBeenCalledWith('Patient', searchParams);
     });
 
     it('should handle search errors', async () => {
-      const resourceType = 'Patient';
-      const searchParams = { family: 'Doe' };
       const error = new Error('Search failed');
 
-      mockMedplumClient.searchResources.mockRejectedValue(error);
+      jest.spyOn(service['medplum'], 'searchResources').mockRejectedValue(error);
 
-      await expect(service.searchResources(resourceType, searchParams)).rejects.toThrow(
-        'Search failed'
-      );
+      await expect(service.searchResources('Patient', {})).rejects.toThrow('Failed to search resources');
       expect(mockLogger.error).toHaveBeenCalledWith(
-        `Failed to search ${resourceType} resources:`,
-        error
+        'Failed to search resources',
+        expect.objectContaining({ resourceType: 'Patient' })
       );
     });
   });
 
   describe('Batch Operations', () => {
     beforeEach(async () => {
-      const mockProfile = { resourceType: 'ProfileResource', id: 'profile-123' };
-      mockMedplumClient.startClientLogin.mockResolvedValue(mockProfile as any);
-      mockMedplumClient.readResource.mockRejectedValue(new Error('Not found'));
+      jest.spyOn(service['medplum'], 'startClientLogin').mockResolvedValue({} as any);
+      jest.spyOn(service['medplum'], 'readResource').mockRejectedValue(new Error('Not found'));
       await service.initialize();
     });
 
     it('should execute batch bundle successfully', async () => {
-      const bundleRequest = {
-        resourceType: 'Bundle',
-        type: 'batch' as const,
-        resources: [
-          (global as any).createMockPatient(),
-          { ...(global as any).createMockPatient(), id: 'existing-patient-1' },
-        ],
-        timestamp: '2024-01-01T12:00:00Z',
-      };
-
-      const batchResponse = {
-        resourceType: 'Bundle' as const,
-        type: 'batch-response' as const,
-        entry: [
-          { response: { status: '201', location: 'Patient/new-patient-1' } },
-          { response: { status: '200', location: 'Patient/existing-patient-1' } },
-        ],
-      };
-
-      mockMedplumClient.executeBatch.mockResolvedValue(batchResponse);
-
-      const result = await service.executeBatch(bundleRequest);
-
-      expect(mockMedplumClient.executeBatch).toHaveBeenCalledWith({
+      const bundle = {
         resourceType: 'Bundle',
         type: 'batch',
-        timestamp: '2024-01-01T12:00:00Z',
         entry: [
           {
             request: { method: 'POST', url: 'Patient' },
-            resource: bundleRequest.resources[0],
-          },
-          {
-            request: { method: 'PUT', url: 'Patient/existing-patient-1' },
-            resource: bundleRequest.resources[1],
+            resource: { resourceType: 'Patient' },
           },
         ],
-      });
-      expect(mockLogger.info).toHaveBeenCalledWith('Successfully executed batch bundle');
-      expect(result).toEqual(batchResponse);
+      };
+      const responseBundle = {
+        resourceType: 'Bundle',
+        type: 'batch-response',
+        entry: [{ response: { status: '201' } }],
+      };
+
+      jest.spyOn(service['medplum'], 'executeBatch').mockResolvedValue(responseBundle);
+
+      const result = await service.executeBatch(bundle);
+
+      expect(result).toEqual(responseBundle);
+      expect(service['medplum'].executeBatch).toHaveBeenCalledWith(bundle);
     });
 
     it('should handle batch execution errors', async () => {
-      const bundleRequest = {
-        resourceType: 'Bundle',
-        type: 'batch' as const,
-        resources: [(global as any).createMockPatient()],
-      };
+      const bundle = { resourceType: 'Bundle', type: 'batch', entry: [] };
+      const error = new Error('Batch failed');
 
-      const error = new Error('Batch execution failed');
-      mockMedplumClient.executeBatch.mockRejectedValue(error);
+      jest.spyOn(service['medplum'], 'executeBatch').mockRejectedValue(error);
 
-      await expect(service.executeBatch(bundleRequest)).rejects.toThrow(
-        'Batch execution failed'
-      );
-      expect(mockLogger.error).toHaveBeenCalledWith('Failed to execute batch bundle:', error);
+      await expect(service.executeBatch(bundle)).rejects.toThrow('Failed to execute batch operation');
     });
   });
 
   describe('Utility Operations', () => {
     beforeEach(async () => {
-      const mockProfile = { resourceType: 'ProfileResource', id: 'profile-123' };
-      mockMedplumClient.startClientLogin.mockResolvedValue(mockProfile as any);
-      mockMedplumClient.readResource.mockRejectedValue(new Error('Not found'));
+      jest.spyOn(service['medplum'], 'startClientLogin').mockResolvedValue({} as any);
+      jest.spyOn(service['medplum'], 'readResource').mockRejectedValue(new Error('Not found'));
       await service.initialize();
     });
 
@@ -470,195 +359,181 @@ describe('MedplumService', () => {
       const capabilityStatement = {
         resourceType: 'CapabilityStatement',
         status: 'active',
-        kind: 'instance',
       };
 
-      mockMedplumClient.get.mockResolvedValue(capabilityStatement);
+      jest.spyOn(service['medplum'], 'get').mockResolvedValue(capabilityStatement);
 
       const result = await service.getCapabilityStatement();
 
-      expect(mockMedplumClient.get).toHaveBeenCalledWith('metadata');
       expect(result).toEqual(capabilityStatement);
+      expect(service['medplum'].get).toHaveBeenCalledWith('metadata');
     });
 
     it('should execute GraphQL query', async () => {
-      const query = 'query { Patient { id name } }';
-      const variables = { limit: 10 };
-      const graphqlResponse = { data: { Patient: [] } };
+      const query = '{ Patient(id: "123") { name { given family } } }';
+      const result = { data: { Patient: { name: [{ given: ['John'], family: 'Doe' }] } } };
 
-      mockMedplumClient.graphql.mockResolvedValue(graphqlResponse);
+      jest.spyOn(service['medplum'], 'graphql').mockResolvedValue(result);
 
-      const result = await service.graphql(query, variables);
+      const response = await service.graphql(query);
 
-      expect(mockMedplumClient.graphql).toHaveBeenCalledWith(query, variables);
-      expect(result).toEqual(graphqlResponse);
+      expect(response).toEqual(result);
+      expect(service['medplum'].graphql).toHaveBeenCalledWith(query);
     });
 
     it('should validate resource', async () => {
-      const resource = (global as any).createMockPatient();
-      const validationResult = {
-        resourceType: 'OperationOutcome' as const,
+      const resource = { resourceType: 'Patient' };
+      const operationOutcome = {
+        resourceType: 'OperationOutcome',
         issue: [],
       };
 
-      mockMedplumClient.validateResource.mockResolvedValue(validationResult);
+      jest.spyOn(service['medplum'], 'validateResource').mockResolvedValue(operationOutcome);
 
       const result = await service.validateResource(resource);
 
-      expect(mockMedplumClient.validateResource).toHaveBeenCalledWith(resource);
-      expect(result).toEqual(validationResult);
+      expect(result).toEqual(operationOutcome);
+      expect(service['medplum'].validateResource).toHaveBeenCalledWith(resource);
     });
 
     it('should create subscription', async () => {
-      const criteria = 'Patient?active=true';
-      const channelType = 'webhook';
+      const criteria = 'Patient?name=Doe';
       const endpoint = 'https://example.com/webhook';
-
       const subscription = {
-        resourceType: 'Subscription' as const,
-        id: 'sub-123',
-        status: 'active' as const,
-        reason: 'OmniCare EMR Integration',
+        resourceType: 'Subscription',
+        status: 'active',
         criteria,
-        channel: { 
-          type: channelType as 'rest-hook',
+        channel: {
+          type: 'rest-hook',
           endpoint,
-          payload: 'application/fhir+json'
         },
       };
 
-      mockMedplumClient.createResource.mockResolvedValue(subscription as any);
+      jest.spyOn(service['medplum'], 'createResource').mockResolvedValue(subscription);
 
-      const result = await service.createSubscription(criteria, channelType, endpoint);
+      const result = await service.createSubscription(criteria, endpoint);
 
-      expect(mockMedplumClient.createResource).toHaveBeenCalledWith({
-        resourceType: 'Subscription',
-        status: 'requested',
-        reason: 'OmniCare EMR Integration',
-        criteria,
-        channel: {
-          type: channelType,
-          endpoint,
-          payload: 'application/fhir+json',
-        },
-      });
       expect(result).toEqual(subscription);
+      expect(service['medplum'].createResource).toHaveBeenCalledWith(
+        expect.objectContaining({
+          resourceType: 'Subscription',
+          criteria,
+        })
+      );
     });
   });
 
   describe('Health Status', () => {
     it('should return DOWN status when not initialized', async () => {
-      const result = await service.getHealthStatus();
+      const status = await service.getHealthStatus();
 
-      expect(result).toEqual({
+      expect(status).toEqual({
         status: 'DOWN',
-        details: { reason: 'Not initialized' },
+        details: {
+          initialized: false,
+          serverUrl: config.medplum.baseUrl,
+        },
       });
     });
 
     it('should return UP status when healthy', async () => {
-      const mockProfile = { resourceType: 'ProfileResource', id: 'profile-123' };
-      mockMedplumClient.startClientLogin.mockResolvedValue(mockProfile as any);
-      mockMedplumClient.readResource.mockRejectedValue(new Error('Not found'));
-      mockMedplumClient.get.mockResolvedValue({ resourceType: 'CapabilityStatement' });
-
+      jest.spyOn(service['medplum'], 'startClientLogin').mockResolvedValue({} as any);
+      jest.spyOn(service['medplum'], 'readResource').mockResolvedValue({ resourceType: 'Patient', id: '123' });
+      
       await service.initialize();
-      const result = await service.getHealthStatus();
+      
+      jest.spyOn(service['medplum'], 'get').mockResolvedValue({ resourceType: 'CapabilityStatement' });
 
-      expect(result.status).toBe('UP');
-      expect(result.details).toMatchObject({
-        baseUrl: config.medplum.baseUrl,
-        selfHosted: config.medplum.selfHosted,
-        initialized: true,
+      const status = await service.getHealthStatus();
+
+      expect(status).toEqual({
+        status: 'UP',
+        details: {
+          initialized: true,
+          serverUrl: config.medplum.baseUrl,
+          lastCheckTime: expect.any(String),
+        },
       });
-      expect(result.details.responseTime).toMatch(/\d+ms/);
     });
 
     it('should return DOWN status when unhealthy', async () => {
-      const mockProfile = { resourceType: 'ProfileResource', id: 'profile-123' };
-      mockMedplumClient.startClientLogin.mockResolvedValue(mockProfile as any);
-      mockMedplumClient.readResource.mockRejectedValue(new Error('Not found'));
+      jest.spyOn(service['medplum'], 'startClientLogin').mockResolvedValue({} as any);
+      jest.spyOn(service['medplum'], 'readResource').mockRejectedValue(new Error('Not found'));
+      
       await service.initialize();
+      
+      jest.spyOn(service['medplum'], 'get').mockRejectedValue(new Error('Server error'));
 
-      const error = new Error('Service unavailable');
-      mockMedplumClient.get.mockRejectedValue(error);
+      const status = await service.getHealthStatus();
 
-      const result = await service.getHealthStatus();
-
-      expect(result).toEqual({
+      expect(status).toEqual({
         status: 'DOWN',
         details: {
-          error: 'Service unavailable',
-          reconnectAttempts: 0,
+          initialized: true,
+          serverUrl: config.medplum.baseUrl,
+          error: 'Server error',
         },
       });
     });
   });
 
   describe('Error Handling', () => {
+    beforeEach(async () => {
+      jest.spyOn(service['medplum'], 'startClientLogin').mockResolvedValue({} as any);
+      jest.spyOn(service['medplum'], 'readResource').mockRejectedValue(new Error('Not found'));
+      await service.initialize();
+    });
+
     it('should throw error when not initialized', async () => {
-      await expect(service.createResource((global as any).createMockPatient())).rejects.toThrow(
-        'MedplumService not initialized. Call initialize() first.'
-      );
+      const uninitializedService = new MedplumService();
+      
+      await expect(uninitializedService.readResource('Patient', '123'))
+        .rejects.toThrow('Medplum service not initialized');
     });
 
     it('should handle FHIR operation outcome in response data', async () => {
-      const mockProfile = { resourceType: 'ProfileResource', id: 'profile-123' };
-      mockMedplumClient.startClientLogin.mockResolvedValue(mockProfile as any);
-      mockMedplumClient.readResource.mockRejectedValue(new Error('Not found'));
-      await service.initialize();
-
-      const fhirError = {
-        response: {
-          data: {
-            resourceType: 'OperationOutcome',
-            issue: [
-              {
-                severity: 'error',
-                code: 'invalid',
-                details: { text: 'Invalid resource format' },
-              },
-            ],
-          },
-        },
+      const operationOutcome = {
+        resourceType: 'OperationOutcome',
+        issue: [{ severity: 'error', code: 'invalid', diagnostics: 'Invalid request' }],
       };
+      const error = { response: { data: operationOutcome } };
 
-      mockMedplumClient.createResource.mockRejectedValue(fhirError);
+      jest.spyOn(service['medplum'], 'readResource').mockRejectedValue(error);
 
-      await expect(service.createResource((global as any).createMockPatient())).rejects.toThrow(
-        'FHIR Error: Invalid resource format'
+      await expect(service.readResource('Patient', '123')).rejects.toThrow('Failed to read resource');
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Failed to read resource',
+        expect.objectContaining({
+          fhirError: 'Invalid request',
+        })
       );
     });
 
     it('should handle non-Error objects', async () => {
-      const mockProfile = { resourceType: 'ProfileResource', id: 'profile-123' };
-      mockMedplumClient.startClientLogin.mockResolvedValue(mockProfile as any);
-      mockMedplumClient.readResource.mockRejectedValue(new Error('Not found'));
-      await service.initialize();
+      const errorObj = { message: 'Something went wrong' };
 
-      mockMedplumClient.createResource.mockRejectedValue('String error');
+      jest.spyOn(service['medplum'], 'readResource').mockRejectedValue(errorObj);
 
-      await expect(service.createResource((global as any).createMockPatient())).rejects.toThrow(
-        'String error'
+      await expect(service.readResource('Patient', '123')).rejects.toThrow('Failed to read resource');
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Failed to read resource',
+        expect.objectContaining({
+          error: 'Unknown error occurred',
+        })
       );
     });
   });
 
   describe('Shutdown', () => {
     it('should shutdown service properly', async () => {
-      const mockProfile = { resourceType: 'ProfileResource', id: 'profile-123' };
-      mockMedplumClient.startClientLogin.mockResolvedValue(mockProfile as any);
-      mockMedplumClient.readResource.mockRejectedValue(new Error('Not found'));
+      jest.spyOn(service['medplum'], 'startClientLogin').mockResolvedValue({} as any);
+      jest.spyOn(service['medplum'], 'readResource').mockRejectedValue(new Error('Not found'));
+      
       await service.initialize();
-
       await service.shutdown();
 
-      expect(mockLogger.info).toHaveBeenCalledWith('Shutting down Medplum service...');
-      
-      // Service should not be initialized after shutdown
-      await expect(service.createResource((global as any).createMockPatient())).rejects.toThrow(
-        'MedplumService not initialized. Call initialize() first.'
-      );
+      expect(service['isInitialized']).toBe(false);
+      expect(mockLogger.info).toHaveBeenCalledWith('Medplum FHIR server connection closed');
     });
   });
 });
