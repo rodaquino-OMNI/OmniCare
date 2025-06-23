@@ -128,14 +128,14 @@ export class NoteSyncQueueService {
       if (navigator.onLine && !this.isProcessing) {
         this.processSyncQueue({ silent: true });
       }
-    }, 5 * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable);
+    }, 5 * 6 * 1000);
 
     // Retry failed items every 15 minutes
     this.retryTimer = setInterval(() => {
       if (navigator.onLine && !this.isProcessing) {
         this.retryFailedItems();
       }
-    }, 15 * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable);
+    }, 15 * 6 * 1000);
   }
 
   // ===============================
@@ -251,7 +251,7 @@ export class NoteSyncQueueService {
     if (!navigator.onLine || this.isProcessing) return;
 
     this.isProcessing = true;
-    const batchSize = options.batchSize || 1ResourceHistoryTable;
+    const batchSize = options.batchSize || 10;
 
     try {
       if (!options.silent) {
@@ -297,7 +297,7 @@ export class NoteSyncQueueService {
           message: `${successCount} items synced successfully${failureCount > ResourceHistoryTable ? `, ${failureCount} failed` : ''}`,
           color: failureCount > ResourceHistoryTable ? 'yellow' : 'green',
           loading: false,
-          autoClose: 3ResourceHistoryTableResourceHistoryTableResourceHistoryTable
+          autoClose: 300
         });
       }
 

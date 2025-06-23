@@ -215,7 +215,7 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
     input.accept = 'application/json';
     
     input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[ResourceHistoryTable];
+      const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
       setIsImporting(true);
@@ -283,12 +283,12 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
             onClick={open}
             className={isSyncing ? 'rotating' : ''}
           >
-            <SyncIcon size={2ResourceHistoryTable} />
+            <SyncIcon size={20} />
           </ActionIcon>
-          {(pendingChanges > ResourceHistoryTable || failedChanges > ResourceHistoryTable || conflicts.length > ResourceHistoryTable) && (
+          {(pendingChanges > 0 || failedChanges > 0 || conflicts.length > 0) && (
             <Badge
               size="xs"
-              color={failedChanges > ResourceHistoryTable || conflicts.length > ResourceHistoryTable ? 'red' : 'orange'}
+              color={failedChanges > 0 || conflicts.length > 0 ? 'red' : 'orange'}
               circle
               style={{
                 position: 'absolute',
@@ -296,7 +296,7 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
                 right: -4,
                 minWidth: 16,
                 height: 16,
-                padding: ResourceHistoryTable,
+                padding: 0,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -321,8 +321,8 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
           position: 'fixed',
           bottom: 16,
           right: 16,
-          minWidth: 2ResourceHistoryTableResourceHistoryTable,
-          zIndex: 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable
+          minWidth: 200,
+          zIndex: 1000
         } : undefined}
       >
         <Stack gap="sm">
@@ -337,11 +337,11 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
               >
                 <SyncIcon size={18} />
               </ThemeIcon>
-              <Text fw={6ResourceHistoryTableResourceHistoryTable} size="sm">
+              <Text fw={600} size="sm">
                 {isOnline ? 'Online' : 'Offline'}
               </Text>
             </Group>
-            <Menu shadow="md" width={2ResourceHistoryTableResourceHistoryTable}>
+            <Menu shadow="md" width={200}>
               <Menu.Target>
                 <ActionIcon variant="subtle" size="sm">
                   <IconSettings size={16} />
@@ -424,7 +424,7 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
                   <Text size="xs">{failedChanges} failed changes</Text>
                 </Group>
               )}
-              {conflicts.length > ResourceHistoryTable && (
+              {conflicts.length > 0 && (
                 <Group gap="xs">
                   <IconAlertTriangle size={14} color="var(--mantine-color-red-6)" />
                   <Text size="xs">{conflicts.length} conflicts</Text>
@@ -459,7 +459,7 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
             icon={isOnline ? <IconCheck /> : <IconAlertCircle />}
             color={isOnline ? 'green' : 'orange'}
           >
-            <Text fw={6ResourceHistoryTableResourceHistoryTable}>{isOnline ? 'Connected' : 'Offline'}</Text>
+            <Text fw={600}>{isOnline ? 'Connected' : 'Offline'}</Text>
             <Text size="sm" c="dimmed">
               {isOnline 
                 ? 'You are connected to the server'
@@ -471,18 +471,18 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
           {/* Statistics */}
           <SimpleGrid cols={3}>
             <Card padding="sm">
-              <Text size="xs" c="dimmed" tt="uppercase" fw={6ResourceHistoryTableResourceHistoryTable}>Pending</Text>
-              <Text size="xl" fw={7ResourceHistoryTableResourceHistoryTable} c="orange">{pendingChanges}</Text>
+              <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Pending</Text>
+              <Text size="xl" fw={700} c="orange">{pendingChanges}</Text>
               <Text size="xs" c="dimmed">Changes to sync</Text>
             </Card>
             <Card padding="sm">
-              <Text size="xs" c="dimmed" tt="uppercase" fw={6ResourceHistoryTableResourceHistoryTable}>Failed</Text>
-              <Text size="xl" fw={7ResourceHistoryTableResourceHistoryTable} c="red">{failedChanges}</Text>
+              <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Failed</Text>
+              <Text size="xl" fw={700} c="red">{failedChanges}</Text>
               <Text size="xs" c="dimmed">Need retry</Text>
             </Card>
             <Card padding="sm">
-              <Text size="xs" c="dimmed" tt="uppercase" fw={6ResourceHistoryTableResourceHistoryTable}>Conflicts</Text>
-              <Text size="xl" fw={7ResourceHistoryTableResourceHistoryTable} c="red">{conflicts.length}</Text>
+              <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Conflicts</Text>
+              <Text size="xl" fw={700} c="red">{conflicts.length}</Text>
               <Text size="xs" c="dimmed">Need resolution</Text>
             </Card>
           </SimpleGrid>
@@ -490,9 +490,9 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
           <Divider />
 
           {/* Sync Errors */}
-          {syncErrors.length > ResourceHistoryTable && (
+          {syncErrors.length > 0 && (
             <Box>
-              <Text fw={6ResourceHistoryTableResourceHistoryTable} mb="sm">Recent Errors</Text>
+              <Text fw={600} mb="sm">Recent Errors</Text>
               <Stack gap="xs">
                 {syncErrors.slice(-5).map((error: { message: string; timestamp: Date }, index: number) => (
                   <Group key={index} gap="sm" align="flex-start">
@@ -512,10 +512,10 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
           )}
 
           {/* Conflicts */}
-          {conflicts.length > ResourceHistoryTable && (
+          {conflicts.length > 0 && (
             <Box>
               <Group justify="space-between" mb="sm">
-                <Text fw={6ResourceHistoryTableResourceHistoryTable}>Conflicts</Text>
+                <Text fw={600}>Conflicts</Text>
                 <Button
                   size="xs"
                   variant="subtle"
@@ -584,7 +584,7 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
             transform: rotate(ResourceHistoryTabledeg);
           }
           to {
-            transform: rotate(36ResourceHistoryTabledeg);
+            transform: rotate(36deg);
           }
         }
         

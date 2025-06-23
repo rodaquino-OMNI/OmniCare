@@ -274,12 +274,12 @@ export class HL7v2ParserService {
 
     const escapeChar = options.escapeCharacter;
     return str
-      .replace(new RegExp(`${escapeChar}F${escapeChar}`, 'g'), options.fieldSeparator)
-      .replace(new RegExp(`${escapeChar}S${escapeChar}`, 'g'), options.componentSeparator)
-      .replace(new RegExp(`${escapeChar}T${escapeChar}`, 'g'), options.subcomponentSeparator)
-      .replace(new RegExp(`${escapeChar}R${escapeChar}`, 'g'), options.repetitionSeparator)
-      .replace(new RegExp(`${escapeChar}E${escapeChar}`, 'g'), options.escapeCharacter)
-      .replace(new RegExp(`${escapeChar}\.br${escapeChar}`, 'g'), '\n');
+      .replace(new RegExp(`\\${escapeChar}F\\${escapeChar}`, 'g'), options.fieldSeparator)
+      .replace(new RegExp(`\\${escapeChar}S\\${escapeChar}`, 'g'), options.componentSeparator)
+      .replace(new RegExp(`\\${escapeChar}T\\${escapeChar}`, 'g'), options.subcomponentSeparator)
+      .replace(new RegExp(`\\${escapeChar}R\\${escapeChar}`, 'g'), options.repetitionSeparator)
+      .replace(new RegExp(`\\${escapeChar}E\\${escapeChar}`, 'g'), options.escapeCharacter)
+      .replace(new RegExp(`\\${escapeChar}\\.br\\${escapeChar}`, 'g'), '\n');
   }
 
   /**

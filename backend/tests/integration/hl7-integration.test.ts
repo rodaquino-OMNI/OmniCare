@@ -2,6 +2,7 @@ import { hl7v2ParserService } from '../../src/services/integration/hl7v2/hl7v2-p
 import { fhirResourcesService } from '../../src/services/fhir-resources.service';
 import { medplumService } from '../../src/services/medplum.service';
 import { HL7v2Message, HL7v2AckCode } from '../../src/services/integration/types/hl7v2.types';
+import { Patient, Observation } from '@medplum/fhirtypes';
 import logger from '../../src/utils/logger';
 
 /**
@@ -160,7 +161,7 @@ PID|1||MRN123456789^^^MRN^MR||DOE^JOHN^MIDDLE^^JR||19900101|M||2106-3|123 MAIN S
           { system: 'phone' as const, value: '(555)555-5678', use: 'work' as const }
         ],
         address: [{
-          use: 'home',
+          use: 'home' as const,
           line: ['123 MAIN ST'],
           city: 'ANYTOWN',
           state: 'ST',

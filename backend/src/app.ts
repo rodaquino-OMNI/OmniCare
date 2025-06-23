@@ -10,9 +10,9 @@ import morgan from 'morgan';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 
-import config from '@/config';
-import logger from '@/utils/logger';
-import routes from '@/routes';
+import config from './config';
+import logger from './utils/logger';
+import routes from './routes';
 
 // Create Express app for testing
 const app = express();
@@ -36,7 +36,7 @@ app.use(helmet({
 }));
 
 app.use(cors({
-  origin: (origin, callback) => {
+  origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
     // Allow requests with no origin (mobile apps, etc.)
     if (!origin) return callback(null, true);
     
@@ -83,7 +83,7 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // Request ID middleware
-app.use((req, res, next) => {
+app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
   const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   (req as any).requestId = requestId;
   res.setHeader('X-Request-ID', requestId);
@@ -91,7 +91,7 @@ app.use((req, res, next) => {
 });
 
 // Health check endpoint
-app.get('/ping', (_req, res) => {
+app.get('/ping', (_req: express.Request, res: express.Response) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
@@ -103,7 +103,7 @@ app.get('/ping', (_req, res) => {
 app.use('/', routes);
 
 // SMART configuration endpoint
-app.get('/.well-known/smart_configuration', (_req, res) => {
+app.get('/.well-known/smart_configuration', (_req: express.Request, res: express.Response) => {
   const smartConfig = {
     authorization_endpoint: config.smart.authorizationUrl,
     token_endpoint: config.smart.tokenUrl,

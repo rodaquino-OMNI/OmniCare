@@ -140,30 +140,30 @@ const VERSION_STORE = 'versions';
 const CONFLICT_STORE = 'conflicts';
 const METADATA_STORE = 'metadata';
 
-const DEFAULT_BATCH_SIZE = 5ResourceHistoryTable;
-const DEFAULT_RETRY_DELAY = 5ResourceHistoryTableResourceHistoryTableResourceHistoryTable; // 5 seconds
+const DEFAULT_BATCH_SIZE = 50;
+const DEFAULT_RETRY_DELAY = 5000; // 5 seconds
 const DEFAULT_MAX_RETRIES = 3;
-const SYNC_INTERVAL = 3ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable; // 3ResourceHistoryTable seconds
-const CONFLICT_CHECK_INTERVAL = 6ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable; // 1 minute
+const SYNC_INTERVAL = 30000; // 30 seconds
+const CONFLICT_CHECK_INTERVAL = 60000; // 1 minute
 
 // Priority weights for sync queue
 const PRIORITY_WEIGHTS: Record<string, number> = {
-  critical: 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable,
-  high: 1ResourceHistoryTableResourceHistoryTable,
-  medium: 1ResourceHistoryTable,
+  critical: 1000,
+  high: 100,
+  medium: 10,
   low: 1
 };
 
 // Resource type priorities
 const RESOURCE_TYPE_PRIORITIES: Record<string, number> = {
-  Patient: 1ResourceHistoryTableResourceHistoryTable,
-  Practitioner: 9ResourceHistoryTable,
+  Patient: 100,
+  Practitioner: 90,
   Organization: 85,
-  Encounter: 8ResourceHistoryTable,
-  Observation: 7ResourceHistoryTable,
+  Encounter: 80,
+  Observation: 70,
   MedicationRequest: 75,
   ServiceRequest: 65,
-  DiagnosticReport: 6ResourceHistoryTable,
+  DiagnosticReport: 60,
   CarePlan: 55
 };
 
@@ -359,13 +359,13 @@ export class OfflineSyncService {
 
       // Process operations in batches
       const batchSize = options.batchSize || DEFAULT_BATCH_SIZE;
-      for (let i = ResourceHistoryTable; i < pendingOperations.length; i += batchSize) {
+      for (let i = 0; i < pendingOperations.length; i += batchSize) {
         const batch = pendingOperations.slice(i, i + batchSize);
         
         await this.processSyncBatch(batch, progress, options);
         
         // Update progress
-        progress.percentage = Math.round((progress.completed + progress.failed) / progress.total * 1ResourceHistoryTableResourceHistoryTable);
+        progress.percentage = Math.round((progress.completed + progress.failed) / progress.total * 100);
         progress.estimatedTimeRemaining = this.estimateTimeRemaining(
           startTime,
           progress.completed + progress.failed,
@@ -901,11 +901,11 @@ export class OfflineSyncService {
    * Calculate priority for a resource
    */
   private calculatePriority(resource: Resource): 'low' | 'medium' | 'high' | 'critical' {
-    const typePriority = RESOURCE_TYPE_PRIORITIES[resource.resourceType] || 5ResourceHistoryTable;
+    const typePriority = RESOURCE_TYPE_PRIORITIES[resource.resourceType] || 50;
 
-    if (typePriority >= 9ResourceHistoryTable) return 'critical';
-    if (typePriority >= 7ResourceHistoryTable) return 'high';
-    if (typePriority >= 5ResourceHistoryTable) return 'medium';
+    if (typePriority >= 90) return 'critical';
+    if (typePriority >= 70) return 'high';
+    if (typePriority >= 50) return 'medium';
     return 'low';
   }
 
@@ -1188,14 +1188,14 @@ export class OfflineSyncService {
    * Extract version from resource
    */
   private extractVersion(resource: Resource): number {
-    return parseInt(resource.meta?.versionId || '1', 1ResourceHistoryTable);
+    return parseInt(resource.meta?.versionId || '1', 10);
   }
 
   /**
    * Extract last modified date from resource
    */
   private extractLastModified(resource: Resource): Date {
-    return new Date(resource.meta?.lastUpdated || ResourceHistoryTable);
+    return new Date(resource.meta?.lastUpdated || 0);
   }
 
   /**
@@ -1452,7 +1452,7 @@ export class OfflineSyncService {
     try {
       return await fhirService.readResource(resourceType, resourceId);
     } catch (error: any) {
-      if (error.status === 4ResourceHistoryTable4) {
+      if (error.status === 404) {
         return null;
       }
       throw error;
@@ -1475,9 +1475,9 @@ export class OfflineSyncService {
 
     this.status.errors.push(syncError);
 
-    // Keep only last 1ResourceHistoryTableResourceHistoryTable errors
-    if (this.status.errors.length > 1ResourceHistoryTableResourceHistoryTable) {
-      this.status.errors = this.status.errors.slice(-1ResourceHistoryTableResourceHistoryTable);
+    // Keep only last 100 errors
+    if (this.status.errors.length > 100) {
+      this.status.errors = this.status.errors.slice(-100);
     }
 
     this.emitSyncEvent('sync-error', { error: syncError });
@@ -1661,7 +1661,7 @@ export class OfflineSyncService {
   /**
    * Cleanup old data
    */
-  async cleanup(daysToKeep: number = 3ResourceHistoryTable): Promise<void> {
+  async cleanup(daysToKeep: number = 30): Promise<void> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
 

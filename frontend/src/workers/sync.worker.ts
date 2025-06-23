@@ -232,7 +232,7 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
         break;
 
       case 'cleanup':
-        const { daysToKeep = 3ResourceHistoryTable } = payload || {};
+        const { daysToKeep = 30 } = payload || {};
         await offlineSyncService.cleanup(daysToKeep);
         response = {
           type: 'cleanup',
@@ -291,7 +291,7 @@ self.addEventListener('sync', async (event: any) => {
           }
           
           await offlineSyncService.sync({
-            batchSize: 2ResourceHistoryTable, // Smaller batches for background sync
+            batchSize: 20, // Smaller batches for background sync
             maxRetries: 5  // More retries in background
           });
           
@@ -333,15 +333,15 @@ self.addEventListener('periodicsync', async (event: any) => {
           // Check if we have pending changes
           const status = offlineSyncService.getSyncStatus();
           
-          if (status.pendingChanges > ResourceHistoryTable || status.failedChanges > ResourceHistoryTable) {
+          if (status.pendingChanges > 0 || status.failedChanges > 0) {
             await offlineSyncService.sync({
-              batchSize: 5ResourceHistoryTable,
+              batchSize: 50,
               conflictResolution: 'last-write-wins'
             });
           }
           
           // Cleanup old data
-          await offlineSyncService.cleanup(3ResourceHistoryTable);
+          await offlineSyncService.cleanup(30);
           
           postMessage({
             type: 'periodic-sync-completed',

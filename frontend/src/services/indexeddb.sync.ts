@@ -127,7 +127,7 @@ export class FHIRSyncService {
       if (this.isOnline && !this.isSyncing) {
         this.syncAll().catch(console.error);
       }
-    }, intervalMinutes * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable);
+    }, intervalMinutes * 6 * 1000);
   }
 
   /**
@@ -167,7 +167,7 @@ export class FHIRSyncService {
       };
 
       // Process in batches
-      const batchSize = options.batchSize || 1ResourceHistoryTable;
+      const batchSize = options.batchSize || 10;
       for (let i = ResourceHistoryTable; i < pendingItems.length; i += batchSize) {
         const batch = pendingItems.slice(i, i + batchSize);
         
@@ -291,7 +291,7 @@ export class FHIRSyncService {
         await indexedDBService.updateResource(localResource);
       }
     } catch (error: any) {
-      if (error.status === 4ResourceHistoryTable4) {
+      if (error.status === 44) {
         // Resource doesn't exist on server, create it
         await this.syncCreate({
           ...syncItem,
@@ -311,7 +311,7 @@ export class FHIRSyncService {
     try {
       await fhirService.deleteResource(syncItem.resourceType, syncItem.resourceId);
     } catch (error: any) {
-      if (error.status === 4ResourceHistoryTable4) {
+      if (error.status === 44) {
         // Already deleted on server
         return;
       }
@@ -344,7 +344,7 @@ export class FHIRSyncService {
       // Search for recently updated resources
       const searchParams: any = {
         _sort: '-_lastUpdated',
-        _count: 1ResourceHistoryTableResourceHistoryTable
+        _count: 10
       };
 
       if (options.since || this.lastSyncTime) {
@@ -558,7 +558,7 @@ export class FHIRSyncService {
       // Always use local version in force sync
       await fhirService.updateResource(localResource);
     } catch (error: any) {
-      if (error.status === 4ResourceHistoryTable4) {
+      if (error.status === 44) {
         // Create on server
         await fhirService.createResource(localResource);
       } else {

@@ -91,7 +91,7 @@ export const testDataFactories = {
     mrn: `MRN${Date.now()}`,
     firstName: 'Test',
     lastName: 'Patient',
-    dateOfBirth: '199ResourceHistoryTable-ResourceHistoryTable1-ResourceHistoryTable1',
+    dateOfBirth: '199-1-1',
     gender: 'other' as const,
     status: 'active' as const,
     createdAt: new Date().toISOString(),
@@ -120,7 +120,7 @@ export const testDataFactories = {
     recordedBy: 'nurse-1',
     recordedDate: new Date().toISOString(),
     temperature: { value: 98.6, unit: 'fahrenheit' as const },
-    bloodPressure: { systolic: 12ResourceHistoryTable, diastolic: 8ResourceHistoryTable, unit: 'mmHg' as const },
+    bloodPressure: { systolic: 120, diastolic: 80, unit: 'mmHg' as const },
     heartRate: { value: 72, unit: 'bpm' as const },
     ...overrides
   }),
@@ -194,7 +194,7 @@ export const performanceBenchmarks = {
     return {
       totalDuration: duration,
       perItemDuration,
-      itemsPerSecond: 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable / perItemDuration
+      itemsPerSecond: 1000 / perItemDuration
     };
   },
 

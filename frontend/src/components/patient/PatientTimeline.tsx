@@ -70,9 +70,9 @@ interface PatientTimelineProps {
 
 export function PatientTimeline({ 
   patient, 
-  maxItems = 5ResourceHistoryTable, 
+  maxItems = 50, 
   showFilters = true,
-  height = 6ResourceHistoryTableResourceHistoryTable 
+  height = 6 
 }: PatientTimelineProps) {
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<TimelineEvent[]>([]);
@@ -163,7 +163,7 @@ export function PatientTimeline({
       // Sort events by date (most recent first)
       timelineEvents.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-      setEvents(timelineEvents.slice(ResourceHistoryTable, maxItems));
+      setEvents(timelineEvents.slice(0, maxItems));
     } catch (err) {
       console.error('Error loading timeline data:', err);
       setError('Failed to load patient timeline');
@@ -219,15 +219,15 @@ export function PatientTimeline({
   };
 
   const getEncounterTitle = (encounter: Encounter): string => {
-    return encounter.type?.[ResourceHistoryTable]?.text || 
-           encounter.type?.[ResourceHistoryTable]?.coding?.[ResourceHistoryTable]?.display || 
+    return encounter.type?.[0]?.text || 
+           encounter.type?.[0]?.coding?.[0]?.display || 
            encounter.class?.display ||
            'Medical Encounter';
   };
 
   const getEncounterDescription = (encounter: Encounter): string => {
-    const location = encounter.location?.[ResourceHistoryTable]?.location?.display;
-    const participant = encounter.participant?.[ResourceHistoryTable]?.individual?.display;
+    const location = encounter.location?.[0]?.location?.display;
+    const participant = encounter.participant?.[0]?.individual?.display;
     
     const parts = [];
     if (location) parts.push(`Location: ${location}`);
@@ -258,7 +258,7 @@ export function PatientTimeline({
 
   const getObservationTitle = (observation: Observation): string => {
     return observation.code?.text || 
-           observation.code?.coding?.[ResourceHistoryTable]?.display || 
+           observation.code?.coding?.[0]?.display || 
            'Lab Result';
   };
 
@@ -323,7 +323,7 @@ export function PatientTimeline({
                 leftSection={<IconSearch size={16} />}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.currentTarget.value)}
-                style={{ flex: 1, minWidth: 2ResourceHistoryTableResourceHistoryTable }}
+                style={{ flex: 1, minWidth: 200 }}
               />
               
               <Select
@@ -366,7 +366,7 @@ export function PatientTimeline({
                 <IconRefresh size={16} />
               </ActionIcon>
               
-              <Menu shadow="md" width={2ResourceHistoryTableResourceHistoryTable}>
+              <Menu shadow="md" width={200}>
                 <Menu.Target>
                   <ActionIcon variant="light">
                     <IconMoreHorizontal size={16} />
@@ -411,10 +411,10 @@ export function PatientTimeline({
       <Paper withBorder>
         <ScrollArea h={height}>
           <div className="p-4">
-            {filteredEvents.length === ResourceHistoryTable ? (
-              <Center h={2ResourceHistoryTableResourceHistoryTable}>
+            {filteredEvents.length === 0 ? (
+              <Center h={200}>
                 <Stack align="center" gap="md">
-                  <IconCalendar size={48} className="text-gray-4ResourceHistoryTableResourceHistoryTable" />
+                  <IconCalendar size={48} className="text-gray-4" />
                   <Text c="dimmed" ta="center">
                     No timeline events found
                     {searchQuery || typeFilter !== 'all' || dateRange !== 'all' 
@@ -433,11 +433,11 @@ export function PatientTimeline({
                     color={event.color}
                     className="pb-4"
                   >
-                    <Paper p="md" className="ml-2 border border-gray-2ResourceHistoryTableResourceHistoryTable hover:bg-gray-5ResourceHistoryTable transition-colors">
+                    <Paper p="md" className="ml-2 border border-gray-200 hover:bg-gray-50 transition-colors">
                       <Group justify="space-between" align="flex-start" mb="xs">
                         <div className="flex-1">
                           <Group gap="sm" align="center" mb="xs">
-                            <Text fw={5ResourceHistoryTableResourceHistoryTable} size="sm" className="text-gray-8ResourceHistoryTableResourceHistoryTable">
+                            <Text fw={500} size="sm" className="text-gray-8">
                               {event.title}
                             </Text>
                             {event.status && (
@@ -466,7 +466,7 @@ export function PatientTimeline({
                           </Group>
                         </div>
                         
-                        <Menu shadow="md" width={2ResourceHistoryTableResourceHistoryTable}>
+                        <Menu shadow="md" width={200}>
                           <Menu.Target>
                             <ActionIcon variant="subtle" size="sm">
                               <IconMoreHorizontal size={14} />

@@ -108,7 +108,7 @@ export class PractitionerGenerator {
       }],
       omnicarePractitionerId: `PR${faker.string.numeric(8)}`,
       employeeId: `EMP${faker.string.numeric(6)}`,
-      hireDate: faker.date.past({ years: this.getExperienceYears(experience) }).toISOString().split('T')[0],
+      hireDate: faker.date.past({ years: this.getExperienceYears(experience) }).toISOString().split('T')[0] ?? '',
       departmentAffiliations: this.generateDepartmentAffiliations(role, specialty),
       credentials: hasActiveCredentials ? this.generateCredentials(role, specialty, experience) : undefined,
       schedule: this.generateSchedule(),
@@ -163,15 +163,17 @@ export class PractitionerGenerator {
     }];
 
     // Add appropriate titles/prefixes
-    if (role === 'physician') {
-      names[0].prefix = ['Dr.'];
-      names[0].suffix = ['MD'];
-    } else if (role === 'nurse') {
-      names[0].suffix = [faker.helpers.arrayElement(['RN', 'LPN', 'NP'])];
-    } else if (role === 'pa') {
-      names[0].suffix = ['PA-C'];
-    } else if (role === 'therapist') {
-      names[0].suffix = [faker.helpers.arrayElement(['PT', 'OT', 'SLP'])];
+    if (names[0]) {
+      if (role === 'physician') {
+        names[0].prefix = ['Dr.'];
+        names[0].suffix = ['MD'];
+      } else if (role === 'nurse') {
+        names[0].suffix = [faker.helpers.arrayElement(['RN', 'LPN', 'NP'])];
+      } else if (role === 'pa') {
+        names[0].suffix = ['PA-C'];
+      } else if (role === 'therapist') {
+        names[0].suffix = [faker.helpers.arrayElement(['PT', 'OT', 'SLP'])];
+      }
     }
 
     return names;
@@ -216,7 +218,7 @@ export class PractitionerGenerator {
     const baseAge = experience === 'junior' ? 28 : experience === 'senior' ? 45 : 35;
     const ageRange = 10;
     const age = faker.number.int({ min: baseAge, max: baseAge + ageRange });
-    return faker.date.birthdate({ min: age, max: age, mode: 'age' }).toISOString().split('T')[0];
+    return faker.date.birthdate({ min: age, max: age, mode: 'age' }).toISOString().split('T')[0] ?? '';
   }
 
   private static generateQualifications(role: string, specialty: string) {
@@ -232,7 +234,7 @@ export class PractitionerGenerator {
           }]
         },
         period: {
-          start: faker.date.past({ years: 15 }).toISOString().split('T')[0]
+          start: faker.date.past({ years: 15 }).toISOString().split('T')[0] ?? ''
         },
         issuer: {
           display: faker.helpers.arrayElement([
@@ -254,7 +256,7 @@ export class PractitionerGenerator {
             }]
           },
           period: {
-            start: faker.date.past({ years: 10 }).toISOString().split('T')[0]
+            start: faker.date.past({ years: 10 }).toISOString().split('T')[0] ?? ''
           },
           issuer: {
             display: 'Specialty Board'
@@ -274,7 +276,7 @@ export class PractitionerGenerator {
           }]
         },
         period: {
-          start: faker.date.past({ years: 8 }).toISOString().split('T')[0]
+          start: faker.date.past({ years: 8 }).toISOString().split('T')[0] ?? ''
         },
         issuer: {
           display: 'State Board of Nursing'
@@ -289,21 +291,21 @@ export class PractitionerGenerator {
     const credentials: PractitionerCredentials = {
       licenseNumber: `${faker.location.state({ abbreviated: true })}${faker.string.numeric(9)}`,
       licenseState: faker.location.state({ abbreviated: true }),
-      licenseExpiration: faker.date.future({ years: 2 }).toISOString().split('T')[0],
+      licenseExpiration: faker.date.future({ years: 2 }).toISOString().split('T')[0] ?? '',
       licenseStatus: 'active'
     };
 
     if (role === 'physician') {
       credentials.npiNumber = HealthcareFaker.npi();
       credentials.deaNumber = `B${faker.string.alpha(1).toUpperCase()}${faker.string.numeric(7)}`;
-      credentials.deaExpiration = faker.date.future({ years: 3 }).toISOString().split('T')[0];
+      credentials.deaExpiration = faker.date.future({ years: 3 }).toISOString().split('T')[0] ?? '';
 
       if (specialty !== 'general') {
         const specialtyInfo = this.SPECIALTIES[specialty as keyof typeof this.SPECIALTIES];
         credentials.boardCertifications = [{
           boardName: specialtyInfo.boardName,
-          certificationDate: faker.date.past({ years: 5 }).toISOString().split('T')[0],
-          expirationDate: faker.date.future({ years: 5 }).toISOString().split('T')[0],
+          certificationDate: faker.date.past({ years: 5 }).toISOString().split('T')[0] ?? '',
+          expirationDate: faker.date.future({ years: 5 }).toISOString().split('T')[0] ?? '',
           specialty: {
             coding: [{
               system: 'http://nucc.org/provider-taxonomy',
@@ -319,8 +321,8 @@ export class PractitionerGenerator {
       credentials.malpracticeInsurance = {
         provider: faker.helpers.arrayElement(['The Doctors Company', 'Medical Protective', 'ProAssurance']),
         policyNumber: `MP${faker.string.numeric(8)}`,
-        effectiveDate: faker.date.past({ years: 1 }).toISOString().split('T')[0],
-        expirationDate: faker.date.future({ years: 1 }).toISOString().split('T')[0],
+        effectiveDate: faker.date.past({ years: 1 }).toISOString().split('T')[0] ?? '',
+        expirationDate: faker.date.future({ years: 1 }).toISOString().split('T')[0] ?? '',
         coverageAmount: {
           perClaim: 1000000,
           aggregate: 3000000
@@ -330,10 +332,10 @@ export class PractitionerGenerator {
     }
 
     credentials.backgroundCheck = {
-      performedDate: faker.date.past({ years: 1 }).toISOString().split('T')[0],
+      performedDate: faker.date.past({ years: 1 }).toISOString().split('T')[0] ?? '',
       performedBy: 'HireRight',
       status: 'cleared',
-      expirationDate: faker.date.future({ years: 2 }).toISOString().split('T')[0]
+      expirationDate: faker.date.future({ years: 2 }).toISOString().split('T')[0] ?? ''
     };
 
     return credentials;
@@ -368,7 +370,7 @@ export class PractitionerGenerator {
           display: this.SPECIALTIES[specialty as keyof typeof this.SPECIALTIES]?.display || specialty
         }]
       }] : [],
-      startDate: faker.date.past({ years: 5 }).toISOString().split('T')[0],
+      startDate: faker.date.past({ years: 5 }).toISOString().split('T')[0] ?? '',
       isPrimary: true,
       responsibilities: this.generateResponsibilities(role)
     }];
@@ -459,14 +461,14 @@ export class PractitionerGenerator {
       mandatoryTraining: [
         {
           trainingName: 'HIPAA Privacy Training',
-          completionDate: faker.date.past({ years: 1 }).toISOString().split('T')[0],
-          expirationDate: faker.date.future({ years: 1 }).toISOString().split('T')[0],
+          completionDate: faker.date.past({ years: 1 }).toISOString().split('T')[0] ?? '',
+          expirationDate: faker.date.future({ years: 1 }).toISOString().split('T')[0] ?? '',
           status: 'completed' as const
         },
         {
           trainingName: 'Fire Safety Training',
-          completionDate: faker.date.past({ years: 1 }).toISOString().split('T')[0],
-          expirationDate: faker.date.future({ years: 1 }).toISOString().split('T')[0],
+          completionDate: faker.date.past({ years: 1 }).toISOString().split('T')[0] ?? '',
+          expirationDate: faker.date.future({ years: 1 }).toISOString().split('T')[0] ?? '',
           status: 'completed' as const
         }
       ],
@@ -479,7 +481,7 @@ export class PractitionerGenerator {
               display: 'Influenza vaccine'
             }]
           },
-          administrationDate: faker.date.past({ years: 1 }).toISOString().split('T')[0],
+          administrationDate: faker.date.past({ years: 1 }).toISOString().split('T')[0] ?? '',
           status: 'current' as const
         }
       ]

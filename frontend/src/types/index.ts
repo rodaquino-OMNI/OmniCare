@@ -115,7 +115,7 @@ export interface Encounter {
 
 export interface Diagnosis {
   id: string;
-  code: string; // ICD-1ResourceHistoryTable
+  code: string; // ICD-10
   description: string;
   type: 'primary' | 'secondary' | 'differential';
   status: 'active' | 'resolved' | 'chronic';
@@ -233,7 +233,7 @@ export interface VitalSigns {
     unit: 'cm' | 'in';
   };
   bmi?: number;
-  painScore?: number; // ResourceHistoryTable-1ResourceHistoryTable scale
+  painScore?: number; // ResourceHistoryTable-10 scale
 }
 
 export interface ClinicalNote {

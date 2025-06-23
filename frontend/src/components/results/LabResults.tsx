@@ -95,12 +95,12 @@ export function LabResults({ patient, encounterId }: LabResultsProps) {
         patient: patient.id,
         category: 'laboratory',
         _sort: '-date',
-        _count: '5ResourceHistoryTable'
+        _count: '50'
       };
 
       // Add date range filter if specified
-      if (dateRange[ResourceHistoryTable] && dateRange[1]) {
-        searchParams.date = `ge${dateRange[ResourceHistoryTable].toISOString()},le${dateRange[1].toISOString()}`;
+      if (dateRange[0] && dateRange[1]) {
+        searchParams.date = `ge${dateRange[0].toISOString()},le${dateRange[1].toISOString()}`;
       }
 
       // Add category filter if not 'all'
@@ -114,7 +114,7 @@ export function LabResults({ patient, encounterId }: LabResultsProps) {
         medplum.searchResources('DiagnosticReport', {
           patient: patient.id,
           _sort: '-issued',
-          _count: '2ResourceHistoryTable'
+          _count: '20'
         })
       ]);
 
@@ -130,12 +130,12 @@ export function LabResults({ patient, encounterId }: LabResultsProps) {
 
   const getCategoryCode = (category: string): string => {
     const categoryCodes: Record<string, string> = {
-      chemistry: '275711ResourceHistoryTableResourceHistoryTable6',
-      hematology: '252275ResourceHistoryTableResourceHistoryTable4',
-      microbiology: '19851ResourceHistoryTableResourceHistoryTable9',
-      pathology: '371525ResourceHistoryTableResourceHistoryTable3',
-      radiology: '363679ResourceHistoryTableResourceHistoryTable5',
-      cardiology: '722164ResourceHistoryTableResourceHistoryTableResourceHistoryTable'
+      chemistry: '27571106',
+      hematology: '252275004',
+      microbiology: '1985109',
+      pathology: '371525003',
+      radiology: '3636795',
+      cardiology: '722164'
     };
     return categoryCodes[category] || '';
   };
@@ -160,9 +160,9 @@ export function LabResults({ patient, encounterId }: LabResultsProps) {
       name: 'Report',
       selector: (report: DiagnosticReport) => (
         <div>
-          <Text fw={5ResourceHistoryTableResourceHistoryTable}>{report.code?.text || 'Lab Report'}</Text>
+          <Text fw={500}>{report.code?.text || 'Lab Report'}</Text>
           <Text size="xs" c="dimmed">
-            {report.code?.coding?.[ResourceHistoryTable]?.display}
+            {report.code?.coding?.[0]?.display}
           </Text>
         </div>
       ),
@@ -212,26 +212,26 @@ export function LabResults({ patient, encounterId }: LabResultsProps) {
           </Title>
           <Group gap="sm">
             <ActionIcon variant="subtle" onClick={handleRefresh}>
-              <IconRefresh size={2ResourceHistoryTable} />
+              <IconRefresh size={20} />
             </ActionIcon>
             <ActionIcon variant="subtle">
-              <IconDownload size={2ResourceHistoryTable} />
+              <IconDownload size={20} />
             </ActionIcon>
             <ActionIcon variant="subtle">
-              <IconPrinter size={2ResourceHistoryTable} />
+              <IconPrinter size={20} />
             </ActionIcon>
           </Group>
         </Group>
 
         {/* Abnormal Results Alert */}
-        {abnormalCount > ResourceHistoryTable && (
+        {abnormalCount > 0 && (
           <Alert 
             icon={<IconAlertTriangle size={16} />} 
             color="orange" 
             variant="light"
             mt="md"
           >
-            <Text fw={6ResourceHistoryTableResourceHistoryTable}>
+            <Text fw={500}>
               {abnormalCount} abnormal result{abnormalCount > 1 ? 's' : ''} found
             </Text>
           </Alert>
@@ -283,9 +283,9 @@ export function LabResults({ patient, encounterId }: LabResultsProps) {
                 <Loader size="lg" />
                 <Text>Loading lab results...</Text>
               </Stack>
-            ) : observations.length === ResourceHistoryTable ? (
+            ) : observations.length === 0 ? (
               <Stack align="center" gap="xs" py="xl">
-                <IconFlask size={48} style={{ opacity: ResourceHistoryTable.5 }} />
+                <IconFlask size={48} style={{ opacity: .5 }} />
                 <Text c="dimmed">No lab results found</Text>
                 <Text size="sm" c="dimmed">
                   Try adjusting your filters or date range
@@ -327,7 +327,7 @@ export function LabResults({ patient, encounterId }: LabResultsProps) {
                   <Paper p="md" withBorder>
                     <ObservationGraph
                       observations={observations}
-                      height={4ResourceHistoryTableResourceHistoryTable}
+                      height={400}
                     />
                   </Paper>
                 )}
@@ -348,7 +348,7 @@ export function LabResults({ patient, encounterId }: LabResultsProps) {
                 value={diagnosticReports}
                 emptyMessage={
                   <Stack align="center" gap="xs" py="xl">
-                    <IconFlask size={48} style={{ opacity: ResourceHistoryTable.5 }} />
+                    <IconFlask size={48} style={{ opacity: .5 }} />
                     <Text c="dimmed">No lab reports found</Text>
                   </Stack>
                 }
@@ -376,7 +376,7 @@ export function LabResults({ patient, encounterId }: LabResultsProps) {
         size="xl"
       >
         {selectedReport && (
-          <ScrollArea h={6ResourceHistoryTableResourceHistoryTable}>
+          <ScrollArea h={600}>
             <DiagnosticReportDisplay
               value={selectedReport}
             />
@@ -416,11 +416,11 @@ function TrendingResults({ patient, observations }: TrendingResultsProps) {
         clearable
       />
 
-      {selectedTest && filteredObservations.length > ResourceHistoryTable ? (
+      {selectedTest && filteredObservations.length > 0 ? (
         <Paper p="md" withBorder>
           <ObservationGraph
             observations={filteredObservations}
-            height={4ResourceHistoryTableResourceHistoryTable}
+            height={400}
             title={`${selectedTest} Trend`}
           />
         </Paper>
@@ -430,11 +430,11 @@ function TrendingResults({ patient, observations }: TrendingResultsProps) {
         </Text>
       )}
 
-      {selectedTest && filteredObservations.length > ResourceHistoryTable && (
+      {selectedTest && filteredObservations.length > 0 && (
         <Paper p="md" withBorder>
           <Title order={4} mb="md">Reference Range</Title>
           <Text size="sm">
-            {observationHelpers.getReferenceRange(filteredObservations[ResourceHistoryTable])}
+            {observationHelpers.getReferenceRange(filteredObservations[0])}
           </Text>
         </Paper>
       )}

@@ -191,7 +191,7 @@ export class PatientGenerator {
     }];
 
     // Add culturally appropriate middle names
-    if (language === 'es' && names[0] && names[0].given) {
+    if (language === 'es' && names?.[0]?.given) {
       names[0].given.push(faker.person.middleName());
     }
 
@@ -300,7 +300,7 @@ export class PatientGenerator {
       payorName: selectedPlan.name,
       planName: selectedPlan.name,
       relationshipToSubscriber: 'self',
-      effectiveDate: faker.date.past({ years: 1 }).toISOString().split('T')[0]!,
+      effectiveDate: faker.date.past({ years: 1 }).toISOString().split('T')[0] ?? '',
       copayAmount: selectedPlan.copay,
       deductibleAmount: selectedPlan.deductible,
       active: true,
@@ -317,7 +317,7 @@ export class PatientGenerator {
       severity: allergyInfo.severity as 'low' | 'medium' | 'high',
       title: `${allergyInfo.allergen} Allergy`,
       description: `Patient has known allergy to ${allergyInfo.allergen} with ${allergyInfo.reaction} reaction`,
-      effectiveDate: faker.date.past({ years: 5 }).toISOString().split('T')[0]!,
+      effectiveDate: faker.date.past({ years: 5 }).toISOString().split('T')[0] ?? '',
       active: true,
       createdBy: { reference: 'Practitioner/system' },
       lastUpdatedBy: { reference: 'Practitioner/system' }
@@ -427,7 +427,7 @@ export class PatientGenerator {
       const patient = this.generatePatient({ ageGroup });
       
       // Share family name and address
-      if (patient.name && patient.name.length > 0 && patient.name[0]) {
+      if (patient.name?.[0]) {
         patient.name[0].family = lastName;
       }
       if (address) {

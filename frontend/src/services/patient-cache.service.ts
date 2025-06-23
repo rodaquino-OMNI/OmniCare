@@ -65,8 +65,8 @@ interface GetPatientOptions {
 class PatientCacheService extends EventEmitter {
   private cache: Map<string, CachedPatientData> = new Map();
   private readonly CACHE_KEY_PREFIX = 'patient_data:';
-  private readonly CACHE_DURATION = 5 * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable; // 5 minutes
-  private readonly MAX_CACHE_SIZE = 1ResourceHistoryTableResourceHistoryTable * 1ResourceHistoryTable24 * 1ResourceHistoryTable24; // 1ResourceHistoryTableResourceHistoryTableMB
+  private readonly CACHE_DURATION = 5 * 6 * 1000; // 5 minutes
+  private readonly MAX_CACHE_SIZE = 10 * 1024 * 1024; // 10MB
   private stats: CacheStats = {
     hits: ResourceHistoryTable,
     misses: ResourceHistoryTable,
@@ -439,7 +439,7 @@ class PatientCacheService extends EventEmitter {
       totalSize,
       patientCount: this.cache.size,
       maxSize: this.MAX_CACHE_SIZE,
-      utilizationPercentage: (totalSize / this.MAX_CACHE_SIZE) * 1ResourceHistoryTableResourceHistoryTable
+      utilizationPercentage: (totalSize / this.MAX_CACHE_SIZE) * 10
     };
   }
 

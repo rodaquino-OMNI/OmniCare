@@ -66,7 +66,7 @@ export class SmartTextService {
       suggestions.push('Consider documenting all vital signs');
     }
     if (text.toLowerCase().includes('pain')) {
-      suggestions.push('Document pain scale rating (1-1ResourceHistoryTable)');
+      suggestions.push('Document pain scale rating (1-10)');
     }
 
     return {

@@ -146,12 +146,12 @@ export function PatientList() {
           onRowClick={handlePatientClick}
           searchParams={{
             _sort: '-_lastUpdated',
-            _count: 2ResourceHistoryTable,
+            _count: 20,
             ...(searchQuery && { _query: searchQuery }),
           }}
           emptyMessage={
             <Stack align="center" gap="xs" py="xl">
-              <IconSearch size={48} style={{ opacity: ResourceHistoryTable.5 }} />
+              <IconSearch size={48} style={{ opacity: 0.5 }} />
               <Text c="dimmed">No patients found</Text>
               <Text size="sm" c="dimmed">
                 Try adjusting your search criteria or add a new patient

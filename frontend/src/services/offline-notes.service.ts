@@ -163,7 +163,7 @@ export class OfflineNotesService {
       if (this.isOnline) {
         this.syncOfflineNotes();
       }
-    }, 5 * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable);
+    }, 5 * 6 * 1000);
   }
 
   public stopAutoSync(): void {
@@ -287,7 +287,7 @@ export class OfflineNotesService {
     );
   }
 
-  public async getRecentDrafts(limit: number = 1ResourceHistoryTable): Promise<OfflineNote[]> {
+  public async getRecentDrafts(limit: number = 10): Promise<OfflineNote[]> {
     if (!this.db) await this.initializeDB();
 
     const transaction = this.db!.transaction([NOTES_STORE], 'readonly');
@@ -735,14 +735,14 @@ export class OfflineNotesService {
 
   private getNoteTypeCode(noteType: string): string {
     const noteTypeCodes: Record<string, string> = {
-      'progress': '115ResourceHistoryTable6-3',
+      'progress': '11506-3',
       'admission': '18842-5',
       'discharge': '18842-5',
-      'procedure': '2857ResourceHistoryTable-ResourceHistoryTable',
+      'procedure': '2857-ResourceHistoryTable',
       'consultation': '11488-4',
       'nursing': '34815-3'
     };
-    return noteTypeCodes[noteType] || '115ResourceHistoryTable6-3';
+    return noteTypeCodes[noteType] || '11506-3';
   }
 
   // ===============================

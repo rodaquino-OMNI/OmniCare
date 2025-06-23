@@ -38,7 +38,7 @@ export function useNetworkAware<T = any>(
     enableAutoRetry = true,
     priority = 'normal',
     cacheStrategy = 'network-first',
-    cacheDuration = 5 * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable, // 5 minutes
+    cacheDuration = 5 * 6 * 1000, // 5 minutes
     backgroundSync = true,
     optimizeForSaveData = true,
     qualityThreshold = 'fair',
@@ -119,7 +119,7 @@ export function useNetworkAware<T = any>(
         if (backgroundSync && networkStatus.isOnline && !isBackgroundSync) {
           backgroundSyncTimeoutRef.current = setTimeout(() => {
             performFetch(true);
-          }, 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable);
+          }, 1000);
         }
         
         return;

@@ -48,10 +48,10 @@ if (process.env.NODE_ENV !== 'test') {
         return Promise.resolve(); 
       }
       async searchResources(_resourceType: string, _params: Record<string, unknown>) { 
-        return Promise.resolve({ resourceType: 'Bundle' as const, type: 'searchset' as const, entry: [] } as Bundle); 
+        return Promise.resolve({ resourceType: 'Bundle' as const, type: 'searchset' as const, entry: [] } as Bundle<Resource>); 
       }
       async executeBatch(_bundle: Bundle) {
-        return Promise.resolve({ resourceType: 'Bundle' as const, type: 'batch-response' as const, entry: [] } as Bundle);
+        return Promise.resolve({ resourceType: 'Bundle' as const, type: 'batch-response' as const, entry: [] } as Bundle<Resource>);
       }
       async get(_url: string, _options?: any) {
         return Promise.resolve({});
@@ -82,10 +82,10 @@ if (process.env.NODE_ENV !== 'test') {
       return Promise.resolve(); 
     }
     async searchResources(_resourceType: string, _params: any) { 
-      return Promise.resolve({ resourceType: 'Bundle' as const, type: 'searchset' as const, entry: [] } as Bundle); 
+      return Promise.resolve({ resourceType: 'Bundle' as const, type: 'searchset' as const, entry: [] } as Bundle<Resource>); 
     }
     async executeBatch(_bundle: any) {
-      return Promise.resolve({ resourceType: 'Bundle' as const, type: 'batch-response' as const, entry: [] } as Bundle);
+      return Promise.resolve({ resourceType: 'Bundle' as const, type: 'batch-response' as const, entry: [] } as Bundle<Resource>);
     }
     async get(_url: string, _options?: any) {
       return Promise.resolve({});

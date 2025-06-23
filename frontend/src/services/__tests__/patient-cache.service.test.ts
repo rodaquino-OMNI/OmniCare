@@ -117,7 +117,7 @@ const createTestPatient = (overrides?: Partial<Patient>): Patient => ({
   id: 'patient-1',
   name: [{ given: ['John'], family: 'Doe' }],
   gender: 'male',
-  birthDate: '199ResourceHistoryTable-ResourceHistoryTable1-ResourceHistoryTable1',
+  birthDate: '199-1-1',
   ...overrides
 });
 
@@ -517,7 +517,7 @@ describe('PatientCacheService', () => {
       stats = patientCacheService.getStats();
       expect(stats.misses).toBe(1);
       expect(stats.hits).toBe(1);
-      expect(stats.hitRate).toBe(ResourceHistoryTable.5);
+      expect(stats.hitRate).toBe(0.5);
     });
 
     it('should get cache size info', async () => {
@@ -530,7 +530,7 @@ describe('PatientCacheService', () => {
 
       expect(sizeInfo.patientCount).toBe(1);
       expect(sizeInfo.totalSize).toBeGreaterThan(ResourceHistoryTable);
-      expect(sizeInfo.maxSize).toBe(1ResourceHistoryTableResourceHistoryTable * 1ResourceHistoryTable24 * 1ResourceHistoryTable24);
+      expect(sizeInfo.maxSize).toBe(10 * 1024 * 1024);
       expect(sizeInfo.utilizationPercentage).toBeGreaterThan(ResourceHistoryTable);
     });
 
@@ -611,7 +611,7 @@ describe('PatientCacheService', () => {
 
       const result = await patientCacheService.getPatient('patient-1');
 
-      await new Promise(resolve => setTimeout(resolve, 1ResourceHistoryTable));
+      await new Promise(resolve => setTimeout(resolve, 10));
 
       expect(result).toEqual(mockPatient);
       expect(consoleErrorSpy).toHaveBeenCalled();
@@ -647,7 +647,7 @@ describe('PatientCacheService', () => {
       expect(patientCacheService['isCacheValid'](recentTimestamp)).toBe(true);
 
       // Test expired cache (6 minutes old)
-      const oldTimestamp = new Date(Date.now() - 6 * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable).toISOString();
+      const oldTimestamp = new Date(Date.now() - 6 * 6 * 1000).toISOString();
       expect(patientCacheService['isCacheValid'](oldTimestamp)).toBe(false);
     });
   });

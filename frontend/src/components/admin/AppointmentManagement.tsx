@@ -67,39 +67,39 @@ const AppointmentManagement: React.FC<AppointmentManagementProps> = ({ facilityI
       // Mock data - replace with actual API calls
       const mockProviders: Provider[] = [
         {
-          id: 'PROV-ResourceHistoryTableResourceHistoryTable1',
+          id: 'PROV-001',
           firstName: 'Sarah',
           lastName: 'Johnson',
           title: 'MD',
           specialty: 'Internal Medicine',
-          npi: '123456789ResourceHistoryTable',
+          npi: '1234567890',
           licenseNumber: 'MD123456',
           email: 'sarah.johnson@omnicare.com',
           phone: '(555) 123-4567',
           schedule: [
-            { dayOfWeek: 1, startTime: 'ResourceHistoryTable8:ResourceHistoryTableResourceHistoryTable', endTime: '17:ResourceHistoryTableResourceHistoryTable', isAvailable: true },
-            { dayOfWeek: 2, startTime: 'ResourceHistoryTable8:ResourceHistoryTableResourceHistoryTable', endTime: '17:ResourceHistoryTableResourceHistoryTable', isAvailable: true },
-            { dayOfWeek: 3, startTime: 'ResourceHistoryTable8:ResourceHistoryTableResourceHistoryTable', endTime: '17:ResourceHistoryTableResourceHistoryTable', isAvailable: true },
-            { dayOfWeek: 4, startTime: 'ResourceHistoryTable8:ResourceHistoryTableResourceHistoryTable', endTime: '17:ResourceHistoryTableResourceHistoryTable', isAvailable: true },
-            { dayOfWeek: 5, startTime: 'ResourceHistoryTable8:ResourceHistoryTableResourceHistoryTable', endTime: '12:ResourceHistoryTableResourceHistoryTable', isAvailable: true },
+            { dayOfWeek: 1, startTime: '08:00', endTime: '17:00', isAvailable: true },
+            { dayOfWeek: 2, startTime: '08:00', endTime: '17:00', isAvailable: true },
+            { dayOfWeek: 3, startTime: '08:00', endTime: '17:00', isAvailable: true },
+            { dayOfWeek: 4, startTime: '08:00', endTime: '17:00', isAvailable: true },
+            { dayOfWeek: 5, startTime: '08:00', endTime: '12:00', isAvailable: true },
           ],
           isActive: true,
           facilityIds: [facilityId]
         },
         {
-          id: 'PROV-ResourceHistoryTableResourceHistoryTable2',
+          id: 'PROV-002',
           firstName: 'Michael',
           lastName: 'Chen',
           title: 'MD',
           specialty: 'Cardiology',
-          npi: 'ResourceHistoryTable987654321',
-          licenseNumber: 'MD789ResourceHistoryTable12',
+          npi: '0987654321',
+          licenseNumber: 'MD789012',
           email: 'michael.chen@omnicare.com',
           phone: '(555) 234-5678',
           schedule: [
-            { dayOfWeek: 1, startTime: 'ResourceHistoryTable9:ResourceHistoryTableResourceHistoryTable', endTime: '16:ResourceHistoryTableResourceHistoryTable', isAvailable: true },
-            { dayOfWeek: 3, startTime: 'ResourceHistoryTable9:ResourceHistoryTableResourceHistoryTable', endTime: '16:ResourceHistoryTableResourceHistoryTable', isAvailable: true },
-            { dayOfWeek: 5, startTime: 'ResourceHistoryTable9:ResourceHistoryTableResourceHistoryTable', endTime: '16:ResourceHistoryTableResourceHistoryTable', isAvailable: true },
+            { dayOfWeek: 1, startTime: '09:00', endTime: '16:00', isAvailable: true },
+            { dayOfWeek: 3, startTime: '09:00', endTime: '16:00', isAvailable: true },
+            { dayOfWeek: 5, startTime: '09:00', endTime: '16:00', isAvailable: true },
           ],
           isActive: true,
           facilityIds: [facilityId]
@@ -108,10 +108,10 @@ const AppointmentManagement: React.FC<AppointmentManagementProps> = ({ facilityI
 
       const mockPatients: Patient[] = [
         {
-          id: 'PAT-ResourceHistoryTableResourceHistoryTable1',
+          id: 'PAT-001',
           firstName: 'John',
           lastName: 'Smith',
-          dateOfBirth: new Date('198ResourceHistoryTable-ResourceHistoryTable5-15'),
+          dateOfBirth: new Date('1980-05-15'),
           gender: 'M',
           address: {
             street: '123 Main St',
@@ -135,35 +135,35 @@ const AppointmentManagement: React.FC<AppointmentManagementProps> = ({ facilityI
 
       const mockAppointments: Appointment[] = [
         {
-          id: 'APT-ResourceHistoryTableResourceHistoryTable1',
-          patientId: 'PAT-ResourceHistoryTableResourceHistoryTable1',
-          providerId: 'PROV-ResourceHistoryTableResourceHistoryTable1',
+          id: 'APT-001',
+          patientId: 'PAT-001',
+          providerId: 'PROV-001',
           facilityId: facilityId,
           appointmentType: 'Follow-up',
-          startTime: new Date(2ResourceHistoryTable24, ResourceHistoryTable, 15, 1ResourceHistoryTable, ResourceHistoryTable), // Jan 15, 2ResourceHistoryTable24, 1ResourceHistoryTable:ResourceHistoryTableResourceHistoryTable AM
-          endTime: new Date(2ResourceHistoryTable24, ResourceHistoryTable, 15, 1ResourceHistoryTable, 3ResourceHistoryTable),
-          duration: 3ResourceHistoryTable,
+          startTime: new Date(2024, 0, 15, 10, 0), // Jan 15, 2024, 10:00 AM
+          endTime: new Date(2024, 0, 15, 10, 30),
+          duration: 30,
           status: 'Scheduled',
           reasonForVisit: 'Follow-up for hypertension',
           notes: 'Patient reports feeling better on new medication',
-          roomId: 'ROOM-1ResourceHistoryTable1',
+          roomId: 'ROOM-101',
           remindersSent: [],
           createdAt: new Date(),
           updatedAt: new Date()
         },
         {
-          id: 'APT-ResourceHistoryTableResourceHistoryTable2',
-          patientId: 'PAT-ResourceHistoryTableResourceHistoryTable1',
-          providerId: 'PROV-ResourceHistoryTableResourceHistoryTable2',
+          id: 'APT-002',
+          patientId: 'PAT-001',
+          providerId: 'PROV-002',
           facilityId: facilityId,
           appointmentType: 'Consultation',
-          startTime: new Date(2ResourceHistoryTable24, ResourceHistoryTable, 16, 14, ResourceHistoryTable), // Jan 16, 2ResourceHistoryTable24, 2:ResourceHistoryTableResourceHistoryTable PM
-          endTime: new Date(2ResourceHistoryTable24, ResourceHistoryTable, 16, 15, ResourceHistoryTable),
-          duration: 6ResourceHistoryTable,
+          startTime: new Date(2024, 0, 16, 14, 0), // Jan 16, 2024, 2:00 PM
+          endTime: new Date(2024, 0, 16, 15, 0),
+          duration: 60,
           status: 'Confirmed',
           reasonForVisit: 'Cardiology consultation for chest pain',
           notes: 'Referred by Dr. Johnson',
-          roomId: 'ROOM-2ResourceHistoryTable3',
+          roomId: 'ROOM-203',
           remindersSent: [
             { type: 'SMS', sentAt: new Date(), status: 'Delivered' }
           ],
@@ -268,10 +268,10 @@ const AppointmentManagement: React.FC<AppointmentManagementProps> = ({ facilityI
     
     switch (appointment.status) {
       case 'Scheduled': backgroundColor = '#3b82f6'; break;
-      case 'Confirmed': backgroundColor = '#1ResourceHistoryTableb981'; break;
-      case 'Checked In': backgroundColor = '#f59eResourceHistoryTableb'; break;
+      case 'Confirmed': backgroundColor = '#10b981'; break;
+      case 'Checked In': backgroundColor = '#f59e0b'; break;
       case 'In Progress': backgroundColor = '#8b5cf6'; break;
-      case 'Completed': backgroundColor = '#6b728ResourceHistoryTable'; break;
+      case 'Completed': backgroundColor = '#6b7280'; break;
       case 'Cancelled': backgroundColor = '#ef4444'; break;
       case 'No Show': backgroundColor = '#f97316'; break;
     }
@@ -280,9 +280,9 @@ const AppointmentManagement: React.FC<AppointmentManagementProps> = ({ facilityI
       style: {
         backgroundColor,
         borderRadius: '4px',
-        opacity: ResourceHistoryTable.8,
+        opacity: 0.8,
         color: 'white',
-        border: 'ResourceHistoryTablepx',
+        border: '0px',
         display: 'block'
       }
     };
@@ -290,7 +290,7 @@ const AppointmentManagement: React.FC<AppointmentManagementProps> = ({ facilityI
 
   if (loading) {
     return (
-      <div style={{ position: 'relative', minHeight: 4ResourceHistoryTableResourceHistoryTable }}>
+      <div style={{ position: 'relative', minHeight: 400 }}>
         <LoadingOverlay visible={loading} />
       </div>
     );
@@ -302,7 +302,7 @@ const AppointmentManagement: React.FC<AppointmentManagementProps> = ({ facilityI
       <Paper p="md" withBorder>
         <Group justify="space-between">
           <div>
-            <Text size="xl" fw={7ResourceHistoryTableResourceHistoryTable}>Appointment Management</Text>
+            <Text size="xl" fw={700}>Appointment Management</Text>
             <Text c="dimmed">Schedule and manage patient appointments</Text>
           </div>
           <Button
@@ -362,7 +362,7 @@ const AppointmentManagement: React.FC<AppointmentManagementProps> = ({ facilityI
       {/* Calendar */}
       <Card shadow="sm" padding="lg" radius="md" withBorder>
         <Group justify="space-between" mb="md">
-          <Text size="lg" fw={6ResourceHistoryTableResourceHistoryTable}>
+          <Text size="lg" fw={600}>
             Appointment Calendar
           </Text>
           <Group gap="sm">
@@ -390,7 +390,7 @@ const AppointmentManagement: React.FC<AppointmentManagementProps> = ({ facilityI
           </Group>
         </Group>
         
-        <div style={{ height: '6ResourceHistoryTableResourceHistoryTablepx' }}>
+        <div style={{ height: '600px' }}>
           <Calendar
             localizer={localizer}
             events={events}
@@ -406,8 +406,8 @@ const AppointmentManagement: React.FC<AppointmentManagementProps> = ({ facilityI
             eventPropGetter={eventStyleGetter}
             step={15}
             timeslots={4}
-            min={new Date(ResourceHistoryTable, ResourceHistoryTable, ResourceHistoryTable, 7, ResourceHistoryTable, ResourceHistoryTable)} // 7 AM
-            max={new Date(ResourceHistoryTable, ResourceHistoryTable, ResourceHistoryTable, 19, ResourceHistoryTable, ResourceHistoryTable)} // 7 PM
+            min={new Date(0, 0, 0, 7, 0, 0)} // 7 AM
+            max={new Date(0, 0, 0, 19, 0, 0)} // 7 PM
             formats={{
               timeGutterFormat: 'h:mm A',
               eventTimeRangeFormat: ({ start, end }) => 
@@ -422,10 +422,10 @@ const AppointmentManagement: React.FC<AppointmentManagementProps> = ({ facilityI
         <Grid.Col span={{ base: 12, md: 4 }}>
           <Card shadow="sm" padding="lg" radius="md" withBorder>
             <Group gap="sm">
-              <IconCalendar size={2ResourceHistoryTable} className="text-gray-4ResourceHistoryTableResourceHistoryTable" />
+              <IconCalendar size={20} className="text-gray-400" />
               <div>
                 <Text size="sm" c="dimmed">Today&apos;s Appointments</Text>
-                <Text size="lg" fw={7ResourceHistoryTableResourceHistoryTable}>
+                <Text size="lg" fw={700}>
                   {appointments.filter(apt => 
                     moment(apt.startTime).isSame(moment(), 'day')
                   ).length}
@@ -438,10 +438,10 @@ const AppointmentManagement: React.FC<AppointmentManagementProps> = ({ facilityI
         <Grid.Col span={{ base: 12, md: 4 }}>
           <Card shadow="sm" padding="lg" radius="md" withBorder>
             <Group gap="sm">
-              <IconCheck size={2ResourceHistoryTable} className="text-green-4ResourceHistoryTableResourceHistoryTable" />
+              <IconCheck size={20} className="text-green-400" />
               <div>
                 <Text size="sm" c="dimmed">Confirmed Appointments</Text>
-                <Text size="lg" fw={7ResourceHistoryTableResourceHistoryTable}>
+                <Text size="lg" fw={700}>
                   {appointments.filter(apt => 
                     apt.status === 'Confirmed' && moment(apt.startTime).isSame(moment(), 'day')
                   ).length}
@@ -454,10 +454,10 @@ const AppointmentManagement: React.FC<AppointmentManagementProps> = ({ facilityI
         <Grid.Col span={{ base: 12, md: 4 }}>
           <Card shadow="sm" padding="lg" radius="md" withBorder>
             <Group gap="sm">
-              <IconAlertTriangle size={2ResourceHistoryTable} className="text-yellow-4ResourceHistoryTableResourceHistoryTable" />
+              <IconAlertTriangle size={20} className="text-yellow-400" />
               <div>
                 <Text size="sm" c="dimmed">Pending Confirmations</Text>
-                <Text size="lg" fw={7ResourceHistoryTableResourceHistoryTable}>
+                <Text size="lg" fw={700}>
                   {appointments.filter(apt => 
                     apt.status === 'Scheduled' && moment(apt.startTime).isSame(moment(), 'day')
                   ).length}
@@ -480,17 +480,17 @@ const AppointmentManagement: React.FC<AppointmentManagementProps> = ({ facilityI
             <Grid>
               <Grid.Col span={6}>
                 <Text size="sm" c="dimmed">Patient</Text>
-                <Text fw={5ResourceHistoryTableResourceHistoryTable}>{getPatientName(selectedAppointment.patientId)}</Text>
+                <Text fw={500}>{getPatientName(selectedAppointment.patientId)}</Text>
               </Grid.Col>
               
               <Grid.Col span={6}>
                 <Text size="sm" c="dimmed">Provider</Text>
-                <Text fw={5ResourceHistoryTableResourceHistoryTable}>{getProviderName(selectedAppointment.providerId)}</Text>
+                <Text fw={500}>{getProviderName(selectedAppointment.providerId)}</Text>
               </Grid.Col>
 
               <Grid.Col span={6}>
                 <Text size="sm" c="dimmed">Date & Time</Text>
-                <Text fw={5ResourceHistoryTableResourceHistoryTable}>
+                <Text fw={500}>
                   {moment(selectedAppointment.startTime).format('MMMM Do, YYYY')}
                   <br />
                   {moment(selectedAppointment.startTime).format('h:mm A')} - {moment(selectedAppointment.endTime).format('h:mm A')}

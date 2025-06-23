@@ -25,7 +25,7 @@ export async function generateSecureKey(length: number = 256): Promise<CryptoKey
 export async function deriveKeyFromPassword(
   password: string,
   salt: Uint8Array,
-  iterations: number = 1ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable
+  iterations: number = 100000
 ): Promise<CryptoKey> {
   const encoder = new TextEncoder();
   const passwordBuffer = encoder.encode(password);
@@ -138,9 +138,9 @@ export async function compressData(data: string): Promise<ArrayBuffer> {
     }
     
     // Combine chunks
-    const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, ResourceHistoryTable);
+    const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
     const result = new Uint8Array(totalLength);
-    let offset = ResourceHistoryTable;
+    let offset = 0;
     
     for (const chunk of chunks) {
       result.set(chunk, offset);
@@ -175,9 +175,9 @@ export async function decompressData(data: ArrayBuffer): Promise<string> {
     }
     
     // Combine chunks and decode
-    const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, ResourceHistoryTable);
+    const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
     const result = new Uint8Array(totalLength);
-    let offset = ResourceHistoryTable;
+    let offset = 0;
     
     for (const chunk of chunks) {
       result.set(chunk, offset);
@@ -197,7 +197,7 @@ export async function decompressData(data: ArrayBuffer): Promise<string> {
  * Secure random string generator
  */
 export function generateSecureRandomString(length: number = 32): string {
-  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzResourceHistoryTable123456789';
+  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   const values = crypto.getRandomValues(new Uint8Array(length));
   return Array.from(values, byte => charset[byte % charset.length]).join('');
 }
@@ -207,7 +207,7 @@ export function generateSecureRandomString(length: number = 32): string {
  */
 export function arrayBufferToHex(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
-  return Array.from(bytes, byte => byte.toString(16).padStart(2, 'ResourceHistoryTable')).join('');
+  return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
 /**
@@ -215,7 +215,7 @@ export function arrayBufferToHex(buffer: ArrayBuffer): string {
  */
 export function hexToArrayBuffer(hex: string): ArrayBuffer {
   const bytes = new Uint8Array(hex.length / 2);
-  for (let i = ResourceHistoryTable; i < hex.length; i += 2) {
+  for (let i = 0; i < hex.length; i += 2) {
     bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
   }
   return bytes.buffer;
@@ -237,7 +237,7 @@ export function arrayBufferToBase64(buffer: ArrayBuffer): string {
 export function base64ToArrayBuffer(base64: string): ArrayBuffer {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
-  for (let i = ResourceHistoryTable; i < binary.length; i++) {
+  for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i);
   }
   return bytes.buffer;
@@ -251,12 +251,12 @@ export function constantTimeCompare(a: string, b: string): boolean {
     return false;
   }
   
-  let result = ResourceHistoryTable;
-  for (let i = ResourceHistoryTable; i < a.length; i++) {
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
     result |= a.charCodeAt(i) ^ b.charCodeAt(i);
   }
   
-  return result === ResourceHistoryTable;
+  return result === 0;
 }
 
 /**
@@ -265,7 +265,7 @@ export function constantTimeCompare(a: string, b: string): boolean {
 export function secureClear(data: Uint8Array | ArrayBuffer): void {
   const bytes = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
   crypto.getRandomValues(bytes);
-  bytes.fill(ResourceHistoryTable);
+  bytes.fill(0);
 }
 
 /**
@@ -275,8 +275,8 @@ export async function generateKeyPair(): Promise<CryptoKeyPair> {
   return await crypto.subtle.generateKey(
     {
       name: 'RSA-OAEP',
-      modulusLength: 2ResourceHistoryTable48,
-      publicExponent: new Uint8Array([1, ResourceHistoryTable, 1]),
+      modulusLength: 2048,
+      publicExponent: new Uint8Array([1, 0, 1]),
       hash: 'SHA-256'
     },
     true,
@@ -330,7 +330,7 @@ export function createEncryptionMetadata(
   algorithm: string = 'AES-GCM'
 ): Record<string, any> {
   return {
-    version: '1.ResourceHistoryTable',
+    version: '1.0',
     algorithm,
     classification,
     created: new Date().toISOString(),
@@ -375,7 +375,7 @@ export function validateEncryptionParams(params: {
 export async function generateDeterministicKey(
   seed: string,
   salt: Uint8Array,
-  iterations: number = 1ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable
+  iterations: number = 100000
 ): Promise<CryptoKey> {
   return await deriveKeyFromPassword(seed, salt, iterations);
 }
@@ -385,12 +385,12 @@ export async function generateDeterministicKey(
  */
 export function splitDataIntoChunks(
   data: ArrayBuffer,
-  chunkSize: number = 1ResourceHistoryTable24 * 1ResourceHistoryTable24 // 1MB
+  chunkSize: number = 1024 * 1024 // 1MB
 ): ArrayBuffer[] {
   const chunks: ArrayBuffer[] = [];
   const bytes = new Uint8Array(data);
   
-  for (let i = ResourceHistoryTable; i < bytes.length; i += chunkSize) {
+  for (let i = 0; i < bytes.length; i += chunkSize) {
     const chunk = bytes.slice(i, Math.min(i + chunkSize, bytes.length));
     chunks.push(chunk.buffer);
   }
@@ -402,9 +402,9 @@ export function splitDataIntoChunks(
  * Combine data chunks
  */
 export function combineDataChunks(chunks: ArrayBuffer[]): ArrayBuffer {
-  const totalLength = chunks.reduce((acc, chunk) => acc + chunk.byteLength, ResourceHistoryTable);
+  const totalLength = chunks.reduce((acc, chunk) => acc + chunk.byteLength, 0);
   const result = new Uint8Array(totalLength);
-  let offset = ResourceHistoryTable;
+  let offset = 0;
   
   for (const chunk of chunks) {
     result.set(new Uint8Array(chunk), offset);
@@ -429,5 +429,5 @@ export function createStorageKeyId(
     generateSecureRandomString(8)
   ];
   
-  return components.join('_').replace(/[^a-zA-ZResourceHistoryTable-9_-]/g, '');
+  return components.join('_').replace(/[^a-zA-Z0-9_-]/g, '');
 }

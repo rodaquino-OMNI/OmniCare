@@ -64,9 +64,9 @@ describe('HIPAA Compliance Test Suite', () => {
       expect(logEntry).toBeDefined();
 
       // Verify sensitive data is encrypted
-      expect(logEntry.additionalData?.ssn).toMatch(/^encrypted:/);
-      expect(logEntry.additionalData?.medicalRecord).toMatch(/^encrypted:/);
-      expect(logEntry.additionalData?.notes).toMatch(/^encrypted:/);
+      expect(logEntry?.additionalData?.ssn).toMatch(/^encrypted:/);
+      expect(logEntry?.additionalData?.medicalRecord).toMatch(/^encrypted:/);
+      expect(logEntry?.additionalData?.notes).toMatch(/^encrypted:/);
       
       // Verify original data is not present
       expect(JSON.stringify(logEntry)).not.toContain('123-45-6789');
@@ -163,13 +163,13 @@ describe('HIPAA Compliance Test Suite', () => {
       
       const logEntry = auditLogs[0];
       expect(logEntry).toBeDefined();
-      expect(logEntry.userId).toBe(testAccess.userId);
-      expect(logEntry.action).toBe(testAccess.action);
-      expect(logEntry.resource).toBe(testAccess.resource);
-      expect(logEntry.resourceId).toBe(testAccess.resourceId);
-      expect(logEntry.ipAddress).toBe(testAccess.ipAddress);
-      expect(logEntry.success).toBe(testAccess.success);
-      expect(logEntry.timestamp).toBeInstanceOf(Date);
+      expect(logEntry?.userId).toBe(testAccess.userId);
+      expect(logEntry?.action).toBe(testAccess.action);
+      expect(logEntry?.resource).toBe(testAccess.resource);
+      expect(logEntry?.resourceId).toBe(testAccess.resourceId);
+      expect(logEntry?.ipAddress).toBe(testAccess.ipAddress);
+      expect(logEntry?.success).toBe(testAccess.success);
+      expect(logEntry?.timestamp).toBeInstanceOf(Date);
     });
 
     it('should log failed access attempts with error details', async () => {
@@ -189,9 +189,9 @@ describe('HIPAA Compliance Test Suite', () => {
       const logEntry = auditLogs[0];
       expect(logEntry).toBeDefined();
       
-      expect(logEntry.success).toBe(false);
-      expect(logEntry.errorMessage).toBe('Insufficient permissions for accessing patient record');
-      expect(logEntry.action).toBe('unauthorized_access');
+      expect(logEntry?.success).toBe(false);
+      expect(logEntry?.errorMessage).toBe('Insufficient permissions for accessing patient record');
+      expect(logEntry?.action).toBe('unauthorized_access');
     });
 
     it('should generate cryptographically secure audit IDs', async () => {
@@ -215,12 +215,14 @@ describe('HIPAA Compliance Test Suite', () => {
       // Verify all IDs are unique
       auditLogs.forEach(log => {
         expect(log).toBeDefined();
-        expect(log.id).toBeDefined();
-        expect(auditIds.has(log.id)).toBe(false);
-        auditIds.add(log.id);
-        
-        // Verify ID format (audit_timestamp_randomhex)
-        expect(log.id).toMatch(/^audit_[a-z0-9]+_[a-f0-9]{16}$/);
+        expect(log?.id).toBeDefined();
+        if (log?.id) {
+          expect(auditIds.has(log.id)).toBe(false);
+          auditIds.add(log.id);
+          
+          // Verify ID format (audit_timestamp_randomhex)
+          expect(log.id).toMatch(/^audit_[a-z0-9]+_[a-f0-9]{16}$/);
+        }
       });
     });
 
@@ -238,11 +240,13 @@ describe('HIPAA Compliance Test Suite', () => {
       const originalLogs = await auditService.searchAuditLogs('');
       expect(originalLogs).toHaveLength(1);
       expect(originalLogs[0]).toBeDefined();
-      const originalLog = { ...originalLogs[0] };
+      const originalLog = originalLogs[0] ? { ...originalLogs[0] } : {};
 
       // Attempt to modify the log (this should not affect the stored version)
-      originalLogs[0].action = 'modified_action';
-      originalLogs[0].success = false;
+      if (originalLogs[0]) {
+        originalLogs[0].action = 'modified_action';
+        originalLogs[0].success = false;
+      }
 
       // Retrieve logs again to verify integrity
       const retrievedLogs = await auditService.searchAuditLogs('');
@@ -250,9 +254,9 @@ describe('HIPAA Compliance Test Suite', () => {
       const retrievedLog = retrievedLogs[0];
       expect(retrievedLog).toBeDefined();
 
-      expect(retrievedLog.action).toBe(originalLog.action);
-      expect(retrievedLog.success).toBe(originalLog.success);
-      expect(retrievedLog.id).toBe(originalLog.id);
+      expect(retrievedLog?.action).toBe(originalLog.action);
+      expect(retrievedLog?.success).toBe(originalLog.success);
+      expect(retrievedLog?.id).toBe(originalLog.id);
     });
   });
 
@@ -345,7 +349,7 @@ describe('HIPAA Compliance Test Suite', () => {
       expect(sessionLogs).toHaveLength(3);
       expect(sessionLogs.map(log => {
         expect(log).toBeDefined();
-        return log.action;
+        return log?.action;
       })).toEqual([
         'session_start',
         'session_activity', 
@@ -507,8 +511,8 @@ describe('HIPAA Compliance Test Suite', () => {
       expect(criticalEvents).toHaveLength(2);
       expect(criticalEvents[0]).toBeDefined();
       expect(criticalEvents[1]).toBeDefined();
-      expect(criticalEvents[0].severity).toBe('CRITICAL');
-      expect(criticalEvents[1].severity).toBe('HIGH');
+      expect(criticalEvents[0]?.severity).toBe('CRITICAL');
+      expect(criticalEvents[1]?.severity).toBe('HIGH');
     });
   });
 
@@ -541,17 +545,17 @@ describe('HIPAA Compliance Test Suite', () => {
       // Analyze for potential breach indicators
       const uniqueResources = new Set(bulkAccess.map(log => {
         expect(log).toBeDefined();
-        expect(log.resourceId).toBeDefined();
-        return log.resourceId;
-      }));
+        expect(log?.resourceId).toBeDefined();
+        return log?.resourceId;
+      }).filter(id => id !== undefined));
       expect(uniqueResources.size).toBe(50); // Accessed 50 different patient records
       
       // All accesses from same IP (potential indicator)
       const uniqueIPs = new Set(bulkAccess.map(log => {
         expect(log).toBeDefined();
-        expect(log.ipAddress).toBeDefined();
-        return log.ipAddress;
-      }));
+        expect(log?.ipAddress).toBeDefined();
+        return log?.ipAddress;
+      }).filter(ip => ip !== undefined));
       expect(uniqueIPs.size).toBe(1);
     });
 
@@ -578,9 +582,10 @@ describe('HIPAA Compliance Test Suite', () => {
       });
 
       expect(exportLogs).toHaveLength(1);
-      expect(exportLogs[0]).toBeDefined();
-      expect(exportLogs[0].additionalData).toBeDefined();
-      expect(exportLogs[0].resource).toBe('Patient');
+      const exportLog = exportLogs[0];
+      expect(exportLog).toBeDefined();
+      expect(exportLog?.additionalData).toBeDefined();
+      expect(exportLog?.resource).toBe('Patient');
     });
   });
 
@@ -630,15 +635,16 @@ describe('HIPAA Compliance Test Suite', () => {
       // Test filtering by user
       const user1Logs = await auditService.searchAuditLogs('', { userId: 'user1' });
       expect(user1Logs).toHaveLength(1);
-      expect(user1Logs[0]).toBeDefined();
-      expect(user1Logs[0].userId).toBe('user1');
+      const user1Log = user1Logs[0];
+      expect(user1Log).toBeDefined();
+      expect(user1Log?.userId).toBe('user1');
 
       // Test filtering by success status
       const failedLogs = await auditService.searchAuditLogs('', { success: false });
       expect(failedLogs.length).toBeGreaterThan(0);
       expect(failedLogs.every(log => {
         expect(log).toBeDefined();
-        return log.success === false;
+        return log?.success === false;
       })).toBe(true);
 
       // Test filtering by IP address
@@ -646,8 +652,8 @@ describe('HIPAA Compliance Test Suite', () => {
       expect(ipLogs.length).toBeGreaterThan(0);
       expect(ipLogs.every(log => {
         expect(log).toBeDefined();
-        expect(log.ipAddress).toBeDefined();
-        return log.ipAddress === '192.168.1.1';
+        expect(log?.ipAddress).toBeDefined();
+        return log?.ipAddress === '192.168.1.1';
       })).toBe(true);
     });
   });

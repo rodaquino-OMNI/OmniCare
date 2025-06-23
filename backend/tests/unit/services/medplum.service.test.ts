@@ -14,6 +14,7 @@ jest.mock('../../../src/config', () => ({
 import { MedplumService } from '../../../src/services/medplum.service';
 import logger from '../../../src/utils/logger';
 import config from '../../../src/config';
+import { Bundle, Resource, Patient } from '@medplum/fhirtypes';
 
 describe('MedplumService', () => {
   let service: MedplumService;
@@ -108,7 +109,7 @@ describe('MedplumService', () => {
 
     describe('createResource', () => {
       it('should create a resource successfully', async () => {
-        const resource = {
+        const resource: Patient = {
           resourceType: 'Patient',
           name: [{ given: ['John'], family: 'Doe' }],
         };
@@ -127,7 +128,7 @@ describe('MedplumService', () => {
       });
 
       it('should handle creation errors', async () => {
-        const resource = { resourceType: 'Patient' };
+        const resource: Patient = { resourceType: 'Patient' };
         const error = new Error('Creation failed');
 
         jest.spyOn(service['medplum'], 'createResource').mockRejectedValue(error);
@@ -140,7 +141,7 @@ describe('MedplumService', () => {
       });
 
       it('should handle FHIR operation outcome errors', async () => {
-        const resource = { resourceType: 'Patient' };
+        const resource: Patient = { resourceType: 'Patient' };
         const operationOutcome = {
           resourceType: 'OperationOutcome',
           issue: [{ severity: 'error', code: 'invalid', diagnostics: 'Invalid resource' }]
@@ -156,7 +157,7 @@ describe('MedplumService', () => {
 
     describe('readResource', () => {
       it('should read a resource successfully', async () => {
-        const resource = { resourceType: 'Patient', id: '123', name: [{ family: 'Doe' }] };
+        const resource: Patient = { resourceType: 'Patient', id: '123', name: [{ family: 'Doe' }] };
 
         jest.spyOn(service['medplum'], 'readResource').mockResolvedValue(resource);
 
@@ -181,7 +182,7 @@ describe('MedplumService', () => {
 
     describe('updateResource', () => {
       it('should update a resource successfully', async () => {
-        const resource = {
+        const resource: Patient = {
           resourceType: 'Patient',
           id: '123',
           name: [{ given: ['Jane'], family: 'Doe' }],
@@ -200,13 +201,13 @@ describe('MedplumService', () => {
       });
 
       it('should throw error for resource without ID', async () => {
-        const resource = { resourceType: 'Patient' };
+        const resource: Patient = { resourceType: 'Patient' };
 
         await expect(service.updateResource(resource)).rejects.toThrow('Resource must have an ID for update');
       });
 
       it('should handle update errors', async () => {
-        const resource = { resourceType: 'Patient', id: '123' };
+        const resource: Patient = { resourceType: 'Patient', id: '123' };
         const error = new Error('Update failed');
 
         jest.spyOn(service['medplum'], 'updateResource').mockRejectedValue(error);
@@ -314,19 +315,19 @@ describe('MedplumService', () => {
     });
 
     it('should execute batch bundle successfully', async () => {
-      const bundle = {
+      const bundle: Bundle = {
         resourceType: 'Bundle',
         type: 'batch',
         entry: [
           {
             request: { method: 'POST', url: 'Patient' },
-            resource: { resourceType: 'Patient' },
+            resource: { resourceType: 'Patient' } as Patient,
           },
         ],
       };
-      const responseBundle = {
-        resourceType: 'Bundle',
-        type: 'batch-response',
+      const responseBundle: Bundle<Resource> = {
+        resourceType: 'Bundle' as const,
+        type: 'batch-response' as const,
         entry: [{ response: { status: '201' } }],
       };
 
@@ -339,7 +340,11 @@ describe('MedplumService', () => {
     });
 
     it('should handle batch execution errors', async () => {
-      const bundle = { resourceType: 'Bundle', type: 'batch', entry: [] };
+      const bundle: Bundle = { 
+        resourceType: 'Bundle' as const, 
+        type: 'batch' as const, 
+        entry: [] 
+      };
       const error = new Error('Batch failed');
 
       jest.spyOn(service['medplum'], 'executeBatch').mockRejectedValue(error);
@@ -382,7 +387,7 @@ describe('MedplumService', () => {
     });
 
     it('should validate resource', async () => {
-      const resource = { resourceType: 'Patient' };
+      const resource: Patient = { resourceType: 'Patient' };
       const operationOutcome = {
         resourceType: 'OperationOutcome',
         issue: [],
@@ -401,10 +406,11 @@ describe('MedplumService', () => {
       const endpoint = 'https://example.com/webhook';
       const subscription = {
         resourceType: 'Subscription',
-        status: 'active',
+        status: 'requested' as const,
+        reason: 'OmniCare EMR Integration',
         criteria,
         channel: {
-          type: 'rest-hook',
+          type: 'rest-hook' as const,
           endpoint,
         },
       };

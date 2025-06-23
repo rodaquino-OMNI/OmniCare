@@ -33,10 +33,12 @@ module.exports = {
     '^.+\\.tsx?$': [
       'ts-jest',
       {
+        isolatedModules: true,
         tsconfig: {
           jsx: 'react',
           esModuleInterop: true,
           allowSyntheticDefaultImports: true,
+          skipLibCheck: true
         },
       },
     ],

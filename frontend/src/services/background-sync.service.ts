@@ -46,18 +46,18 @@ class BackgroundSyncService {
   private processingTasks: Set<string> = new Set();
   private syncInterval: NodeJS.Timeout | null = null;
   private stats: SyncStats = {
-    pendingTasks: ResourceHistoryTable,
-    completedTasks: ResourceHistoryTable,
-    failedTasks: ResourceHistoryTable,
+    pendingTasks: 0,
+    completedTasks: 0,
+    failedTasks: 0,
     lastSyncTime: null,
     nextSyncTime: null,
-    averageSyncDuration: ResourceHistoryTable,
+    averageSyncDuration: 0,
   };
   
   private options: Required<SyncQueueOptions> = {
-    maxQueueSize: 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable,
-    syncInterval: 3ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable, // 3ResourceHistoryTable seconds
-    batchSize: 1ResourceHistoryTable,
+    maxQueueSize: 1000,
+    syncInterval: 30000, // 3 seconds
+    batchSize: 10,
     enableCompression: true,
     enableEncryption: true,
     persistQueue: true,
@@ -264,7 +264,7 @@ class BackgroundSyncService {
       };
     } catch (error: any) {
       // Check if it's a conflict error
-      if (error.status === 4ResourceHistoryTable9 || error.code === 'CONFLICT') {
+      if (error.status === 49 || error.code === 'CONFLICT') {
         const resolver = this.conflictResolvers.get(task.resource);
         
         if (resolver && task.conflictResolution !== 'manual') {
@@ -354,7 +354,7 @@ class BackgroundSyncService {
     const tasks = this.getPendingTasks();
     const tasksToRemove = tasks
       .filter(t => t.priority === 'low')
-      .slice(ResourceHistoryTable, Math.floor(this.options.maxQueueSize * ResourceHistoryTable.1));
+      .slice(0, Math.floor(this.options.maxQueueSize * 0.1));
 
     tasksToRemove.forEach(task => {
       this.syncQueue.delete(task.id);
@@ -420,7 +420,7 @@ class BackgroundSyncService {
         const error = new Error(`HTTP ${response.status}`);
         (error as any).status = response.status;
         
-        if (response.status === 4ResourceHistoryTable9) {
+        if (response.status === 49) {
           (error as any).serverData = await response.json();
         }
         

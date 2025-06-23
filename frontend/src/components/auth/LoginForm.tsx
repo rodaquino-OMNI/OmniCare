@@ -89,7 +89,7 @@ export function LoginForm() {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-5ResourceHistoryTable to-indigo-1ResourceHistoryTableResourceHistoryTable flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-10 flex items-center justify-center p-4">
       <Card 
         shadow="lg" 
         padding="xl" 
@@ -102,11 +102,11 @@ export function LoginForm() {
         {/* Header */}
         <Stack align="center" mb="xl">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-primary/1ResourceHistoryTable rounded-full">
+            <div className="p-3 bg-primary/10 rounded-full">
               <IconStethoscope size={32} className="text-primary" />
             </div>
             <div>
-              <Title order={2} className="text-gray-8ResourceHistoryTableResourceHistoryTable">
+              <Title order={2} className="text-gray-8ResourceHistoryTable">
                 {APP_NAME}
               </Title>
               <Text size="sm" c="dimmed">
@@ -116,7 +116,7 @@ export function LoginForm() {
           </div>
         </Stack>
 
-        <Title order={3} ta="center" mb="md" className="text-gray-7ResourceHistoryTableResourceHistoryTable">
+        <Title order={3} ta="center" mb="md" className="text-gray-7ResourceHistoryTable">
           Sign in to your account
         </Title>
 

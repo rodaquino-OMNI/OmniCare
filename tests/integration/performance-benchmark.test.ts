@@ -5,6 +5,7 @@ import { Pool } from 'pg';
 import * as Redis from 'redis';
 import autocannon from 'autocannon';
 import { MedplumClient } from '@medplum/core';
+import { Patient, Bundle, Encounter, Observation } from '@medplum/fhirtypes';
 
 // Import server components
 import config from '../../backend/src/config';

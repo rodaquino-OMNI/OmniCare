@@ -493,7 +493,7 @@ export const demoDataHelpers = {
         type: {
           coding: [{ code: 'MR', display: 'Medical Record Number' }]
         },
-        value: `MRN${Math.floor(Math.random() * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable)}`
+        value: `MRN${Math.floor(Math.random() * 100000)}`
       }
     ],
     name: [
@@ -504,7 +504,7 @@ export const demoDataHelpers = {
       }
     ],
     gender: 'male',
-    birthDate: '198ResourceHistoryTable-ResourceHistoryTable1-15',
+    birthDate: '198-1-15',
     telecom: [
       {
         system: 'phone',

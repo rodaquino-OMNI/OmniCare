@@ -1,15 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 // import jwt from 'jsonwebtoken';
 
-import { JWTAuthService } from '@/auth/jwt.service';
-import { hasPermission, hasHigherRole } from '@/auth/role-permissions';
-// import config from '@/config';
-import { AuditService } from '@/services/audit.service';
-import { SessionManager } from '@/services/session.service';
-import { smartFHIRService } from '@/services/smart-fhir.service';
-import { User, UserRole, UserRoles, Permission, SessionInfo } from '@/types/auth.types';
-import logger from '@/utils/logger';
-import { getErrorMessage } from '@/utils/error.utils';
+import { JWTAuthService } from '../auth/jwt.service';
+import { hasPermission, hasHigherRole } from '../auth/role-permissions';
+// import config from '../config';
+import { AuditService } from '../services/audit.service';
+import { SessionManager } from '../services/session.service';
+import { smartFHIRService } from '../services/smart-fhir.service';
+import { User, UserRole, UserRoles, Permission, SessionInfo } from '../types/auth.types';
+import logger from '../utils/logger';
+import { getErrorMessage } from '../utils/error.utils';
 
 // Extended Request interface to include authentication data
 declare global {

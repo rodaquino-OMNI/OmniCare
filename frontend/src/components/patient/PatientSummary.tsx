@@ -124,18 +124,18 @@ export function PatientSummary({
 
       // Filter active allergies
       const activeAllergies = allergiesData.filter(allergy => 
-        allergy.clinicalStatus?.coding?.[ResourceHistoryTable]?.code === 'active'
+        allergy.clinicalStatus?.coding?.[0]?.code === 'active'
       );
       setAllergies(activeAllergies);
 
       // Filter active conditions
       const activeConditions = conditionsData.filter(condition => 
-        condition.clinicalStatus?.coding?.[ResourceHistoryTable]?.code === 'active'
+        condition.clinicalStatus?.coding?.[0]?.code === 'active'
       );
       setConditions(activeConditions);
 
       // Get recent encounters (last 5)
-      setRecentEncounters(encountersData.slice(ResourceHistoryTable, 5));
+      setRecentEncounters(encountersData.slice(0, 5));
 
     } catch (err) {
       console.error('Error loading patient summary:', err);
@@ -148,11 +148,11 @@ export function PatientSummary({
   const processVitalSigns = (observations: Observation[]): VitalSign[] => {
     const vitalTypes = [
       { code: '8867-4', name: 'Heart Rate', unit: 'bpm', icon: IconHeart },
-      { code: '848ResourceHistoryTable-6', name: 'Systolic BP', unit: 'mmHg', icon: IconDroplet },
+      { code: '8480-6', name: 'Systolic BP', unit: 'mmHg', icon: IconDroplet },
       { code: '8462-4', name: 'Diastolic BP', unit: 'mmHg', icon: IconDroplet },
-      { code: '831ResourceHistoryTable-5', name: 'Temperature', unit: '°F', icon: IconTemperature },
+      { code: '8310-5', name: 'Temperature', unit: '°F', icon: IconTemperature },
       { code: '9279-1', name: 'Respiratory Rate', unit: '/min', icon: IconLungs },
-      { code: '27ResourceHistoryTable8-6', name: 'Oxygen Saturation', unit: '%', icon: IconActivity },
+      { code: '2708-6', name: 'Oxygen Saturation', unit: '%', icon: IconActivity },
       { code: '29463-7', name: 'Weight', unit: 'kg', icon: IconScale }
     ];
 
@@ -205,7 +205,7 @@ export function PatientSummary({
 
   if (loading) {
     return (
-      <Center h={4ResourceHistoryTableResourceHistoryTable}>
+      <Center h={400}>
         <Stack align="center" gap="md">
           <Loader size="lg" />
           <Text c="dimmed">Loading patient summary...</Text>
@@ -232,15 +232,15 @@ export function PatientSummary({
         <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Group justify="space-between">
             <div>
-              <Text size="xs" c="dimmed" fw={5ResourceHistoryTableResourceHistoryTable}>
+              <Text size="xs" c="dimmed" fw={500}>
                 MEDICATIONS
               </Text>
-              <Text fw={7ResourceHistoryTableResourceHistoryTable} size="xl" className="text-blue-6ResourceHistoryTableResourceHistoryTable">
+              <Text fw={700} size="xl" className="text-blue-600">
                 {medications.length}
               </Text>
             </div>
             <ThemeIcon color="blue" variant="light" size="lg" radius="md">
-              <IconPill size={2ResourceHistoryTable} />
+              <IconPill size={20} />
             </ThemeIcon>
           </Group>
         </Card>
@@ -248,15 +248,15 @@ export function PatientSummary({
         <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Group justify="space-between">
             <div>
-              <Text size="xs" c="dimmed" fw={5ResourceHistoryTableResourceHistoryTable}>
+              <Text size="xs" c="dimmed" fw={500}>
                 ALLERGIES
               </Text>
-              <Text fw={7ResourceHistoryTableResourceHistoryTable} size="xl" className="text-red-6ResourceHistoryTableResourceHistoryTable">
+              <Text fw={700} size="xl" className="text-red-600">
                 {allergies.length}
               </Text>
             </div>
             <ThemeIcon color="red" variant="light" size="lg" radius="md">
-              <IconShield size={2ResourceHistoryTable} />
+              <IconShield size={20} />
             </ThemeIcon>
           </Group>
         </Card>
@@ -264,15 +264,15 @@ export function PatientSummary({
         <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Group justify="space-between">
             <div>
-              <Text size="xs" c="dimmed" fw={5ResourceHistoryTableResourceHistoryTable}>
+              <Text size="xs" c="dimmed" fw={500}>
                 CONDITIONS
               </Text>
-              <Text fw={7ResourceHistoryTableResourceHistoryTable} size="xl" className="text-orange-6ResourceHistoryTableResourceHistoryTable">
+              <Text fw={700} size="xl" className="text-orange-600">
                 {conditions.length}
               </Text>
             </div>
             <ThemeIcon color="orange" variant="light" size="lg" radius="md">
-              <IconStethoscope size={2ResourceHistoryTable} />
+              <IconStethoscope size={20} />
             </ThemeIcon>
           </Group>
         </Card>
@@ -280,15 +280,15 @@ export function PatientSummary({
         <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Group justify="space-between">
             <div>
-              <Text size="xs" c="dimmed" fw={5ResourceHistoryTableResourceHistoryTable}>
+              <Text size="xs" c="dimmed" fw={500}>
                 ENCOUNTERS
               </Text>
-              <Text fw={7ResourceHistoryTableResourceHistoryTable} size="xl" className="text-green-6ResourceHistoryTableResourceHistoryTable">
+              <Text fw={700} size="xl" className="text-green-600">
                 {recentEncounters.length}
               </Text>
             </div>
             <ThemeIcon color="green" variant="light" size="lg" radius="md">
-              <IconCalendar size={2ResourceHistoryTable} />
+              <IconCalendar size={20} />
             </ThemeIcon>
           </Group>
         </Card>
@@ -299,7 +299,7 @@ export function PatientSummary({
         {showVitals && (
           <Card shadow="sm" padding="lg" radius="md" withBorder>
             <Group justify="space-between" mb="md">
-              <Text fw={6ResourceHistoryTableResourceHistoryTable} size="lg">Recent Vital Signs</Text>
+              <Text fw={600} size="lg">Recent Vital Signs</Text>
               <Group gap="xs">
                 <ActionIcon 
                   variant="light" 
@@ -321,16 +321,16 @@ export function PatientSummary({
             </Group>
 
             <Stack gap="md">
-              {vitals.length === ResourceHistoryTable ? (
+              {vitals.length === 0 ? (
                 <Text c="dimmed" ta="center" py="xl">
                   No recent vital signs recorded
                 </Text>
               ) : (
-                vitals.slice(ResourceHistoryTable, 4).map((vital, index) => (
-                  <Paper key={index} p="sm" className="bg-gray-5ResourceHistoryTable rounded-lg">
+                vitals.slice(0, 4).map((vital, index) => (
+                  <Paper key={index} p="sm" className="bg-gray-50 rounded-lg">
                     <Group justify="space-between" align="center">
                       <div>
-                        <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>
+                        <Text size="sm" fw={500}>
                           {vital.type}
                         </Text>
                         <Text size="xs" c="dimmed">
@@ -338,10 +338,10 @@ export function PatientSummary({
                         </Text>
                       </div>
                       <Group gap="sm" align="center">
-                        <Text size="lg" fw={6ResourceHistoryTableResourceHistoryTable} className={
-                          vital.status === 'normal' ? 'text-green-6ResourceHistoryTableResourceHistoryTable' :
-                          vital.status === 'abnormal' ? 'text-yellow-6ResourceHistoryTableResourceHistoryTable' :
-                          'text-red-6ResourceHistoryTableResourceHistoryTable'
+                        <Text size="lg" fw={600} className={
+                          vital.status === 'normal' ? 'text-green-6ResourceHistoryTable' :
+                          vital.status === 'abnormal' ? 'text-yellow-6ResourceHistoryTable' :
+                          'text-red-6ResourceHistoryTable'
                         }>
                           {vital.value} {vital.unit}
                         </Text>
@@ -365,7 +365,7 @@ export function PatientSummary({
         {showMedications && (
           <Card shadow="sm" padding="lg" radius="md" withBorder>
             <Group justify="space-between" mb="md">
-              <Text fw={6ResourceHistoryTableResourceHistoryTable} size="lg">Current Medications</Text>
+              <Text fw={600} size="lg">Current Medications</Text>
               {onViewDetails && (
                 <ActionIcon 
                   variant="light" 
@@ -378,16 +378,16 @@ export function PatientSummary({
             </Group>
 
             <Stack gap="sm">
-              {medications.length === ResourceHistoryTable ? (
+              {medications.length === 0 ? (
                 <Text c="dimmed" ta="center" py="xl">
                   No active medications
                 </Text>
               ) : (
-                medications.slice(ResourceHistoryTable, 5).map((medication, index) => (
-                  <Paper key={index} p="sm" className="border border-gray-2ResourceHistoryTableResourceHistoryTable rounded-lg">
+                medications.slice(0, 5).map((medication, index) => (
+                  <Paper key={index} p="sm" className="border border-gray-200 rounded-lg">
                     <Group justify="space-between" align="flex-start">
                       <div className="flex-1">
-                        <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable} className="text-gray-8ResourceHistoryTableResourceHistoryTable">
+                        <Text size="sm" fw={500} className="text-gray-800">
                           {medicationHelpers.getName(medication)}
                         </Text>
                         <Text size="xs" c="dimmed">
@@ -415,11 +415,11 @@ export function PatientSummary({
         )}
 
         {/* Allergies & Alerts */}
-        {showAllergies && allergies.length > ResourceHistoryTable && (
+        {showAllergies && allergies.length > 0 && (
           <Card shadow="sm" padding="lg" radius="md" withBorder>
             <Group justify="space-between" mb="md">
-              <Text fw={6ResourceHistoryTableResourceHistoryTable} size="lg" className="text-red-7ResourceHistoryTableResourceHistoryTable">
-                <IconShield size={2ResourceHistoryTable} className="inline mr-2" />
+              <Text fw={600} size="lg" className="text-red-700">
+                <IconShield size={20} className="inline mr-2" />
                 Allergies & Alerts
               </Text>
               {onViewDetails && (
@@ -443,14 +443,14 @@ export function PatientSummary({
                 >
                   <Group justify="space-between" align="center">
                     <div>
-                      <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>
+                      <Text size="sm" fw={500}>
                         {allergy.code?.text || 
-                         allergy.code?.coding?.[ResourceHistoryTable]?.display || 
+                         allergy.code?.coding?.[0]?.display || 
                          'Unknown Allergy'}
                       </Text>
-                      {allergy.reaction?.[ResourceHistoryTable]?.manifestation?.[ResourceHistoryTable]?.text && (
+                      {allergy.reaction?.[0]?.manifestation?.[0]?.text && (
                         <Text size="xs" c="dimmed">
-                          Reaction: {allergy.reaction[ResourceHistoryTable].manifestation[ResourceHistoryTable].text}
+                          Reaction: {allergy.reaction[0].manifestation[0].text}
                         </Text>
                       )}
                     </div>
@@ -471,10 +471,10 @@ export function PatientSummary({
         )}
 
         {/* Active Conditions */}
-        {showConditions && conditions.length > ResourceHistoryTable && (
+        {showConditions && conditions.length > 0 && (
           <Card shadow="sm" padding="lg" radius="md" withBorder>
             <Group justify="space-between" mb="md">
-              <Text fw={6ResourceHistoryTableResourceHistoryTable} size="lg">Active Conditions</Text>
+              <Text fw={600} size="lg">Active Conditions</Text>
               {onViewDetails && (
                 <ActionIcon 
                   variant="light" 
@@ -487,13 +487,13 @@ export function PatientSummary({
             </Group>
 
             <Stack gap="sm">
-              {conditions.slice(ResourceHistoryTable, 5).map((condition, index) => (
-                <Paper key={index} p="sm" className="border border-gray-2ResourceHistoryTableResourceHistoryTable rounded-lg">
+              {conditions.slice(0, 5).map((condition, index) => (
+                <Paper key={index} p="sm" className="border border-gray-200 rounded-lg">
                   <Group justify="space-between" align="flex-start">
                     <div>
-                      <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable} className="text-gray-8ResourceHistoryTableResourceHistoryTable">
+                      <Text size="sm" fw={500} className="text-gray-800">
                         {condition.code?.text || 
-                         condition.code?.coding?.[ResourceHistoryTable]?.display || 
+                         condition.code?.coding?.[0]?.display || 
                          'Unknown Condition'}
                       </Text>
                       {condition.recordedDate && (
@@ -507,7 +507,7 @@ export function PatientSummary({
                       color="blue" 
                       variant="light"
                     >
-                      {condition.verificationStatus?.coding?.[ResourceHistoryTable]?.code?.toUpperCase() || 'ACTIVE'}
+                      {condition.verificationStatus?.coding?.[0]?.code?.toUpperCase() || 'ACTIVE'}
                     </Badge>
                   </Group>
                 </Paper>
@@ -523,10 +523,10 @@ export function PatientSummary({
       </SimpleGrid>
 
       {/* Recent Activity */}
-      {showRecentActivity && recentEncounters.length > ResourceHistoryTable && (
+      {showRecentActivity && recentEncounters.length > 0 && (
         <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Group justify="space-between" mb="md">
-            <Text fw={6ResourceHistoryTableResourceHistoryTable} size="lg">Recent Encounters</Text>
+            <Text fw={600} size="lg">Recent Encounters</Text>
             {onViewDetails && (
               <ActionIcon 
                 variant="light" 
@@ -540,12 +540,12 @@ export function PatientSummary({
 
           <Stack gap="sm">
             {recentEncounters.map((encounter, index) => (
-              <Paper key={index} p="md" className="border border-gray-2ResourceHistoryTableResourceHistoryTable rounded-lg">
+              <Paper key={index} p="md" className="border border-gray-200 rounded-lg">
                 <Group justify="space-between" align="center">
                   <div>
-                    <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable} className="text-gray-8ResourceHistoryTableResourceHistoryTable">
-                      {encounter.type?.[ResourceHistoryTable]?.text || 
-                       encounter.type?.[ResourceHistoryTable]?.coding?.[ResourceHistoryTable]?.display || 
+                    <Text size="sm" fw={500} className="text-gray-800">
+                      {encounter.type?.[0]?.text || 
+                       encounter.type?.[0]?.coding?.[0]?.display || 
                        'Medical Encounter'}
                     </Text>
                     <Text size="xs" c="dimmed">

@@ -14,7 +14,7 @@ export const NetworkStatusIndicator: React.FC<NetworkStatusIndicatorProps> = ({
   position = 'bottom-right',
   showDetails = true,
   autoHide = true,
-  autoHideDelay = 5ResourceHistoryTableResourceHistoryTableResourceHistoryTable,
+  autoHideDelay = 5000,
 }) => {
   const networkStatus = useNetworkStatusContext();
   const [isVisible, setIsVisible] = useState(!networkStatus.isOnline);
@@ -29,10 +29,10 @@ export const NetworkStatusIndicator: React.FC<NetworkStatusIndicatorProps> = ({
   };
 
   const qualityColors = {
-    poor: 'text-red-5ResourceHistoryTableResourceHistoryTable bg-red-5ResourceHistoryTable border-red-2ResourceHistoryTableResourceHistoryTable',
-    fair: 'text-orange-5ResourceHistoryTableResourceHistoryTable bg-orange-5ResourceHistoryTable border-orange-2ResourceHistoryTableResourceHistoryTable',
-    good: 'text-blue-5ResourceHistoryTableResourceHistoryTable bg-blue-5ResourceHistoryTable border-blue-2ResourceHistoryTableResourceHistoryTable',
-    excellent: 'text-green-5ResourceHistoryTableResourceHistoryTable bg-green-5ResourceHistoryTable border-green-2ResourceHistoryTableResourceHistoryTable',
+    poor: 'text-red-500 bg-red-50 border-red-200',
+    fair: 'text-orange-500 bg-orange-50 border-orange-200',
+    good: 'text-blue-500 bg-blue-50 border-blue-200',
+    excellent: 'text-green-500 bg-green-50 border-green-200',
   };
 
   const qualityIcons = {
@@ -66,13 +66,13 @@ export const NetworkStatusIndicator: React.FC<NetworkStatusIndicatorProps> = ({
   if (!isVisible) return null;
 
   return (
-    <div className={cn('fixed z-5ResourceHistoryTable flex flex-col gap-2', positionClasses[position])}>
+    <div className={cn('fixed z-50 flex flex-col gap-2', positionClasses[position])}>
       {/* Main Status Indicator */}
       <div
         className={cn(
           'flex items-center gap-2 px-4 py-2 rounded-lg shadow-lg border transition-all cursor-pointer',
           !networkStatus.isOnline
-            ? 'bg-red-5ResourceHistoryTable border-red-2ResourceHistoryTableResourceHistoryTable text-red-7ResourceHistoryTableResourceHistoryTable'
+            ? 'bg-red-50 border-red-200 text-red-7ResourceHistoryTable'
             : qualityColors[networkStatus.quality.quality]
         )}
         onClick={() => showDetails && setShowDetailPanel(!showDetailPanel)}
@@ -98,7 +98,7 @@ export const NetworkStatusIndicator: React.FC<NetworkStatusIndicatorProps> = ({
               e.stopPropagation();
               setShowDetailPanel(!showDetailPanel);
             }}
-            className="ml-2 p-1 hover:bg-black/1ResourceHistoryTable rounded"
+            className="ml-2 p-1 hover:bg-black/10 rounded"
           >
             <Info className="w-4 h-4" />
           </button>
@@ -114,12 +114,12 @@ export const NetworkStatusIndicator: React.FC<NetworkStatusIndicatorProps> = ({
 
       {/* Detail Panel */}
       {showDetailPanel && (
-        <div className="bg-white rounded-lg shadow-xl border p-4 min-w-[3ResourceHistoryTableResourceHistoryTablepx]">
+        <div className="bg-white rounded-lg shadow-xl border p-4 min-w-[300px]">
           <div className="flex justify-between items-center mb-3">
             <h3 className="font-semibold">Network Details</h3>
             <button
               onClick={() => setShowDetailPanel(false)}
-              className="p-1 hover:bg-gray-1ResourceHistoryTableResourceHistoryTable rounded"
+              className="p-1 hover:bg-gray-10 rounded"
             >
               <X className="w-4 h-4" />
             </button>
@@ -127,49 +127,49 @@ export const NetworkStatusIndicator: React.FC<NetworkStatusIndicatorProps> = ({
 
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-6ResourceHistoryTableResourceHistoryTable">Status:</span>
+              <span className="text-gray-6ResourceHistoryTable">Status:</span>
               <span className="font-medium">
                 {networkStatus.isOnline ? 'Online' : 'Offline'}
               </span>
             </div>
 
             <div className="flex justify-between">
-              <span className="text-gray-6ResourceHistoryTableResourceHistoryTable">Connection Type:</span>
+              <span className="text-gray-6ResourceHistoryTable">Connection Type:</span>
               <span className="font-medium">
                 {networkStatus.connectionType || 'Unknown'}
               </span>
             </div>
 
             <div className="flex justify-between">
-              <span className="text-gray-6ResourceHistoryTableResourceHistoryTable">Effective Type:</span>
+              <span className="text-gray-6ResourceHistoryTable">Effective Type:</span>
               <span className="font-medium">
                 {networkStatus.effectiveType.toUpperCase()}
               </span>
             </div>
 
             <div className="flex justify-between">
-              <span className="text-gray-6ResourceHistoryTableResourceHistoryTable">Latency:</span>
+              <span className="text-gray-6ResourceHistoryTable">Latency:</span>
               <span className="font-medium">
                 {networkStatus.quality.latency}ms
               </span>
             </div>
 
             <div className="flex justify-between">
-              <span className="text-gray-6ResourceHistoryTableResourceHistoryTable">Bandwidth:</span>
+              <span className="text-gray-6ResourceHistoryTable">Bandwidth:</span>
               <span className="font-medium">
                 {networkStatus.quality.bandwidth} Mbps
               </span>
             </div>
 
             <div className="flex justify-between">
-              <span className="text-gray-6ResourceHistoryTableResourceHistoryTable">Jitter:</span>
+              <span className="text-gray-6ResourceHistoryTable">Jitter:</span>
               <span className="font-medium">
                 {networkStatus.quality.jitter}ms
               </span>
             </div>
 
             <div className="flex justify-between">
-              <span className="text-gray-6ResourceHistoryTableResourceHistoryTable">Packet Loss:</span>
+              <span className="text-gray-6ResourceHistoryTable">Packet Loss:</span>
               <span className="font-medium">
                 {networkStatus.quality.packetLoss}%
               </span>
@@ -177,22 +177,22 @@ export const NetworkStatusIndicator: React.FC<NetworkStatusIndicatorProps> = ({
 
             {networkStatus.saveData && (
               <div className="flex justify-between">
-                <span className="text-gray-6ResourceHistoryTableResourceHistoryTable">Save Data:</span>
-                <span className="font-medium text-green-6ResourceHistoryTableResourceHistoryTable">Enabled</span>
+                <span className="text-gray-6ResourceHistoryTable">Save Data:</span>
+                <span className="font-medium text-green-6ResourceHistoryTable">Enabled</span>
               </div>
             )}
 
             {networkStatus.retryQueue.length > ResourceHistoryTable && (
               <div className="mt-3 pt-3 border-t">
                 <div className="flex justify-between mb-2">
-                  <span className="text-gray-6ResourceHistoryTableResourceHistoryTable">Pending Retries:</span>
+                  <span className="text-gray-6ResourceHistoryTable">Pending Retries:</span>
                   <span className="font-medium">
                     {networkStatus.retryQueue.length}
                   </span>
                 </div>
                 
                 {networkStatus.isProcessingRetries && (
-                  <div className="text-xs text-blue-6ResourceHistoryTableResourceHistoryTable flex items-center gap-1">
+                  <div className="text-xs text-blue-6ResourceHistoryTable flex items-center gap-1">
                     <RefreshCw className="w-3 h-3 animate-spin" />
                     Processing retries...
                   </div>
@@ -204,7 +204,7 @@ export const NetworkStatusIndicator: React.FC<NetworkStatusIndicatorProps> = ({
           <div className="mt-4 flex gap-2">
             <button
               onClick={() => networkStatus.refresh()}
-              className="flex-1 px-3 py-1.5 bg-blue-5ResourceHistoryTableResourceHistoryTable text-white rounded hover:bg-blue-6ResourceHistoryTableResourceHistoryTable text-sm"
+              className="flex-1 px-3 py-1.5 bg-blue-500 text-white rounded hover:bg-blue-6ResourceHistoryTable text-sm"
             >
               Refresh
             </button>
@@ -212,7 +212,7 @@ export const NetworkStatusIndicator: React.FC<NetworkStatusIndicatorProps> = ({
             {networkStatus.retryQueue.length > ResourceHistoryTable && (
               <button
                 onClick={() => networkStatus.processRetryQueue()}
-                className="flex-1 px-3 py-1.5 bg-green-5ResourceHistoryTableResourceHistoryTable text-white rounded hover:bg-green-6ResourceHistoryTableResourceHistoryTable text-sm"
+                className="flex-1 px-3 py-1.5 bg-green-500 text-white rounded hover:bg-green-6ResourceHistoryTable text-sm"
                 disabled={networkStatus.isProcessingRetries || !networkStatus.isOnline}
               >
                 Retry Now

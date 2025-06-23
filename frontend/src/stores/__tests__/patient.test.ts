@@ -16,10 +16,10 @@ global.fetch = jest.fn();
 // Helper function to create test patient
 const createTestPatient = (overrides?: Partial<Patient>): Patient => ({
   id: '1',
-  mrn: 'MRNResourceHistoryTableResourceHistoryTable1',
+  mrn: 'MRN01',
   firstName: 'John',
   lastName: 'Doe',
-  dateOfBirth: '199ResourceHistoryTable-ResourceHistoryTable1-ResourceHistoryTable1',
+  dateOfBirth: '199-1-1',
   gender: 'male',
   email: 'john.doe@example.com',
   phone: '555-1234',
@@ -31,8 +31,8 @@ const createTestPatient = (overrides?: Partial<Patient>): Patient => ({
     country: 'USA'
   },
   status: 'active',
-  createdAt: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
-  updatedAt: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
+  createdAt: '2024-1-1T00:00:00Z',
+  updatedAt: '2024-1-1T00:00:00Z',
   ...overrides
 });
 
@@ -95,7 +95,7 @@ describe('Patient Store', () => {
       });
 
       expect(result.current.patients).toHaveLength(1);
-      expect(result.current.patients[ResourceHistoryTable]).toEqual(newPatient);
+      expect(result.current.patients[0]).toEqual(newPatient);
       expect(result.current.filteredPatients).toHaveLength(1);
     });
 
@@ -108,8 +108,8 @@ describe('Patient Store', () => {
         result.current.updatePatient('1', { firstName: 'Jane' });
       });
 
-      expect(result.current.patients[ResourceHistoryTable].firstName).toBe('Jane');
-      expect(result.current.filteredPatients[ResourceHistoryTable].firstName).toBe('Jane');
+      expect(result.current.patients[0].firstName).toBe('Jane');
+      expect(result.current.filteredPatients[0].firstName).toBe('Jane');
     });
 
     it('should update current patient when updating its data', () => {
@@ -128,7 +128,7 @@ describe('Patient Store', () => {
     it('should remove a patient', () => {
       const { result } = renderHook(() => usePatientStore());
       const patient1 = createTestPatient();
-      const patient2 = createTestPatient({ id: '2', mrn: 'MRNResourceHistoryTableResourceHistoryTable2' });
+      const patient2 = createTestPatient({ id: '2', mrn: 'MRN02' });
 
       act(() => {
         result.current.addPatient(patient1);
@@ -137,7 +137,7 @@ describe('Patient Store', () => {
       });
 
       expect(result.current.patients).toHaveLength(1);
-      expect(result.current.patients[ResourceHistoryTable].id).toBe('2');
+      expect(result.current.patients[0].id).toBe('2');
     });
 
     it('should clear current patient when removing it', () => {
@@ -197,7 +197,7 @@ describe('Patient Store', () => {
       const encounter: Encounter = {
         id: 'enc-1',
         patientId: '1',
-        date: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1',
+        date: '2024-1-1',
         type: 'routine',
         status: 'completed',
         providerId: 'doc-1',
@@ -206,8 +206,8 @@ describe('Patient Store', () => {
         diagnosis: [],
         notes: '',
         vitals: null,
-        createdAt: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
-        updatedAt: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ'
+        createdAt: '2024-1-1T00:00:00Z',
+        updatedAt: '2024-1-1T00:00:00Z'
       };
 
       act(() => {
@@ -229,26 +229,26 @@ describe('Patient Store', () => {
           lastName: 'Doe',
           gender: 'male',
           status: 'active',
-          dateOfBirth: '199ResourceHistoryTable-ResourceHistoryTable1-ResourceHistoryTable1'
+          dateOfBirth: '199-1-1'
         }));
         result.current.addPatient(createTestPatient({ 
           id: '2', 
           firstName: 'Jane', 
           lastName: 'Smith',
-          mrn: 'MRNResourceHistoryTableResourceHistoryTable2',
+          mrn: 'MRN02',
           gender: 'female',
           status: 'inactive',
-          dateOfBirth: '1985-ResourceHistoryTable1-ResourceHistoryTable1'
+          dateOfBirth: '1985-1-1'
         }));
         result.current.addPatient(createTestPatient({ 
           id: '3', 
           firstName: 'Bob', 
           lastName: 'Johnson',
-          mrn: 'MRNResourceHistoryTableResourceHistoryTable3',
+          mrn: 'MRN03',
           gender: 'male',
           status: 'active',
           email: 'bob@example.com',
-          dateOfBirth: '2ResourceHistoryTableResourceHistoryTableResourceHistoryTable-ResourceHistoryTable1-ResourceHistoryTable1'
+          dateOfBirth: '200-1-1'
         }));
       });
     });
@@ -261,18 +261,18 @@ describe('Patient Store', () => {
       });
 
       expect(result.current.filteredPatients).toHaveLength(1);
-      expect(result.current.filteredPatients[ResourceHistoryTable].firstName).toBe('Jane');
+      expect(result.current.filteredPatients[0].firstName).toBe('Jane');
     });
 
     it('should filter patients by search query (MRN)', () => {
       const { result } = renderHook(() => usePatientStore());
 
       act(() => {
-        result.current.setSearchQuery('MRNResourceHistoryTableResourceHistoryTable2');
+        result.current.setSearchQuery('MRN02');
       });
 
       expect(result.current.filteredPatients).toHaveLength(1);
-      expect(result.current.filteredPatients[ResourceHistoryTable].mrn).toBe('MRNResourceHistoryTableResourceHistoryTable2');
+      expect(result.current.filteredPatients[0].mrn).toBe('MRN02');
     });
 
     it('should filter patients by search query (email)', () => {
@@ -283,7 +283,7 @@ describe('Patient Store', () => {
       });
 
       expect(result.current.filteredPatients).toHaveLength(1);
-      expect(result.current.filteredPatients[ResourceHistoryTable].email).toBe('bob@example.com');
+      expect(result.current.filteredPatients[0].email).toBe('bob@example.com');
     });
 
     it('should filter patients by status', () => {
@@ -305,14 +305,14 @@ describe('Patient Store', () => {
       });
 
       expect(result.current.filteredPatients).toHaveLength(1);
-      expect(result.current.filteredPatients[ResourceHistoryTable].gender).toBe('female');
+      expect(result.current.filteredPatients[0].gender).toBe('female');
     });
 
     it('should filter patients by age range', () => {
       const { result } = renderHook(() => usePatientStore());
 
       act(() => {
-        result.current.setFilter('ageRange', [3ResourceHistoryTable, 4ResourceHistoryTable]);
+        result.current.setFilter('ageRange', [3, 4]);
       });
 
       // John (34 years old) and Jane (39 years old) should be included
@@ -358,25 +358,25 @@ describe('Patient Store', () => {
           id: '1', 
           firstName: 'Charlie', 
           lastName: 'Brown',
-          mrn: 'MRNResourceHistoryTableResourceHistoryTable3',
-          dateOfBirth: '199ResourceHistoryTable-ResourceHistoryTable1-ResourceHistoryTable1',
-          updatedAt: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable3TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ'
+          mrn: 'MRN03',
+          dateOfBirth: '199-1-1',
+          updatedAt: '2024-1-3T00:00:00Z'
         }));
         result.current.addPatient(createTestPatient({ 
           id: '2', 
           firstName: 'Alice', 
           lastName: 'Anderson',
-          mrn: 'MRNResourceHistoryTableResourceHistoryTable1',
-          dateOfBirth: '1985-ResourceHistoryTable1-ResourceHistoryTable1',
-          updatedAt: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ'
+          mrn: 'MRN01',
+          dateOfBirth: '1985-1-1',
+          updatedAt: '2024-1-1T00:00:00Z'
         }));
         result.current.addPatient(createTestPatient({ 
           id: '3', 
           firstName: 'Bob', 
           lastName: 'Baker',
-          mrn: 'MRNResourceHistoryTableResourceHistoryTable2',
-          dateOfBirth: '1995-ResourceHistoryTable1-ResourceHistoryTable1',
-          updatedAt: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable2TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ'
+          mrn: 'MRN02',
+          dateOfBirth: '1995-1-1',
+          updatedAt: '2024-1-2T00:00:00Z'
         }));
       });
     });
@@ -389,7 +389,7 @@ describe('Patient Store', () => {
         result.current.setSortOrder('asc');
       });
 
-      expect(result.current.filteredPatients[ResourceHistoryTable].lastName).toBe('Anderson');
+      expect(result.current.filteredPatients[0].lastName).toBe('Anderson');
       expect(result.current.filteredPatients[1].lastName).toBe('Baker');
       expect(result.current.filteredPatients[2].lastName).toBe('Brown');
     });
@@ -402,7 +402,7 @@ describe('Patient Store', () => {
         result.current.setSortOrder('desc');
       });
 
-      expect(result.current.filteredPatients[ResourceHistoryTable].lastName).toBe('Brown');
+      expect(result.current.filteredPatients[0].lastName).toBe('Brown');
       expect(result.current.filteredPatients[1].lastName).toBe('Baker');
       expect(result.current.filteredPatients[2].lastName).toBe('Anderson');
     });
@@ -415,9 +415,9 @@ describe('Patient Store', () => {
         result.current.setSortOrder('asc');
       });
 
-      expect(result.current.filteredPatients[ResourceHistoryTable].mrn).toBe('MRNResourceHistoryTableResourceHistoryTable1');
-      expect(result.current.filteredPatients[1].mrn).toBe('MRNResourceHistoryTableResourceHistoryTable2');
-      expect(result.current.filteredPatients[2].mrn).toBe('MRNResourceHistoryTableResourceHistoryTable3');
+      expect(result.current.filteredPatients[0].mrn).toBe('MRN01');
+      expect(result.current.filteredPatients[1].mrn).toBe('MRN02');
+      expect(result.current.filteredPatients[2].mrn).toBe('MRN03');
     });
 
     it('should sort by date of birth', () => {
@@ -428,7 +428,7 @@ describe('Patient Store', () => {
         result.current.setSortOrder('asc');
       });
 
-      expect(result.current.filteredPatients[ResourceHistoryTable].id).toBe('2'); // Oldest first
+      expect(result.current.filteredPatients[0].id).toBe('2'); // Oldest first
       expect(result.current.filteredPatients[2].id).toBe('3'); // Youngest last
     });
 
@@ -440,7 +440,7 @@ describe('Patient Store', () => {
         result.current.setSortOrder('desc');
       });
 
-      expect(result.current.filteredPatients[ResourceHistoryTable].id).toBe('1'); // Most recent first
+      expect(result.current.filteredPatients[0].id).toBe('1'); // Most recent first
       expect(result.current.filteredPatients[2].id).toBe('2'); // Least recent last
     });
   });
@@ -582,16 +582,16 @@ describe('Patient Store', () => {
         id: 'v1',
         patientId: '1',
         encounterId: 'e1',
-        dateTime: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
+        dateTime: '2024-1-1T00:00:00Z',
         temperature: 98.6,
-        bloodPressureSystolic: 12ResourceHistoryTable,
-        bloodPressureDiastolic: 8ResourceHistoryTable,
+        bloodPressureSystolic: 120,
+        bloodPressureDiastolic: 8,
         heartRate: 72,
         respiratoryRate: 16,
         oxygenSaturation: 98,
         recordedBy: 'nurse1',
-        createdAt: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
-        updatedAt: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ'
+        createdAt: '2024-1-1T00:00:00Z',
+        updatedAt: '2024-1-1T00:00:00Z'
       }];
       
       const mockNotes: ClinicalNote[] = [{
@@ -602,8 +602,8 @@ describe('Patient Store', () => {
         content: 'Patient is doing well',
         authorId: 'doc1',
         authorName: 'Dr. Smith',
-        createdAt: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
-        updatedAt: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ'
+        createdAt: '2024-1-1T00:00:00Z',
+        updatedAt: '2024-1-1T00:00:00Z'
       }];
 
       (fetch as jest.Mock)
@@ -647,16 +647,16 @@ describe('Patient Store', () => {
         id: 'v1',
         patientId: '1',
         encounterId: 'e1',
-        dateTime: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
+        dateTime: '2024-1-1T00:00:00Z',
         temperature: 98.6,
-        bloodPressureSystolic: 12ResourceHistoryTable,
-        bloodPressureDiastolic: 8ResourceHistoryTable,
+        bloodPressureSystolic: 120,
+        bloodPressureDiastolic: 8,
         heartRate: 72,
         respiratoryRate: 16,
         oxygenSaturation: 98,
         recordedBy: 'nurse1',
-        createdAt: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
-        updatedAt: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ'
+        createdAt: '2024-1-1T00:00:00Z',
+        updatedAt: '2024-1-1T00:00:00Z'
       };
 
       act(() => {
@@ -664,7 +664,7 @@ describe('Patient Store', () => {
       });
 
       expect(result.current.patientVitals).toHaveLength(1);
-      expect(result.current.patientVitals[ResourceHistoryTable]).toEqual(vitals);
+      expect(result.current.patientVitals[0]).toEqual(vitals);
     });
 
     it('should add clinical note', () => {
@@ -677,8 +677,8 @@ describe('Patient Store', () => {
         content: 'Patient is improving',
         authorId: 'doc1',
         authorName: 'Dr. Smith',
-        createdAt: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
-        updatedAt: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ'
+        createdAt: '2024-1-1T00:00:00Z',
+        updatedAt: '2024-1-1T00:00:00Z'
       };
 
       act(() => {
@@ -686,7 +686,7 @@ describe('Patient Store', () => {
       });
 
       expect(result.current.patientNotes).toHaveLength(1);
-      expect(result.current.patientNotes[ResourceHistoryTable]).toEqual(note);
+      expect(result.current.patientNotes[0]).toEqual(note);
     });
 
     it('should update clinical note', () => {
@@ -699,8 +699,8 @@ describe('Patient Store', () => {
         content: 'Initial note',
         authorId: 'doc1',
         authorName: 'Dr. Smith',
-        createdAt: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
-        updatedAt: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ'
+        createdAt: '2024-1-1T00:00:00Z',
+        updatedAt: '2024-1-1T00:00:00Z'
       };
 
       act(() => {
@@ -708,7 +708,7 @@ describe('Patient Store', () => {
         result.current.updateClinicalNote('n1', { content: 'Updated note' });
       });
 
-      expect(result.current.patientNotes[ResourceHistoryTable].content).toBe('Updated note');
+      expect(result.current.patientNotes[0].content).toBe('Updated note');
     });
   });
 
@@ -840,10 +840,10 @@ describe('calculateAge Helper', () => {
     const currentYear = today.getFullYear();
     
     act(() => {
-      // Add patient who is exactly 3ResourceHistoryTable years old
+      // Add patient who is exactly 3 years old
       result.current.addPatient(createTestPatient({ 
         id: '1',
-        dateOfBirth: `${currentYear - 3ResourceHistoryTable}-${String(today.getMonth() + 1).padStart(2, 'ResourceHistoryTable')}-${String(today.getDate()).padStart(2, 'ResourceHistoryTable')}`
+        dateOfBirth: `${currentYear - 3}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
       }));
       
       // Add patient who is 29 (birthday tomorrow)
@@ -851,13 +851,13 @@ describe('calculateAge Helper', () => {
       tomorrow.setDate(tomorrow.getDate() + 1);
       result.current.addPatient(createTestPatient({ 
         id: '2',
-        dateOfBirth: `${currentYear - 3ResourceHistoryTable}-${String(tomorrow.getMonth() + 1).padStart(2, 'ResourceHistoryTable')}-${String(tomorrow.getDate()).padStart(2, 'ResourceHistoryTable')}`
+        dateOfBirth: `${currentYear - 3}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
       }));
       
-      result.current.setFilter('ageRange', [3ResourceHistoryTable, 3ResourceHistoryTable]);
+      result.current.setFilter('ageRange', [3, 3]);
     });
 
     expect(result.current.filteredPatients).toHaveLength(1);
-    expect(result.current.filteredPatients[ResourceHistoryTable].id).toBe('1');
+    expect(result.current.filteredPatients[0].id).toBe('1');
   });
 });

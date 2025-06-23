@@ -68,16 +68,16 @@ export function OfflineSettings({
   const [isClearing, setIsClearing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const cacheUsagePercent = (cacheSize / maxCacheSize) * 1ResourceHistoryTableResourceHistoryTable;
+  const cacheUsagePercent = (cacheSize / maxCacheSize) * 100;
 
   const dataTypes = [
     { value: 'patients', label: 'Patient Records', size: '~2MB per patient' },
-    { value: 'encounters', label: 'Encounters', size: '~5ResourceHistoryTableResourceHistoryTableKB per encounter' },
-    { value: 'medications', label: 'Medications', size: '~1ResourceHistoryTableResourceHistoryTableKB per patient' },
-    { value: 'labResults', label: 'Lab Results', size: '~2ResourceHistoryTableResourceHistoryTableKB per result' },
-    { value: 'vitalSigns', label: 'Vital Signs', size: '~5ResourceHistoryTableKB per set' },
-    { value: 'clinicalNotes', label: 'Clinical Notes', size: '~3ResourceHistoryTableResourceHistoryTableKB per note' },
-    { value: 'appointments', label: 'Appointments', size: '~5ResourceHistoryTableKB per appointment' }
+    { value: 'encounters', label: 'Encounters', size: '~500KB per encounter' },
+    { value: 'medications', label: 'Medications', size: '~100KB per patient' },
+    { value: 'labResults', label: 'Lab Results', size: '~200KB per result' },
+    { value: 'vitalSigns', label: 'Vital Signs', size: '~50KB per set' },
+    { value: 'clinicalNotes', label: 'Clinical Notes', size: '~300KB per note' },
+    { value: 'appointments', label: 'Appointments', size: '~50KB per appointment' }
   ];
 
   const handleClearCache = async () => {
@@ -105,12 +105,12 @@ export function OfflineSettings({
           <>
             <Group justify="space-between" align="center">
               <Group gap="xs">
-                <IconSettings size={24} className="text-gray-7ResourceHistoryTableResourceHistoryTable" />
-                <Text fw={6ResourceHistoryTableResourceHistoryTable} size="lg">Offline Settings</Text>
+                <IconSettings size={24} className="text-gray-700" />
+                <Text fw={600} size="lg">Offline Settings</Text>
               </Group>
               {onClose && (
                 <ActionIcon variant="subtle" onClick={onClose}>
-                  <IconInfoCircle size={2ResourceHistoryTable} />
+                  <IconInfoCircle size={20} />
                 </ActionIcon>
               )}
             </Group>
@@ -123,9 +123,9 @@ export function OfflineSettings({
           <Switch
             label={
               <Group gap="xs">
-                <Text fw={5ResourceHistoryTableResourceHistoryTable}>Enable Offline Mode</Text>
+                <Text fw={500}>Enable Offline Mode</Text>
                 <Tooltip label="Allows the app to work without internet connection">
-                  <IconInfoCircle size={16} className="text-gray-5ResourceHistoryTableResourceHistoryTable" />
+                  <IconInfoCircle size={16} className="text-gray-500" />
                 </Tooltip>
               </Group>
             }
@@ -154,7 +154,7 @@ export function OfflineSettings({
                   value={syncInterval}
                   onChange={(value) => setSyncInterval(Number(value) || 5)}
                   min={1}
-                  max={6ResourceHistoryTable}
+                  max={60}
                   step={5}
                   rightSection={<Text size="xs" c="dimmed">min</Text>}
                 />
@@ -163,7 +163,7 @@ export function OfflineSettings({
 
             {/* Data Types Selection */}
             <div>
-              <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable} mb="xs">Data to Store Offline</Text>
+              <Text size="sm" fw={500} mb="xs">Data to Store Offline</Text>
               <Stack gap="xs">
                 {dataTypes.map((type) => (
                   <Paper key={type.value} p="xs" withBorder>
@@ -183,14 +183,14 @@ export function OfflineSettings({
             {/* Cache Management */}
             <div>
               <Group justify="space-between" mb="xs">
-                <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>Cache Storage</Text>
-                <Badge color={cacheUsagePercent > 8ResourceHistoryTable ? 'red' : 'blue'} variant="light">
+                <Text size="sm" fw={500}>Cache Storage</Text>
+                <Badge color={cacheUsagePercent > 80 ? 'red' : 'blue'} variant="light">
                   {formatBytes(cacheSize)} / {formatBytes(maxCacheSize)}
                 </Badge>
               </Group>
               <Progress 
                 value={cacheUsagePercent} 
-                color={cacheUsagePercent > 8ResourceHistoryTable ? 'red' : cacheUsagePercent > 6ResourceHistoryTable ? 'orange' : 'blue'}
+                color={cacheUsagePercent > 80 ? 'red' : cacheUsagePercent > 60 ? 'orange' : 'blue'}
                 size="md"
                 radius="xl"
                 mb="sm"
@@ -198,15 +198,15 @@ export function OfflineSettings({
               <Group gap="xs">
                 <Slider
                   label="Maximum Cache Size"
-                  value={maxCacheSize / (1ResourceHistoryTable24 * 1ResourceHistoryTable24)} // Convert to MB
-                  onChange={(value) => setMaxCacheSize(value * 1ResourceHistoryTable24 * 1ResourceHistoryTable24)}
-                  min={5ResourceHistoryTable}
-                  max={5ResourceHistoryTableResourceHistoryTable}
-                  step={5ResourceHistoryTable}
+                  value={maxCacheSize / (1024 * 1024)} // Convert to MB
+                  onChange={(value) => setMaxCacheSize(value * 1024 * 1024)}
+                  min={50}
+                  max={500}
+                  step={50}
                   marks={[
-                    { value: 5ResourceHistoryTable, label: '5ResourceHistoryTableMB' },
-                    { value: 25ResourceHistoryTable, label: '25ResourceHistoryTableMB' },
-                    { value: 5ResourceHistoryTableResourceHistoryTable, label: '5ResourceHistoryTableResourceHistoryTableMB' }
+                    { value: 50, label: '50MB' },
+                    { value: 250, label: '250MB' },
+                    { value: 500, label: '500MB' }
                   ]}
                   style={{ flex: 1 }}
                 />
@@ -220,13 +220,13 @@ export function OfflineSettings({
               value={retentionDays}
               onChange={(value) => setRetentionDays(Number(value) || 7)}
               min={1}
-              max={3ResourceHistoryTable}
+              max={30}
               rightSection={<Text size="xs" c="dimmed">days</Text>}
             />
 
             {/* Advanced Settings */}
             <Stack gap="xs">
-              <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>Advanced Settings</Text>
+              <Text size="sm" fw={500}>Advanced Settings</Text>
               
               <Switch
                 label="Sync on Cellular Data"
@@ -293,7 +293,7 @@ export function OfflineSettings({
             </Stack>
 
             {/* Storage Warning */}
-            {cacheUsagePercent > 8ResourceHistoryTable && (
+            {cacheUsagePercent > 80 && (
               <Alert
                 icon={<IconInfoCircle size={16} />}
                 color="orange"

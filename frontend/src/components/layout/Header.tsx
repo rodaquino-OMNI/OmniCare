@@ -64,21 +64,21 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
   };
 
   return (
-    <Paper shadow="sm" className="sticky top-ResourceHistoryTable z-2ResourceHistoryTable border-b border-gray-2ResourceHistoryTableResourceHistoryTable">
+    <Paper shadow="sm" className="sticky top-0 z-20 border-b border-gray-200">
       <div className="px-6 py-3">
         <Group justify="space-between" align="center">
           {/* Left side - Menu, Breadcrumbs, Title */}
-          <Group gap="md" className="flex-1 min-w-ResourceHistoryTable">
+          <Group gap="md" className="flex-1 min-w-0">
             <ActionIcon
               variant="subtle"
               onClick={toggleSidebar}
               className="md:hidden"
             >
-              <IconMenu2 size={2ResourceHistoryTable} />
+              <IconMenu2 size={20} />
             </ActionIcon>
 
-            <div className="flex-1 min-w-ResourceHistoryTable">
-              {breadcrumbs.length > ResourceHistoryTable && (
+            <div className="flex-1 min-w-0">
+              {breadcrumbs.length > 0 && (
                 <Breadcrumbs className="mb-1">
                   {breadcrumbs.map((item, index) => (
                     <Anchor
@@ -96,7 +96,7 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
               
               {title && (
                 <div>
-                  <Text fw={6ResourceHistoryTableResourceHistoryTable} size="lg" className="text-gray-8ResourceHistoryTableResourceHistoryTable" truncate>
+                  <Text fw={600} size="lg" className="text-gray-800" truncate>
                     {title}
                   </Text>
                   {subtitle && (
@@ -133,21 +133,21 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
               onClick={() => {}}
               className="md:hidden"
             >
-              <IconSearch size={2ResourceHistoryTable} />
+              <IconSearch size={20} />
             </ActionIcon>
 
             {/* Notifications */}
-            <Menu shadow="md" width={32ResourceHistoryTable} position="bottom-end">
+            <Menu shadow="md" width={320} position="bottom-end">
               <Menu.Target>
                 <ActionIcon variant="subtle" size="lg">
                   <Indicator
                     size={16}
                     offset={7}
-                    disabled={unreadNotifications.length === ResourceHistoryTable}
+                    disabled={unreadNotifications.length === 0}
                     color="red"
                     label={unreadNotifications.length}
                   >
-                    <IconBell size={2ResourceHistoryTable} />
+                    <IconBell size={20} />
                   </Indicator>
                 </ActionIcon>
               </Menu.Target>
@@ -162,8 +162,8 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
                   </Group>
                 </Menu.Label>
 
-                <ScrollArea h={3ResourceHistoryTableResourceHistoryTable}>
-                  {notifications.length === ResourceHistoryTable ? (
+                <ScrollArea h={300}>
+                  {notifications.length === 0 ? (
                     <div className="p-4 text-center">
                       <Text c="dimmed" size="sm">
                         No notifications
@@ -171,27 +171,27 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
                     </div>
                   ) : (
                     <Stack gap="xs" p="xs">
-                      {notifications.slice(ResourceHistoryTable, 5).map((notification) => (
+                      {notifications.slice(0, 5).map((notification) => (
                         <Paper
                           key={notification.id}
                           p="sm"
-                          className="border border-gray-1ResourceHistoryTableResourceHistoryTable hover:bg-gray-5ResourceHistoryTable cursor-pointer"
+                          className="border border-gray-100 hover:bg-gray-50 cursor-pointer"
                           radius="sm"
                         >
                           <Group gap="sm" align="flex-start">
                             <div className={`p-1 rounded-full ${
-                              notification.type === 'error' ? 'bg-red-1ResourceHistoryTableResourceHistoryTable' :
-                              notification.type === 'warning' ? 'bg-yellow-1ResourceHistoryTableResourceHistoryTable' :
-                              notification.type === 'success' ? 'bg-green-1ResourceHistoryTableResourceHistoryTable' :
-                              'bg-blue-1ResourceHistoryTableResourceHistoryTable'
+                              notification.type === 'error' ? 'bg-red-100' :
+                              notification.type === 'warning' ? 'bg-yellow-100' :
+                              notification.type === 'success' ? 'bg-green-100' :
+                              'bg-blue-100'
                             }`}>
-                              {notification.type === 'error' && <IconAlertTriangle size={14} className="text-red-6ResourceHistoryTableResourceHistoryTable" />}
-                              {notification.type === 'warning' && <IconAlertTriangle size={14} className="text-yellow-6ResourceHistoryTableResourceHistoryTable" />}
-                              {notification.type === 'success' && <IconShield size={14} className="text-green-6ResourceHistoryTableResourceHistoryTable" />}
-                              {notification.type === 'info' && <IconMessageCircle size={14} className="text-blue-6ResourceHistoryTableResourceHistoryTable" />}
+                              {notification.type === 'error' && <IconAlertTriangle size={14} className="text-red-600" />}
+                              {notification.type === 'warning' && <IconAlertTriangle size={14} className="text-yellow-600" />}
+                              {notification.type === 'success' && <IconShield size={14} className="text-green-600" />}
+                              {notification.type === 'info' && <IconMessageCircle size={14} className="text-blue-600" />}
                             </div>
-                            <div className="flex-1 min-w-ResourceHistoryTable">
-                              <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable} truncate>
+                            <div className="flex-1 min-w-0">
+                              <Text size="sm" fw={500} truncate>
                                 {notification.title}
                               </Text>
                               {notification.message && (
@@ -200,7 +200,7 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
                                 </Text>
                               )}
                               <Text size="xs" c="dimmed" className="flex items-center gap-1 mt-1">
-                                <IconClock size={1ResourceHistoryTable} />
+                                <IconClock size={10} />
                                 {formatTime(new Date())}
                               </Text>
                             </div>
@@ -226,9 +226,9 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
 
             {/* User Menu */}
             {user && (
-              <Menu shadow="md" width={24ResourceHistoryTable} position="bottom-end">
+              <Menu shadow="md" width={240} position="bottom-end">
                 <Menu.Target>
-                  <UnstyledButton className="p-2 rounded-lg hover:bg-gray-5ResourceHistoryTable transition-colors">
+                  <UnstyledButton className="p-2 rounded-lg hover:bg-gray-50 transition-colors">
                     <Group gap="sm">
                       <Avatar
                         src={user.avatar}
@@ -236,11 +236,11 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
                         size="sm"
                         color="primary"
                       >
-                        {user.firstName.charAt(ResourceHistoryTable)}{user.lastName.charAt(ResourceHistoryTable)}
+                        {user.firstName.charAt(0)}{user.lastName.charAt(0)}
                       </Avatar>
                       
                       <div className="hidden sm:block text-left">
-                        <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable} className="text-gray-8ResourceHistoryTableResourceHistoryTable">
+                        <Text size="sm" fw={500} className="text-gray-800">
                           {user.firstName} {user.lastName}
                         </Text>
                         <Text size="xs" c="dimmed">
@@ -248,7 +248,7 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
                         </Text>
                       </div>
                       
-                      <IconChevronDown size={14} className="text-gray-4ResourceHistoryTableResourceHistoryTable" />
+                      <IconChevronDown size={14} className="text-gray-400" />
                     </Group>
                   </UnstyledButton>
                 </Menu.Target>
@@ -256,7 +256,7 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
                 <Menu.Dropdown>
                   <Menu.Label>
                     <div>
-                      <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>
+                      <Text size="sm" fw={500}>
                         {user.firstName} {user.lastName}
                       </Text>
                       <Text size="xs" c="dimmed">

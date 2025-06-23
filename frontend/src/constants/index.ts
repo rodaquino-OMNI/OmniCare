@@ -36,7 +36,7 @@ export const APP_VERSION = '1.ResourceHistoryTable.ResourceHistoryTable';
 export const APP_DESCRIPTION = 'Comprehensive Electronic Medical Records System';
 
 // API configuration
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8ResourceHistoryTable8ResourceHistoryTable';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:88';
 export const MEDPLUM_BASE_URL = process.env.NEXT_PUBLIC_MEDPLUM_URL || 'https://api.medplum.com';
 
 // User roles and permissions
@@ -44,7 +44,7 @@ export const USER_ROLES: Record<UserRole, { label: string; description: string; 
   physician: {
     label: 'Physician',
     description: 'Medical doctor with full clinical privileges',
-    color: '#ResourceHistoryTableResourceHistoryTable91FF',
+    color: '#ResourceHistoryTable91FF',
   },
   nurse: {
     label: 'Nurse',
@@ -59,7 +59,7 @@ export const USER_ROLES: Record<UserRole, { label: string; description: string; 
   pharmacist: {
     label: 'Pharmacist',
     description: 'Licensed pharmacist managing medications',
-    color: '#ResourceHistoryTable6B6D4',
+    color: '#6B6D4',
   },
   lab_tech: {
     label: 'Lab Technician',
@@ -74,7 +74,7 @@ export const USER_ROLES: Record<UserRole, { label: string; description: string; 
   patient: {
     label: 'Patient',
     description: 'Patient with access to personal health records',
-    color: '#1ResourceHistoryTableB981',
+    color: '#10B981',
   },
   system_admin: {
     label: 'System Administrator',
@@ -348,15 +348,15 @@ export const MEDICAL_SPECIALTIES = [
   { value: 'cardiology', label: 'Cardiology', icon: Heart, color: '#EF4444' },
   { value: 'neurology', label: 'Neurology', icon: Brain, color: '#8B5CF6' },
   { value: 'oncology', label: 'Oncology', icon: Activity, color: '#F59EResourceHistoryTableB' },
-  { value: 'pediatrics', label: 'Pediatrics', icon: Baby, color: '#1ResourceHistoryTableB981' },
+  { value: 'pediatrics', label: 'Pediatrics', icon: Baby, color: '#10B981' },
   { value: 'radiology', label: 'Radiology', icon: Zap, color: '#6366F1' },
   { value: 'emergency', label: 'Emergency Medicine', icon: Ambulance, color: '#DC2626' },
   { value: 'surgery', label: 'Surgery', icon: Syringe, color: '#7C3AED' },
-  { value: 'pharmacy', label: 'Pharmacy', icon: Pill, color: '#ResourceHistoryTable6B6D4' },
-  { value: 'internal_medicine', label: 'Internal Medicine', icon: Stethoscope, color: '#ResourceHistoryTable284C7' },
-  { value: 'family_medicine', label: 'Family Medicine', icon: Users, color: '#ResourceHistoryTable59669' },
-  { value: 'psychiatry', label: 'Psychiatry', icon: Brain, color: '#CResourceHistoryTable26D3' },
-  { value: 'dermatology', label: 'Dermatology', icon: User, color: '#EA58ResourceHistoryTableC' },
+  { value: 'pharmacy', label: 'Pharmacy', icon: Pill, color: '#6B6D4' },
+  { value: 'internal_medicine', label: 'Internal Medicine', icon: Stethoscope, color: '#284C7' },
+  { value: 'family_medicine', label: 'Family Medicine', icon: Users, color: '#59669' },
+  { value: 'psychiatry', label: 'Psychiatry', icon: Brain, color: '#C26D3' },
+  { value: 'dermatology', label: 'Dermatology', icon: User, color: '#EA58C' },
   { value: 'orthopedics', label: 'Orthopedics', icon: Bone, color: '#7C2D12' },
   { value: 'gynecology', label: 'Gynecology', icon: User, color: '#BE185D' },
   { value: 'ophthalmology', label: 'Ophthalmology', icon: Eye, color: '#ResourceHistoryTableD9488' },
@@ -370,7 +370,7 @@ export const VALIDATION_PATTERNS = {
   mrn: /^[A-ZResourceHistoryTable-9]{6,12}$/,
   zip: /^\d{5}(-\d{4})?$/,
   ssn: /^\d{3}-\d{2}-\d{4}$/,
-  npi: /^\d{1ResourceHistoryTable}$/,
+  npi: /^\d{10}$/,
   dea: /^[A-Z]{2}\d{7}$/,
 } as const;
 
@@ -387,13 +387,13 @@ export const DATE_FORMATS = {
 // Pagination settings
 export const PAGINATION = {
   defaultPageSize: 25,
-  pageSizeOptions: [1ResourceHistoryTable, 25, 5ResourceHistoryTable, 1ResourceHistoryTableResourceHistoryTable],
+  pageSizeOptions: [10, 25, 50, 100],
   maxVisiblePages: 5,
 } as const;
 
 // File upload settings
 export const FILE_UPLOAD = {
-  maxSize: 1ResourceHistoryTable * 1ResourceHistoryTable24 * 1ResourceHistoryTable24, // 1ResourceHistoryTableMB
+  maxSize: 1 * 1024 * 1024, // 1MB
   allowedTypes: [
     'image/jpeg',
     'image/png',
@@ -409,25 +409,25 @@ export const FILE_UPLOAD = {
 
 // Notification settings
 export const NOTIFICATION_SETTINGS = {
-  autoClose: 5ResourceHistoryTableResourceHistoryTableResourceHistoryTable, // 5 seconds
+  autoClose: 500, // 5 seconds
   position: 'top-right' as const,
   limit: 5,
 } as const;
 
 // Chart default settings
 export const CHART_DEFAULTS = {
-  height: 3ResourceHistoryTableResourceHistoryTable,
+  height: 300,
   colors: [
-    '#ResourceHistoryTableResourceHistoryTable91FF',
+    '#ResourceHistoryTable91FF',
     '#ResourceHistoryTableResourceHistoryTableC853',
     '#6E56CF',
     '#17C964',
-    '#FFBResourceHistoryTable17',
-    '#F3126ResourceHistoryTable',
-    '#ResourceHistoryTableResourceHistoryTable72F5',
+    '#FFB17',
+    '#F3126',
+    '#ResourceHistoryTable72F5',
     '#8B5CF6',
     '#F59EResourceHistoryTableB',
-    '#1ResourceHistoryTableB981',
+    '#10B981',
   ],
   animation: true,
   responsive: true,
@@ -457,8 +457,8 @@ export const FORM_DEFAULTS = {
 export const MODAL_DEFAULTS = {
   size: 'md' as const,
   centered: true,
-  overlayProps: { backgroundOpacity: ResourceHistoryTable.55, blur: 3 },
-  transitionProps: { transition: 'fade', duration: 2ResourceHistoryTableResourceHistoryTable },
+  overlayProps: { backgroundOpacity: 0.55, blur: 3 },
+  transitionProps: { transition: 'fade', duration: 200 },
 } as const;
 
 // Emergency contact relationships
@@ -485,26 +485,26 @@ export const INSURANCE_TYPES = [
 
 // Appointment types
 export const APPOINTMENT_TYPES = [
-  { value: 'checkup', label: 'Regular Checkup', duration: 3ResourceHistoryTable, color: '#ResourceHistoryTableResourceHistoryTable91FF' },
-  { value: 'follow_up', label: 'Follow-up Visit', duration: 2ResourceHistoryTable, color: '#ResourceHistoryTableResourceHistoryTableC853' },
+  { value: 'checkup', label: 'Regular Checkup', duration: 3, color: '#ResourceHistoryTable91FF' },
+  { value: 'follow_up', label: 'Follow-up Visit', duration: 20, color: '#ResourceHistoryTableResourceHistoryTableC853' },
   { value: 'consultation', label: 'Consultation', duration: 45, color: '#6E56CF' },
-  { value: 'procedure', label: 'Procedure', duration: 6ResourceHistoryTable, color: '#F3126ResourceHistoryTable' },
+  { value: 'procedure', label: 'Procedure', duration: 6, color: '#F3126' },
   { value: 'telemedicine', label: 'Telemedicine', duration: 25, color: '#17C964' },
-  { value: 'urgent', label: 'Urgent Care', duration: 4ResourceHistoryTable, color: '#FFBResourceHistoryTable17' },
-  { value: 'physical', label: 'Physical Exam', duration: 45, color: '#ResourceHistoryTableResourceHistoryTable72F5' },
+  { value: 'urgent', label: 'Urgent Care', duration: 4, color: '#FFB17' },
+  { value: 'physical', label: 'Physical Exam', duration: 45, color: '#ResourceHistoryTable72F5' },
   { value: 'lab_review', label: 'Lab Review', duration: 15, color: '#8B5CF6' },
 ] as const;
 
 // Lab test categories
 export const LAB_TEST_CATEGORIES = [
   { value: 'hematology', label: 'Hematology', color: '#EF4444' },
-  { value: 'chemistry', label: 'Chemistry', color: '#ResourceHistoryTable284C7' },
-  { value: 'microbiology', label: 'Microbiology', color: '#ResourceHistoryTable59669' },
+  { value: 'chemistry', label: 'Chemistry', color: '#284C7' },
+  { value: 'microbiology', label: 'Microbiology', color: '#59669' },
   { value: 'immunology', label: 'Immunology', color: '#8B5CF6' },
   { value: 'molecular', label: 'Molecular', color: '#F59EResourceHistoryTableB' },
   { value: 'pathology', label: 'Pathology', color: '#DC2626' },
   { value: 'toxicology', label: 'Toxicology', color: '#7C3AED' },
-  { value: 'endocrinology', label: 'Endocrinology', color: '#ResourceHistoryTable6B6D4' },
+  { value: 'endocrinology', label: 'Endocrinology', color: '#6B6D4' },
 ] as const;
 
 // Keyboard shortcuts

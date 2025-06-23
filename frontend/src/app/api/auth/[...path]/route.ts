@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // Backend API URL
-const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:8ResourceHistoryTable8ResourceHistoryTable';
+const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:8080';
 
 /**
  * Proxy handler for auth routes
@@ -129,7 +129,7 @@ async function handleRequest(
         details: error instanceof Error ? error.message : 'Unknown error'
       },
       { 
-        status: 5ResourceHistoryTable3,
+        status: 503,
         headers: {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
@@ -143,7 +143,7 @@ async function handleRequest(
 // Handle OPTIONS requests for CORS
 export async function OPTIONS() {
   return new NextResponse(null, {
-    status: 2ResourceHistoryTableResourceHistoryTable,
+    status: 200,
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',

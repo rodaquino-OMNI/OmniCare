@@ -52,7 +52,7 @@ jest.mock('@/utils', () => ({
   }),
   formatDate: jest.fn((date) => {
     if (!date) return 'No Date';
-    return '6/21/2ResourceHistoryTable25';
+    return '6/21/2025';
   })
 }));
 
@@ -78,7 +78,7 @@ describe('ClinicalNoteInput', () => {
       family: 'Doe',
       use: 'official'
     }],
-    birthDate: '199ResourceHistoryTable-ResourceHistoryTable1-ResourceHistoryTable1',
+    birthDate: '1990-01-01',
     gender: 'male',
     identifier: [{
       system: 'http://hospital.example.org',
@@ -175,8 +175,8 @@ describe('ClinicalNoteInput', () => {
         ]
       }),
       getSuggestions: jest.fn().mockResolvedValue([
-        { text: 'chest pain', score: ResourceHistoryTable.9 },
-        { text: 'chest discomfort', score: ResourceHistoryTable.8 }
+        { text: 'chest pain', score: 0.9 },
+        { text: 'chest discomfort', score: 0.8 }
       ])
     }));
     
@@ -232,7 +232,7 @@ describe('ClinicalNoteInput', () => {
       
       // Use getAllByText since Note Type appears multiple times
       const noteTypeElements = screen.getAllByText('Note Type');
-      expect(noteTypeElements.length).toBeGreaterThan(ResourceHistoryTable);
+      expect(noteTypeElements.length).toBeGreaterThan(0);
       expect(screen.getByLabelText('Note Title')).toBeInTheDocument();
       expect(screen.getByText('Save Draft')).toBeInTheDocument();
       expect(screen.getByText('Sign Note')).toBeInTheDocument();
@@ -350,11 +350,11 @@ describe('ClinicalNoteInput', () => {
 
       // Note Type select input - look for the actual select input 
       const noteTypeInputs = screen.getAllByDisplayValue('Progress Note');
-      expect(noteTypeInputs.length).toBeGreaterThan(ResourceHistoryTable);
+      expect(noteTypeInputs.length).toBeGreaterThan(0);
       
       // Check that the label exists
       const noteTypeLabels = screen.getAllByText('Note Type');
-      expect(noteTypeLabels.length).toBeGreaterThan(ResourceHistoryTable);
+      expect(noteTypeLabels.length).toBeGreaterThan(0);
     });
 
   });
@@ -417,7 +417,7 @@ describe('ClinicalNoteInput', () => {
             type: expect.objectContaining({
               coding: expect.arrayContaining([
                 expect.objectContaining({
-                  code: '115ResourceHistoryTable6-3',
+                  code: '11506-3',
                   display: 'Progress Note'
                 })
               ])

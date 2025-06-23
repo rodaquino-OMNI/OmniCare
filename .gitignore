@@ -172,3 +172,50 @@ monitoring/logs/
 # Local development
 .local/
 local/
+
+# Security and secrets
+devops/docker/secrets/
+*.password
+*.secret
+
+# Analysis and reporting files (temporary)
+*-report.md
+*-analysis.md
+typescript-error*.txt
+typescript-error*.md
+final-*-report.md
+qa-validation-report.md
+security-assessment*.json
+DATABASE_CONNECTION_REPORT.md
+frontend-test-setup-report.md
+coverage-improvement-report.md
+
+# Temporary scripts and tools
+analyze_errors.sh
+check-health.sh
+fix-*.sh
+start-*.sh
+stop-*.sh
+service-status-report.sh
+test-*.js
+integration-test-runner.js
+
+# Memory and swarm coordination data
+memory/data/swarm-*
+memory/swarm-*
+swarm-*
+reports/swarm-*.json
+memory-*.json
+memory/data/*_integration_report.json
+memory/data/final_*.json
+
+# Nodemon config (temporary)
+nodemon.json
+
+# Docker compose variants  
+docker-compose-*.yml
+!docker-compose.yml
+!docker-compose.override.yml
+
+# Test configuration variants
+**/tsconfig.test.json

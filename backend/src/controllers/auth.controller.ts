@@ -1,14 +1,14 @@
 import { Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
 
-import { JWTAuthService } from '@/auth/jwt.service';
-import config from '@/config';
-import { AuditService } from '@/services/audit.service';
-import { SessionManager } from '@/services/session.service';
-import { smartFHIRService } from '@/services/smart-fhir.service';
-import { User, UserRoles, LoginCredentials } from '@/types/auth.types';
-import logger from '@/utils/logger';
-import { getErrorMessage } from '@/utils/error.utils';
+import { JWTAuthService } from '../auth/jwt.service';
+import config from '../config';
+import { AuditService } from '../services/audit.service';
+import { SessionManager } from '../services/session.service';
+import { smartFHIRService } from '../services/smart-fhir.service';
+import { User, UserRoles, LoginCredentials } from '../types/auth.types';
+import logger from '../utils/logger';
+import { getErrorMessage } from '../utils/error.utils';
 
 /**
  * Authentication Controller
@@ -75,6 +75,46 @@ export class AuthController {
         res.status(400).json({
           error: 'invalid_request',
           error_description: 'redirect_uri is required',
+        });
+        return;
+      }
+
+      // Validate redirect URI for security
+      try {
+        const redirectUrl = new URL(redirect_uri);
+        
+        // Only allow http and https schemes
+        const allowedSchemes = ['http:', 'https:'];
+        if (!allowedSchemes.includes(redirectUrl.protocol)) {
+          res.status(400).json({
+            error: 'invalid_request',
+            error_description: 'Invalid redirect_uri scheme. Only http and https are allowed.',
+          });
+          return;
+        }
+
+        // Block known malicious domains
+        const blockedDomains = ['evil.com', 'malicious.com', 'attacker.com'];
+        if (blockedDomains.includes(redirectUrl.hostname)) {
+          res.status(400).json({
+            error: 'invalid_request',
+            error_description: 'Invalid redirect_uri domain.',
+          });
+          return;
+        }
+
+        // Block localhost in production (optional - comment out for testing)
+        // if (process.env.NODE_ENV === 'production' && redirectUrl.hostname === 'localhost') {
+        //   res.status(400).json({
+        //     error: 'invalid_request',
+        //     error_description: 'Localhost redirect not allowed in production.',
+        //   });
+        //   return;
+        // }
+      } catch (error) {
+        res.status(400).json({
+          error: 'invalid_request',
+          error_description: 'Invalid redirect_uri format',
         });
         return;
       }

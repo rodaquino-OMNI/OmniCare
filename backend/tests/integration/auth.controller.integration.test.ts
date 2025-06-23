@@ -92,8 +92,8 @@ describe('Auth Controller Integration Tests', () => {
     describe('GET /auth/authorize', () => {
       it('should handle standalone authorization request', async () => {
         mockSmartFHIRService.initiateAuthorization.mockResolvedValue({
+          authorizationUrl: 'https://test-fhir.omnicare.com/authorize?response_type=code&client_id=test-client',
           state: 'test-state-123',
-          aud: 'https://test-fhir.omnicare.com',
         });
 
         const response = await request(app)
@@ -131,8 +131,8 @@ describe('Auth Controller Integration Tests', () => {
 
       it('should handle EHR launch authorization request', async () => {
         mockSmartFHIRService.handleEHRLaunch.mockResolvedValue({
+          authorizationUrl: 'https://test-fhir.omnicare.com/authorize?response_type=code&client_id=test-client&launch=launch-context-123',
           state: 'ehr-state-789',
-          aud: 'https://test-fhir.omnicare.com',
         });
 
         const response = await request(app)
@@ -246,8 +246,8 @@ describe('Auth Controller Integration Tests', () => {
       it('should exchange authorization code for tokens', async () => {
         // First, get an authorization code
         mockSmartFHIRService.initiateAuthorization.mockResolvedValue({
+          authorizationUrl: 'https://test-fhir.omnicare.com/authorize?response_type=code&client_id=test-client',
           state: 'test-state-123',
-          aud: 'https://test-fhir.omnicare.com',
         });
 
         const authResponse = await request(app)
@@ -419,8 +419,8 @@ describe('Auth Controller Integration Tests', () => {
       it('should return error for expired authorization code', async () => {
         // Get authorization code
         mockSmartFHIRService.initiateAuthorization.mockResolvedValue({
+          authorizationUrl: 'https://test-fhir.omnicare.com/authorize?response_type=code&client_id=test-client',
           state: 'test-state-123',
-          aud: 'https://test-fhir.omnicare.com',
         });
 
         const authResponse = await request(app)
@@ -551,7 +551,7 @@ describe('Auth Controller Integration Tests', () => {
           },
           session: {
             sessionId: expect.any(String),
-            expiresAt: expect.any(Date),
+            expiresAt: expect.any(String),
           },
         });
 
@@ -592,7 +592,7 @@ describe('Auth Controller Integration Tests', () => {
           },
           session: {
             sessionId: expect.any(String),
-            expiresAt: expect.any(Date),
+            expiresAt: expect.any(String),
           },
         });
       });

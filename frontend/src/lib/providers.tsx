@@ -32,7 +32,7 @@ const theme = createTheme({
       },
       styles: {
         root: {
-          fontWeight: 5ResourceHistoryTableResourceHistoryTable,
+          fontWeight: 500,
         },
       },
     },
@@ -88,14 +88,14 @@ const theme = createTheme({
     Modal: {
       defaultProps: {
         centered: true,
-        overlayProps: { backgroundOpacity: ResourceHistoryTable.55, blur: 3 },
-        transitionProps: { transition: 'fade', duration: 2ResourceHistoryTableResourceHistoryTable },
+        overlayProps: { backgroundOpacity: 0.55, blur: 3 },
+        transitionProps: { transition: 'fade', duration: 200 },
       },
     },
     Drawer: {
       defaultProps: {
-        overlayProps: { backgroundOpacity: ResourceHistoryTable.55, blur: 3 },
-        transitionProps: { transition: 'slide-right', duration: 2ResourceHistoryTableResourceHistoryTable },
+        overlayProps: { backgroundOpacity: 0.55, blur: 3 },
+        transitionProps: { transition: 'slide-right', duration: 200 },
       },
     },
     Badge: {
@@ -173,7 +173,7 @@ const theme = createTheme({
     },
     Timeline: {
       defaultProps: {
-        bulletSize: 2ResourceHistoryTable,
+        bulletSize: 20,
         lineWidth: 2,
       },
     },
@@ -190,11 +190,11 @@ const theme = createTheme({
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable, // 5 minutes
-      gcTime: 1ResourceHistoryTable * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable, // 1ResourceHistoryTable minutes (previously cacheTime)
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes (previously cacheTime)
       retry: (failureCount, error) => {
         // Don't retry on authentication errors
-        if (error instanceof Error && error.message.includes('4ResourceHistoryTable1')) {
+        if (error instanceof Error && error.message.includes('401')) {
           return false;
         }
         return failureCount < 3;
@@ -228,15 +228,15 @@ export function Providers({ children }: ProvidersProps) {
               <ModalsProvider
                 modalProps={{
                   centered: true,
-                  overlayProps: { backgroundOpacity: ResourceHistoryTable.55, blur: 3 },
-                  transitionProps: { transition: 'fade', duration: 2ResourceHistoryTableResourceHistoryTable },
+                  overlayProps: { backgroundOpacity: 0.55, blur: 3 },
+                  transitionProps: { transition: 'fade', duration: 200 },
                 }}
               >
                 <Notifications
                   position="top-right"
-                  autoClose={5ResourceHistoryTableResourceHistoryTableResourceHistoryTable}
+                  autoClose={5000}
                   limit={5}
-                  containerWidth={4ResourceHistoryTableResourceHistoryTable}
+                  containerWidth={400}
                 />
                 {children}
               </ModalsProvider>

@@ -100,8 +100,8 @@ export const OBJECT_STORES: ObjectStoreConfig[] = [
       { name: 'resourceType', keyPath: 'resourceType', unique: false },
       { name: 'patient', keyPath: 'resource.subject.reference', unique: false },
       { name: 'encounter', keyPath: 'resource.encounter.reference', unique: false },
-      { name: 'category', keyPath: 'resource.category[ResourceHistoryTable].coding[ResourceHistoryTable].code', unique: false },
-      { name: 'code', keyPath: 'resource.code.coding[ResourceHistoryTable].code', unique: false },
+      { name: 'category', keyPath: 'resource.category[0].coding[0].code', unique: false },
+      { name: 'code', keyPath: 'resource.code.coding[0].code', unique: false },
       { name: 'effectiveDate', keyPath: 'resource.effectiveDateTime', unique: false },
       { name: 'status', keyPath: 'resource.status', unique: false },
       { name: 'syncStatus', keyPath: 'syncMetadata.syncStatus', unique: false },
@@ -134,10 +134,10 @@ export const OBJECT_STORES: ObjectStoreConfig[] = [
     indexes: [
       { name: 'resourceType', keyPath: 'resourceType', unique: false },
       { name: 'patient', keyPath: 'resource.subject.reference', unique: false },
-      { name: 'clinicalStatus', keyPath: 'resource.clinicalStatus.coding[ResourceHistoryTable].code', unique: false },
-      { name: 'verificationStatus', keyPath: 'resource.verificationStatus.coding[ResourceHistoryTable].code', unique: false },
-      { name: 'category', keyPath: 'resource.category[ResourceHistoryTable].coding[ResourceHistoryTable].code', unique: false },
-      { name: 'code', keyPath: 'resource.code.coding[ResourceHistoryTable].code', unique: false },
+      { name: 'clinicalStatus', keyPath: 'resource.clinicalStatus.coding[0].code', unique: false },
+      { name: 'verificationStatus', keyPath: 'resource.verificationStatus.coding[0].code', unique: false },
+      { name: 'category', keyPath: 'resource.category[0].coding[0].code', unique: false },
+      { name: 'code', keyPath: 'resource.code.coding[0].code', unique: false },
       { name: 'recordedDate', keyPath: 'resource.recordedDate', unique: false },
       { name: 'syncStatus', keyPath: 'syncMetadata.syncStatus', unique: false },
       { name: 'updatedAt', keyPath: 'updatedAt', unique: false }
@@ -152,7 +152,7 @@ export const OBJECT_STORES: ObjectStoreConfig[] = [
     indexes: [
       { name: 'resourceType', keyPath: 'resourceType', unique: false },
       { name: 'patient', keyPath: 'resource.patient.reference', unique: false },
-      { name: 'clinicalStatus', keyPath: 'resource.clinicalStatus.coding[ResourceHistoryTable].code', unique: false },
+      { name: 'clinicalStatus', keyPath: 'resource.clinicalStatus.coding[0].code', unique: false },
       { name: 'type', keyPath: 'resource.type', unique: false },
       { name: 'category', keyPath: 'resource.category', unique: false, multiEntry: true },
       { name: 'criticality', keyPath: 'resource.criticality', unique: false },
@@ -170,11 +170,11 @@ export const OBJECT_STORES: ObjectStoreConfig[] = [
     indexes: [
       { name: 'resourceType', keyPath: 'resourceType', unique: false },
       { name: 'patient', keyPath: 'resource.subject.reference', unique: false },
-      { name: 'encounter', keyPath: 'resource.context.encounter[ResourceHistoryTable].reference', unique: false },
+      { name: 'encounter', keyPath: 'resource.context.encounter[0].reference', unique: false },
       { name: 'status', keyPath: 'resource.status', unique: false },
       { name: 'docStatus', keyPath: 'resource.docStatus', unique: false },
-      { name: 'type', keyPath: 'resource.type.coding[ResourceHistoryTable].code', unique: false },
-      { name: 'category', keyPath: 'resource.category[ResourceHistoryTable].coding[ResourceHistoryTable].code', unique: false },
+      { name: 'type', keyPath: 'resource.type.coding[0].code', unique: false },
+      { name: 'category', keyPath: 'resource.category[0].coding[0].code', unique: false },
       { name: 'date', keyPath: 'resource.date', unique: false },
       { name: 'syncStatus', keyPath: 'syncMetadata.syncStatus', unique: false },
       { name: 'updatedAt', keyPath: 'updatedAt', unique: false }
@@ -192,8 +192,8 @@ export const OBJECT_STORES: ObjectStoreConfig[] = [
       { name: 'patient', keyPath: 'resource.subject.reference', unique: false },
       { name: 'encounter', keyPath: 'resource.encounter.reference', unique: false },
       { name: 'status', keyPath: 'resource.status', unique: false },
-      { name: 'category', keyPath: 'resource.category[ResourceHistoryTable].coding[ResourceHistoryTable].code', unique: false },
-      { name: 'code', keyPath: 'resource.code.coding[ResourceHistoryTable].code', unique: false },
+      { name: 'category', keyPath: 'resource.category[0].coding[0].code', unique: false },
+      { name: 'code', keyPath: 'resource.code.coding[0].code', unique: false },
       { name: 'effectiveDate', keyPath: 'resource.effectiveDateTime', unique: false },
       { name: 'syncStatus', keyPath: 'syncMetadata.syncStatus', unique: false },
       { name: 'updatedAt', keyPath: 'updatedAt', unique: false }
@@ -211,7 +211,7 @@ export const OBJECT_STORES: ObjectStoreConfig[] = [
       { name: 'patient', keyPath: 'resource.subject.reference', unique: false },
       { name: 'status', keyPath: 'resource.status', unique: false },
       { name: 'intent', keyPath: 'resource.intent', unique: false },
-      { name: 'category', keyPath: 'resource.category[ResourceHistoryTable].coding[ResourceHistoryTable].code', unique: false },
+      { name: 'category', keyPath: 'resource.category[0].coding[0].code', unique: false },
       { name: 'period', keyPath: 'resource.period.start', unique: false },
       { name: 'syncStatus', keyPath: 'syncMetadata.syncStatus', unique: false },
       { name: 'updatedAt', keyPath: 'updatedAt', unique: false }
@@ -227,7 +227,7 @@ export const OBJECT_STORES: ObjectStoreConfig[] = [
       { name: 'resourceType', keyPath: 'resourceType', unique: false },
       { name: 'patient', keyPath: 'resource.patient.reference', unique: false },
       { name: 'status', keyPath: 'resource.status', unique: false },
-      { name: 'vaccineCode', keyPath: 'resource.vaccineCode.coding[ResourceHistoryTable].code', unique: false },
+      { name: 'vaccineCode', keyPath: 'resource.vaccineCode.coding[0].code', unique: false },
       { name: 'occurrenceDate', keyPath: 'resource.occurrenceDateTime', unique: false },
       { name: 'syncStatus', keyPath: 'syncMetadata.syncStatus', unique: false },
       { name: 'updatedAt', keyPath: 'updatedAt', unique: false }
@@ -246,8 +246,8 @@ export const OBJECT_STORES: ObjectStoreConfig[] = [
       { name: 'status', keyPath: 'resource.status', unique: false },
       { name: 'intent', keyPath: 'resource.intent', unique: false },
       { name: 'priority', keyPath: 'resource.priority', unique: false },
-      { name: 'category', keyPath: 'resource.category[ResourceHistoryTable].coding[ResourceHistoryTable].code', unique: false },
-      { name: 'code', keyPath: 'resource.code.coding[ResourceHistoryTable].code', unique: false },
+      { name: 'category', keyPath: 'resource.category[0].coding[0].code', unique: false },
+      { name: 'code', keyPath: 'resource.code.coding[0].code', unique: false },
       { name: 'authoredOn', keyPath: 'resource.authoredOn', unique: false },
       { name: 'syncStatus', keyPath: 'syncMetadata.syncStatus', unique: false },
       { name: 'updatedAt', keyPath: 'updatedAt', unique: false }
@@ -279,7 +279,7 @@ export const OBJECT_STORES: ObjectStoreConfig[] = [
       { name: 'resourceType', keyPath: 'resourceType', unique: false },
       { name: 'identifier', keyPath: 'searchHashes.identifier', unique: false },
       { name: 'name', keyPath: 'searchHashes.name', unique: false },
-      { name: 'type', keyPath: 'resource.type[ResourceHistoryTable].coding[ResourceHistoryTable].code', unique: false },
+      { name: 'type', keyPath: 'resource.type[0].coding[0].code', unique: false },
       { name: 'active', keyPath: 'resource.active', unique: false },
       { name: 'syncStatus', keyPath: 'syncMetadata.syncStatus', unique: false },
       { name: 'updatedAt', keyPath: 'updatedAt', unique: false }
@@ -328,11 +328,11 @@ export const ENCRYPTED_FIELDS: Record<string, string[]> = {
 
 // Data retention policies (in days)
 export const RETENTION_POLICIES: Record<string, number> = {
-  encounters: 9ResourceHistoryTable,        // 9ResourceHistoryTable days for encounters
-  observations: 18ResourceHistoryTable,     // 18ResourceHistoryTable days for observations
+  encounters: 9,        // 9 days for encounters
+  observations: 18,     // 18 days for observations
   documentReferences: 365, // 1 year for documents
   diagnosticReports: 365,  // 1 year for diagnostic reports
-  serviceRequests: 3ResourceHistoryTable,     // 3ResourceHistoryTable days for service requests
+  serviceRequests: 3,     // 3 days for service requests
   // Permanent storage (no expiration)
   patients: ResourceHistoryTable,
   conditions: ResourceHistoryTable,

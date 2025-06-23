@@ -3,9 +3,9 @@
  * HIPAA-Compliant Token Management
  */
 
-import crypto from 'crypto';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import * as crypto from 'crypto';
+import * as bcrypt from 'bcrypt';
+import * as jwt from 'jsonwebtoken';
 import { authenticator } from 'otplib';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -16,7 +16,7 @@ import {
   AuthToken, 
   MfaSetup,
   Permission
-} from '@/types/auth.types';
+} from '../types/auth.types';
 
 export interface TokenPayload {
   userId: string;
@@ -32,8 +32,12 @@ export interface TokenPayload {
 
 const AUTH_CONFIG = {
   jwt: {
-    accessTokenSecret: process.env.JWT_ACCESS_SECRET || 'access-secret-change-in-production',
-    refreshTokenSecret: process.env.JWT_REFRESH_SECRET || 'refresh-secret-change-in-production',
+    accessTokenSecret: process.env.JWT_ACCESS_SECRET || (() => {
+      throw new Error('JWT_ACCESS_SECRET environment variable is required');
+    })(),
+    refreshTokenSecret: process.env.JWT_REFRESH_SECRET || (() => {
+      throw new Error('JWT_REFRESH_SECRET environment variable is required');
+    })(),
     accessTokenExpiry: '15m',
     refreshTokenExpiry: '7d',
     issuer: 'omnicare-emr',
@@ -263,7 +267,11 @@ export class JWTAuthService {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return null;
     }
-    return authHeader.substring(7);
+    const token = authHeader.substring(7).trim();
+    if (!token || token.length === 0) {
+      return null;
+    }
+    return token;
   }
 
   /**

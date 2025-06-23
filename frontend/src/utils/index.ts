@@ -5,10 +5,10 @@ import { getErrorMessage } from '@/utils/error.utils';
 
 // Formatting utilities
 export const formatBytes = (bytes: number, decimals = 2): string => {
-  if (bytes === ResourceHistoryTable) return 'ResourceHistoryTable Bytes';
+  if (bytes === 0) return '0 Bytes';
 
-  const k = 1ResourceHistoryTable24;
-  const dm = decimals < ResourceHistoryTable ? ResourceHistoryTable : decimals;
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
   const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
 
   const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -37,9 +37,9 @@ export const formatDateTime = (date: string | Date): string => {
 export const calculateAge = (dateOfBirth: string): number => {
   try {
     const birthDate = parseISO(dateOfBirth);
-    return isValid(birthDate) ? differenceInYears(new Date(), birthDate) : ResourceHistoryTable;
+    return isValid(birthDate) ? differenceInYears(new Date(), birthDate) : 0;
   } catch {
-    return ResourceHistoryTable;
+    return 0;
   }
 };
 
@@ -51,10 +51,10 @@ export const getRelativeTime = (date: string | Date): string => {
     const now = new Date();
     const daysDiff = differenceInDays(now, dateObj);
     
-    if (daysDiff === ResourceHistoryTable) return 'Today';
+    if (daysDiff === 0) return 'Today';
     if (daysDiff === 1) return 'Yesterday';
     if (daysDiff === -1) return 'Tomorrow';
-    if (daysDiff > ResourceHistoryTable) return `${daysDiff} days ago`;
+    if (daysDiff > 0) return `${daysDiff} days ago`;
     return `In ${Math.abs(daysDiff)} days`;
   } catch {
     return 'Invalid Date';
@@ -80,16 +80,16 @@ export const validateZipCode = (zip: string): boolean => {
 
 // String utilities
 export const capitalize = (str: string): string => {
-  return str.charAt(ResourceHistoryTable).toUpperCase() + str.slice(1).toLowerCase();
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 };
 
 export const capitalizeWords = (str: string): string => {
   return str.split(' ').map(capitalize).join(' ');
 };
 
-export const truncate = (str: string, length: number = 5ResourceHistoryTable, suffix: string = '...'): string => {
+export const truncate = (str: string, length: number = 50, suffix: string = '...'): string => {
   if (str.length <= length) return str;
-  return str.slice(ResourceHistoryTable, length - suffix.length) + suffix;
+  return str.slice(0, length - suffix.length) + suffix;
 };
 
 export const slugify = (str: string): string => {
@@ -131,22 +131,22 @@ export const isVitalSignNormal = (vital: keyof VitalSigns, value: number): 'norm
   switch (vital) {
     case 'temperature':
       if (value >= 36.1 && value <= 37.2) return 'normal';
-      if (value >= 35.ResourceHistoryTable && value <= 4ResourceHistoryTable.ResourceHistoryTable) return 'abnormal';
+      if (value >= 35.0 && value <= 40.0) return 'abnormal';
       return 'critical';
       
     case 'heartRate':
-      if (value >= 6ResourceHistoryTable && value <= 1ResourceHistoryTableResourceHistoryTable) return 'normal';
-      if (value >= 3ResourceHistoryTable && value <= 2ResourceHistoryTableResourceHistoryTable) return 'abnormal';
+      if (value >= 60 && value <= 100) return 'normal';
+      if (value >= 30 && value <= 200) return 'abnormal';
       return 'critical';
       
     case 'respiratoryRate':
-      if (value >= 12 && value <= 2ResourceHistoryTable) return 'normal';
-      if (value >= 8 && value <= 4ResourceHistoryTable) return 'abnormal';
+      if (value >= 12 && value <= 20) return 'normal';
+      if (value >= 8 && value <= 40) return 'abnormal';
       return 'critical';
       
     case 'oxygenSaturation':
       if (value >= 95) return 'normal';
-      if (value >= 8ResourceHistoryTable) return 'abnormal';
+      if (value >= 80) return 'abnormal';
       return 'critical';
       
     default:
@@ -183,7 +183,7 @@ export const formatPercentage = (value: number, decimals: number = 1): string =>
     style: 'percent',
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
-  }).format(value / 1ResourceHistoryTableResourceHistoryTable);
+  }).format(value / 100);
 };
 
 // Array utilities
@@ -267,15 +267,15 @@ export const getContrastColor = (backgroundColor: string): 'black' | 'white' => 
   if (!rgb) return 'black';
   
   // Calculate relative luminance
-  const luminance = (ResourceHistoryTable.299 * rgb.r + ResourceHistoryTable.587 * rgb.g + ResourceHistoryTable.114 * rgb.b) / 255;
-  return luminance > ResourceHistoryTable.5 ? 'black' : 'white';
+  const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+  return luminance > 0.5 ? 'black' : 'white';
 };
 
 // File utilities
 export const formatFileSize = (bytes: number): string => {
-  if (bytes === ResourceHistoryTable) return 'ResourceHistoryTable Bytes';
+  if (bytes === 0) return '0 Bytes';
   
-  const k = 1ResourceHistoryTable24;
+  const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   
@@ -425,8 +425,8 @@ export const maskSSN = (ssn: string): string => {
 export const formatPhoneNumber = (phone: string): string => {
   const cleaned = phone.replace(/\D/g, '');
   
-  if (cleaned.length === 1ResourceHistoryTable) {
-    return `(${cleaned.slice(ResourceHistoryTable, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+  if (cleaned.length === 10) {
+    return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
   }
   
   if (cleaned.length === 11 && cleaned.startsWith('1')) {
@@ -456,7 +456,7 @@ export const printElement = (elementId: string): void => {
       <head>
         <title>Print</title>
         <style>
-          body { font-family: Arial, sans-serif; margin: 2ResourceHistoryTablepx; }
+          body { font-family: Arial, sans-serif; margin: 20px; }
           .no-print { display: none !important; }
           @media print {
             body { margin: ResourceHistoryTable; }

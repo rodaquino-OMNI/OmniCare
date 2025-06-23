@@ -36,7 +36,7 @@ export function AppLayout({
       
       <AppShell
         navbar={{
-          width: isCollapsed ? 8ResourceHistoryTable : 28ResourceHistoryTable,
+          width: isCollapsed ? 8 : 28,
           breakpoint: 'md',
           collapsed: { mobile: !isOpen, desktop: !isOpen },
         }}
@@ -59,7 +59,7 @@ export function AppLayout({
 
         {/* Main Content */}
         <AppShell.Main>
-          <div className="min-h-[calc(1ResourceHistoryTableResourceHistoryTablevh-64px-2rem)]">
+          <div className="min-h-[calc(10vh-64px-2rem)]">
             {children}
           </div>
         </AppShell.Main>

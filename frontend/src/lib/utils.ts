@@ -14,10 +14,10 @@ export function cn(...inputs: ClassValue[]) {
  * Format a duration in milliseconds to a human-readable string
  */
 export function formatDuration(ms: number): string {
-  if (ms < 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable) return `${ms}ms`;
-  if (ms < 6ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable) return `${(ms / 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable).toFixed(1)}s`;
-  if (ms < 36ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable) return `${Math.floor(ms / 6ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable)}m ${Math.floor((ms % 6ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable) / 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable)}s`;
-  return `${Math.floor(ms / 36ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable)}h ${Math.floor((ms % 36ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable) / 6ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable)}m`;
+  if (ms < 1000) return `${ms}ms`;
+  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+  if (ms < 3600000) return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`;
+  return `${Math.floor(ms / 3600000)}h ${Math.floor((ms % 3600000) / 60000)}m`;
 }
 
 /**
@@ -62,8 +62,8 @@ export async function retry<T>(
 ): Promise<T> {
   const {
     maxAttempts = 3,
-    initialDelay = 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable,
-    maxDelay = 3ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable,
+    initialDelay = 1000,
+    maxDelay = 30000,
     factor = 2
   } = options;
 

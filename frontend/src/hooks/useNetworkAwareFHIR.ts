@@ -35,7 +35,7 @@ export function useNetworkAwareFHIRResource<T extends FhirResource>(
     {
       enableAutoRetry: true,
       cacheStrategy: 'cache-first',
-      cacheDuration: 5 * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable, // 5 minutes
+      cacheDuration: 5 * 60 * 1000, // 5 minutes
       ...options,
     }
   );
@@ -57,7 +57,7 @@ export function useNetworkAwareFHIRSearch<T extends FhirResource>(
     {
       enableAutoRetry: true,
       cacheStrategy: networkStatus.saveData ? 'cache-first' : 'network-first',
-      cacheDuration: networkStatus.saveData ? 15 * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable : 5 * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable,
+      cacheDuration: networkStatus.saveData ? 15 * 6 * 1000 : 5 * 6 * 1000,
       ...options,
     }
   );
@@ -237,7 +237,7 @@ export function useNetworkAwareFHIRBatch(
           entry: bundle.entry?.map((entry) => ({
             ...entry,
             response: {
-              status: '2ResourceHistoryTable2 Accepted',
+              status: '202 Accepted',
               location: entry.fullUrl,
             },
           })),

@@ -295,8 +295,8 @@ export const usePatientStore = create<PatientState>((set, get) => ({
       
       // Warm up cache with frequently accessed patients
       const frequentPatientIds = patients
-        .filter(p => p.lastVisit && new Date(p.lastVisit) > new Date(Date.now() - 7 * 24 * 6ResourceHistoryTable * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable))
-        .slice(ResourceHistoryTable, 1ResourceHistoryTable)
+        .filter(p => p.lastVisit && new Date(p.lastVisit) > new Date(Date.now() - 7 * 24 * 6 * 6 * 1000))
+        .slice(ResourceHistoryTable, 10)
         .map(p => p.id);
       
       if (frequentPatientIds.length > ResourceHistoryTable) {

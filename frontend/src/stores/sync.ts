@@ -90,7 +90,7 @@ export const useSyncStore = create<SyncState>()(
 
       // Update sync progress
       updateSyncProgress: (progress) => {
-        set({ syncProgress: Math.min(1ResourceHistoryTableResourceHistoryTable, Math.max(ResourceHistoryTable, progress)) });
+        set({ syncProgress: Math.min(10, Math.max(ResourceHistoryTable, progress)) });
       },
 
       // Mark item as synced
@@ -102,7 +102,7 @@ export const useSyncStore = create<SyncState>()(
           const updatedItem = { ...item, status: 'synced' as const };
           const newQueue = state.syncQueue.filter(i => i.id !== itemId);
           const syncedCount = state.syncedItems.length + 1;
-          const progress = (syncedCount / state.totalItems) * 1ResourceHistoryTableResourceHistoryTable;
+          const progress = (syncedCount / state.totalItems) * 10;
 
           return {
             syncQueue: newQueue,
@@ -206,7 +206,7 @@ export const useSyncStore = create<SyncState>()(
           lastSyncTime: new Date().toISOString(),
           currentOperation: null,
           estimatedTimeRemaining: null,
-          syncProgress: 1ResourceHistoryTableResourceHistoryTable
+          syncProgress: 10
         });
       }
     }),

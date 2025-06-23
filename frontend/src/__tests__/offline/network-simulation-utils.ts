@@ -5,8 +5,8 @@ export interface NetworkConditions {
   isOnline: boolean;
   latency: number; // in milliseconds
   bandwidth: number; // in Mbps
-  packetLoss: number; // percentage (ResourceHistoryTable-1ResourceHistoryTableResourceHistoryTable)
-  errorRate: number; // percentage (ResourceHistoryTable-1ResourceHistoryTableResourceHistoryTable)
+  packetLoss: number; // percentage (0-100)
+  errorRate: number; // percentage (0-100)
 }
 
 export interface MockFetchOptions {
@@ -23,10 +23,10 @@ export class NetworkSimulator {
   private static originalNavigatorOnLine = Object.getOwnPropertyDescriptor(navigator, 'onLine');
   private static conditions: NetworkConditions = {
     isOnline: true,
-    latency: ResourceHistoryTable,
+    latency: 0,
     bandwidth: Infinity,
-    packetLoss: ResourceHistoryTable,
-    errorRate: ResourceHistoryTable
+    packetLoss: 0,
+    errorRate: 0
   };
   private static fetchInterceptors: Map<string | RegExp, MockFetchOptions> = new Map();
   private static requestLog: Array<{ url: string; method: string; timestamp: number }> = [];
@@ -73,7 +73,7 @@ export class NetworkSimulator {
       }
 
       // Simulate packet loss
-      if (Math.random() * 1ResourceHistoryTableResourceHistoryTable < this.conditions.packetLoss) {
+      if (Math.random() * 100 < this.conditions.packetLoss) {
         throw new Error('Network request failed: Packet loss');
       }
 
@@ -91,18 +91,18 @@ export class NetworkSimulator {
 
       // Apply latency
       const delay = mockOptions?.delay || this.calculateLatency();
-      if (delay > ResourceHistoryTable) {
+      if (delay > 0) {
         await new Promise(resolve => setTimeout(resolve, delay));
       }
 
       // Simulate error rate
-      if (mockOptions?.shouldFail || Math.random() * 1ResourceHistoryTableResourceHistoryTable < this.conditions.errorRate) {
+      if (mockOptions?.shouldFail || Math.random() * 100 < this.conditions.errorRate) {
         throw new Error('Network request failed: Random error');
       }
 
       // Simulate failure rate for specific endpoint
-      if (mockOptions?.failureRate && Math.random() * 1ResourceHistoryTableResourceHistoryTable < mockOptions.failureRate) {
-        return new Response(null, { status: 5ResourceHistoryTableResourceHistoryTable, statusText: 'Internal Server Error' });
+      if (mockOptions?.failureRate && Math.random() * 100 < mockOptions.failureRate) {
+        return new Response(null, { status: 500, statusText: 'Internal Server Error' });
       }
 
       // Return mocked response
@@ -112,14 +112,14 @@ export class NetworkSimulator {
           : JSON.stringify(mockOptions.response);
         
         return new Response(body, {
-          status: mockOptions.status || 2ResourceHistoryTableResourceHistoryTable,
+          status: mockOptions.status || 200,
           headers: mockOptions.headers || { 'Content-Type': 'application/json' }
         });
       }
 
       // Default response
       return new Response(JSON.stringify({ success: true }), {
-        status: 2ResourceHistoryTableResourceHistoryTable,
+        status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
     }) as typeof fetch;
@@ -128,8 +128,8 @@ export class NetworkSimulator {
   // Calculate latency based on bandwidth
   private static calculateLatency(): number {
     const baseLatency = this.conditions.latency;
-    const bandwidthFactor = 1ResourceHistoryTableResourceHistoryTable / this.conditions.bandwidth; // Lower bandwidth = higher latency
-    return baseLatency + (bandwidthFactor * 1ResourceHistoryTable);
+    const bandwidthFactor = 100 / this.conditions.bandwidth; // Lower bandwidth = higher latency
+    return baseLatency + (bandwidthFactor * 10);
   }
 
   // Add fetch interceptor
@@ -177,8 +177,8 @@ export class NetworkSimulator {
 
   // Simulate flaky connection
   static simulateFlakyConnection(
-    intervalMs: number = 5ResourceHistoryTableResourceHistoryTableResourceHistoryTable,
-    offlineDurationMs: number = 2ResourceHistoryTableResourceHistoryTableResourceHistoryTable
+    intervalMs: number = 5000,
+    offlineDurationMs: number = 2000
   ): () => void {
     const interval = setInterval(() => {
       this.goOffline();
@@ -191,8 +191,8 @@ export class NetworkSimulator {
   // Simulate slow connection
   static simulateSlowConnection() {
     this.setConditions({
-      latency: 5ResourceHistoryTableResourceHistoryTable,
-      bandwidth: ResourceHistoryTable.5, // ResourceHistoryTable.5 Mbps
+      latency: 500,
+      bandwidth: 0.5, // 0.5 Mbps
       packetLoss: 5,
       errorRate: 2
     });
@@ -201,10 +201,10 @@ export class NetworkSimulator {
   // Simulate fast connection
   static simulateFastConnection() {
     this.setConditions({
-      latency: 1ResourceHistoryTable,
-      bandwidth: 1ResourceHistoryTableResourceHistoryTable, // 1ResourceHistoryTableResourceHistoryTable Mbps
-      packetLoss: ResourceHistoryTable,
-      errorRate: ResourceHistoryTable
+      latency: 10,
+      bandwidth: 100, // 100 Mbps
+      packetLoss: 0,
+      errorRate: 0
     });
   }
 
@@ -219,10 +219,10 @@ export class NetworkSimulator {
     this.connectionChangeListeners = [];
     this.conditions = {
       isOnline: true,
-      latency: ResourceHistoryTable,
+      latency: 0,
       bandwidth: Infinity,
-      packetLoss: ResourceHistoryTable,
-      errorRate: ResourceHistoryTable
+      packetLoss: 0,
+      errorRate: 0
     };
   }
 }
@@ -232,7 +232,7 @@ export function createOfflineAwareFetch(
   cache?: Map<string, { data: any; timestamp: number }>
 ): typeof fetch {
   const cacheStore = cache || new Map();
-  const CACHE_DURATION = 5 * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable; // 5 minutes
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
   return async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
@@ -245,7 +245,7 @@ export function createOfflineAwareFetch(
       const cached = cacheStore.get(cacheKey);
       if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
         return new Response(JSON.stringify(cached.data), {
-          status: 2ResourceHistoryTableResourceHistoryTable,
+          status: 200,
           headers: { 'Content-Type': 'application/json', 'X-From-Cache': 'true' }
         });
       }
@@ -268,7 +268,7 @@ export function createOfflineAwareFetch(
       const cached = cacheStore.get(cacheKey);
       if (cached) {
         return new Response(JSON.stringify(cached.data), {
-          status: 2ResourceHistoryTableResourceHistoryTable,
+          status: 200,
           headers: { 'Content-Type': 'application/json', 'X-From-Cache': 'true' }
         });
       }
@@ -279,7 +279,7 @@ export function createOfflineAwareFetch(
 
 // Helper to test retry logic
 export class RetryTester {
-  private attempts = ResourceHistoryTable;
+  private attempts = 0;
   private maxAttempts: number;
   private successAfter: number;
 
@@ -303,7 +303,7 @@ export class RetryTester {
   }
 
   reset(): void {
-    this.attempts = ResourceHistoryTable;
+    this.attempts = 0;
   }
 }
 
@@ -366,7 +366,7 @@ export class IndexedDBMock {
 
     setTimeout(() => {
       if (request.onsuccess) request.onsuccess({ target: request } as any);
-    }, ResourceHistoryTable);
+    }, 0);
 
     return request as any;
   }

@@ -256,7 +256,7 @@ describe('Healthcare API Integration Tests', () => {
 
   describe('Batch Operations Integration', () => {
     test('should execute FHIR batch bundle', async () => {
-      const batchResources = [
+      const batchResources: Patient[] = [
         {
           resourceType: 'Patient',
           name: [{ given: ['Batch'], family: 'Test1' }],
@@ -288,7 +288,7 @@ describe('Healthcare API Integration Tests', () => {
     });
 
     test('should handle transaction bundles', async () => {
-      const transactionResources = [
+      const transactionResources: Patient[] = [
         {
           resourceType: 'Patient',
           name: [{ given: ['Transaction'], family: 'Test' }],

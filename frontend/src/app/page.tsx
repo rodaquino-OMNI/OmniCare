@@ -20,7 +20,7 @@ export default function Home() {
   }, [isAuthenticated, isLoading, router]);
 
   return (
-    <Center h="1ResourceHistoryTableResourceHistoryTablevh">
+    <Center h="10vh">
       <Stack align="center" gap="md">
         <Loader size="lg" />
         <Text c="dimmed">Loading OmniCare EMR...</Text>

@@ -5,10 +5,10 @@
 export const offlineTestConfig = {
   // Timeouts for async operations
   timeouts: {
-    sync: 1ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable, // 1ResourceHistoryTable seconds for sync operations
-    cache: 5ResourceHistoryTableResourceHistoryTableResourceHistoryTable, // 5 seconds for cache operations
-    network: 3ResourceHistoryTableResourceHistoryTableResourceHistoryTable, // 3 seconds for network requests
-    conflict: 15ResourceHistoryTableResourceHistoryTableResourceHistoryTable // 15 seconds for conflict resolution
+    sync: 1000, // 1 second for sync operations
+    cache: 5000, // 5 seconds for cache operations
+    network: 3000, // 3 seconds for network requests
+    conflict: 15000 // 15 seconds for conflict resolution
   },
 
   // Mock data defaults
@@ -16,27 +16,27 @@ export const offlineTestConfig = {
     defaultPatients: [
       {
         id: 'patient-1',
-        mrn: 'MRNResourceHistoryTableResourceHistoryTable1',
+        mrn: 'MRN001',
         firstName: 'John',
         lastName: 'Doe',
-        dateOfBirth: '198ResourceHistoryTable-ResourceHistoryTable1-ResourceHistoryTable1',
+        dateOfBirth: '1980-01-01',
         gender: 'male' as const,
         status: 'active' as const,
-        createdAt: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
-        updatedAt: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
         allergies: [],
         insurance: []
       },
       {
         id: 'patient-2',
-        mrn: 'MRNResourceHistoryTableResourceHistoryTable2',
+        mrn: 'MRN002',
         firstName: 'Jane',
         lastName: 'Smith',
-        dateOfBirth: '1975-ResourceHistoryTable5-15',
+        dateOfBirth: '1975-5-15',
         gender: 'female' as const,
         status: 'active' as const,
-        createdAt: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
-        updatedAt: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
         allergies: [
           {
             id: 'allergy-1',
@@ -53,7 +53,7 @@ export const offlineTestConfig = {
       patientId: 'patient-1',
       type: 'outpatient' as const,
       status: 'in-progress' as const,
-      startTime: '2ResourceHistoryTable24-ResourceHistoryTable1-15T1ResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
+      startTime: '2024-01-15T10:00:00Z',
       providerId: 'provider-1',
       departmentId: 'dept-1',
       diagnosis: [],
@@ -63,9 +63,9 @@ export const offlineTestConfig = {
       id: 'vital-1',
       patientId: 'patient-1',
       recordedBy: 'nurse-1',
-      recordedDate: '2ResourceHistoryTable24-ResourceHistoryTable1-15T1ResourceHistoryTable:3ResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
+      recordedDate: '2024-01-15T10:30:00Z',
       temperature: { value: 98.6, unit: 'fahrenheit' as const },
-      bloodPressure: { systolic: 12ResourceHistoryTable, diastolic: 8ResourceHistoryTable, unit: 'mmHg' as const },
+      bloodPressure: { systolic: 120, diastolic: 80, unit: 'mmHg' as const },
       heartRate: { value: 72, unit: 'bpm' as const },
       respiratoryRate: { value: 16, unit: 'bpm' as const },
       oxygenSaturation: { value: 98, unit: '%' as const }
@@ -74,18 +74,18 @@ export const offlineTestConfig = {
 
   // Performance thresholds
   performance: {
-    maxCacheResponseTime: 5ResourceHistoryTable, // ms
-    maxSyncQueueSize: 1ResourceHistoryTableResourceHistoryTable,
-    maxMemoryUsage: 5ResourceHistoryTable * 1ResourceHistoryTable24 * 1ResourceHistoryTable24, // 5ResourceHistoryTableMB
-    maxSyncDuration: 3ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable, // 3ResourceHistoryTable seconds
-    maxConflictResolutionTime: 5ResourceHistoryTableResourceHistoryTableResourceHistoryTable // 5 seconds
+    maxCacheResponseTime: 50, // ms
+    maxSyncQueueSize: 100,
+    maxMemoryUsage: 50 * 1024 * 1024, // 50MB
+    maxSyncDuration: 30000, // 30 seconds
+    maxConflictResolutionTime: 5000 // 5 seconds
   },
 
   // Security settings
   security: {
     encryptionKey: 'test-encryption-key-do-not-use-in-production',
-    saltRounds: 1ResourceHistoryTable,
-    tokenExpiry: 36ResourceHistoryTableResourceHistoryTable, // 1 hour
+    saltRounds: 10,
+    tokenExpiry: 3600, // 1 hour
     maxFailedAttempts: 3
   },
 
@@ -109,7 +109,7 @@ export function setupOfflineTests() {
     if (!global.crypto) {
       global.crypto = {
         getRandomValues: (array: Uint8Array) => {
-          for (let i = ResourceHistoryTable; i < array.length; i++) {
+          for (let i = 0; i < array.length; i++) {
             array[i] = Math.floor(Math.random() * 256);
           }
           return array;
@@ -264,10 +264,10 @@ export function simulateOfflineScenario(scenario: {
   queuedActions?: number;
 }) {
   const {
-    duration = 5ResourceHistoryTableResourceHistoryTableResourceHistoryTable,
-    packetLoss = ResourceHistoryTable,
-    latency = ResourceHistoryTable,
-    queuedActions = ResourceHistoryTable
+    duration = 5000,
+    packetLoss = 0,
+    latency = 0,
+    queuedActions = 0
   } = scenario;
 
   // Go offline
@@ -278,9 +278,9 @@ export function simulateOfflineScenario(scenario: {
   window.dispatchEvent(new Event('offline'));
 
   // Queue actions if specified
-  if (queuedActions > ResourceHistoryTable) {
+  if (queuedActions > 0) {
     const queue = [];
-    for (let i = ResourceHistoryTable; i < queuedActions; i++) {
+    for (let i = 0; i < queuedActions; i++) {
       queue.push({
         id: `action-${i}`,
         type: 'UPDATE',
@@ -341,16 +341,16 @@ export class PerformanceMonitor {
     p95: number;
   } | null {
     const values = this.metrics.get(name);
-    if (!values || values.length === ResourceHistoryTable) return null;
+    if (!values || values.length === 0) return null;
 
     const sorted = [...values].sort((a, b) => a - b);
-    const p95Index = Math.floor(sorted.length * ResourceHistoryTable.95);
+    const p95Index = Math.floor(sorted.length * 0.95);
 
     return {
       count: values.length,
       min: Math.min(...values),
       max: Math.max(...values),
-      avg: values.reduce((a, b) => a + b, ResourceHistoryTable) / values.length,
+      avg: values.reduce((a, b) => a + b, 0) / values.length,
       p95: sorted[p95Index]
     };
   }

@@ -1,16 +1,16 @@
 import { Request, Response, NextFunction } from 'express';
 
-import { cdsHooksService } from '@/services/cds-hooks.service';
-import { fhirResourcesService } from '@/services/fhir-resources.service';
-import { fhirValidationService } from '@/services/integration/fhir/fhir-validation.service';
-import { medplumService } from '@/services/medplum.service';
-import { subscriptionsService } from '@/services/subscriptions.service';
-import { databaseService } from '@/services/database.service';
-import { FHIRSearchParams, CDSHookRequest, BundleRequest } from '@/types/fhir';
+import { cdsHooksService } from '../services/cds-hooks.service';
+import { fhirResourcesService } from '../services/fhir-resources.service';
+import { fhirValidationService } from '../services/integration/fhir/fhir-validation.service';
+import { medplumService } from '../services/medplum.service';
+import { subscriptionsService } from '../services/subscriptions.service';
+import { databaseService } from '../services/database.service';
+import { FHIRSearchParams, CDSHookRequest, BundleRequest } from '../types/fhir';
 import { Patient, Encounter, Observation, Bundle } from '@medplum/fhirtypes';
-import logger from '@/utils/logger';
-import { hasMessage } from '@/utils/error.utils';
-import { validateResourceType } from '@/utils/fhir-validation.utils';
+import logger from '../utils/logger';
+import { hasMessage } from '../utils/error.utils';
+import { validateResourceType } from '../utils/fhir-validation.utils';
 
 /**
  * FHIR API Controller
@@ -707,7 +707,7 @@ export class FHIRController {
       }
 
       // Check permissions
-      if (req.user?.role === 'nurse' && !req.user?.permissions?.includes('patient:write')) {
+      if (req.user?.role && typeof req.user.role === 'string' && req.user.role.includes('nurse') && !req.user?.permissions?.includes('patient:write')) {
         res.status(403).json({
           resourceType: 'OperationOutcome',
           issue: [{
@@ -905,7 +905,7 @@ export class FHIRController {
         return;
       }
 
-      const createdObservations = await fhirResourcesService.createVitalSigns(id, undefined, vitalsData);
+      const createdObservations = await fhirResourcesService.createVitalSigns(id, 'default-encounter', vitalsData);
       
       const responseBundle: Bundle = {
         resourceType: 'Bundle',
@@ -967,46 +967,7 @@ export class FHIRController {
     }
   }
 
-  /**
-   * POST /fhir/$validate - Validate a FHIR resource (specific method for tests)
-   */
-  async validateResource(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const resource = req.body;
-
-      const validationResult = await fhirValidationService.validateResource(resource);
-      
-      if (validationResult.valid) {
-        res.status(200).json({
-          resourceType: 'OperationOutcome',
-          issue: [{
-            severity: 'information',
-            code: 'informational',
-            diagnostics: 'Resource is valid'
-          }]
-        });
-      } else {
-        res.status(400).json({
-          resourceType: 'OperationOutcome',
-          issue: validationResult.errors.map(error => ({
-            severity: 'error',
-            code: 'invalid',
-            diagnostics: error.message,
-            location: error.path ? [error.path] : undefined
-          }))
-        });
-      }
-    } catch (error) {
-      res.status(500).json({
-        resourceType: 'OperationOutcome',
-        issue: [{
-          severity: 'error',
-          code: 'exception',
-          diagnostics: 'Failed to validate resource'
-        }]
-      });
-    }
-  }
+  // Removed duplicate validateResource function - already defined at line 476
 
   // ===============================
   // HEALTH CHECK

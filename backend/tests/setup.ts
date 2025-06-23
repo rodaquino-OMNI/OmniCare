@@ -77,6 +77,102 @@ jest.mock('winston', () => ({
   },
 }));
 
+// Mock JWT Service
+jest.mock('jsonwebtoken', () => ({
+  sign: jest.fn((payload: any, secret: string, options?: any) => {
+    const mockToken = `mock.jwt.token.${Date.now()}`;
+    return mockToken;
+  }),
+  verify: jest.fn((token: string, secret: string) => {
+    if (token.includes('invalid') || token === 'invalid-refresh-token') {
+      throw new Error('Invalid token');
+    }
+    return {
+      userId: 'user-1',
+      username: 'admin@omnicare.com',
+      role: 'SYSTEM_ADMINISTRATOR',
+      sessionId: 'session-123',
+      type: 'access',
+      iss: 'test-issuer',
+      exp: Date.now() + 3600000, // 1 hour from now
+    };
+  }),
+  decode: jest.fn((token: string) => ({
+    userId: 'user-1',
+    username: 'admin@omnicare.com',
+    role: 'SYSTEM_ADMINISTRATOR',
+    sessionId: 'session-123',
+    type: 'access',
+    iss: 'test-issuer',
+    exp: Date.now() + 3600000,
+  })),
+}));
+
+// Mock Auth Services
+jest.mock('../src/auth/jwt.service', () => ({
+  JWTAuthService: jest.fn().mockImplementation(() => ({
+    generateTokens: jest.fn(() => ({
+      accessToken: 'mock.access.token',
+      refreshToken: 'mock.refresh.token',
+      expiresIn: 3600,
+      tokenType: 'Bearer',
+    })),
+    verifyAccessToken: jest.fn(() => ({
+      userId: 'user-1',
+      username: 'admin@omnicare.com',
+      role: 'SYSTEM_ADMINISTRATOR',
+      sessionId: 'session-123',
+    })),
+    verifyRefreshToken: jest.fn(() => ({
+      userId: 'user-1',
+      sessionId: 'session-123',
+    })),
+    extractTokenFromHeader: jest.fn((header: string) => {
+      if (!header || !header.startsWith('Bearer ')) return null;
+      const token = header.substring(7).trim();
+      return token || null;
+    }),
+  })),
+}));
+
+// Mock Session Service
+jest.mock('../src/services/session.service', () => ({
+  SessionManager: jest.fn().mockImplementation(() => ({
+    createSession: jest.fn(() => ({
+      sessionId: 'session-123',
+      userId: 'user-1',
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 3600000),
+      isActive: true,
+    })),
+    getSession: jest.fn(() => ({
+      sessionId: 'session-123',
+      userId: 'user-1',
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 3600000),
+      isActive: true,
+    })),
+    validateSessionSecurity: jest.fn(() => ({
+      isValid: true,
+      securityIssues: [],
+    })),
+    updateSessionActivity: jest.fn(() => ({
+      sessionId: 'session-123',
+      userId: 'user-1',
+      lastActivity: new Date(),
+    })),
+    destroySession: jest.fn(),
+  })),
+}));
+
+// Mock Audit Service
+jest.mock('../src/services/audit.service', () => ({
+  AuditService: jest.fn().mockImplementation(() => ({
+    logSecurityEvent: jest.fn(),
+    logUserAction: jest.fn(),
+  })),
+}));
+
 // Set up test database connection
 process.env.NODE_ENV = 'test';
 process.env.DB_HOST = 'localhost';

@@ -36,7 +36,7 @@ interface PatientRegistrationProps {
 }
 
 const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onComplete, onCancel }) => {
-  const [currentStep, setCurrentStep] = useState(ResourceHistoryTable);
+  const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [duplicateCheck, setDuplicateCheck] = useState<{ status: 'none' | 'checking' | 'found' | 'clear' }>({ status: 'none' });
   const [insuranceVerificationStatus, setInsuranceVerificationStatus] = useState<'none' | 'verifying' | 'verified' | 'failed'>('none');
@@ -70,7 +70,7 @@ const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onComplete, o
 
   const steps = [
     { 
-      id: ResourceHistoryTable, 
+      id: 0, 
       name: 'Patient Information', 
       icon: IconUser,
       description: 'Basic demographics and identification'
@@ -124,9 +124,9 @@ const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onComplete, o
     
     // Simulate insurance verification API call
     setTimeout(() => {
-      const isVerified = Math.random() < ResourceHistoryTable.8; // 8ResourceHistoryTable% success rate for demo
+      const isVerified = Math.random() < 0.8; // 80% success rate for demo
       setInsuranceVerificationStatus(isVerified ? 'verified' : 'failed');
-    }, 2ResourceHistoryTableResourceHistoryTableResourceHistoryTable);
+    }, 2000);
   };
 
   const capturePhoto = () => {
@@ -139,7 +139,7 @@ const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onComplete, o
     
     try {
       // Simulate patient registration API call
-      await new Promise(resolve => setTimeout(resolve, 2ResourceHistoryTableResourceHistoryTableResourceHistoryTable));
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
       const newPatient: Patient = {
         id: `PAT-${Date.now()}`,
@@ -178,7 +178,7 @@ const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onComplete, o
 
   const renderStepContent = () => {
     switch (currentStep) {
-      case ResourceHistoryTable:
+      case 0:
         return (
           <Stack gap="md">
             <Grid>
@@ -268,7 +268,7 @@ const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onComplete, o
       case 1:
         return (
           <Stack gap="md">
-            <Text size="lg" fw={6ResourceHistoryTableResourceHistoryTable}>Address Information</Text>
+            <Text size="lg" fw={600}>Address Information</Text>
             <Grid>
               <Grid.Col span={12}>
                 <TextInput
@@ -327,7 +327,7 @@ const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onComplete, o
               </Grid.Col>
             </Grid>
 
-            <Text size="lg" fw={6ResourceHistoryTableResourceHistoryTable} mt="xl">Contact Information</Text>
+            <Text size="lg" fw={600} mt="xl">Contact Information</Text>
             <Grid>
               <Grid.Col span={6}>
                 <TextInput
@@ -350,7 +350,7 @@ const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onComplete, o
               </Grid.Col>
             </Grid>
 
-            <Text size="lg" fw={6ResourceHistoryTableResourceHistoryTable} mt="xl">Emergency Contact</Text>
+            <Text size="lg" fw={600} mt="xl">Emergency Contact</Text>
             <Grid>
               <Grid.Col span={4}>
                 <TextInput
@@ -408,7 +408,7 @@ const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onComplete, o
         return (
           <Stack gap="md">
             <Group justify="space-between">
-              <Text size="lg" fw={6ResourceHistoryTableResourceHistoryTable}>Insurance Information</Text>
+              <Text size="lg" fw={600}>Insurance Information</Text>
               <Button
                 onClick={verifyInsurance}
                 loading={insuranceVerificationStatus === 'verifying'}
@@ -446,7 +446,7 @@ const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onComplete, o
       case 3:
         return (
           <Stack gap="md">
-            <Text size="lg" fw={6ResourceHistoryTableResourceHistoryTable}>Consent Forms and Documentation</Text>
+            <Text size="lg" fw={600}>Consent Forms and Documentation</Text>
             
             <Stack gap="sm">
               <Checkbox
@@ -503,7 +503,7 @@ const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onComplete, o
 
             {/* Photo Capture */}
             <div>
-              <Text size="md" fw={6ResourceHistoryTableResourceHistoryTable} mb="sm">Patient Photograph (Optional)</Text>
+              <Text size="md" fw={600} mb="sm">Patient Photograph (Optional)</Text>
               <Group gap="md">
                 {photoCapture ? (
                   <div style={{ position: 'relative' }}>
@@ -537,12 +537,12 @@ const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onComplete, o
       case 4:
         return (
           <Stack gap="md">
-            <Text size="lg" fw={6ResourceHistoryTableResourceHistoryTable}>Review and Complete Registration</Text>
+            <Text size="lg" fw={600}>Review and Complete Registration</Text>
             
             <Card padding="lg" withBorder>
               <Grid>
                 <Grid.Col span={6}>
-                  <Text size="md" fw={6ResourceHistoryTableResourceHistoryTable} mb="sm">Patient Information</Text>
+                  <Text size="md" fw={600} mb="sm">Patient Information</Text>
                   <Stack gap="xs">
                     <div>
                       <Text size="sm" c="dimmed">Name:</Text>
@@ -560,7 +560,7 @@ const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onComplete, o
                 </Grid.Col>
 
                 <Grid.Col span={6}>
-                  <Text size="md" fw={6ResourceHistoryTableResourceHistoryTable} mb="sm">Contact Information</Text>
+                  <Text size="md" fw={600} mb="sm">Contact Information</Text>
                   <Stack gap="xs">
                     <div>
                       <Text size="sm" c="dimmed">Phone:</Text>

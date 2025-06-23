@@ -68,7 +68,7 @@ export function usePatientCache(
     enableSync = true,
     prefetchRelated = true,
     autoRefresh = false,
-    refreshInterval = 3ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable // 5 minutes
+    refreshInterval = 300000 // 5 minutes
   } = options;
 
   // State
@@ -144,7 +144,7 @@ export function usePatientCache(
           totalSize: sizeInfo.totalSize,
           patientCount: sizeInfo.patientCount
         });
-        setFromCache(!forceRefresh && stats.hitRate > ResourceHistoryTable.5);
+        setFromCache(!forceRefresh && stats.hitRate > 0.5);
       }
     } catch (error) {
       console.error('Error loading patient data:', error);
@@ -332,7 +332,7 @@ export function useCacheStats() {
     };
 
     // Update every 5 seconds
-    const interval = setInterval(updateStats, 5ResourceHistoryTableResourceHistoryTableResourceHistoryTable);
+    const interval = setInterval(updateStats, 500);
 
     // Listen for cache events
     const events = [
@@ -369,7 +369,7 @@ export function useSyncStatus() {
     };
 
     // Update every 2 seconds
-    const interval = setInterval(updateSyncState, 2ResourceHistoryTableResourceHistoryTableResourceHistoryTable);
+    const interval = setInterval(updateSyncState, 200);
 
     // Listen for sync events
     const handleStatusChange = () => {

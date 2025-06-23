@@ -21,8 +21,8 @@ export interface NetworkRequest<T = any> {
 class NetworkRetryService {
   private defaultRetryConfig: Required<RetryConfig> = {
     maxRetries: 3,
-    initialBackoffMs: 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable,
-    maxBackoffMs: 3ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable,
+    initialBackoffMs: 1000,
+    maxBackoffMs: 3000,
     backoffMultiplier: 2,
     priority: 'normal',
     shouldRetry: (error) => {
@@ -30,11 +30,11 @@ class NetworkRetryService {
       if (error.name === 'NetworkError' || error.name === 'TypeError') {
         return true;
       }
-      if (error.status >= 5ResourceHistoryTableResourceHistoryTable) {
+      if (error.status >= 500) {
         return true;
       }
       // Retry on specific status codes
-      const retryableStatuses = [4ResourceHistoryTable8, 429, 5ResourceHistoryTable2, 5ResourceHistoryTable3, 5ResourceHistoryTable4];
+      const retryableStatuses = [48, 429, 502, 503, 504];
       return retryableStatuses.includes(error.status);
     },
     onRetry: () => {},
@@ -53,7 +53,7 @@ class NetworkRetryService {
     const config = { ...this.defaultRetryConfig, ...retryConfig };
     let lastError: any;
 
-    for (let attempt = ResourceHistoryTable; attempt <= config.maxRetries; attempt++) {
+    for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
       try {
         const response = await this.performFetch(url, options);
         
@@ -123,7 +123,7 @@ class NetworkRetryService {
         
         return response.json();
       },
-      retryCount: ResourceHistoryTable,
+      retryCount: 0,
       maxRetries: config.maxRetries,
       backoffMs: config.initialBackoffMs,
       timestamp: Date.now(),
@@ -199,7 +199,7 @@ class NetworkRetryService {
     maxMs: number
   ): number {
     const exponentialBackoff = initialMs * Math.pow(multiplier, attempt);
-    const withJitter = exponentialBackoff * (ResourceHistoryTable.5 + Math.random() * ResourceHistoryTable.5);
+    const withJitter = exponentialBackoff * (0.5 + Math.random() * 0.5);
     return Math.min(withJitter, maxMs);
   }
 

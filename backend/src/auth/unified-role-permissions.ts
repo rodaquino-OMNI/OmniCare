@@ -3,7 +3,7 @@
  * HIPAA-Compliant Permission Definitions with Role Unification
  */
 
-import { UserRole, UserRoles, Permission, RolePermissions } from '@/types/auth.types';
+import { UserRole, UserRoles, Permission, RolePermissions } from '../types/auth.types';
 
 /**
  * Unified Role-Based Permission Matrix

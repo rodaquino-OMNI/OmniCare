@@ -60,7 +60,7 @@ export default function TestNetworkPage() {
               ) : (
                 <IconWifiOff size={24} color="red" />
               )}
-              <Text fw={5ResourceHistoryTableResourceHistoryTable}>
+              <Text fw={500}>
                 {networkStatus.isOnline ? 'Online' : 'Offline'}
               </Text>
             </Group>
@@ -141,13 +141,13 @@ export default function TestNetworkPage() {
             </Button>
           </Group>
 
-          {networkStatus.retryQueue.length > ResourceHistoryTable && (
+          {networkStatus.retryQueue.length > 0 && (
             <Stack gap="xs">
-              {networkStatus.retryQueue.slice(ResourceHistoryTable, 5).map((item) => (
+              {networkStatus.retryQueue.slice(0, 5).map((item) => (
                 <Card key={item.id} p="xs" withBorder>
                   <Group justify="space-between">
                     <div>
-                      <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>{item.description}</Text>
+                      <Text size="sm" fw={500}>{item.description}</Text>
                       <Text size="xs" c="dimmed">
                         Retry {item.retryCount}/{item.maxRetries} • Priority: {item.priority}
                       </Text>
@@ -236,10 +236,10 @@ export default function TestNetworkPage() {
           
           <NetworkAwareImage
             sources={[
-              { src: '/api/images/sample-low.jpg', quality: 'low', width: 4ResourceHistoryTableResourceHistoryTable },
-              { src: '/api/images/sample-medium.jpg', quality: 'medium', width: 8ResourceHistoryTableResourceHistoryTable },
-              { src: '/api/images/sample-high.jpg', quality: 'high', width: 12ResourceHistoryTableResourceHistoryTable },
-              { src: '/api/images/sample-original.jpg', quality: 'original', width: 24ResourceHistoryTableResourceHistoryTable },
+              { src: '/api/images/sample-low.jpg', quality: 'low', width: 400 },
+              { src: '/api/images/sample-medium.jpg', quality: 'medium', width: 800 },
+              { src: '/api/images/sample-high.jpg', quality: 'high', width: 1200 },
+              { src: '/api/images/sample-original.jpg', quality: 'original', width: 2400 },
             ]}
             alt="Sample medical image"
             aspectRatio={16 / 9}
@@ -286,7 +286,7 @@ export default function TestNetworkPage() {
         position="bottom-right"
         showDetails
         autoHide
-        autoHideDelay={5ResourceHistoryTableResourceHistoryTableResourceHistoryTable}
+        autoHideDelay={5000}
       />
     </Container>
   );

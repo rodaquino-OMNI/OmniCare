@@ -20,32 +20,32 @@ const DEFAULT_CONFIG: OfflineSecurityConfig = {
     algorithm: 'AES-GCM',
     keySize: 256,
     saltSize: 32,
-    iterations: 1ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable,
+    iterations: 100000,
     tagLength: 128
   },
   storage: {
-    maxCacheSize: 5ResourceHistoryTable * 1ResourceHistoryTable24 * 1ResourceHistoryTable24, // 5ResourceHistoryTableMB
-    maxItemSize: 5 * 1ResourceHistoryTable24 * 1ResourceHistoryTable24, // 5MB
-    ttl: 24 * 6ResourceHistoryTable * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable, // 24 hours
+    maxCacheSize: 50 * 1024 * 1024, // 50MB
+    maxItemSize: 5 * 1024 * 1024, // 5MB
+    ttl: 24 * 60 * 60 * 1000, // 24 hours
     allowedDomains: ['localStorage', 'sessionStorage', 'indexedDB']
   },
   session: {
-    timeout: 15 * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable, // 15 minutes
+    timeout: 15 * 60 * 1000, // 15 minutes
     maxOfflineSessions: 5,
     requireReauth: true
   },
   audit: {
     enabled: true,
-    maxEntries: 1ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable,
-    retentionDays: 9ResourceHistoryTable
+    maxEntries: 10000,
+    retentionDays: 90
   },
   purge: {
     enabled: true,
-    interval: 6ResourceHistoryTable * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable, // 1 hour
+    interval: 60 * 60 * 1000, // 1 hour
     policies: {
-      phi: { maxAge: 24 * 6ResourceHistoryTable * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable }, // 24 hours
-      sensitive: { maxAge: 7 * 24 * 6ResourceHistoryTable * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable }, // 7 days
-      general: { maxAge: 3ResourceHistoryTable * 24 * 6ResourceHistoryTable * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable } // 3ResourceHistoryTable days
+      phi: { maxAge: 24 * 60 * 60 * 1000 }, // 24 hours
+      sensitive: { maxAge: 7 * 24 * 60 * 60 * 1000 }, // 7 days
+      general: { maxAge: 30 * 24 * 60 * 60 * 1000 } // 30 days
     }
   }
 };
@@ -354,7 +354,7 @@ export class OfflineSecurityService {
         dataId: encryptedData.id,
         userId: encryptedData.userId,
         classification: encryptedData.classification,
-        accessCount: ResourceHistoryTable,
+        accessCount: 0,
         lastAccessed: null,
         created: new Date()
       });
@@ -535,7 +535,7 @@ export class OfflineSecurityService {
       const expiredRange = IDBKeyRange.upperBound(now.toISOString());
       
       const expiredCursor = expiredIndex.openCursor(expiredRange);
-      let purgedCount = ResourceHistoryTable;
+      let purgedCount = 0;
       
       await new Promise<void>((resolve) => {
         expiredCursor.onsuccess = (event) => {
@@ -572,7 +572,7 @@ export class OfflineSecurityService {
       
       // Purge old audit logs
       const auditStore = transaction.objectStore('audit_log');
-      const cutoffDate = new Date(now.getTime() - this.config.audit.retentionDays * 24 * 6ResourceHistoryTable * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable);
+      const cutoffDate = new Date(now.getTime() - this.config.audit.retentionDays * 24 * 60 * 60 * 1000);
       const auditRange = IDBKeyRange.upperBound(cutoffDate.toISOString());
       const auditIndex = auditStore.index('timestamp');
       const auditCursor = auditIndex.openCursor(auditRange);
@@ -590,7 +590,7 @@ export class OfflineSecurityService {
         };
       });
       
-      if (purgedCount > ResourceHistoryTable) {
+      if (purgedCount > 0) {
         await this.auditAction(
           'DATA_PURGED',
           `Purged ${purgedCount} expired items`
@@ -660,7 +660,7 @@ export class OfflineSecurityService {
     }
 
     const entry: OfflineAuditEntry = {
-      id: ResourceHistoryTable, // Auto-increment
+      id: 0, // Auto-increment
       timestamp: new Date().toISOString(),
       action,
       description,
@@ -759,7 +759,7 @@ export class OfflineSecurityService {
   private generateSecureId(): string {
     const array = new Uint8Array(16);
     crypto.getRandomValues(array);
-    return Array.from(array, byte => byte.toString(16).padStart(2, 'ResourceHistoryTable')).join('');
+    return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
   }
 
   /**
@@ -771,7 +771,7 @@ export class OfflineSecurityService {
     const data = navigator.userAgent + navigator.language;
     const encoder = new TextEncoder();
     const hash = await crypto.subtle.digest('SHA-256', encoder.encode(data));
-    return this.arrayBufferToBase64(hash).substring(ResourceHistoryTable, 16);
+    return this.arrayBufferToBase64(hash).substring(0, 16);
   }
 
   /**
@@ -780,7 +780,7 @@ export class OfflineSecurityService {
   private calculateExpiry(classification: DataClassification): string {
     const now = new Date();
     const policy = this.config.purge.policies[classification];
-    const expiryTime = now.getTime() + (policy?.maxAge || 24 * 6ResourceHistoryTable * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable);
+    const expiryTime = now.getTime() + (policy?.maxAge || 24 * 60 * 60 * 1000);
     return new Date(expiryTime).toISOString();
   }
 
@@ -800,7 +800,7 @@ export class OfflineSecurityService {
   private base64ToArrayBuffer(base64: string): ArrayBuffer {
     const binary = atob(base64);
     const bytes = new Uint8Array(binary.length);
-    for (let i = ResourceHistoryTable; i < binary.length; i++) {
+    for (let i = 0; i < binary.length; i++) {
       bytes[i] = binary.charCodeAt(i);
     }
     return bytes.buffer;
@@ -866,8 +866,8 @@ export class OfflineSecurityService {
       const store = transaction.objectStore('secure_data');
       
       const stats = {
-        totalItems: ResourceHistoryTable,
-        totalSize: ResourceHistoryTable,
+        totalItems: 0,
+        totalSize: 0,
         byClassification: {} as Record<string, number>,
         oldestItem: null as Date | null,
         newestItem: null as Date | null
@@ -886,7 +886,7 @@ export class OfflineSecurityService {
             
             // Count by classification
             stats.byClassification[item.classification] = 
-              (stats.byClassification[item.classification] || ResourceHistoryTable) + 1;
+              (stats.byClassification[item.classification] || 0) + 1;
             
             // Track dates
             const itemDate = new Date(item.created);
@@ -907,8 +907,8 @@ export class OfflineSecurityService {
       });
     } catch {
       return {
-        totalItems: ResourceHistoryTable,
-        totalSize: ResourceHistoryTable,
+        totalItems: 0,
+        totalSize: 0,
         byClassification: {},
         oldestItem: null,
         newestItem: null

@@ -78,7 +78,7 @@ describe('Medplum Client', () => {
       id: '123',
       name: [{ given: ['John', 'Michael'], family: 'Doe' }],
       gender: 'male',
-      birthDate: '198ResourceHistoryTable-ResourceHistoryTable1-15',
+      birthDate: '198-1-15',
       identifier: [
         {
           type: { coding: [{ code: 'MR', display: 'Medical Record Number' }] },
@@ -148,10 +148,10 @@ describe('Medplum Client', () => {
       it('should calculate patient age correctly', () => {
         const patient: Patient = {
           resourceType: 'Patient',
-          birthDate: '2ResourceHistoryTableResourceHistoryTableResourceHistoryTable-ResourceHistoryTable1-ResourceHistoryTable1'
+          birthDate: '200-1-1'
         };
         const age = patientHelpers.getAge(patient);
-        const expectedAge = new Date().getFullYear() - 2ResourceHistoryTableResourceHistoryTableResourceHistoryTable;
+        const expectedAge = new Date().getFullYear() - 200;
         expect(age).toBe(expectedAge);
       });
 
@@ -477,13 +477,13 @@ describe('Medplum Client', () => {
           status: 'final',
           code: {},
           referenceRange: [{
-            low: { value: 7ResourceHistoryTable, unit: 'mg/dL' },
-            high: { value: 1ResourceHistoryTableResourceHistoryTable, unit: 'mg/dL' }
+            low: { value: 7, unit: 'mg/dL' },
+            high: { value: 10, unit: 'mg/dL' }
           }]
         };
         
         const range = observationHelpers.getReferenceRange(observation);
-        expect(range).toBe('7ResourceHistoryTable-1ResourceHistoryTableResourceHistoryTable mg/dL');
+        expect(range).toBe('7-10 mg/dL');
       });
 
       it('should get reference range with only low', () => {
@@ -492,12 +492,12 @@ describe('Medplum Client', () => {
           status: 'final',
           code: {},
           referenceRange: [{
-            low: { value: 7ResourceHistoryTable, unit: 'mg/dL' }
+            low: { value: 7, unit: 'mg/dL' }
           }]
         };
         
         const range = observationHelpers.getReferenceRange(observation);
-        expect(range).toBe('>7ResourceHistoryTable mg/dL');
+        expect(range).toBe('>7 mg/dL');
       });
 
       it('should get reference range with only high', () => {
@@ -506,12 +506,12 @@ describe('Medplum Client', () => {
           status: 'final',
           code: {},
           referenceRange: [{
-            high: { value: 1ResourceHistoryTableResourceHistoryTable, unit: 'mg/dL' }
+            high: { value: 10, unit: 'mg/dL' }
           }]
         };
         
         const range = observationHelpers.getReferenceRange(observation);
-        expect(range).toBe('<1ResourceHistoryTableResourceHistoryTable mg/dL');
+        expect(range).toBe('<10 mg/dL');
       });
 
       it('should return empty string when no reference range', () => {
@@ -929,7 +929,7 @@ describe('Medplum Client', () => {
         expect(demoPatient.name?.[ResourceHistoryTable].given).toEqual(['John']);
         expect(demoPatient.name?.[ResourceHistoryTable].family).toBe('Doe');
         expect(demoPatient.gender).toBe('male');
-        expect(demoPatient.birthDate).toBe('198ResourceHistoryTable-ResourceHistoryTable1-15');
+        expect(demoPatient.birthDate).toBe('198-1-15');
         expect(demoPatient.active).toBe(true);
       });
     });

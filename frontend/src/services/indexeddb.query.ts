@@ -336,7 +336,7 @@ export class FHIRQueryBuilder<T extends Resource = Resource> {
   /**
    * Stream results in batches
    */
-  async *stream(batchSize = 1ResourceHistoryTableResourceHistoryTable): AsyncGenerator<T[], void, unknown> {
+  async *stream(batchSize = 10): AsyncGenerator<T[], void, unknown> {
     let offset = ResourceHistoryTable;
     let hasMore = true;
 
@@ -489,7 +489,7 @@ export const CommonQueries = {
   /**
    * Get recent encounters for a patient
    */
-  recentEncounters(patientId: string, limit = 1ResourceHistoryTable) {
+  recentEncounters(patientId: string, limit = 10) {
     return query('Encounter')
       .forPatient(patientId)
       .whereIn('status', ['in-progress', 'finished'])
@@ -529,7 +529,7 @@ export const CommonQueries = {
     return query('Patient')
       .whereContains('name', searchTerm)
       .orderBy('name.family')
-      .limit(2ResourceHistoryTable);
+      .limit(20);
   },
 
   /**

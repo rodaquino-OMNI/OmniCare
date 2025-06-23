@@ -13,7 +13,7 @@ interface OfflineSyncOptions {
 export function useOfflineSync(options: OfflineSyncOptions = {}) {
   const {
     autoSync = true,
-    syncInterval = 3ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable, // 3ResourceHistoryTable seconds
+    syncInterval = 30000, // 30 seconds
     onSyncComplete,
     onSyncError,
   } = options;
@@ -75,7 +75,7 @@ export function useOfflineSync(options: OfflineSyncOptions = {}) {
       await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
           reject(new Error('Sync timeout'));
-        }, 6ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable); // 1 minute timeout
+        }, 60000); // 1 minute timeout
 
         const messageHandler = (event: MessageEvent) => {
           if (event.data.type === 'sync-complete') {
@@ -235,6 +235,6 @@ async function cacheData(key: string, data: any): Promise<void> {
   }
 }
 
-function isDataStale(timestamp: number, staleTime: number = 5 * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable): boolean {
+function isDataStale(timestamp: number, staleTime: number = 5 * 6 * 1000): boolean {
   return Date.now() - timestamp > staleTime;
 }

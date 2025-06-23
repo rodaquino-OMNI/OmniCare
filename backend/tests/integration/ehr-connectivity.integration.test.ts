@@ -1,6 +1,7 @@
 import { smartFHIRService } from '../../src/services/smart-fhir.service';
 import { medplumService } from '../../src/services/medplum.service';
 import { fhirResourcesService } from '../../src/services/fhir-resources.service';
+import { Patient } from '@medplum/fhirtypes';
 import axios from 'axios';
 import logger from '../../src/utils/logger';
 
@@ -37,7 +38,7 @@ describe('EHR Connectivity Integration Tests', () => {
 
     test('should retrieve Epic patient data via FHIR API', async () => {
       // Mock Epic FHIR endpoint response
-      const mockEpicResponse = {
+      const mockEpicResponse: Patient = {
         resourceType: 'Patient',
         id: 'epic-patient-123',
         identifier: [
@@ -64,10 +65,11 @@ describe('EHR Connectivity Integration Tests', () => {
       // Verify FHIR R4 compliance
       const validationResult = await fhirResourcesService.validateResource(mockEpicResponse);
       expect(validationResult).toBeDefined();
+      expect(validationResult.valid).toBeDefined();
     });
 
     test('should handle Epic-specific FHIR extensions', () => {
-      const epicPatientWithExtensions = {
+      const epicPatientWithExtensions: Patient = {
         resourceType: 'Patient',
         id: 'epic-patient-ext',
         extension: [
@@ -314,7 +316,7 @@ describe('EHR Connectivity Integration Tests', () => {
 
   describe('Cross-EHR Data Synchronization', () => {
     test('should reconcile patient data from multiple EHRs', async () => {
-      const epicPatient = {
+      const epicPatient: Patient = {
         resourceType: 'Patient',
         id: 'epic-123',
         identifier: [
@@ -328,7 +330,7 @@ describe('EHR Connectivity Integration Tests', () => {
         gender: 'male'
       };
 
-      const cernerPatient = {
+      const cernerPatient: Patient = {
         resourceType: 'Patient',
         id: 'cerner-456',
         identifier: [
@@ -357,8 +359,8 @@ describe('EHR Connectivity Integration Tests', () => {
         ...epicPatient,
         id: `omnicare-${Date.now()}`,
         identifier: [
-          ...epicPatient.identifier,
-          ...cernerPatient.identifier,
+          ...(epicPatient.identifier || []),
+          ...(cernerPatient.identifier || []),
           {
             system: 'http://omnicare.com/fhir/sid/master-patient-id',
             value: `MP${Date.now()}`
@@ -411,8 +413,8 @@ describe('EHR Connectivity Integration Tests', () => {
       };
 
       expect(ehrDataConflict.conflicts.length).toBe(2);
-      expect(ehrDataConflict.conflicts[0].resolution).toBe('manual-review');
-      expect(ehrDataConflict.conflicts[1].chosenValue).toBe('12346');
+      expect(ehrDataConflict.conflicts[0]?.resolution).toBe('manual-review');
+      expect(ehrDataConflict.conflicts[1]?.chosenValue).toBe('12346');
     });
   });
 

@@ -119,7 +119,7 @@ export function PatientChart({ patientId }: PatientChartProps) {
 
       const stats = patientCacheService.getStats();
       setCacheStats({
-        fromCache: stats.hitRate > ResourceHistoryTable.5,
+        fromCache: stats.hitRate > 0.5,
         lastRefreshed: new Date()
       });
     } catch (error: unknown) {
@@ -226,7 +226,7 @@ export function PatientChart({ patientId }: PatientChartProps) {
             )}
             
             {/* Pending Changes */}
-            {pendingChanges > ResourceHistoryTable && (
+            {pendingChanges > 0 && (
               <Tooltip label={`${pendingChanges} changes pending sync`}>
                 <Badge 
                   color="blue" 
@@ -292,7 +292,7 @@ export function PatientChart({ patientId }: PatientChartProps) {
             variant="light"
             mt="md"
           >
-            <Text fw={6ResourceHistoryTableResourceHistoryTable} mb={4}>Working Offline</Text>
+            <Text fw={600} mb={4}>Working Offline</Text>
             <Text size="sm">
               You're viewing cached patient data. Any changes will be synchronized when you're back online.
             </Text>
@@ -300,7 +300,7 @@ export function PatientChart({ patientId }: PatientChartProps) {
         )}
 
         {/* Allergy Alert */}
-        {allergies.length > ResourceHistoryTable && (
+        {allergies.length > 0 && (
           <Alert 
             icon={<IconAlertTriangle size={16} />} 
             color="red" 
@@ -308,10 +308,10 @@ export function PatientChart({ patientId }: PatientChartProps) {
             mt="md"
           >
             <Group gap="xs">
-              <Text fw={6ResourceHistoryTableResourceHistoryTable}>Allergies:</Text>
-              {allergies.slice(ResourceHistoryTable, 3).map((allergy, index) => (
+              <Text fw={600}>Allergies:</Text>
+              {allergies.slice(0, 3).map((allergy, index) => (
                 <Badge key={index} color="red" variant="light">
-                  {allergy.code?.coding?.[ResourceHistoryTable]?.display || 'Unknown'}
+                  {allergy.code?.coding?.[0]?.display || 'Unknown'}
                 </Badge>
               ))}
               {allergies.length > 3 && (
@@ -362,8 +362,8 @@ export function PatientChart({ patientId }: PatientChartProps) {
                 <Stack gap="md">
                   <Card>
                     <Title order={4} mb="md">Active Conditions</Title>
-                    <ScrollArea h={2ResourceHistoryTableResourceHistoryTable}>
-                      {conditions.length === ResourceHistoryTable ? (
+                    <ScrollArea h={200}>
+                      {conditions.length === 0 ? (
                         <Text c="dimmed">No active conditions</Text>
                       ) : (
                         <Stack gap="xs">
@@ -380,8 +380,8 @@ export function PatientChart({ patientId }: PatientChartProps) {
 
                   <Card>
                     <Title order={4} mb="md">Allergies & Intolerances</Title>
-                    <ScrollArea h={15ResourceHistoryTable}>
-                      {allergies.length === ResourceHistoryTable ? (
+                    <ScrollArea h={150}>
+                      {allergies.length === 0 ? (
                         <Text c="dimmed">No known allergies</Text>
                       ) : (
                         <Stack gap="xs">
@@ -419,7 +419,7 @@ export function PatientChart({ patientId }: PatientChartProps) {
           <Tabs.Panel value="vitals" pt="md">
             {loading ? (
               <Loader />
-            ) : vitals.length === ResourceHistoryTable ? (
+            ) : vitals.length === 0 ? (
               <Text c="dimmed">No vital signs recorded</Text>
             ) : (
               <Stack gap="md">
@@ -435,7 +435,7 @@ export function PatientChart({ patientId }: PatientChartProps) {
           <Tabs.Panel value="medications" pt="md">
             {loading ? (
               <Loader />
-            ) : medications.length === ResourceHistoryTable ? (
+            ) : medications.length === 0 ? (
               <Text c="dimmed">No medications</Text>
             ) : (
               <Stack gap="md">
@@ -451,14 +451,14 @@ export function PatientChart({ patientId }: PatientChartProps) {
           <Tabs.Panel value="labs" pt="md">
             {loading ? (
               <Loader />
-            ) : labs.length === ResourceHistoryTable ? (
+            ) : labs.length === 0 ? (
               <Text c="dimmed">No lab results</Text>
             ) : (
               <Stack gap="md">
                 {labs.map((lab) => (
                   <Card key={lab.id}>
-                    <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>
-                      {lab.code?.text || lab.code?.coding?.[ResourceHistoryTable]?.display || 'Unknown Lab'}
+                    <Text size="sm" fw={500}>
+                      {lab.code?.text || lab.code?.coding?.[0]?.display || 'Unknown Lab'}
                     </Text>
                     <Text size="xs">
                       {lab.valueQuantity ? 
@@ -477,23 +477,23 @@ export function PatientChart({ patientId }: PatientChartProps) {
           <Tabs.Panel value="notes" pt="md">
             {loading ? (
               <Loader />
-            ) : documents.length === ResourceHistoryTable ? (
+            ) : documents.length === 0 ? (
               <Text c="dimmed">No clinical notes</Text>
             ) : (
               <Stack gap="md">
                 {documents.map((doc) => (
                   <Card key={doc.id}>
-                    <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>
+                    <Text size="sm" fw={500}>
                       {doc.description || 'Clinical Document'}
                     </Text>
                     <Text size="xs" c="dimmed">
-                      {doc.type?.text || doc.type?.coding?.[ResourceHistoryTable]?.display || 'Unknown Type'}
+                      {doc.type?.text || doc.type?.coding?.[0]?.display || 'Unknown Type'}
                     </Text>
-                    {doc.content?.[ResourceHistoryTable]?.attachment?.url && (
+                    {doc.content?.[0]?.attachment?.url && (
                       <Button 
                         size="xs" 
                         component="a" 
-                        href={doc.content[ResourceHistoryTable].attachment.url}
+                        href={doc.content[0].attachment.url}
                         target="_blank"
                         mt="xs"
                       >
@@ -509,14 +509,14 @@ export function PatientChart({ patientId }: PatientChartProps) {
           <Tabs.Panel value="encounters" pt="md">
             {loading ? (
               <Loader />
-            ) : encounters.length === ResourceHistoryTable ? (
+            ) : encounters.length === 0 ? (
               <Text c="dimmed">No encounters recorded</Text>
             ) : (
               <Stack gap="md">
                 {encounters.map((encounter) => (
                   <Card key={encounter.id}>
-                    <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>
-                      {encounter.type?.[ResourceHistoryTable]?.text || encounter.type?.[ResourceHistoryTable]?.coding?.[ResourceHistoryTable]?.display || 'Unknown Encounter'}
+                    <Text size="sm" fw={500}>
+                      {encounter.type?.[0]?.text || encounter.type?.[0]?.coding?.[0]?.display || 'Unknown Encounter'}
                     </Text>
                     <Text size="xs" c="dimmed">
                       Status: {encounter.status}
@@ -536,11 +536,11 @@ export function PatientChart({ patientId }: PatientChartProps) {
       <Card>
         <Title order={3} mb="md">
           <Group gap="xs">
-            <IconHistory size={2ResourceHistoryTable} />
+            <IconHistory size={20} />
             Change History
           </Group>
         </Title>
-        <ResourceHistoryTable resourceType="Patient" id={patientId} />
+        <ResourceHistory resourceType="Patient" id={patientId} />
       </Card>
     </Stack>
   );

@@ -63,7 +63,7 @@ export function SmartText({
   onChange,
   placeholder,
   minRows = 4,
-  maxRows = 2ResourceHistoryTable,
+  maxRows = 20,
   disabled = false,
   showTemplates = false,
   showAISuggestions = false,
@@ -74,7 +74,7 @@ export function SmartText({
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [macroSuggestions, setMacroSuggestions] = useState<MacroSuggestion[]>([]);
   const [contextualSuggestions, setContextualSuggestions] = useState<string[]>([]);
-  const [selectedMacroIndex, setSelectedMacroIndex] = useState(ResourceHistoryTable);
+  const [selectedMacroIndex, setSelectedMacroIndex] = useState(0);
   const [currentWord, setCurrentWord] = useState('');
   const [templates, setTemplates] = useState<SmartTextTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<SmartTextTemplate | null>(null);
@@ -100,7 +100,7 @@ export function SmartText({
     if (!textareaRef.current) return;
 
     const cursorPosition = textareaRef.current.selectionStart;
-    const textBeforeCursor = newValue.substring(ResourceHistoryTable, cursorPosition);
+    const textBeforeCursor = newValue.substring(0, cursorPosition);
     const words = textBeforeCursor.split(/\s+/);
     const lastWord = words[words.length - 1];
 
@@ -112,10 +112,10 @@ export function SmartText({
         macro.trigger.toLowerCase().startsWith(lastWord.toLowerCase())
       );
       
-      if (filteredMacros.length > ResourceHistoryTable) {
+      if (filteredMacros.length > 0) {
         setMacroSuggestions(filteredMacros);
         setShowMacroPopover(true);
-        setSelectedMacroIndex(ResourceHistoryTable);
+        setSelectedMacroIndex(0);
       } else {
         setShowMacroPopover(false);
       }
@@ -149,18 +149,18 @@ export function SmartText({
 
   // Handle keyboard navigation for macro suggestions
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (showMacroPopover && macroSuggestions.length > ResourceHistoryTable) {
+    if (showMacroPopover && macroSuggestions.length > 0) {
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
           setSelectedMacroIndex((prev) => 
-            prev < macroSuggestions.length - 1 ? prev + 1 : ResourceHistoryTable
+            prev < macroSuggestions.length - 1 ? prev + 1 : 0
           );
           break;
         case 'ArrowUp':
           e.preventDefault();
           setSelectedMacroIndex((prev) => 
-            prev > ResourceHistoryTable ? prev - 1 : macroSuggestions.length - 1
+            prev > 0 ? prev - 1 : macroSuggestions.length - 1
           );
           break;
         case 'Enter':
@@ -180,11 +180,11 @@ export function SmartText({
     if (!textareaRef.current) return;
 
     const cursorPosition = textareaRef.current.selectionStart;
-    const textBeforeCursor = value.substring(ResourceHistoryTable, cursorPosition);
+    const textBeforeCursor = value.substring(0, cursorPosition);
     const textAfterCursor = value.substring(cursorPosition);
     
     // Remove the trigger word and replace with expansion
-    const beforeWithoutTrigger = textBeforeCursor.substring(ResourceHistoryTable, textBeforeCursor.length - currentWord.length);
+    const beforeWithoutTrigger = textBeforeCursor.substring(0, textBeforeCursor.length - currentWord.length);
     const newValue = beforeWithoutTrigger + macro.expansion + textAfterCursor;
     
     onChange(newValue);
@@ -197,7 +197,7 @@ export function SmartText({
         textareaRef.current.setSelectionRange(newPosition, newPosition);
         textareaRef.current.focus();
       }
-    }, ResourceHistoryTable);
+    }, 0);
   };
 
   // Apply template
@@ -277,26 +277,26 @@ export function SmartText({
             />
           </Popover.Target>
           
-          <Popover.Dropdown p={ResourceHistoryTable}>
-            <ScrollArea mah={2ResourceHistoryTableResourceHistoryTable}>
+          <Popover.Dropdown p={0}>
+            <ScrollArea mah={200}>
               {macroSuggestions.map((macro, index) => (
                 <Paper
                   key={macro.trigger}
                   p="xs"
                   className={`cursor-pointer ${
-                    index === selectedMacroIndex ? 'bg-blue-5ResourceHistoryTable' : 'hover:bg-gray-5ResourceHistoryTable'
+                    index === selectedMacroIndex ? 'bg-blue-50' : 'hover:bg-gray-50'
                   }`}
                   onClick={() => applyMacro(macro)}
                 >
                   <Group gap="xs" wrap="nowrap">
                     {getCategoryIcon(macro.category)}
                     <div style={{ flex: 1 }}>
-                      <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>{macro.trigger}</Text>
+                      <Text size="sm" fw={500}>{macro.trigger}</Text>
                       <Text size="xs" c="dimmed" lineClamp={1}>
                         {macro.expansion}
                       </Text>
                     </div>
-                    <IconChevronRight size={14} className="text-gray-4ResourceHistoryTableResourceHistoryTable" />
+                    <IconChevronRight size={14} className="text-gray-400" />
                   </Group>
                 </Paper>
               ))}
@@ -305,18 +305,18 @@ export function SmartText({
         </Popover>
 
         {/* Contextual Suggestions */}
-        {showAISuggestions && contextualSuggestions.length > ResourceHistoryTable && (
+        {showAISuggestions && contextualSuggestions.length > 0 && (
           <Paper shadow="sm" p="sm" mt="xs" withBorder>
             <Group gap="xs" mb="xs">
-              <IconBrain size={16} className="text-blue-6ResourceHistoryTableResourceHistoryTable" />
-              <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>Suggestions</Text>
+              <IconBrain size={16} className="text-blue-600" />
+              <Text size="sm" fw={500}>Suggestions</Text>
             </Group>
             <Stack gap="xs">
               {contextualSuggestions.map((suggestion, index) => (
                 <Text 
                   key={index} 
                   size="sm" 
-                  className="cursor-pointer hover:text-blue-6ResourceHistoryTableResourceHistoryTable"
+                  className="cursor-pointer hover:text-blue-600"
                   onClick={() => {
                     const newValue = value + (value.endsWith(' ') ? '' : ' ') + suggestion;
                     onChange(newValue);

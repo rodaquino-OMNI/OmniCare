@@ -155,7 +155,7 @@ describe('Auth Store', () => {
     it('should handle login failure', async () => {
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
-        status: 4ResourceHistoryTable1,
+        status: 41,
         json: async () => ({ message: 'Login failed' }),
       });
 
@@ -234,7 +234,7 @@ describe('Auth Store', () => {
           tokens: {
             accessToken: 'token',
             refreshToken: 'refresh-token',
-            expiresIn: 36ResourceHistoryTableResourceHistoryTable,
+            expiresIn: 3600,
             tokenType: 'Bearer'
           },
           permissions: [
@@ -281,7 +281,7 @@ describe('Auth Store', () => {
       tokens: {
         accessToken: 'new-access-token',
         refreshToken: 'new-refresh-token',
-        expiresIn: 36ResourceHistoryTableResourceHistoryTable,
+        expiresIn: 3600,
         tokenType: 'Bearer'
       },
       permissions: [
@@ -297,7 +297,7 @@ describe('Auth Store', () => {
           tokens: {
             accessToken: 'old-access-token',
             refreshToken: 'old-refresh-token',
-            expiresIn: 36ResourceHistoryTableResourceHistoryTable,
+            expiresIn: 3600,
             tokenType: 'Bearer'
           },
         });
@@ -347,7 +347,7 @@ describe('Auth Store', () => {
           tokens: {
             accessToken: 'invalid-access-token',
             refreshToken: 'invalid-refresh-token',
-            expiresIn: 36ResourceHistoryTableResourceHistoryTable,
+            expiresIn: 3600,
             tokenType: 'Bearer'
           },
           isAuthenticated: true,
@@ -368,7 +368,7 @@ describe('Auth Store', () => {
       // Mock the refresh failure
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
-        status: 4ResourceHistoryTable1,
+        status: 41,
         json: async () => ({ message: 'Token expired' }),
       });
       
@@ -390,7 +390,7 @@ describe('Auth Store', () => {
           tokens: {
             accessToken: 'old-access-token',
             refreshToken: 'old-refresh-token',
-            expiresIn: 36ResourceHistoryTableResourceHistoryTable,
+            expiresIn: 3600,
             tokenType: 'Bearer'
           },
         });

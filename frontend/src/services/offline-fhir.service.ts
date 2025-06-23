@@ -241,7 +241,7 @@ export class OfflineFHIRService extends FHIRService {
       const referenceEndpoints = [
         '/api/medications/catalog',
         '/api/lab/tests',
-        '/api/reference/icd1ResourceHistoryTable',
+        '/api/reference/icd10',
         '/api/reference/procedures',
       ];
 

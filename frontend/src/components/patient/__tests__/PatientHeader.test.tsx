@@ -148,11 +148,11 @@ describe('PatientHeader', () => {
       },
     ],
     gender: 'male',
-    birthDate: '199ResourceHistoryTable-ResourceHistoryTable1-15',
+    birthDate: '199-1-15',
     telecom: [
       {
         system: 'phone',
-        value: '555-ResourceHistoryTable123',
+        value: '555-123',
         use: 'mobile',
       },
       {
@@ -190,7 +190,7 @@ describe('PatientHeader', () => {
         coding: [
           {
             system: 'http://snomed.info/sct',
-            code: '387517ResourceHistoryTableResourceHistoryTable4',
+            code: '3875174',
             display: 'Penicillin',
           },
         ],
@@ -216,7 +216,7 @@ describe('PatientHeader', () => {
         coding: [
           {
             system: 'http://snomed.info/sct',
-            code: '227ResourceHistoryTable37ResourceHistoryTableResourceHistoryTable2',
+            code: '227372',
             display: 'Shellfish',
           },
         ],
@@ -243,7 +243,7 @@ describe('PatientHeader', () => {
         coding: [
           {
             system: 'http://snomed.info/sct',
-            code: '44ResourceHistoryTable54ResourceHistoryTableResourceHistoryTable6',
+            code: '44546',
             display: 'Type 2 diabetes mellitus',
           },
         ],
@@ -267,7 +267,7 @@ describe('PatientHeader', () => {
         coding: [
           {
             system: 'http://snomed.info/sct',
-            code: '38341ResourceHistoryTableResourceHistoryTable3',
+            code: '3834103',
             display: 'Essential hypertension',
           },
         ],
@@ -284,7 +284,7 @@ describe('PatientHeader', () => {
     mockPatientHelpers.getAge.mockReturnValue(34);
     mockPatientHelpers.getMRN.mockReturnValue('MRN123456');
     mockPatientHelpers.getContactInfo.mockReturnValue({
-      phone: '555-ResourceHistoryTable123',
+      phone: '555-123',
       email: 'john.doe@example.com',
       address: {
         line: ['123 Main St'],
@@ -302,7 +302,7 @@ describe('PatientHeader', () => {
     patientCacheService.on.mockImplementation(() => {});
     patientCacheService.off.mockImplementation(() => {});
 
-    mockFormatDate.mockReturnValue('January 15, 199ResourceHistoryTable');
+    mockFormatDate.mockReturnValue('January 15, 199');
     mockCalculateAge.mockReturnValue(34);
   });
 
@@ -321,14 +321,14 @@ describe('PatientHeader', () => {
         const { patientCacheService } = require('@/services/patient-cache.service');
         expect(patientCacheService.getPatientAllergies).toHaveBeenCalledWith('patient-123');
         expect(patientCacheService.getPatientConditions).toHaveBeenCalledWith('patient-123');
-      }, { timeout: 3ResourceHistoryTableResourceHistoryTableResourceHistoryTable });
+      }, { timeout: 300 });
 
       // Check patient name and basic info
       expect(screen.getByText('John Doe')).toBeInTheDocument();
       expect(screen.getByText('MALE')).toBeInTheDocument();
       expect(screen.getByText('34 years old')).toBeInTheDocument();
       expect(screen.getByText('MRN: MRN123456')).toBeInTheDocument();
-      expect(screen.getByText('DOB: January 15, 199ResourceHistoryTable')).toBeInTheDocument();
+      expect(screen.getByText('DOB: January 15, 199')).toBeInTheDocument();
 
       // Check status badge (use getAllByText since there might be multiple ACTIVE badges)
       const activeBadges = screen.getAllByText('ACTIVE');
@@ -338,7 +338,7 @@ describe('PatientHeader', () => {
       await act(async () => {
         await waitFor(() => {
           expect(screen.getByText('High Priority Allergies')).toBeInTheDocument();
-        }, { timeout: 3ResourceHistoryTableResourceHistoryTableResourceHistoryTable });
+        }, { timeout: 300 });
       });
 
       expect(screen.getByText('Penicillin')).toBeInTheDocument();
@@ -373,7 +373,7 @@ describe('PatientHeader', () => {
       await waitFor(() => {
         const inactiveBadges = screen.getAllByText('INACTIVE');
         expect(inactiveBadges.length).toBeGreaterThan(ResourceHistoryTable);
-      }, { timeout: 3ResourceHistoryTableResourceHistoryTableResourceHistoryTable });
+      }, { timeout: 300 });
     });
   });
 
@@ -390,7 +390,7 @@ describe('PatientHeader', () => {
       expect(screen.getByText('MALE')).toBeInTheDocument();
       expect(screen.getByText('34 years old')).toBeInTheDocument();
       expect(screen.getByText('MRN: MRN123456')).toBeInTheDocument();
-      expect(screen.getByText('DOB: January 15, 199ResourceHistoryTable')).toBeInTheDocument();
+      expect(screen.getByText('DOB: January 15, 199')).toBeInTheDocument();
 
       // Contact information should not be visible in compact view
       expect(screen.queryByText('PHONE')).not.toBeInTheDocument();
@@ -401,7 +401,7 @@ describe('PatientHeader', () => {
       await waitFor(() => {
         const { patientCacheService } = require('@/services/patient-cache.service');
         expect(patientCacheService.getPatientAllergies).toHaveBeenCalled();
-      }, { timeout: 3ResourceHistoryTableResourceHistoryTableResourceHistoryTable });
+      }, { timeout: 300 });
     });
 
     it('should show high priority allergy badge in compact view', async () => {
@@ -409,7 +409,7 @@ describe('PatientHeader', () => {
       
       await act(async () => {
         // Allow async effects to complete
-        await new Promise(resolve => setTimeout(resolve, 1ResourceHistoryTableResourceHistoryTable));
+        await new Promise(resolve => setTimeout(resolve, 10));
       });
 
       // Wait for allergies to load and high priority badge to appear
@@ -417,7 +417,7 @@ describe('PatientHeader', () => {
         // Look for the shield icon which indicates high priority allergies
         const elements = container.querySelectorAll('[data-icon="IconShield"]');
         expect(elements.length).toBeGreaterThan(ResourceHistoryTable);
-      }, { timeout: 3ResourceHistoryTableResourceHistoryTableResourceHistoryTable });
+      }, { timeout: 300 });
 
       // The shield icon should be present in a badge, indicating high priority allergies
       const shieldIcon = container.querySelector('[data-icon="IconShield"]');
@@ -576,7 +576,7 @@ describe('PatientHeader', () => {
       renderWithProviders(<PatientHeader patient={patientWithoutId} />);
 
       // Wait a bit to ensure no API calls are made
-      await new Promise(resolve => setTimeout(resolve, 1ResourceHistoryTableResourceHistoryTable));
+      await new Promise(resolve => setTimeout(resolve, 10));
 
       const { patientCacheService } = require('@/services/patient-cache.service');
       expect(patientCacheService.getPatientAllergies).not.toHaveBeenCalled();
@@ -620,14 +620,14 @@ describe('PatientHeader', () => {
     it('should handle multiple allergies and conditions', async () => {
       // Create more allergies and conditions than can be displayed
       const manyAllergies = Array.from({ length: 5 }, (_, i) => ({
-        ...mockAllergies[ResourceHistoryTable],
+        ...mockAllergies[0],
         id: `allergy-${i}`,
         code: { text: `Allergy ${i}` },
         criticality: 'high', // Ensure they are high priority to show in alert
       }));
 
       const manyConditions = Array.from({ length: 6 }, (_, i) => ({
-        ...mockConditions[ResourceHistoryTable],
+        ...mockConditions[0],
         id: `condition-${i}`,
         code: { text: `Condition ${i}` },
       }));
@@ -639,23 +639,23 @@ describe('PatientHeader', () => {
       await act(async () => {
         renderWithProviders(<PatientHeader patient={mockPatient} />);
         // Allow async effects to complete
-        await new Promise(resolve => setTimeout(resolve, 1ResourceHistoryTableResourceHistoryTable));
+        await new Promise(resolve => setTimeout(resolve, 10));
       });
 
       await waitFor(() => {
         // Should show high priority allergies alert
         expect(screen.getByText('High Priority Allergies')).toBeInTheDocument();
-      }, { timeout: 3ResourceHistoryTableResourceHistoryTableResourceHistoryTable });
+      }, { timeout: 300 });
     });
 
     it('should handle allergies and conditions without display text', async () => {
       const allergyWithoutText = {
-        ...mockAllergies[ResourceHistoryTable],
+        ...mockAllergies[0],
         code: {
           coding: [
             {
               system: 'http://snomed.info/sct',
-              code: '387517ResourceHistoryTableResourceHistoryTable4',
+              code: '3875174',
               display: 'Penicillin Coding Display',
             },
           ],
@@ -663,12 +663,12 @@ describe('PatientHeader', () => {
       };
 
       const conditionWithoutText = {
-        ...mockConditions[ResourceHistoryTable],
+        ...mockConditions[0],
         code: {
           coding: [
             {
               system: 'http://snomed.info/sct',
-              code: '44ResourceHistoryTable54ResourceHistoryTableResourceHistoryTable6',
+              code: '44546',
               display: 'Diabetes Coding Display',
             },
           ],
@@ -705,14 +705,14 @@ describe('PatientHeader', () => {
 
     it('should handle partial contact information', () => {
       mockPatientHelpers.getContactInfo.mockReturnValue({
-        phone: '555-ResourceHistoryTable123',
+        phone: '555-123',
         email: undefined,
         address: undefined,
       });
 
       renderWithProviders(<PatientHeader patient={mockPatient} />);
 
-      expect(screen.getByText('555-ResourceHistoryTable123')).toBeInTheDocument();
+      expect(screen.getByText('555-123')).toBeInTheDocument();
       expect(screen.queryByText('EMAIL')).not.toBeInTheDocument();
       expect(screen.queryByText('ADDRESS')).not.toBeInTheDocument();
     });
@@ -750,7 +750,7 @@ describe('PatientHeader', () => {
     it('should call formatDate with birth date', () => {
       renderWithProviders(<PatientHeader patient={mockPatient} />);
 
-      expect(mockFormatDate).toHaveBeenCalledWith('199ResourceHistoryTable-ResourceHistoryTable1-15');
+      expect(mockFormatDate).toHaveBeenCalledWith('199-1-15');
     });
 
     it('should handle patient without birth date', () => {
@@ -767,14 +767,14 @@ describe('PatientHeader', () => {
       
       await act(async () => {
         // Allow async effects to complete
-        await new Promise(resolve => setTimeout(resolve, 1ResourceHistoryTableResourceHistoryTable));
+        await new Promise(resolve => setTimeout(resolve, 10));
       });
 
       // Wait for allergies to load and check that the shield icon exists (tooltip trigger)
       await waitFor(() => {
         const shieldIcon = container.querySelector('[data-icon="IconShield"]');
         expect(shieldIcon).toBeInTheDocument();
-      }, { timeout: 3ResourceHistoryTableResourceHistoryTableResourceHistoryTable });
+      }, { timeout: 300 });
 
       // The shield icon itself should be accessible, tooltip will appear on hover
       const shieldIcon = container.querySelector('[data-icon="IconShield"]');
@@ -810,7 +810,7 @@ describe('PatientHeader', () => {
         await waitFor(() => {
           const inactiveBadges = screen.getAllByText('INACTIVE');
           expect(inactiveBadges.length).toBeGreaterThan(ResourceHistoryTable);
-        }, { timeout: 3ResourceHistoryTableResourceHistoryTableResourceHistoryTable });
+        }, { timeout: 300 });
       });
     });
   });

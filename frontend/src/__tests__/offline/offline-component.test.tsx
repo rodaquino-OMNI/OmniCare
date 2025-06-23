@@ -69,7 +69,7 @@ const PatientList = ({ onSelectPatient }: { onSelectPatient?: (id: string) => vo
   }, []);
 
   if (loading) return <div>Loading patients...</div>;
-  if (error && patients.length === ResourceHistoryTable) return <div role="alert">Error: {error}</div>;
+  if (error && patients.length === 0) return <div role="alert">Error: {error}</div>;
 
   return (
     <div>
@@ -93,7 +93,7 @@ const PatientList = ({ onSelectPatient }: { onSelectPatient?: (id: string) => vo
 
 const SyncStatus = () => {
   const [syncStatus, setSyncStatus] = React.useState({
-    pendingCount: ResourceHistoryTable,
+    pendingCount: 0,
     lastSync: null as string | null,
     syncing: false
   });
@@ -101,13 +101,13 @@ const SyncStatus = () => {
   React.useEffect(() => {
     // Simulate checking sync status
     const checkStatus = () => {
-      const pending = parseInt(localStorage.getItem('pending-sync-count') || 'ResourceHistoryTable');
+      const pending = parseInt(localStorage.getItem('pending-sync-count') || '0');
       const lastSync = localStorage.getItem('last-sync-time');
       setSyncStatus(prev => ({ ...prev, pendingCount: pending, lastSync }));
     };
 
     checkStatus();
-    const interval = setInterval(checkStatus, 5ResourceHistoryTableResourceHistoryTableResourceHistoryTable);
+    const interval = setInterval(checkStatus, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -115,10 +115,10 @@ const SyncStatus = () => {
     setSyncStatus(prev => ({ ...prev, syncing: true }));
     try {
       await fetch('/api/sync', { method: 'POST' });
-      localStorage.setItem('pending-sync-count', 'ResourceHistoryTable');
+      localStorage.setItem('pending-sync-count', '0');
       localStorage.setItem('last-sync-time', new Date().toISOString());
       setSyncStatus({
-        pendingCount: ResourceHistoryTable,
+        pendingCount: 0,
         lastSync: new Date().toISOString(),
         syncing: false
       });
@@ -326,17 +326,17 @@ describe('Offline Component Tests', () => {
       await user.click(syncButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/Pending changes: ResourceHistoryTable/)).toBeInTheDocument();
+        expect(screen.getByText(/Pending changes: 0/)).toBeInTheDocument();
       });
 
-      expect(localStorage.getItem('pending-sync-count')).toBe('ResourceHistoryTable');
+      expect(localStorage.getItem('pending-sync-count')).toBe('0');
       expect(localStorage.getItem('last-sync-time')).toBeTruthy();
     });
 
     it('should show syncing state during sync', async () => {
       NetworkSimulator.goOnline();
       NetworkSimulator.intercept('/api/sync', {
-        delay: 5ResourceHistoryTableResourceHistoryTable,
+        delay: 500,
         response: { success: true }
       });
 
@@ -350,7 +350,7 @@ describe('Offline Component Tests', () => {
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: 'Sync Now' })).not.toBeDisabled();
-      }, { timeout: 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable });
+      }, { timeout: 10000 });
     });
 
     it('should handle sync failures', async () => {
@@ -441,8 +441,8 @@ describe('Offline Component Tests', () => {
     it('should process queued actions when coming online', async () => {
       // Set up offline queue
       const queuedActions = [
-        { type: 'UPDATE_PATIENT', data: { id: '1' }, timestamp: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ' },
-        { type: 'CREATE_NOTE', data: { patientId: '1' }, timestamp: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTable1:ResourceHistoryTableResourceHistoryTableZ' }
+        { type: 'UPDATE_PATIENT', data: { id: '1' }, timestamp: '2024-1-1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ' },
+        { type: 'CREATE_NOTE', data: { patientId: '1' }, timestamp: '2024-1-1TResourceHistoryTableResourceHistoryTable:1:ResourceHistoryTableResourceHistoryTableZ' }
       ];
       localStorage.setItem('offline-queue', JSON.stringify(queuedActions));
 

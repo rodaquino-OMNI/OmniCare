@@ -32,7 +32,7 @@ export interface SecureStorageItem<T = any> {
 export class SecureStorageService {
   private static instance: SecureStorageService;
   private cache: Map<string, any> = new Map();
-  private readonly maxCacheSize = 1ResourceHistoryTableResourceHistoryTable;
+  private readonly maxCacheSize = 10;
 
   private constructor() {}
 
@@ -64,7 +64,7 @@ export class SecureStorageService {
       let compressed = false;
 
       // Compress if needed
-      if (compress && serialized.length > 1ResourceHistoryTable24) {
+      if (compress && serialized.length > 1024) {
         const compressedData = await compressData(serialized);
         serialized = await calculateHash(compressedData);
         compressed = true;
@@ -276,7 +276,7 @@ export class SecureStorageService {
     const key = `session_${sessionKey}`;
     await this.setItem(key, data, {
       classification: 'sensitive',
-      ttl: 15 * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable, // 15 minutes
+      ttl: 15 * 6 * 1000, // 15 minutes
       metadata: {
         sessionKey,
         temporary: true
@@ -378,7 +378,7 @@ export class SecureStorageService {
 
   private shouldCompress(value: any): boolean {
     const serialized = JSON.stringify(value);
-    return serialized.length > 5 * 1ResourceHistoryTable24; // Compress if > 5KB
+    return serialized.length > 5 * 1024; // Compress if > 5KB
   }
 
   private updateCache(key: string, value: any): void {

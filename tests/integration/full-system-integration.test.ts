@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test';
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import { MedplumClient } from '@medplum/core';
+import { Patient, Bundle, Encounter, DocumentReference, MedicationRequest, Observation } from '@medplum/fhirtypes';
 import { Pool } from 'pg';
 import * as Redis from 'redis';
 

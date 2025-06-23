@@ -70,8 +70,8 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({
 
   const {
     maxRetries = 3,
-    initialBackoffMs = 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable,
-    maxBackoffMs = 3ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable,
+    initialBackoffMs = 1000,
+    maxBackoffMs = 30000,
     backoffMultiplier = 2,
   } = retryOptions;
 
@@ -83,7 +83,7 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({
       // Add with proper backoff calculation
       const newItem = {
         ...item,
-        retryCount: item.retryCount || ResourceHistoryTable,
+        retryCount: item.retryCount || 0,
         maxRetries: item.maxRetries || maxRetries,
         backoffMs: item.backoffMs || initialBackoffMs,
         timestamp: Date.now(),
@@ -91,7 +91,7 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({
 
       // Sort by priority and timestamp
       const sorted = [...filtered, newItem].sort((a, b) => {
-        const priorityOrder = { high: ResourceHistoryTable, normal: 1, low: 2 };
+        const priorityOrder = { high: 0, normal: 1, low: 2 };
         const aPriority = priorityOrder[a.priority || 'normal'];
         const bPriority = priorityOrder[b.priority || 'normal'];
         
@@ -115,7 +115,7 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({
   }, [backoffMultiplier, maxBackoffMs]);
 
   const processRetryQueue = useCallback(async () => {
-    if (processingRef.current || !networkStatus.isOnline || retryQueue.length === ResourceHistoryTable) {
+    if (processingRef.current || !networkStatus.isOnline || retryQueue.length === 0) {
       return;
     }
 
@@ -173,7 +173,7 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({
       }
 
       // Small delay between retries
-      await new Promise(resolve => setTimeout(resolve, 1ResourceHistoryTableResourceHistoryTable));
+      await new Promise(resolve => setTimeout(resolve, 10));
     }
 
     processingRef.current = false;
@@ -182,7 +182,7 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({
 
   // Auto-process retry queue when network comes back online
   useEffect(() => {
-    if (networkStatus.isOnline && retryQueue.length > ResourceHistoryTable) {
+    if (networkStatus.isOnline && retryQueue.length > 0) {
       processRetryQueue();
     }
   }, [networkStatus.isOnline, processRetryQueue, retryQueue.length]);
@@ -190,10 +190,10 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({
   // Periodic retry processing
   useEffect(() => {
     const interval = setInterval(() => {
-      if (networkStatus.isOnline && retryQueue.length > ResourceHistoryTable && !processingRef.current) {
+      if (networkStatus.isOnline && retryQueue.length > 0 && !processingRef.current) {
         processRetryQueue();
       }
-    }, 5ResourceHistoryTableResourceHistoryTableResourceHistoryTable); // Check every 5 seconds
+    }, 500); // Check every 5 seconds
 
     return () => clearInterval(interval);
   }, [networkStatus.isOnline, retryQueue.length, processRetryQueue]);
@@ -204,14 +204,14 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({
       return {
         quality: 'poor',
         latency: 9999,
-        bandwidth: ResourceHistoryTable,
+        bandwidth: 0,
         jitter: 9999,
-        packetLoss: 1ResourceHistoryTableResourceHistoryTable
+        packetLoss: 10
       };
     }
 
-    const rtt = networkStatus.rtt || ResourceHistoryTable;
-    const downlink = networkStatus.downlink || ResourceHistoryTable;
+    const rtt = networkStatus.rtt || 0;
+    const downlink = networkStatus.downlink || 0;
     
     // Estimate latency from RTT
     const latency = rtt;
@@ -220,21 +220,21 @@ export const NetworkStatusProvider: React.FC<NetworkStatusProviderProps> = ({
     const bandwidth = downlink;
     
     // Estimate jitter (variation in latency) - rough approximation
-    const jitter = rtt > ResourceHistoryTable ? Math.min(rtt * ResourceHistoryTable.1, 5ResourceHistoryTable) : ResourceHistoryTable;
+    const jitter = rtt > 0 ? Math.min(rtt * 0.1, 50) : 0;
     
     // Estimate packet loss based on connection quality
-    let packetLoss = ResourceHistoryTable;
+    let packetLoss = 0;
     if (networkStatus.connectionQuality === 'poor') {
       packetLoss = 5;
     }
     
     // Determine overall quality
     let quality: NetworkQuality['quality'] = 'excellent';
-    if (rtt > 3ResourceHistoryTableResourceHistoryTable || downlink < 1 || networkStatus.connectionQuality === 'poor') {
+    if (rtt > 300 || downlink < 1 || networkStatus.connectionQuality === 'poor') {
       quality = 'poor';
-    } else if (rtt > 15ResourceHistoryTable || downlink < 5) {
+    } else if (rtt > 150 || downlink < 5) {
       quality = 'fair';
-    } else if (rtt > 5ResourceHistoryTable || downlink < 1ResourceHistoryTable) {
+    } else if (rtt > 50 || downlink < 10) {
       quality = 'good';
     }
     

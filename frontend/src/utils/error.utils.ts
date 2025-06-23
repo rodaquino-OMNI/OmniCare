@@ -229,16 +229,16 @@ export function withErrorHandling<T extends (...args: any[]) => Promise<any>>(
 export function getDisplayErrorMessage(error: unknown): string {
   if (isAPIError(error)) {
     const status = getAPIErrorStatus(error);
-    if (status === 4ResourceHistoryTable1) {
+    if (status === 401) {
       return 'Your session has expired. Please log in again.';
     }
-    if (status === 4ResourceHistoryTable3) {
+    if (status === 403) {
       return 'You do not have permission to perform this action.';
     }
-    if (status === 4ResourceHistoryTable4) {
+    if (status === 404) {
       return 'The requested resource was not found.';
     }
-    if (status && status >= 5ResourceHistoryTableResourceHistoryTable) {
+    if (status && status >= 500) {
       return 'A server error occurred. Please try again later.';
     }
     return getAPIErrorMessage(error);

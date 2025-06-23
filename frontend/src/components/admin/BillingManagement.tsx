@@ -66,12 +66,12 @@ const BillingManagement: React.FC<BillingManagementProps> = ({ userRole, facilit
       // Mock data - replace with actual API calls
       const mockProviders: Provider[] = [
         {
-          id: 'PROV-ResourceHistoryTableResourceHistoryTable1',
+          id: 'PROV-001',
           firstName: 'Sarah',
           lastName: 'Johnson',
           title: 'MD',
           specialty: 'Internal Medicine',
-          npi: '123456789ResourceHistoryTable',
+          npi: '1234567890',
           licenseNumber: 'MD123456',
           email: 'sarah.johnson@omnicare.com',
           phone: '(555) 123-4567',
@@ -83,10 +83,10 @@ const BillingManagement: React.FC<BillingManagementProps> = ({ userRole, facilit
 
       const mockPatients: Patient[] = [
         {
-          id: 'PAT-ResourceHistoryTableResourceHistoryTable1',
+          id: 'PAT-001',
           firstName: 'John',
           lastName: 'Smith',
-          dateOfBirth: new Date('198ResourceHistoryTable-ResourceHistoryTable5-15'),
+          dateOfBirth: new Date('1985-05-15'),
           gender: 'M',
           address: {
             street: '123 Main St',
@@ -110,62 +110,62 @@ const BillingManagement: React.FC<BillingManagementProps> = ({ userRole, facilit
 
       const mockBillings: Billing[] = [
         {
-          id: 'BILL-ResourceHistoryTableResourceHistoryTable1',
-          patientId: 'PAT-ResourceHistoryTableResourceHistoryTable1',
-          appointmentId: 'APT-ResourceHistoryTableResourceHistoryTable1',
-          providerId: 'PROV-ResourceHistoryTableResourceHistoryTable1',
+          id: 'BILL-001',
+          patientId: 'PAT-001',
+          appointmentId: 'APT-001',
+          providerId: 'PROV-001',
           facilityId: facilityId,
-          encounterDate: new Date('2ResourceHistoryTable24-ResourceHistoryTable1-15'),
+          encounterDate: new Date('2024-01-15'),
           diagnosisCodes: [
-            { code: 'I1ResourceHistoryTable', description: 'Essential hypertension', isPrimary: true },
+            { code: 'I10', description: 'Essential hypertension', isPrimary: true },
             { code: 'Z79.4', description: 'Long term use of insulin', isPrimary: false }
           ],
           procedureCodes: [
-            { code: '99214', description: 'Office visit, established patient, moderate complexity', modifier: '', units: 1, amount: 225.ResourceHistoryTableResourceHistoryTable },
-            { code: '93ResourceHistoryTableResourceHistoryTableResourceHistoryTable', description: 'Electrocardiogram, routine ECG with 12 leads', modifier: '', units: 1, amount: 85.ResourceHistoryTableResourceHistoryTable }
+            { code: '99214', description: 'Office visit, established patient, moderate complexity', modifier: '', units: 1, amount: 225.00 },
+            { code: '93000', description: 'Electrocardiogram, routine ECG with 12 leads', modifier: '', units: 1, amount: 85.00 }
           ],
           charges: [
-            { id: 'CHG-ResourceHistoryTableResourceHistoryTable1', procedureCode: '99214', amount: 225.ResourceHistoryTableResourceHistoryTable, units: 1, dateOfService: new Date('2ResourceHistoryTable24-ResourceHistoryTable1-15') },
-            { id: 'CHG-ResourceHistoryTableResourceHistoryTable2', procedureCode: '93ResourceHistoryTableResourceHistoryTableResourceHistoryTable', amount: 85.ResourceHistoryTableResourceHistoryTable, units: 1, dateOfService: new Date('2ResourceHistoryTable24-ResourceHistoryTable1-15') }
+            { id: 'CHG-001', procedureCode: '99214', amount: 225.00, units: 1, dateOfService: new Date('2024-01-15') },
+            { id: 'CHG-002', procedureCode: '93000', amount: 85.00, units: 1, dateOfService: new Date('2024-01-15') }
           ],
-          totalAmount: 31ResourceHistoryTable.ResourceHistoryTableResourceHistoryTable,
-          insuranceAmount: 285.ResourceHistoryTableResourceHistoryTable,
-          patientAmount: 25.ResourceHistoryTableResourceHistoryTable,
+          totalAmount: 310.00,
+          insuranceAmount: 285.00,
+          patientAmount: 25.00,
           status: 'Submitted',
-          claimId: 'CLM-ResourceHistoryTableResourceHistoryTable1',
-          claimSubmissionDate: new Date('2ResourceHistoryTable24-ResourceHistoryTable1-16'),
+          claimId: 'CLM-001',
+          claimSubmissionDate: new Date('2024-01-16'),
           adjustments: [],
-          createdAt: new Date('2ResourceHistoryTable24-ResourceHistoryTable1-15'),
-          updatedAt: new Date('2ResourceHistoryTable24-ResourceHistoryTable1-16')
+          createdAt: new Date('2024-01-15'),
+          updatedAt: new Date('2024-01-16')
         },
         {
-          id: 'BILL-ResourceHistoryTableResourceHistoryTable2',
-          patientId: 'PAT-ResourceHistoryTableResourceHistoryTable1',
-          providerId: 'PROV-ResourceHistoryTableResourceHistoryTable1',
+          id: 'BILL-002',
+          patientId: 'PAT-001',
+          providerId: 'PROV-001',
           facilityId: facilityId,
-          encounterDate: new Date('2ResourceHistoryTable24-ResourceHistoryTable1-1ResourceHistoryTable'),
+          encounterDate: new Date('2024-01-10'),
           diagnosisCodes: [
-            { code: 'ZResourceHistoryTableResourceHistoryTable.ResourceHistoryTableResourceHistoryTable', description: 'Encounter for general adult medical examination without abnormal findings', isPrimary: true }
+            { code: 'Z00.00', description: 'Encounter for general adult medical examination without abnormal findings', isPrimary: true }
           ],
           procedureCodes: [
-            { code: '99395', description: 'Periodic comprehensive preventive medicine reevaluation, established patient, 18-39 years', modifier: '', units: 1, amount: 28ResourceHistoryTable.ResourceHistoryTableResourceHistoryTable }
+            { code: '99395', description: 'Periodic comprehensive preventive medicine reevaluation, established patient, 18-39 years', modifier: '', units: 1, amount: 280.00 }
           ],
           charges: [
-            { id: 'CHG-ResourceHistoryTableResourceHistoryTable3', procedureCode: '99395', amount: 28ResourceHistoryTable.ResourceHistoryTableResourceHistoryTable, units: 1, dateOfService: new Date('2ResourceHistoryTable24-ResourceHistoryTable1-1ResourceHistoryTable') }
+            { id: 'CHG-003', procedureCode: '99395', amount: 280.00, units: 1, dateOfService: new Date('2024-01-10') }
           ],
-          totalAmount: 28ResourceHistoryTable.ResourceHistoryTableResourceHistoryTable,
-          insuranceAmount: 28ResourceHistoryTable.ResourceHistoryTableResourceHistoryTable,
-          patientAmount: ResourceHistoryTable.ResourceHistoryTableResourceHistoryTable,
+          totalAmount: 280.00,
+          insuranceAmount: 280.00,
+          patientAmount: 0.00,
           status: 'Paid',
-          claimId: 'CLM-ResourceHistoryTableResourceHistoryTable2',
-          claimSubmissionDate: new Date('2ResourceHistoryTable24-ResourceHistoryTable1-11'),
-          paymentDate: new Date('2ResourceHistoryTable24-ResourceHistoryTable1-25'),
-          paymentAmount: 28ResourceHistoryTable.ResourceHistoryTableResourceHistoryTable,
+          claimId: 'CLM-002',
+          claimSubmissionDate: new Date('2024-01-11'),
+          paymentDate: new Date('2024-01-25'),
+          paymentAmount: 280.00,
           adjustments: [
-            { id: 'ADJ-ResourceHistoryTableResourceHistoryTable1', type: 'Insurance Payment', amount: 28ResourceHistoryTable.ResourceHistoryTableResourceHistoryTable, date: new Date('2ResourceHistoryTable24-ResourceHistoryTable1-25'), reason: 'Primary insurance payment', userId: 'USER-ResourceHistoryTableResourceHistoryTable1' }
+            { id: 'ADJ-001', type: 'Insurance Payment', amount: 280.00, date: new Date('2024-01-25'), reason: 'Primary insurance payment', userId: 'USER-001' }
           ],
-          createdAt: new Date('2ResourceHistoryTable24-ResourceHistoryTable1-1ResourceHistoryTable'),
-          updatedAt: new Date('2ResourceHistoryTable24-ResourceHistoryTable1-25')
+          createdAt: new Date('2024-01-10'),
+          updatedAt: new Date('2024-01-25')
         }
       ];
 
@@ -174,7 +174,7 @@ const BillingManagement: React.FC<BillingManagementProps> = ({ userRole, facilit
         pendingClaims: mockBillings.filter(b => ['Ready to Bill', 'Submitted'].includes(b.status)).length,
         paidClaims: mockBillings.filter(b => b.status === 'Paid').length,
         deniedClaims: mockBillings.filter(b => b.status === 'Denied').length,
-        totalRevenue: mockBillings.reduce((sum, b) => sum + (b.paymentAmount || ResourceHistoryTable), ResourceHistoryTable),
+        totalRevenue: mockBillings.reduce((sum, b) => sum + (b.paymentAmount || 0), 0),
         collectionsRate: 85.2,
         averageDaysInAR: 32
       };
@@ -257,7 +257,7 @@ const BillingManagement: React.FC<BillingManagementProps> = ({ userRole, facilit
 
   if (loading) {
     return (
-      <div style={{ position: 'relative', minHeight: 4ResourceHistoryTableResourceHistoryTable }}>
+      <div style={{ position: 'relative', minHeight: 400 }}>
         <LoadingOverlay visible={loading} />
       </div>
     );
@@ -305,7 +305,7 @@ const BillingManagement: React.FC<BillingManagementProps> = ({ userRole, facilit
       <Paper p="md" withBorder>
         <Group justify="space-between">
           <div>
-            <Text size="xl" fw={7ResourceHistoryTableResourceHistoryTable}>Billing & Revenue Cycle Management</Text>
+            <Text size="xl" fw={700}>Billing & Revenue Cycle Management</Text>
             <Text c="dimmed">Process claims and manage revenue cycle operations</Text>
           </div>
           <Group gap="sm">
@@ -334,10 +334,10 @@ const BillingManagement: React.FC<BillingManagementProps> = ({ userRole, facilit
           <Grid.Col span={{ base: 12, md: 3 }}>
             <Card shadow="sm" padding="lg" radius="md" withBorder>
               <Group gap="sm">
-                <IconFileText size={2ResourceHistoryTable} className="text-gray-4ResourceHistoryTableResourceHistoryTable" />
+                <IconFileText size={20} className="text-gray-400" />
                 <div>
                   <Text size="sm" c="dimmed">Total Claims</Text>
-                  <Text size="lg" fw={7ResourceHistoryTableResourceHistoryTable}>{claimSummary.totalClaims}</Text>
+                  <Text size="lg" fw={700}>{claimSummary.totalClaims}</Text>
                 </div>
               </Group>
             </Card>
@@ -346,10 +346,10 @@ const BillingManagement: React.FC<BillingManagementProps> = ({ userRole, facilit
           <Grid.Col span={{ base: 12, md: 3 }}>
             <Card shadow="sm" padding="lg" radius="md" withBorder>
               <Group gap="sm">
-                <IconFileText size={2ResourceHistoryTable} className="text-yellow-4ResourceHistoryTableResourceHistoryTable" />
+                <IconFileText size={20} className="text-yellow-400" />
                 <div>
                   <Text size="sm" c="dimmed">Pending Claims</Text>
-                  <Text size="lg" fw={7ResourceHistoryTableResourceHistoryTable}>{claimSummary.pendingClaims}</Text>
+                  <Text size="lg" fw={700}>{claimSummary.pendingClaims}</Text>
                 </div>
               </Group>
             </Card>
@@ -358,10 +358,10 @@ const BillingManagement: React.FC<BillingManagementProps> = ({ userRole, facilit
           <Grid.Col span={{ base: 12, md: 3 }}>
             <Card shadow="sm" padding="lg" radius="md" withBorder>
               <Group gap="sm">
-                <IconCurrencyDollar size={2ResourceHistoryTable} className="text-green-4ResourceHistoryTableResourceHistoryTable" />
+                <IconCurrencyDollar size={20} className="text-green-400" />
                 <div>
                   <Text size="sm" c="dimmed">Total Revenue</Text>
-                  <Text size="lg" fw={7ResourceHistoryTableResourceHistoryTable}>${claimSummary.totalRevenue.toLocaleString()}</Text>
+                  <Text size="lg" fw={700}>${claimSummary.totalRevenue.toLocaleString()}</Text>
                 </div>
               </Group>
             </Card>
@@ -370,10 +370,10 @@ const BillingManagement: React.FC<BillingManagementProps> = ({ userRole, facilit
           <Grid.Col span={{ base: 12, md: 3 }}>
             <Card shadow="sm" padding="lg" radius="md" withBorder>
               <Group gap="sm">
-                <IconCheck size={2ResourceHistoryTable} className="text-blue-4ResourceHistoryTableResourceHistoryTable" />
+                <IconCheck size={20} className="text-blue-400" />
                 <div>
                   <Text size="sm" c="dimmed">Collections Rate</Text>
-                  <Text size="lg" fw={7ResourceHistoryTableResourceHistoryTable}>{claimSummary.collectionsRate}%</Text>
+                  <Text size="lg" fw={700}>{claimSummary.collectionsRate}%</Text>
                 </div>
               </Group>
             </Card>
@@ -429,7 +429,7 @@ const BillingManagement: React.FC<BillingManagementProps> = ({ userRole, facilit
 
       {/* Claims Table */}
       <Card shadow="sm" padding="lg" radius="md" withBorder>
-        <Text size="lg" fw={6ResourceHistoryTableResourceHistoryTable} mb="md">
+        <Text size="lg" fw={600} mb="md">
           Claims Management
         </Text>
         
@@ -448,10 +448,10 @@ const BillingManagement: React.FC<BillingManagementProps> = ({ userRole, facilit
           <Table.Tbody>{rows}</Table.Tbody>
         </Table>
         
-        {filteredBillings.length === ResourceHistoryTable && (
+        {filteredBillings.length === 0 && (
           <div className="text-center py-12">
-            <IconFileText size={48} className="mx-auto text-gray-4ResourceHistoryTableResourceHistoryTable mb-4" />
-            <Text size="md" fw={5ResourceHistoryTableResourceHistoryTable} c="dimmed">No claims found</Text>
+            <IconFileText size={48} className="mx-auto text-gray-400 mb-4" />
+            <Text size="md" fw={500} c="dimmed">No claims found</Text>
             <Text size="sm" c="dimmed">
               Get started by creating a new claim or adjusting your filters.
             </Text>
@@ -472,7 +472,7 @@ const BillingManagement: React.FC<BillingManagementProps> = ({ userRole, facilit
             <Grid>
               <Grid.Col span={6}>
                 <Text size="sm" c="dimmed">Claim ID</Text>
-                <Text fw={5ResourceHistoryTableResourceHistoryTable}>{selectedBilling.claimId || selectedBilling.id}</Text>
+                <Text fw={500}>{selectedBilling.claimId || selectedBilling.id}</Text>
               </Grid.Col>
               <Grid.Col span={6}>
                 <Text size="sm" c="dimmed">Status</Text>
@@ -482,36 +482,36 @@ const BillingManagement: React.FC<BillingManagementProps> = ({ userRole, facilit
               </Grid.Col>
               <Grid.Col span={6}>
                 <Text size="sm" c="dimmed">Patient</Text>
-                <Text fw={5ResourceHistoryTableResourceHistoryTable}>{getPatientName(selectedBilling.patientId)}</Text>
+                <Text fw={500}>{getPatientName(selectedBilling.patientId)}</Text>
               </Grid.Col>
               <Grid.Col span={6}>
                 <Text size="sm" c="dimmed">Provider</Text>
-                <Text fw={5ResourceHistoryTableResourceHistoryTable}>{getProviderName(selectedBilling.providerId)}</Text>
+                <Text fw={500}>{getProviderName(selectedBilling.providerId)}</Text>
               </Grid.Col>
             </Grid>
 
             {/* Financial Summary */}
             <Paper p="md" bg="gray.1" radius="md">
-              <Text size="md" fw={6ResourceHistoryTableResourceHistoryTable} mb="sm">Financial Summary</Text>
+              <Text size="md" fw={600} mb="sm">Financial Summary</Text>
               <Grid>
                 <Grid.Col span={4}>
                   <Text size="sm" c="dimmed">Total Charges</Text>
-                  <Text size="lg" fw={7ResourceHistoryTableResourceHistoryTable}>${selectedBilling.totalAmount.toFixed(2)}</Text>
+                  <Text size="lg" fw={700}>${selectedBilling.totalAmount.toFixed(2)}</Text>
                 </Grid.Col>
                 <Grid.Col span={4}>
                   <Text size="sm" c="dimmed">Insurance Amount</Text>
-                  <Text size="lg" fw={7ResourceHistoryTableResourceHistoryTable}>${selectedBilling.insuranceAmount.toFixed(2)}</Text>
+                  <Text size="lg" fw={700}>${selectedBilling.insuranceAmount.toFixed(2)}</Text>
                 </Grid.Col>
                 <Grid.Col span={4}>
                   <Text size="sm" c="dimmed">Patient Responsibility</Text>
-                  <Text size="lg" fw={7ResourceHistoryTableResourceHistoryTable}>${selectedBilling.patientAmount.toFixed(2)}</Text>
+                  <Text size="lg" fw={700}>${selectedBilling.patientAmount.toFixed(2)}</Text>
                 </Grid.Col>
               </Grid>
               {selectedBilling.paymentAmount && (
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #dee2e6' }}>
                   <Group justify="space-between">
                     <Text size="sm" c="dimmed">Amount Paid</Text>
-                    <Text size="sm" fw={6ResourceHistoryTableResourceHistoryTable} c="green.6">${selectedBilling.paymentAmount.toFixed(2)}</Text>
+                    <Text size="sm" fw={600} c="green.6">${selectedBilling.paymentAmount.toFixed(2)}</Text>
                   </Group>
                   {selectedBilling.paymentDate && (
                     <Group justify="space-between">

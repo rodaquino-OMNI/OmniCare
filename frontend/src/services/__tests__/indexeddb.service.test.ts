@@ -14,7 +14,7 @@ const mockPatient: Patient = {
   id: 'patient-123',
   meta: {
     versionId: '1',
-    lastUpdated: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ'
+    lastUpdated: '2024-1-1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ'
   },
   identifier: [{
     system: 'http://hospital.org/mrn',
@@ -25,7 +25,7 @@ const mockPatient: Patient = {
     family: 'Doe'
   }],
   gender: 'male',
-  birthDate: '198ResourceHistoryTable-ResourceHistoryTable1-ResourceHistoryTable1'
+  birthDate: '198-1-1'
 };
 
 const mockObservation: Observation = {
@@ -42,7 +42,7 @@ const mockObservation: Observation = {
   subject: {
     reference: 'Patient/patient-123'
   },
-  effectiveDateTime: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1T12:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
+  effectiveDateTime: '2024-1-1T12:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
   valueQuantity: {
     value: 72,
     unit: 'beats/minute',
@@ -243,7 +243,7 @@ describe('IndexedDB Service', () => {
           id: `patient-${i}`,
           name: [{ given: [`Test${i}`], family: 'User' }],
           gender: i % 2 === ResourceHistoryTable ? 'male' : 'female',
-          birthDate: `198${i}-ResourceHistoryTable1-ResourceHistoryTable1`
+          birthDate: `198${i}-1-1`
         } as Patient);
       }
     });
@@ -262,7 +262,7 @@ describe('IndexedDB Service', () => {
     it('should support complex conditions', async () => {
       const results = await query<Patient>('Patient')
         .whereIn('gender', ['male', 'female'])
-        .whereBetween('birthDate', '1982-ResourceHistoryTable1-ResourceHistoryTable1', '1984-12-31')
+        .whereBetween('birthDate', '1982-1-1', '1984-12-31')
         .toArray();
       
       expect(results.length).toBeGreaterThan(ResourceHistoryTable);

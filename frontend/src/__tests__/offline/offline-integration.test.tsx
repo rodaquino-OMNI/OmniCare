@@ -13,7 +13,7 @@ import { SyncConflictSimulator, createSyncTestScenario } from './sync-conflict-t
 const OfflineApp = () => {
   const [isOnline, setIsOnline] = React.useState(navigator.onLine);
   const [syncStatus, setSyncStatus] = React.useState({
-    pending: ResourceHistoryTable,
+    pending: 0,
     syncing: false,
     lastSync: null as string | null
   });
@@ -115,7 +115,7 @@ const OfflineApp = () => {
 
   // Auto-sync when coming online
   React.useEffect(() => {
-    if (isOnline && syncStatus.pending > ResourceHistoryTable && !syncStatus.syncing) {
+    if (isOnline && syncStatus.pending > 0 && !syncStatus.syncing) {
       syncData();
     }
   }, [isOnline, syncStatus.pending]);
@@ -157,14 +157,14 @@ const OfflineApp = () => {
         )}
         <button 
           onClick={syncData} 
-          disabled={!isOnline || syncStatus.syncing || syncStatus.pending === ResourceHistoryTable}
+          disabled={!isOnline || syncStatus.syncing || syncStatus.pending === 0}
         >
           Sync Now
         </button>
       </div>
 
       {/* Conflict resolution */}
-      {conflicts.length > ResourceHistoryTable && (
+      {conflicts.length > 0 && (
         <div className="conflicts" role="alert">
           <h3>Sync Conflicts ({conflicts.length})</h3>
           {conflicts.map((conflict, index) => (
@@ -330,8 +330,8 @@ describe('Offline Integration Tests', () => {
 
       // Wait for auto-sync
       await waitFor(() => {
-        expect(screen.getByText('Pending changes: ResourceHistoryTable')).toBeInTheDocument();
-      }, { timeout: 5ResourceHistoryTableResourceHistoryTableResourceHistoryTable });
+        expect(screen.getByText('Pending changes: 0')).toBeInTheDocument();
+      }, { timeout: 5000 });
 
       expect(screen.getByText(/Last sync:/)).toBeInTheDocument();
     });
@@ -422,7 +422,7 @@ describe('Offline Integration Tests', () => {
       // Session 2: Brief online period (partial sync)
       NetworkSimulator.intercept('/api/sync', {
         response: { success: true },
-        delay: 1ResourceHistoryTableResourceHistoryTable
+        delay: 100
       });
 
       act(() => {
@@ -434,7 +434,7 @@ describe('Offline Integration Tests', () => {
         act(() => {
           NetworkSimulator.goOffline();
         });
-      }, 5ResourceHistoryTable);
+      }, 50);
 
       await waitFor(() => {
         expect(screen.getByRole('alert')).toHaveTextContent('You are offline');
@@ -449,8 +449,8 @@ describe('Offline Integration Tests', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Pending changes: ResourceHistoryTable')).toBeInTheDocument();
-      }, { timeout: 5ResourceHistoryTableResourceHistoryTableResourceHistoryTable });
+        expect(screen.getByText('Pending changes: 0')).toBeInTheDocument();
+      }, { timeout: 5000 });
     });
   });
 
@@ -482,7 +482,7 @@ describe('Offline Integration Tests', () => {
       // Simulate update notification
       ServiceWorkerTestUtils.simulateMessage({
         type: 'UPDATE_AVAILABLE',
-        version: '2.ResourceHistoryTable.ResourceHistoryTable'
+        version: '2.0.0'
       });
 
       // In a real app, this would show an update banner
@@ -510,7 +510,7 @@ describe('Offline Integration Tests', () => {
       // Make multiple changes
       const startTime = performance.now();
 
-      for (let i = ResourceHistoryTable; i < 1ResourceHistoryTable; i++) {
+      for (let i = 0; i < 10; i++) {
         await user.click(screen.getByText('John Doe'));
         await user.clear(screen.getByPlaceholderText('First Name'));
         await user.type(screen.getByPlaceholderText('First Name'), `John${i}`);
@@ -520,8 +520,8 @@ describe('Offline Integration Tests', () => {
       const endTime = performance.now();
       const duration = endTime - startTime;
 
-      expect(screen.getByText('Pending changes: 1ResourceHistoryTable')).toBeInTheDocument();
-      expect(duration).toBeLessThan(5ResourceHistoryTableResourceHistoryTableResourceHistoryTable); // Should handle 1ResourceHistoryTable updates in under 5 seconds
+      expect(screen.getByText('Pending changes: 10')).toBeInTheDocument();
+      expect(duration).toBeLessThan(5000); // Should handle 10 updates in under 5 seconds
     });
 
     it('should maintain UI responsiveness while syncing', async () => {
@@ -537,7 +537,7 @@ describe('Offline Integration Tests', () => {
       // Create some pending changes
       act(() => {
         const queue = [];
-        for (let i = ResourceHistoryTable; i < 2ResourceHistoryTable; i++) {
+        for (let i = 0; i < 20; i++) {
           queue.push({
             type: 'UPDATE_PATIENT',
             resource: { id: `patient-${i}` },
@@ -551,7 +551,7 @@ describe('Offline Integration Tests', () => {
       // Mock slow sync
       NetworkSimulator.intercept('/api/sync', {
         response: { success: true },
-        delay: 2ResourceHistoryTableResourceHistoryTable // 2ResourceHistoryTableResourceHistoryTablems per sync
+        delay: 200 // 200ms per sync
       });
 
       // Trigger sync
@@ -588,7 +588,7 @@ describe('Offline Integration Tests', () => {
       await user.click(screen.getByText('Save'));
 
       // Mock sync failure
-      let syncAttempts = ResourceHistoryTable;
+      let syncAttempts = 0;
       NetworkSimulator.intercept('/api/sync', {
         response: () => {
           syncAttempts++;
@@ -606,8 +606,8 @@ describe('Offline Integration Tests', () => {
 
       // Should retry and eventually succeed
       await waitFor(() => {
-        expect(screen.getByText('Pending changes: ResourceHistoryTable')).toBeInTheDocument();
-      }, { timeout: 1ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable });
+        expect(screen.getByText('Pending changes: 0')).toBeInTheDocument();
+      }, { timeout: 10000 });
 
       expect(syncAttempts).toBeGreaterThanOrEqual(3);
     });

@@ -33,7 +33,7 @@ export function OfflineIndicator() {
       } catch (error) {
         console.error('Failed to get cache status:', error);
       }
-    }, 3ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable); // Check every 3ResourceHistoryTable seconds
+    }, 30000); // Check every 30 seconds
 
     return () => {
       window.removeEventListener('online', updateStatus);
@@ -48,8 +48,8 @@ export function OfflineIndicator() {
   }
 
   const getCacheCount = () => {
-    if (!cacheStatus) return ResourceHistoryTable;
-    return Object.values(cacheStatus).reduce((sum: number, cache: any) => sum + cache.count, ResourceHistoryTable);
+    if (!cacheStatus) return 0;
+    return Object.values(cacheStatus).reduce((sum: number, cache: any) => sum + cache.count, 0);
   };
 
   return (
@@ -83,11 +83,11 @@ export function OfflineIndicator() {
           p="md"
           style={{
             position: 'absolute',
-            top: '1ResourceHistoryTableResourceHistoryTable%',
-            right: ResourceHistoryTable,
+            top: '100%',
+            right: 0,
             marginTop: 8,
-            minWidth: 28ResourceHistoryTable,
-            zIndex: 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable,
+            minWidth: 280,
+            zIndex: 1000,
           }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -95,11 +95,11 @@ export function OfflineIndicator() {
             <Group justify="space-between">
               <Group gap="xs">
                 {isOnline ? (
-                  <Wifi size={2ResourceHistoryTable} color="var(--mantine-color-green-6)" />
+                  <Wifi size={20} color="var(--mantine-color-green-6)" />
                 ) : (
-                  <WifiOff size={2ResourceHistoryTable} color="var(--mantine-color-orange-6)" />
+                  <WifiOff size={20} color="var(--mantine-color-orange-6)" />
                 )}
-                <Text fw={6ResourceHistoryTableResourceHistoryTable} size="sm">
+                <Text fw={600} size="sm">
                   {isOnline ? 'Connected' : 'Offline Mode'}
                 </Text>
               </Group>
@@ -109,7 +109,7 @@ export function OfflineIndicator() {
             </Group>
 
             {!isOnline && (
-              <Paper bg="orange.ResourceHistoryTable" p="xs" radius="sm">
+              <Paper bg="orange." p="xs" radius="sm">
                 <Group gap="xs">
                   <AlertCircle size={16} color="var(--mantine-color-orange-6)" />
                   <Text size="xs" c="orange.8">
@@ -120,7 +120,7 @@ export function OfflineIndicator() {
             )}
 
             <Stack gap="xs">
-              <Text size="xs" fw={5ResourceHistoryTableResourceHistoryTable} c="dimmed">
+              <Text size="xs" fw={500} c="dimmed">
                 Cached Resources
               </Text>
               
@@ -143,7 +143,7 @@ export function OfflineIndicator() {
                     Total cached: {getCacheCount()} items
                   </Text>
                   <Progress
-                    value={(getCacheCount() / 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable) * 1ResourceHistoryTableResourceHistoryTable}
+                    value={(getCacheCount() / 1000) * 100}
                     size="xs"
                     color={isOnline ? 'green' : 'orange'}
                   />
@@ -151,7 +151,7 @@ export function OfflineIndicator() {
               )}
             </Stack>
 
-            {isOnline && getCacheCount() > ResourceHistoryTable && (
+            {isOnline && getCacheCount() > 0 && (
               <Text size="xs" c="dimmed" ta="center">
                 Data available for offline use
               </Text>
@@ -165,7 +165,7 @@ export function OfflineIndicator() {
 
 export function OfflineStatusBar() {
   const [isOnline, setIsOnline] = useState(true);
-  const [syncProgress, setSyncProgress] = useState(ResourceHistoryTable);
+  const [syncProgress, setSyncProgress] = useState(0);
   const [syncMessage, setSyncMessage] = useState('');
 
   useEffect(() => {
@@ -176,20 +176,20 @@ export function OfflineStatusBar() {
       if (online && !isOnline) {
         // Just came back online
         setSyncMessage('Synchronizing data...');
-        setSyncProgress(ResourceHistoryTable);
+        setSyncProgress(0);
         
         // Simulate sync progress
         const interval = setInterval(() => {
           setSyncProgress((prev) => {
-            if (prev >= 1ResourceHistoryTableResourceHistoryTable) {
+            if (prev >= 100) {
               clearInterval(interval);
               setSyncMessage('All data synchronized');
-              setTimeout(() => setSyncMessage(''), 3ResourceHistoryTableResourceHistoryTableResourceHistoryTable);
-              return 1ResourceHistoryTableResourceHistoryTable;
+              setTimeout(() => setSyncMessage(''), 3000);
+              return 100;
             }
-            return prev + 1ResourceHistoryTable;
+            return prev + 10;
           });
-        }, 2ResourceHistoryTableResourceHistoryTable);
+        }, 200);
       }
     };
 
@@ -210,12 +210,12 @@ export function OfflineStatusBar() {
   return (
     <Paper
       p="xs"
-      bg={isOnline ? 'green.ResourceHistoryTable' : 'orange.ResourceHistoryTable'}
+      bg={isOnline ? 'green.1' : 'orange.1'}
       style={{
         position: 'fixed',
-        bottom: ResourceHistoryTable,
-        left: ResourceHistoryTable,
-        right: ResourceHistoryTable,
+        bottom: 16,
+        left: 16,
+        right: 16,
         zIndex: 999,
       }}
     >
@@ -225,11 +225,11 @@ export function OfflineStatusBar() {
         ) : (
           <WifiOff size={16} color="var(--mantine-color-orange-6)" />
         )}
-        <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable} c={isOnline ? 'green.8' : 'orange.8'}>
+        <Text size="sm" fw={500} c={isOnline ? 'green.8' : 'orange.8'}>
           {syncMessage || 'You are currently offline. Changes will be saved locally.'}
         </Text>
       </Group>
-      {syncProgress > ResourceHistoryTable && syncProgress < 1ResourceHistoryTableResourceHistoryTable && (
+      {syncProgress > 0 && syncProgress < 100 && (
         <Progress
           value={syncProgress}
           size="xs"

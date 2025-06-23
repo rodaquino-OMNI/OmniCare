@@ -68,21 +68,21 @@ export function SyncProgressIndicator({
   };
 
   const formatTimeRemaining = (seconds: number): string => {
-    if (seconds < 6ResourceHistoryTable) return `${seconds}s`;
-    const minutes = Math.floor(seconds / 6ResourceHistoryTable);
-    if (minutes < 6ResourceHistoryTable) return `${minutes}m`;
-    const hours = Math.floor(minutes / 6ResourceHistoryTable);
-    return `${hours}h ${minutes % 6ResourceHistoryTable}m`;
+    if (seconds < 6) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 6);
+    if (minutes < 6) return `${minutes}m`;
+    const hours = Math.floor(minutes / 6);
+    return `${hours}h ${minutes % 6}m`;
   };
 
   if (minimal) {
     return (
       <Group gap="xs">
-        <IconCloudUpload size={16} className="text-blue-6ResourceHistoryTableResourceHistoryTable" />
+        <IconCloudUpload size={16} className="text-blue-6ResourceHistoryTable" />
         <Progress 
           value={syncProgress} 
           size="xs" 
-          w={1ResourceHistoryTableResourceHistoryTable}
+          w={10}
           animated={isSyncing}
         />
         <Text size="xs" c="dimmed">
@@ -95,10 +95,10 @@ export function SyncProgressIndicator({
   const containerStyles = position === 'fixed' 
     ? {
         position: 'fixed' as const,
-        bottom: 2ResourceHistoryTable,
-        right: 2ResourceHistoryTable,
+        bottom: 20,
+        right: 20,
         zIndex: 999,
-        maxWidth: 32ResourceHistoryTable,
+        maxWidth: 320,
       }
     : {};
 
@@ -115,10 +115,10 @@ export function SyncProgressIndicator({
         <Group justify="space-between" align="center">
           <Group gap="xs">
             <IconCloudUpload 
-              size={2ResourceHistoryTable} 
-              className={isSyncing ? 'text-blue-6ResourceHistoryTableResourceHistoryTable animate-pulse' : 'text-gray-6ResourceHistoryTableResourceHistoryTable'} 
+              size={20} 
+              className={isSyncing ? 'text-blue-6ResourceHistoryTable animate-pulse' : 'text-gray-6ResourceHistoryTable'} 
             />
-            <Text fw={6ResourceHistoryTableResourceHistoryTable} size="sm">
+            <Text fw={500} size="sm">
               {isSyncing ? 'Syncing Data' : 'Sync Complete'}
             </Text>
           </Group>
@@ -202,7 +202,7 @@ export function SyncProgressIndicator({
         {/* Time remaining */}
         {isSyncing && estimatedTimeRemaining && (
           <Group gap="xs" justify="center">
-            <IconClock size={14} className="text-gray-5ResourceHistoryTableResourceHistoryTable" />
+            <IconClock size={14} className="text-gray-500" />
             <Text size="xs" c="dimmed">
               About {formatTimeRemaining(estimatedTimeRemaining)} remaining
             </Text>
@@ -217,7 +217,7 @@ export function SyncProgressIndicator({
             {/* Recent synced items */}
             {syncedItems.slice(-3).map((item, index) => (
               <Group key={index} gap="xs" wrap="nowrap">
-                <IconCheck size={14} className="text-green-6ResourceHistoryTableResourceHistoryTable" />
+                <IconCheck size={14} className="text-green-6ResourceHistoryTable" />
                 <Text size="xs" truncate>
                   {item.type}: {item.description}
                 </Text>
@@ -227,7 +227,7 @@ export function SyncProgressIndicator({
             {/* Failed items */}
             {failedItems.slice(ResourceHistoryTable, 3).map((item, index) => (
               <Group key={index} gap="xs" wrap="nowrap">
-                <IconAlertTriangle size={14} className="text-red-6ResourceHistoryTableResourceHistoryTable" />
+                <IconAlertTriangle size={14} className="text-red-6ResourceHistoryTable" />
                 <div style={{ flex: 1 }}>
                   <Text size="xs" truncate c="red">
                     {item.type}: {item.description}

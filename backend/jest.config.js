@@ -4,16 +4,24 @@ module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/src', '<rootDir>/tests'],
   testMatch: [
-    '**/__tests__/**/*.+(ts|tsx|js)',
+    '**/__tests__/**/*.(test|spec).+(ts|tsx|js)',
     '**/*.(test|spec).+(ts|tsx|js)'
   ],
   testPathIgnorePatterns: [
-    '/node_modules/',
-    '/dist/',
-    '/coverage/',
-    '\\.d\\.ts$',
-    '<rootDir>/tests/global-setup.ts',
-    '<rootDir>/tests/global-teardown.ts'
+    'node_modules',
+    'dist',
+    'coverage',
+    '.*\\.d\\.ts$',
+    'tests/global-setup\\.ts',
+    'tests/global-teardown\\.ts', 
+    'tests/setup\\.ts',
+    'tests/env\\.setup\\.ts',
+    'tests/fixtures',
+    'tests/.*generators',
+    'tests/.*generator\\.(ts|js)',
+    'tests/.*\\.(mock|base|runner|factory)\\.ts',
+    'tests/performance/framework',
+    'tests/performance/.*/.*-tests\\.ts'
   ],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
@@ -23,7 +31,9 @@ module.exports = {
     '!src/**/*.interface.ts',
     '!src/**/migrations/**',
     '!src/**/seeds/**',
-    '!src/**/fixtures/**'
+    '!src/**/fixtures/**',
+    '!src/**/generators/**',
+    '!src/**/*-generator.ts'
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html', 'json', 'json-summary'],
@@ -97,7 +107,7 @@ module.exports = {
     '/node_modules/',
     '/coverage/',
     '/dist/',
-    '\\.git'
+    '\\\\.git'
   ],
   // Reporter configuration
   reporters: [

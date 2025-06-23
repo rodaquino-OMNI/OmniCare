@@ -1,6 +1,6 @@
-import path from 'path';
+import * as path from 'path';
 
-import dotenv from 'dotenv';
+import * as dotenv from 'dotenv';
 
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '../../.env') });

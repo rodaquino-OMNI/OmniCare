@@ -56,7 +56,7 @@ export function PatientDashboard() {
     enableSync: true,
     prefetchRelated: true,
     autoRefresh: true,
-    refreshInterval: 3ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable // 5 minutes
+    refreshInterval: 300000 // 5 minutes
   });
 
   // Use cache statistics
@@ -69,13 +69,13 @@ export function PatientDashboard() {
     return (
       <Container size="xl">
         <Stack gap="md">
-          <Skeleton height={2ResourceHistoryTableResourceHistoryTable} />
+          <Skeleton height={200} />
           <Grid>
             <Grid.Col span={8}>
-              <Skeleton height={4ResourceHistoryTableResourceHistoryTable} />
+              <Skeleton height={400} />
             </Grid.Col>
             <Grid.Col span={4}>
-              <Skeleton height={4ResourceHistoryTableResourceHistoryTable} />
+              <Skeleton height={400} />
             </Grid.Col>
           </Grid>
         </Stack>
@@ -109,7 +109,7 @@ export function PatientDashboard() {
                   ? 'Sync error - changes may not be saved'
                   : 'Connecting to sync service...'}
               </Text>
-              {syncState.errors.length > ResourceHistoryTable && (
+              {syncState.errors.length > 0 && (
                 <Button size="xs" variant="subtle" onClick={syncState.clearErrors}>
                   Clear Errors ({syncState.errors.length})
                 </Button>
@@ -188,7 +188,7 @@ export function PatientDashboard() {
                     {/* Conditions */}
                     <div>
                       <Title order={5} mb="xs">Active Conditions</Title>
-                      {conditions.length === ResourceHistoryTable ? (
+                      {conditions.length === 0 ? (
                         <Text c="dimmed">No active conditions</Text>
                       ) : (
                         <Stack gap="xs">
@@ -204,7 +204,7 @@ export function PatientDashboard() {
                     {/* Allergies */}
                     <div>
                       <Title order={5} mb="xs">Allergies</Title>
-                      {allergies.length === ResourceHistoryTable ? (
+                      {allergies.length === 0 ? (
                         <Text c="dimmed">No known allergies</Text>
                       ) : (
                         <Stack gap="xs">
@@ -220,14 +220,14 @@ export function PatientDashboard() {
                 </Tabs.Panel>
 
                 <Tabs.Panel value="vitals" pt="md">
-                  {vitals.length === ResourceHistoryTable ? (
+                  {vitals.length === 0 ? (
                     <Text c="dimmed">No vital signs recorded</Text>
                   ) : (
                     <Stack gap="md">
-                      {vitals.slice(ResourceHistoryTable, 5).map((vital, index) => (
+                      {vitals.slice(0, 5).map((vital, index) => (
                         <Card key={index} withBorder>
                           <Group justify="space-between">
-                            <Text fw={5ResourceHistoryTableResourceHistoryTable}>
+                            <Text fw={500}>
                               {vital.code?.text || 'Vital Sign'}
                             </Text>
                             <Badge>
@@ -241,17 +241,17 @@ export function PatientDashboard() {
                 </Tabs.Panel>
 
                 <Tabs.Panel value="medications" pt="md">
-                  {medications.length === ResourceHistoryTable ? (
+                  {medications.length === 0 ? (
                     <Text c="dimmed">No active medications</Text>
                   ) : (
                     <Stack gap="md">
                       {medications.map((med, index) => (
                         <Card key={index} withBorder>
-                          <Text fw={5ResourceHistoryTableResourceHistoryTable}>
+                          <Text fw={500}>
                             {med.medicationCodeableConcept?.text || 'Medication'}
                           </Text>
                           <Text size="sm" c="dimmed">
-                            {med.dosageInstruction?.[ResourceHistoryTable]?.text || 'No dosage info'}
+                            {med.dosageInstruction?.[0]?.text || 'No dosage info'}
                           </Text>
                         </Card>
                       ))}
@@ -260,17 +260,17 @@ export function PatientDashboard() {
                 </Tabs.Panel>
 
                 <Tabs.Panel value="labs" pt="md">
-                  {labs.length === ResourceHistoryTable ? (
+                  {labs.length === 0 ? (
                     <Text c="dimmed">No lab results</Text>
                   ) : (
                     <Stack gap="md">
-                      {labs.slice(ResourceHistoryTable, 5).map((lab, index) => (
+                      {labs.slice(0, 5).map((lab, index) => (
                         <Card key={index} withBorder>
                           <Group justify="space-between">
-                            <Text fw={5ResourceHistoryTableResourceHistoryTable}>
+                            <Text fw={500}>
                               {lab.code?.text || 'Lab Result'}
                             </Text>
-                            <Badge color={lab.interpretation?.[ResourceHistoryTable]?.coding?.[ResourceHistoryTable]?.code === 'H' ? 'red' : 'green'}>
+                            <Badge color={lab.interpretation?.[0]?.coding?.[0]?.code === 'H' ? 'red' : 'green'}>
                               {lab.valueQuantity?.value} {lab.valueQuantity?.unit}
                             </Badge>
                           </Group>
@@ -296,25 +296,25 @@ export function PatientDashboard() {
                   <div>
                     <Group justify="space-between" mb="xs">
                       <Text size="sm">Hit Rate</Text>
-                      <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>
-                        {(cacheStats.hitRate * 1ResourceHistoryTableResourceHistoryTable).toFixed(ResourceHistoryTable)}%
+                      <Text size="sm" fw={500}>
+                        {(cacheStats.hitRate * 100).toFixed(0)}%
                       </Text>
                     </Group>
                     <Progress
-                      value={cacheStats.hitRate * 1ResourceHistoryTableResourceHistoryTable}
-                      color={cacheStats.hitRate > ResourceHistoryTable.7 ? 'green' : 'orange'}
+                      value={cacheStats.hitRate * 100}
+                      color={cacheStats.hitRate > 0.7 ? 'green' : 'orange'}
                     />
                   </div>
                   
                   <div>
                     <Group justify="space-between" mb="xs">
                       <Text size="sm">Cache Size</Text>
-                      <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>
-                        {(cacheStats.totalSize / 1ResourceHistoryTable24 / 1ResourceHistoryTable24).toFixed(1)} MB
+                      <Text size="sm" fw={500}>
+                        {(cacheStats.totalSize / 1024 / 1024).toFixed(1)} MB
                       </Text>
                     </Group>
                     <Progress
-                      value={(cacheStats.totalSize / (1ResourceHistoryTableResourceHistoryTable * 1ResourceHistoryTable24 * 1ResourceHistoryTable24)) * 1ResourceHistoryTableResourceHistoryTable}
+                      value={(cacheStats.totalSize / (100 * 1024 * 1024)) * 100}
                       color="blue"
                     />
                   </div>
@@ -352,7 +352,7 @@ export function PatientDashboard() {
                     </Text>
                   )}
                   
-                  {syncState.pendingSync > ResourceHistoryTable && (
+                  {syncState.pendingSync > 0 && (
                     <Badge color="orange" variant="light">
                       {syncState.pendingSync} pending
                     </Badge>

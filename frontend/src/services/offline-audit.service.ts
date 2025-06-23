@@ -93,7 +93,7 @@ export class OfflineAuditService {
     // Start periodic compliance checks
     setInterval(() => {
       this.performComplianceCheck();
-    }, 6ResourceHistoryTable * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable); // Every hour
+    }, 60 * 60 * 1000); // Every hour
   }
 
   /**
@@ -259,26 +259,26 @@ export class OfflineAuditService {
   }> {
     const entries = await offlineSecurityService.getAuditLog({ userId });
     const anomalies: string[] = [];
-    let riskScore = ResourceHistoryTable;
+    let riskScore = 0;
 
     // Check for unusual access times
     const accessTimes = entries.map(e => new Date(e.timestamp).getHours());
     const nightAccess = accessTimes.filter(hour => hour < 6 || hour > 22).length;
-    if (nightAccess > entries.length * ResourceHistoryTable.3) {
+    if (nightAccess > entries.length * 0.3) {
       anomalies.push('Unusual access times detected');
-      riskScore += 2ResourceHistoryTable;
+      riskScore += 20;
     }
 
     // Check for rapid consecutive accesses
     const rapidAccess = this.detectRapidAccess(entries);
     if (rapidAccess) {
       anomalies.push('Rapid consecutive data access detected');
-      riskScore += 3ResourceHistoryTable;
+      riskScore += 30;
     }
 
     // Check for access to multiple patients
     const patientAccess = this.countPatientAccess(entries);
-    if (patientAccess > 5ResourceHistoryTable) {
+    if (patientAccess > 50) {
       anomalies.push('High volume of patient record access');
       riskScore += 25;
     }
@@ -289,13 +289,13 @@ export class OfflineAuditService {
     ).length;
     if (failedAttempts > 5) {
       anomalies.push('Multiple failed access attempts');
-      riskScore += 4ResourceHistoryTable;
+      riskScore += 40;
     }
 
     return {
-      normal: anomalies.length === ResourceHistoryTable,
+      normal: anomalies.length === 0,
       anomalies,
-      riskScore: Math.min(riskScore, 1ResourceHistoryTableResourceHistoryTable)
+      riskScore: Math.min(riskScore, 100)
     };
   }
 
@@ -357,9 +357,9 @@ export class OfflineAuditService {
 
   private async savePHIAccessLogs(): Promise<void> {
     try {
-      // Keep only last 9ResourceHistoryTable days
+      // Keep only last 9 days
       const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - 9ResourceHistoryTable);
+      cutoff.setDate(cutoff.getDate() - 90);
       
       this.phiAccessLogs = this.phiAccessLogs.filter(log =>
         log.timestamp > cutoff
@@ -454,17 +454,17 @@ export class OfflineAuditService {
   }
 
   private detectRapidAccess(entries: OfflineAuditEntry[]): boolean {
-    if (entries.length < 1ResourceHistoryTable) return false;
+    if (entries.length < 10) return false;
 
     const sorted = entries.sort((a, b) => 
       new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
 
-    let rapidCount = ResourceHistoryTable;
+    let rapidCount = 0;
     for (let i = 1; i < sorted.length; i++) {
       const timeDiff = new Date(sorted[i].timestamp).getTime() - 
                       new Date(sorted[i-1].timestamp).getTime();
-      if (timeDiff < 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable) { // Less than 1 second
+      if (timeDiff < 1000) { // Less than 1 second
         rapidCount++;
       }
     }
@@ -502,12 +502,12 @@ export class OfflineAuditService {
     // Check for old data that should be purged
     if (stats.oldestItem) {
       const age = now.getTime() - stats.oldestItem.getTime();
-      if (age > 9ResourceHistoryTable * 24 * 6ResourceHistoryTable * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable) { // 9ResourceHistoryTable days
+      if (age > 90 * 24 * 60 * 60 * 1000) { // 90 days
         await this.logEvent(
           'RETENTION_POLICY',
           'Old data detected for purging',
           undefined,
-          { age: Math.floor(age / (24 * 6ResourceHistoryTable * 6ResourceHistoryTable * 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable)) }
+          { age: Math.floor(age / (24 * 60 * 60 * 1000)) }
         );
       }
     }

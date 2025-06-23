@@ -150,7 +150,7 @@ const defaultPreferences: UIState['preferences'] = {
   soundEffects: false,
   keyboardShortcuts: true,
   autoSave: true,
-  autoSaveInterval: 3ResourceHistoryTable,
+  autoSaveInterval: 3,
 };
 
 export const useUIStore = create<UIState>()(
@@ -312,7 +312,7 @@ export const useUIStore = create<UIState>()(
         if (notification.autoClose !== false) {
           const timeout = typeof notification.autoClose === 'number' 
             ? notification.autoClose 
-            : 5ResourceHistoryTableResourceHistoryTableResourceHistoryTable;
+            : 500;
           
           setTimeout(() => {
             get().removeNotification(id);
@@ -345,7 +345,7 @@ export const useUIStore = create<UIState>()(
         set((state) => {
           const filtered = state.recentSearches.filter((s) => s !== query);
           return {
-            recentSearches: [query, ...filtered].slice(ResourceHistoryTable, 1ResourceHistoryTable), // Keep last 1ResourceHistoryTable
+            recentSearches: [query, ...filtered].slice(ResourceHistoryTable, 10), // Keep last 10
           };
         });
       },

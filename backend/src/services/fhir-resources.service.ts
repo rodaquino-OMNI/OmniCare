@@ -18,6 +18,7 @@ import {
   AllergyIntolerance,
   Immunization,
   Bundle,
+  Resource,
 } from '@medplum/fhirtypes';
 
 import { medplumService } from './medplum.service';
@@ -709,7 +710,7 @@ export class FHIRResourcesService {
   /**
    * Get all resources for a patient
    */
-  async getPatientEverything(patientId: string): Promise<Bundle> {
+  async getPatientEverything(patientId: string): Promise<Bundle<Resource>> {
     try {
       const result = await medplumService.searchResources('Patient', {
         _id: patientId,
@@ -732,7 +733,7 @@ export class FHIRResourcesService {
   /**
    * Process a FHIR Bundle (transaction or batch)
    */
-  async processBundle(bundle: Bundle): Promise<Bundle> {
+  async processBundle(bundle: Bundle): Promise<Bundle<Resource>> {
     try {
       logger.fhir('Processing bundle', {
         bundleType: bundle.type,
@@ -832,9 +833,9 @@ export class FHIRResourcesService {
         }
       }
 
-      const responseBundle: Bundle = {
-        resourceType: 'Bundle',
-        type: bundle.type === 'batch' ? 'batch-response' : 'transaction-response',
+      const responseBundle: Bundle<Resource> = {
+        resourceType: 'Bundle' as const,
+        type: bundle.type === 'batch' ? 'batch-response' as const : 'transaction-response' as const,
         entry: responseEntries as any,
       };
 

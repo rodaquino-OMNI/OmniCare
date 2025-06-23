@@ -5,13 +5,13 @@
  * @deprecated Use @/auth/unified-role-permissions instead for full role support
  */
 
-import { UserRole, Permission, RolePermissions } from '@/types/auth.types';
+import { UserRole, Permission, RolePermissions } from '../types/auth.types';
 import { 
   UNIFIED_ROLE_PERMISSIONS, 
   getRolePermissions as getUnifiedRolePermissions,
   hasPermission as hasUnifiedPermission,
   getRoleInfo as getUnifiedRoleInfo
-} from '@/auth/unified-role-permissions';
+} from './unified-role-permissions';
 
 /**
  * Basic Role-Based Permission Matrix for Backend (Legacy Support)
@@ -47,10 +47,10 @@ export function getRoleInfo(role: UserRole): Omit<RolePermissions, 'permissions'
  * Permission hierarchy for role-based overrides
  * @deprecated Import ROLE_HIERARCHY from @/types/unified-user-roles instead
  */
-export { ROLE_HIERARCHY } from '@/types/unified-user-roles';
+export { ROLE_HIERARCHY } from '../types/unified-user-roles';
 
 /**
  * Check if roleA has higher hierarchy than roleB
  * @deprecated Import hasHigherRole from @/types/unified-user-roles instead
  */
-export { hasHigherRole } from '@/types/unified-user-roles';
+export { hasHigherRole } from '../types/unified-user-roles';

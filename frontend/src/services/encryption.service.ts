@@ -10,7 +10,7 @@ const ALGORITHM = 'AES-GCM';
 const KEY_LENGTH = 256;
 const IV_LENGTH = 12;
 const SALT_LENGTH = 16;
-const PBKDF2_ITERATIONS = 1ResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTableResourceHistoryTable;
+const PBKDF2_ITERATIONS = 100000;
 
 export interface EncryptedData {
   ciphertext: string;
@@ -174,7 +174,7 @@ export class EncryptionService {
         {
           name: 'PBKDF2',
           salt: fieldSalt,
-          iterations: 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable,
+          iterations: 1000,
           hash: 'SHA-256'
         },
         await crypto.subtle.importKey(

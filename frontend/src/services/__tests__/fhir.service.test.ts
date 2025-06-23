@@ -19,7 +19,7 @@ const mockedAxios = axios as jest.Mocked<typeof axios>;
 describe('FHIRService', () => {
   let service: FHIRService;
   const mockAuthToken = 'mock-auth-token';
-  const baseURL = 'http://localhost:8ResourceHistoryTable8ResourceHistoryTable/fhir/R4';
+  const baseURL = 'http://localhost:88/fhir/R4';
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -61,7 +61,7 @@ describe('FHIRService', () => {
       const mockCapabilityStatement = {
         resourceType: 'CapabilityStatement',
         status: 'active',
-        date: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1',
+        date: '2024-1-1',
         kind: 'instance'
       };
 
@@ -84,7 +84,7 @@ describe('FHIRService', () => {
     it('should get health status', async () => {
       const mockHealthStatus = {
         status: 'UP' as const,
-        timestamp: '2ResourceHistoryTable24-ResourceHistoryTable1-ResourceHistoryTable1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
+        timestamp: '2024-1-1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
         components: {
           medplum: { status: 'UP', details: {} },
           cdsHooks: { status: 'UP', details: {} },
@@ -96,7 +96,7 @@ describe('FHIRService', () => {
 
       const result = await service.getHealthStatus();
 
-      expect(mockedAxios.get).toHaveBeenCalledWith('http://localhost:8ResourceHistoryTable8ResourceHistoryTable/health');
+      expect(mockedAxios.get).toHaveBeenCalledWith('http://localhost:88/health');
       expect(result).toEqual(mockHealthStatus);
     });
   });
@@ -109,7 +109,7 @@ describe('FHIRService', () => {
           id: '123',
           name: [{ given: ['John'], family: 'Doe' }],
           gender: 'male',
-          birthDate: '198ResourceHistoryTable-ResourceHistoryTable1-ResourceHistoryTable1'
+          birthDate: '198-1-1'
         };
 
         mockedAxios.post.mockResolvedValueOnce({ data: mockPatient });
@@ -257,7 +257,7 @@ describe('FHIRService', () => {
     it('should search resources with parameters', async () => {
       const searchParams = {
         name: 'John',
-        _count: 1ResourceHistoryTable,
+        _count: 10,
         _offset: ResourceHistoryTable,
         _sort: 'name'
       };
@@ -294,7 +294,7 @@ describe('FHIRService', () => {
       id: '123',
       name: [{ given: ['John'], family: 'Doe' }],
       gender: 'male',
-      birthDate: '198ResourceHistoryTable-ResourceHistoryTable1-ResourceHistoryTable1'
+      birthDate: '198-1-1'
     };
 
     it('should create a patient', async () => {
@@ -303,7 +303,7 @@ describe('FHIRService', () => {
       const result = await service.createPatient({
         name: [{ given: ['John'], family: 'Doe' }],
         gender: 'male',
-        birthDate: '198ResourceHistoryTable-ResourceHistoryTable1-ResourceHistoryTable1'
+        birthDate: '198-1-1'
       });
 
       expect(mockedAxios.post).toHaveBeenCalledWith(
@@ -312,7 +312,7 @@ describe('FHIRService', () => {
           resourceType: 'Patient',
           name: [{ given: ['John'], family: 'Doe' }],
           gender: 'male',
-          birthDate: '198ResourceHistoryTable-ResourceHistoryTable1-ResourceHistoryTable1'
+          birthDate: '198-1-1'
         })
       );
       expect(result).toEqual(mockPatient);
@@ -566,7 +566,7 @@ describe('FHIRService', () => {
         code: {
           coding: [{
             system: 'http://loinc.org',
-            code: '831ResourceHistoryTable-5',
+            code: '8310-5',
             display: 'Body temperature'
           }]
         }
@@ -579,7 +579,7 @@ describe('FHIRService', () => {
         code: {
           coding: [{
             system: 'http://loinc.org',
-            code: '831ResourceHistoryTable-5',
+            code: '8310-5',
             display: 'Body temperature'
           }]
         }
@@ -603,7 +603,7 @@ describe('FHIRService', () => {
         code: {
           coding: [{
             system: 'http://loinc.org',
-            code: '831ResourceHistoryTable-5',
+            code: '8310-5',
             display: 'Body temperature'
           }]
         }
@@ -658,7 +658,7 @@ describe('FHIRService', () => {
         type: 'batch-response',
         entry: [
           {
-            response: { status: '2ResourceHistoryTable1' },
+            response: { status: '201' },
             resource: { resourceType: 'Patient', id: '123' } as Patient
           }
         ]
@@ -993,8 +993,8 @@ describe('FHIRService', () => {
       });
 
       it('should handle quantity with only value', () => {
-        const quantity = { value: 1ResourceHistoryTableResourceHistoryTable };
-        expect(service.formatQuantity(quantity)).toBe('1ResourceHistoryTableResourceHistoryTable');
+        const quantity = { value: 10 };
+        expect(service.formatQuantity(quantity)).toBe('10');
       });
 
       it('should handle quantity with only unit', () => {
@@ -1009,9 +1009,9 @@ describe('FHIRService', () => {
 
     describe('Date utilities', () => {
       it('should parse FHIR date', () => {
-        const date = service.parseFHIRDate('2ResourceHistoryTable24-ResourceHistoryTable1-15');
+        const date = service.parseFHIRDate('2024-1-15');
         expect(date).toBeInstanceOf(Date);
-        expect(date?.toISOString()).toContain('2ResourceHistoryTable24-ResourceHistoryTable1-15');
+        expect(date?.toISOString()).toContain('2024-1-15');
       });
 
       it('should handle undefined FHIR date', () => {
@@ -1019,17 +1019,17 @@ describe('FHIRService', () => {
       });
 
       it('should format FHIR date', () => {
-        const formatted = service.formatFHIRDate('2ResourceHistoryTable24-ResourceHistoryTable1-15');
-        expect(formatted).toBe('Jan 15, 2ResourceHistoryTable24');
+        const formatted = service.formatFHIRDate('2024-1-15');
+        expect(formatted).toBe('Jan 15, 2024');
       });
 
       it('should format FHIR date with custom options', () => {
-        const formatted = service.formatFHIRDate('2ResourceHistoryTable24-ResourceHistoryTable1-15', {
+        const formatted = service.formatFHIRDate('2024-1-15', {
           year: 'numeric',
           month: 'numeric',
           day: 'numeric'
         });
-        expect(formatted).toMatch(/1\/15\/2ResourceHistoryTable24/);
+        expect(formatted).toMatch(/1\/15\/2024/);
       });
 
       it('should handle undefined date in formatting', () => {
@@ -1037,8 +1037,8 @@ describe('FHIRService', () => {
       });
 
       it('should format FHIR datetime', () => {
-        const formatted = service.formatFHIRDateTime('2ResourceHistoryTable24-ResourceHistoryTable1-15T1ResourceHistoryTable:3ResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ');
-        expect(formatted).toMatch(/Jan 15, 2ResourceHistoryTable24.*\d{1,2}:\d{2}/);
+        const formatted = service.formatFHIRDateTime('2024-1-15T10:3:ResourceHistoryTableResourceHistoryTableZ');
+        expect(formatted).toMatch(/Jan 15, 2024.*\d{1,2}:\d{2}/);
       });
     });
 
@@ -1083,12 +1083,12 @@ describe('FHIRService', () => {
       it('should get resource last updated', () => {
         const resource: Resource = {
           resourceType: 'Patient',
-          meta: { lastUpdated: '2ResourceHistoryTable24-ResourceHistoryTable1-15T1ResourceHistoryTable:3ResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ' }
+          meta: { lastUpdated: '2024-1-15T10:3:ResourceHistoryTableResourceHistoryTableZ' }
         };
 
         const lastUpdated = service.getResourceLastUpdated(resource);
         expect(lastUpdated).toBeInstanceOf(Date);
-        expect(lastUpdated?.toISOString()).toBe('2ResourceHistoryTable24-ResourceHistoryTable1-15T1ResourceHistoryTable:3ResourceHistoryTable:ResourceHistoryTableResourceHistoryTable.ResourceHistoryTableResourceHistoryTableResourceHistoryTableZ');
+        expect(lastUpdated?.toISOString()).toBe('2024-1-15T10:3:ResourceHistoryTableResourceHistoryTable.ResourceHistoryTableResourceHistoryTableResourceHistoryTableZ');
       });
 
       it('should return null for resource without lastUpdated', () => {
@@ -1100,7 +1100,7 @@ describe('FHIRService', () => {
 
   describe('Error Handling', () => {
     it('should handle FHIRError instance', async () => {
-      const fhirError = new FHIRError('Test error', undefined, 4ResourceHistoryTableResourceHistoryTable);
+      const fhirError = new FHIRError('Test error', undefined, 400);
       mockedAxios.get.mockRejectedValueOnce(fhirError);
 
       await expect(service.getPatient('123')).rejects.toThrow(fhirError);
@@ -1119,7 +1119,7 @@ describe('FHIRService', () => {
       const axiosError = {
         response: {
           data: operationOutcome,
-          status: 4ResourceHistoryTable4
+          status: 44
         }
       };
 
@@ -1135,10 +1135,10 @@ describe('FHIRService', () => {
       }
     });
 
-    it('should handle 4ResourceHistoryTable4 errors', async () => {
+    it('should handle 44 errors', async () => {
       const axiosError = {
-        response: { status: 4ResourceHistoryTable4 },
-        status: 4ResourceHistoryTable4
+        response: { status: 44 },
+        status: 44
       };
 
       mockedAxios.get.mockRejectedValueOnce(axiosError);
@@ -1146,10 +1146,10 @@ describe('FHIRService', () => {
       await expect(service.getPatient('123')).rejects.toThrow();
     });
 
-    it('should handle 4ResourceHistoryTable3 errors', async () => {
+    it('should handle 43 errors', async () => {
       const axiosError = {
-        response: { status: 4ResourceHistoryTable3 },
-        status: 4ResourceHistoryTable3
+        response: { status: 43 },
+        status: 43
       };
 
       mockedAxios.get.mockRejectedValueOnce(axiosError);
@@ -1157,10 +1157,10 @@ describe('FHIRService', () => {
       await expect(service.getPatient('123')).rejects.toThrow();
     });
 
-    it('should handle 4ResourceHistoryTable1 errors', async () => {
+    it('should handle 41 errors', async () => {
       const axiosError = {
-        response: { status: 4ResourceHistoryTable1 },
-        status: 4ResourceHistoryTable1
+        response: { status: 41 },
+        status: 41
       };
 
       mockedAxios.get.mockRejectedValueOnce(axiosError);
@@ -1168,10 +1168,10 @@ describe('FHIRService', () => {
       await expect(service.getPatient('123')).rejects.toThrow();
     });
 
-    it('should handle 5ResourceHistoryTableResourceHistoryTable errors', async () => {
+    it('should handle 500 errors', async () => {
       const axiosError = {
-        response: { status: 5ResourceHistoryTableResourceHistoryTable },
-        status: 5ResourceHistoryTableResourceHistoryTable
+        response: { status: 500 },
+        status: 500
       };
 
       mockedAxios.get.mockRejectedValueOnce(axiosError);

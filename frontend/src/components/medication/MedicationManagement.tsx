@@ -259,7 +259,7 @@ export function MedicationManagement({
           variant="light"
           mt="md"
         >
-          <Text fw={6ResourceHistoryTableResourceHistoryTable}>Check for drug allergies and interactions before prescribing</Text>
+          <Text fw={600}>Check for drug allergies and interactions before prescribing</Text>
         </Alert>
       </Card>
 
@@ -291,7 +291,7 @@ export function MedicationManagement({
                 value={medications.filter(med => med.status === 'active')}
                 emptyMessage={
                   <Stack align="center" gap="xs" py="xl">
-                    <IconPill size={48} style={{ opacity: ResourceHistoryTable.5 }} />
+                    <IconPill size={48} style={{ opacity: 0.5 }} />
                     <Text c="dimmed">No active medications</Text>
                   </Stack>
                 }
@@ -314,7 +314,7 @@ export function MedicationManagement({
                 )}
                 emptyMessage={
                   <Stack align="center" gap="xs" py="xl">
-                    <IconHistory size={48} style={{ opacity: ResourceHistoryTable.5 }} />
+                    <IconHistory size={48} style={{ opacity: 0.5 }} />
                     <Text c="dimmed">No medication history</Text>
                   </Stack>
                 }
@@ -434,13 +434,13 @@ function MedicationReconciliation({
   return (
     <Stack gap="md">
       <Alert color="blue" variant="light">
-        <Text fw={5ResourceHistoryTableResourceHistoryTable}>Medication Reconciliation</Text>
+        <Text fw={500}>Medication Reconciliation</Text>
         <Text size="sm" mt="xs">
           Review and confirm all current medications with the patient to ensure accuracy.
         </Text>
       </Alert>
 
-      {reconciliationList.length === ResourceHistoryTable ? (
+      {reconciliationList.length === 0 ? (
         <Text c="dimmed" ta="center" py="xl">
           No active medications to reconcile
         </Text>
@@ -450,7 +450,7 @@ function MedicationReconciliation({
             <Paper key={med.id} p="md" withBorder>
               <Group justify="space-between">
                 <div>
-                  <Text fw={5ResourceHistoryTableResourceHistoryTable}>{medicationHelpers.getName(med)}</Text>
+                  <Text fw={500}>{medicationHelpers.getName(med)}</Text>
                   <Text size="sm" c="dimmed">
                     {medicationHelpers.getDosageInstruction(med)}
                   </Text>
@@ -476,7 +476,7 @@ function MedicationReconciliation({
         <Button
           loading={reconciling}
           onClick={handleReconcile}
-          disabled={reconciliationList.length === ResourceHistoryTable}
+          disabled={reconciliationList.length === 0}
         >
           Complete Reconciliation
         </Button>

@@ -38,7 +38,7 @@ export interface Provider {
 
 export interface ScheduleSlot {
   dayOfWeek: number; // ResourceHistoryTable=Sunday, 1=Monday, etc.
-  startTime: string; // "ResourceHistoryTable8:ResourceHistoryTableResourceHistoryTable"
+  startTime: string; // "8:ResourceHistoryTableResourceHistoryTable"
   endTime: string; // "17:ResourceHistoryTableResourceHistoryTable"
   isAvailable: boolean;
 }

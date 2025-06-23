@@ -58,7 +58,7 @@ export function CacheManager({ minimal = false }: CacheManagerProps) {
     const interval = setInterval(() => {
       setStats(patientCacheService.getStats());
       setSizeInfo(patientCacheService.getCacheSizeInfo());
-    }, 5ResourceHistoryTableResourceHistoryTableResourceHistoryTable);
+    }, 5000);
 
     // Listen for cache events
     const handleCacheEvent = () => {
@@ -84,7 +84,7 @@ export function CacheManager({ minimal = false }: CacheManagerProps) {
     setRefreshing(true);
     try {
       // Trigger refresh of stale data
-      await new Promise(resolve => setTimeout(resolve, 1ResourceHistoryTableResourceHistoryTableResourceHistoryTable));
+      await new Promise(resolve => setTimeout(resolve, 1000));
       patientCacheService.emit('cache:refresh-requested');
     } finally {
       setRefreshing(false);
@@ -102,7 +102,7 @@ export function CacheManager({ minimal = false }: CacheManagerProps) {
 
   const handleWarmupCache = async () => {
     const ids = patientIds.split(',').map(id => id.trim()).filter(Boolean);
-    if (ids.length > ResourceHistoryTable) {
+    if (ids.length > 0) {
       await patientCacheService.warmupCache(ids);
       setWarmupOpen(false);
       setPatientIds('');
@@ -135,11 +135,11 @@ export function CacheManager({ minimal = false }: CacheManagerProps) {
         <Group justify="space-between" align="center">
           <Group gap="xs">
             <IconDatabase size={16} />
-            <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>Cache</Text>
+            <Text size="sm" fw={500}>Cache</Text>
           </Group>
           <Group gap="xs">
-            <Badge size="sm" variant="light" color={stats.hitRate > ResourceHistoryTable.7 ? 'green' : 'orange'}>
-              {(stats.hitRate * 1ResourceHistoryTableResourceHistoryTable).toFixed(ResourceHistoryTable)}% Hit
+            <Badge size="sm" variant="light" color={stats.hitRate > 0.7 ? 'green' : 'orange'}>
+              {(stats.hitRate * 100).toFixed(0)}% Hit
             </Badge>
             <Badge size="sm" variant="light">
               {sizeInfo.patientCount} patients
@@ -200,15 +200,15 @@ export function CacheManager({ minimal = false }: CacheManagerProps) {
               <Paper p="md" withBorder>
                 <Stack gap="xs" align="center">
                   <RingProgress
-                    size={1ResourceHistoryTableResourceHistoryTable}
+                    size={100}
                     thickness={8}
                     sections={[
-                      { value: stats.hitRate * 1ResourceHistoryTableResourceHistoryTable, color: 'green' },
-                      { value: stats.missRate * 1ResourceHistoryTableResourceHistoryTable, color: 'red' }
+                      { value: stats.hitRate * 100, color: 'green' },
+                      { value: stats.missRate * 100, color: 'red' }
                     ]}
                     label={
-                      <Text size="xl" fw={7ResourceHistoryTableResourceHistoryTable} ta="center">
-                        {(stats.hitRate * 1ResourceHistoryTableResourceHistoryTable).toFixed(ResourceHistoryTable)}%
+                      <Text size="xl" fw={700} ta="center">
+                        {(stats.hitRate * 100).toFixed(0)}%
                       </Text>
                     }
                   />
@@ -222,13 +222,13 @@ export function CacheManager({ minimal = false }: CacheManagerProps) {
                 <Stack gap="xs">
                   <Group justify="space-between">
                     <IconUsers size={24} color="var(--mantine-color-blue-6)" />
-                    <Text size="xl" fw={7ResourceHistoryTableResourceHistoryTable}>{sizeInfo.patientCount}</Text>
+                    <Text size="xl" fw={700}>{sizeInfo.patientCount}</Text>
                   </Group>
                   <Text size="sm" c="dimmed">Cached Patients</Text>
                   <Progress
                     value={sizeInfo.utilizationPercentage}
                     size="sm"
-                    color={sizeInfo.utilizationPercentage > 8ResourceHistoryTable ? 'orange' : 'blue'}
+                    color={sizeInfo.utilizationPercentage > 80 ? 'orange' : 'blue'}
                   />
                 </Stack>
               </Paper>
@@ -239,7 +239,7 @@ export function CacheManager({ minimal = false }: CacheManagerProps) {
                 <Stack gap="xs">
                   <Group justify="space-between">
                     <IconDatabase size={24} color="var(--mantine-color-green-6)" />
-                    <Text size="xl" fw={7ResourceHistoryTableResourceHistoryTable}>
+                    <Text size="xl" fw={700}>
                       {formatBytes(sizeInfo.totalSize)}
                     </Text>
                   </Group>
@@ -247,7 +247,7 @@ export function CacheManager({ minimal = false }: CacheManagerProps) {
                   <Progress
                     value={sizeInfo.utilizationPercentage}
                     size="sm"
-                    color={sizeInfo.utilizationPercentage > 8ResourceHistoryTable ? 'orange' : 'green'}
+                    color={sizeInfo.utilizationPercentage > 80 ? 'orange' : 'green'}
                   />
                 </Stack>
               </Paper>
@@ -258,7 +258,7 @@ export function CacheManager({ minimal = false }: CacheManagerProps) {
                 <Stack gap="xs">
                   <Group justify="space-between">
                     <IconClock size={24} color="var(--mantine-color-orange-6)" />
-                    <Text size="xl" fw={7ResourceHistoryTableResourceHistoryTable}>{stats.hits + stats.misses}</Text>
+                    <Text size="xl" fw={700}>{stats.hits + stats.misses}</Text>
                   </Group>
                   <Text size="sm" c="dimmed">Total Requests</Text>
                   <Text size="xs" c="dimmed">
@@ -273,7 +273,7 @@ export function CacheManager({ minimal = false }: CacheManagerProps) {
 
           <Group justify="space-between">
             <Stack gap={4}>
-              <Text size="sm" fw={5ResourceHistoryTableResourceHistoryTable}>Cache Statistics</Text>
+              <Text size="sm" fw={500}>Cache Statistics</Text>
               <Group gap="xs">
                 <Badge size="sm" variant="light">
                   {stats.evictions} Evictions
@@ -307,13 +307,13 @@ export function CacheManager({ minimal = false }: CacheManagerProps) {
             </Group>
           </Group>
 
-          {sizeInfo.utilizationPercentage > 8ResourceHistoryTable && (
+          {sizeInfo.utilizationPercentage > 80 && (
             <Alert
               icon={<IconAlertCircle size={16} />}
               color="orange"
               variant="light"
             >
-              Cache is {sizeInfo.utilizationPercentage.toFixed(ResourceHistoryTable)}% full. 
+              Cache is {sizeInfo.utilizationPercentage.toFixed(0)}% full. 
               Consider clearing old entries to improve performance.
             </Alert>
           )}
@@ -335,7 +335,7 @@ export function CacheManager({ minimal = false }: CacheManagerProps) {
             onChange={(e) => setSearchQuery(e.currentTarget.value)}
           />
 
-          <ScrollArea h={4ResourceHistoryTableResourceHistoryTable}>
+          <ScrollArea h={400}>
             <Table>
               <Table.Thead>
                 <Table.Tr>
@@ -406,8 +406,8 @@ export function CacheManager({ minimal = false }: CacheManagerProps) {
 
 // Helper function for formatting bytes
 function formatBytes(bytes: number): string {
-  if (bytes === ResourceHistoryTable) return 'ResourceHistoryTable Bytes';
-  const k = 1ResourceHistoryTable24;
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];

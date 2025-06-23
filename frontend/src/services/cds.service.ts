@@ -145,7 +145,7 @@ export class CDSService {
 
   async getPatientRiskScore(patientId: string): Promise<number> {
     // Simplified risk scoring - in real implementation would use clinical algorithms
-    const baseScore = Math.random() * 1ResourceHistoryTableResourceHistoryTable;
+    const baseScore = Math.random() * 10;
     return Math.round(baseScore);
   }
 
@@ -161,8 +161,8 @@ export class CDSService {
       {
         measure: 'Blood Pressure Control',
         status: 'non-compliant',
-        lastValue: '145/9ResourceHistoryTable',
-        target: '<13ResourceHistoryTable/8ResourceHistoryTable'
+        lastValue: '145/9',
+        target: '<13/8'
       }
     ];
   }
