@@ -41,18 +41,32 @@ jest.mock('redis', () => ({
 }));
 
 // Mock PostgreSQL
-jest.mock('pg', () => ({
-  Pool: jest.fn(() => ({
-    connect: jest.fn(),
-    query: jest.fn(),
-    end: jest.fn(),
-  })),
-  Client: jest.fn(() => ({
-    connect: jest.fn(),
-    query: jest.fn(),
-    end: jest.fn(),
-  })),
-}));
+jest.mock('pg', () => {
+  const mockPool = {
+    connect: jest.fn(() => Promise.resolve({
+      query: jest.fn(() => Promise.resolve({ rows: [], rowCount: 0 })),
+      release: jest.fn(),
+    })),
+    query: jest.fn(() => Promise.resolve({ rows: [], rowCount: 0 })),
+    end: jest.fn(() => Promise.resolve()),
+    on: jest.fn(),
+    removeAllListeners: jest.fn(),
+    // Additional pool methods that might be used
+    totalCount: 0,
+    idleCount: 0,
+    waitingCount: 0,
+  };
+
+  return {
+    Pool: jest.fn(() => mockPool),
+    Client: jest.fn(() => ({
+      connect: jest.fn(() => Promise.resolve()),
+      query: jest.fn(() => Promise.resolve({ rows: [], rowCount: 0 })),
+      end: jest.fn(() => Promise.resolve()),
+      on: jest.fn(),
+    })),
+  };
+});
 
 // Mock Winston logger
 jest.mock('winston', () => ({
@@ -170,7 +184,66 @@ jest.mock('../src/services/audit.service', () => ({
   AuditService: jest.fn().mockImplementation(() => ({
     logSecurityEvent: jest.fn(),
     logUserAction: jest.fn(),
+    shutdown: jest.fn(),
+    searchAuditLogs: jest.fn(),
+    getAuditStatistics: jest.fn(),
+    generateHipaaComplianceReport: jest.fn(),
+    logAccess: jest.fn(),
+    logPatientAccess: jest.fn(),  
+    createSession: jest.fn(),
+    updateSessionActivity: jest.fn(),
+    endSession: jest.fn(),
+    setSessionId: jest.fn(),
+    emit: jest.fn(),
+    on: jest.fn(),
+    removeAllListeners: jest.fn()
   })),
+  auditService: {
+    logSecurityEvent: jest.fn(),
+    logUserAction: jest.fn(),
+    shutdown: jest.fn(),
+    searchAuditLogs: jest.fn(),
+    getAuditStatistics: jest.fn(),
+    generateHipaaComplianceReport: jest.fn(),
+    logAccess: jest.fn(),
+    logPatientAccess: jest.fn(),
+    createSession: jest.fn(),
+    updateSessionActivity: jest.fn(),
+    endSession: jest.fn(),
+    setSessionId: jest.fn(),
+    emit: jest.fn(),
+    on: jest.fn(),
+    removeAllListeners: jest.fn()
+  }
+}));
+
+// Mock Compliance Service
+jest.mock('../src/services/compliance.service', () => ({
+  ComplianceService: jest.fn().mockImplementation(() => ({
+    checkHipaaCompliance: jest.fn(),
+    validatePHIAccess: jest.fn(),
+    logDataBreach: jest.fn(),
+    generateComplianceAuditReport: jest.fn(),
+    validateDataMinimization: jest.fn()
+  }))
+}));
+
+// Mock Validation Service
+jest.mock('../src/services/validation.service', () => ({
+  ValidationService: jest.fn().mockImplementation(() => ({
+    validateEmail: jest.fn(),
+    validatePhoneNumber: jest.fn(),
+    sanitizeInput: jest.fn(),
+    validateFHIRId: jest.fn(),
+    validateURI: jest.fn()
+  })),
+  validationService: {
+    validateEmail: jest.fn(),
+    validatePhoneNumber: jest.fn(),
+    sanitizeInput: jest.fn(),
+    validateFHIRId: jest.fn(),
+    validateURI: jest.fn()
+  }
 }));
 
 // Set up test database connection
@@ -180,6 +253,8 @@ process.env.DB_PORT = '5432';
 process.env.DB_NAME = 'omnicare_test';
 process.env.DB_USER = 'test_user';
 process.env.DB_PASSWORD = 'test_password';
+// Set DATABASE_URL which is what the config actually uses
+process.env.DATABASE_URL = 'postgresql://test_user:test_password@localhost:5432/omnicare_test';
 process.env.REDIS_URL = 'redis://localhost:6379/1';
 process.env.JWT_SECRET = 'test_jwt_secret_key_for_testing_only';
 process.env.MEDPLUM_CLIENT_ID = 'test_client_id';
