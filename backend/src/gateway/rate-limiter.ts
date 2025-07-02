@@ -7,7 +7,9 @@ export interface RateLimitConfig {
 }
 
 export class GatewayRateLimiter {
-  constructor(_config: RateLimitConfig) {}
+  constructor(_config: RateLimitConfig) {
+    // TODO: Implement rate limiting configuration
+  }
   
   middleware() {
     return (req: Request, res: Response, next: NextFunction) => {

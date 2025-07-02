@@ -1,0 +1,38 @@
+{
+  "metadata": {
+    "reportVersion": "1.0",
+    "generatedAt": "2025-07-02T20:08:30.964Z",
+    "reporter": "OmniCare Chaos Reporter"
+  },
+  "experiment": {
+    "name": "API Latency Injection",
+    "description": "Inject artificial latency into API responses",
+    "type": "latency",
+    "duration": 30000,
+    "targets": [
+      "/api/patients",
+      "/api/appointments"
+    ],
+    "parameters": {
+      "minLatency": 100,
+      "maxLatency": 2000,
+      "distribution": "gaussian"
+    },
+    "safeguards": []
+  },
+  "execution": {
+    "startTime": "1970-01-01T00:03:12.258Z",
+    "endTime": "1970-01-01T00:03:17.330Z",
+    "duration": 5072.020166000002,
+    "success": false,
+    "errors": []
+  },
+  "metrics": {},
+  "impact": {
+    "severity": "UNKNOWN",
+    "description": "No metrics available"
+  },
+  "recommendations": [
+    "Experiment failed - investigate safeguard triggers or system issues"
+  ]
+}

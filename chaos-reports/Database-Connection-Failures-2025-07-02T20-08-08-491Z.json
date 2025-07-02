@@ -1,0 +1,43 @@
+{
+  "metadata": {
+    "reportVersion": "1.0",
+    "generatedAt": "2025-07-02T20:08:08.517Z",
+    "reporter": "OmniCare Chaos Reporter"
+  },
+  "experiment": {
+    "name": "Database Connection Failures",
+    "description": "Simulate database connection failures",
+    "type": "database",
+    "duration": 15000,
+    "targets": [
+      "postgresql"
+    ],
+    "parameters": {
+      "errorType": "connection_timeout",
+      "failureRate": 0.2
+    },
+    "safeguards": [
+      {
+        "name": "Database Health",
+        "type": "metric",
+        "condition": "db_connection_errors > 10",
+        "action": "stop"
+      }
+    ]
+  },
+  "execution": {
+    "startTime": "1970-01-01T00:02:49.376Z",
+    "endTime": "1970-01-01T00:02:54.857Z",
+    "duration": 5480.799291000003,
+    "success": false,
+    "errors": []
+  },
+  "metrics": {},
+  "impact": {
+    "severity": "UNKNOWN",
+    "description": "No metrics available"
+  },
+  "recommendations": [
+    "Experiment failed - investigate safeguard triggers or system issues"
+  ]
+}

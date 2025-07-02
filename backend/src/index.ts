@@ -5,14 +5,14 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 
 import config from '@/config';
-import { fhirResourceCache, analyticsCache } from '@/middleware/api-cache.middleware';
+// Removed unused imports: fhirResourceCache, analyticsCache
 import { createEnhancedRateLimit, createAbuseProtectionMiddleware } from '@/middleware/enhanced-rate-limit.middleware';
 import routes from '@/routes';
 import { databaseService } from '@/services/database.service';
 import { medplumService } from '@/services/medplum.service';
 import { redisCacheService } from '@/services/redis-cache.service';
 import { redisRateLimiterService } from '@/services/redis-rate-limiter.service';
-import { redisSessionStore } from '@/services/redis-session.service';
+// Removed unused import: redisSessionStore
 import { redisService } from '@/services/redis.service';
 import { subscriptionsService } from '@/services/subscriptions.service';
 import logger from '@/utils/logger';

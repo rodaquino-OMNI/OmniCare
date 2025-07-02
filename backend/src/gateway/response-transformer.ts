@@ -2,7 +2,9 @@
 import { Request, Response, NextFunction } from 'express';
 
 export class ResponseTransformer {
-  constructor() {}
+  constructor() {
+    // Stub implementation - to be implemented
+  }
   
   middleware() {
     return (_req: Request, _res: Response, next: NextFunction) => {

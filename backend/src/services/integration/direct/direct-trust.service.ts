@@ -1,3 +1,6 @@
+import * as crypto from 'crypto';
+import { randomBytes } from 'crypto';
+
 // Import nodemailer only if not in test environment
 let nodemailer: any;
 let createTransport: any;
@@ -523,7 +526,7 @@ export class DirectTrustService {
       const iv = randomBytes(16);
       
       // Encrypt content with AES
-      const cipher = require('crypto').createCipher('aes-256-gcm', key);
+      const cipher = crypto.createCipher('aes-256-gcm', key);
       cipher.setAAD(Buffer.from('DirectTrust', 'utf8'));
       
       let encrypted = cipher.update(content, 'utf8', 'hex');

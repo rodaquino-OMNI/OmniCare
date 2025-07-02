@@ -2,18 +2,18 @@ import { NextFunction, Request, Response } from 'express';
 // import jwt from 'jsonwebtoken';
 
 import { JWTAuthService } from '../auth/jwt.service';
-import { hasHigherRole, hasPermission } from '../auth/role-permissions';
+import { hasPermission } from '../auth/role-permissions';
 // import config from '../config';
 import { accessControlService, AccessContext } from '../services/access-control.service';
 import { AuditService } from '../services/audit.service';
 import { SessionManager } from '../services/session.service';
 import { smartFHIRService } from '../services/smart-fhir.service';
 import { userService } from '../services/user.service';
-import { Permission, SessionInfo, User, UserRole, UserRoles, UserRoleLong } from '../types/auth.types';
-import { toCanonicalRole, UserRoleUnified } from '../types/unified-user-roles';
+import { Permission, User, UserRole } from '../types/auth.types';
+import { toCanonicalRole } from '../types/unified-user-roles';
 import { getErrorMessage } from '../utils/error.utils';
 import logger from '../utils/logger';
-import { isRoleAllowed, toUserRoleLong, validateRole } from '../utils/role.utils';
+import { isRoleAllowed } from '../utils/role.utils';
 
 // Standard Express middleware types
 

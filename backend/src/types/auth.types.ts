@@ -5,9 +5,22 @@
 
 import { Request } from 'express';
 
+// Define User interface locally since BackendUser doesn't exist in shared types
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  role: UserRoleLong;
+  firstName?: string;
+  lastName?: string;
+  isActive?: boolean;
+  lastLogin?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 // Import types from shared types
 import type { 
-  BackendUser as User,
   UserRole,
   UserRoleLong,
   UserRoleShort,
@@ -54,7 +67,7 @@ export {
 } from './unified-user-roles';
 
 // Re-export types with backend-specific modifications if needed
-export type { User };
+// User interface defined above
 
 // Re-export Permission enum from shared types
 export { PermissionEnum as Permission } from '../../../../shared/types';

@@ -59,10 +59,10 @@ export class VersionRouter {
       const handler = versionConfig.handler;
       if (typeof handler === 'function') {
         // It's a RequestHandler function
-        handler(req, res, next);
+        void handler(req, res, next);
       } else {
         // It's a Router, use it as middleware
-        (handler as Router)(req, res, next);
+        void (handler as Router)(req, res, next);
       }
     };
   }

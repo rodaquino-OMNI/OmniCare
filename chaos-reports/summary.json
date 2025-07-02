@@ -1,0 +1,48 @@
+{
+  "lastUpdated": "2025-07-02T20:33:17.313Z",
+  "totalExperiments": 4,
+  "successfulExperiments": 1,
+  "failedExperiments": 3,
+  "experimentsByType": {
+    "latency": {
+      "total": 3,
+      "successful": 1,
+      "failed": 2
+    },
+    "error": {
+      "total": 1,
+      "successful": 0,
+      "failed": 1
+    }
+  },
+  "recentExperiments": [
+    {
+      "name": "Random HTTP Errors",
+      "type": "error",
+      "timestamp": "2025-07-02T20:33:17.313Z",
+      "success": false,
+      "duration": 5052.6080409999995
+    },
+    {
+      "name": "API Latency Injection",
+      "type": "latency",
+      "timestamp": "2025-07-02T20:33:17.211Z",
+      "success": false,
+      "duration": 4950.379540999995
+    },
+    {
+      "name": "API Latency Injection",
+      "type": "latency",
+      "timestamp": "2025-07-02T20:33:12.244Z",
+      "success": false,
+      "duration": 101.19670800000313
+    },
+    {
+      "name": "API Latency Injection",
+      "type": "latency",
+      "timestamp": "2025-07-02T20:33:12.127Z",
+      "success": true,
+      "duration": 30002.916999999998
+    }
+  ]
+}

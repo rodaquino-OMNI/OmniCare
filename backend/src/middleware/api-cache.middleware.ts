@@ -193,7 +193,7 @@ export async function invalidateApiCache(pattern: string): Promise<number> {
 /**
  * Invalidate cache for specific resource
  */
-export async function invalidateResourceCache(resourceType: string, id?: string): Promise<void> {
+export function invalidateResourceCache(resourceType: string, id?: string): void {
   try {
     if (id) {
       // Invalidate specific resource

@@ -1,0 +1,45 @@
+{
+  "metadata": {
+    "reportVersion": "1.0",
+    "generatedAt": "2025-07-02T20:08:25.375Z",
+    "reporter": "OmniCare Chaos Reporter"
+  },
+  "experiment": {
+    "name": "Random HTTP Errors",
+    "description": "Inject random HTTP errors into API responses",
+    "type": "error",
+    "duration": 120000,
+    "targets": [
+      "/api/*"
+    ],
+    "parameters": {
+      "errorCodes": [
+        500,
+        502,
+        503,
+        504
+      ],
+      "errorRate": 0.1,
+      "excludePaths": [
+        "/api/health",
+        "/api/metrics"
+      ]
+    },
+    "safeguards": []
+  },
+  "execution": {
+    "startTime": "1970-01-01T00:03:06.667Z",
+    "endTime": "1970-01-01T00:03:11.739Z",
+    "duration": 5072.749750000017,
+    "success": false,
+    "errors": []
+  },
+  "metrics": {},
+  "impact": {
+    "severity": "UNKNOWN",
+    "description": "No metrics available"
+  },
+  "recommendations": [
+    "Experiment failed - investigate safeguard triggers or system issues"
+  ]
+}

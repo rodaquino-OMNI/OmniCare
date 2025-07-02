@@ -3,6 +3,7 @@
  * Manages PostgreSQL connection pool and database operations
  */
 
+import * as os from 'os';
 import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
 
 interface PoolStats {
@@ -99,7 +100,7 @@ export class DatabaseService {
    * Calculate optimal pool size based on environment and CPU cores
    */
   private calculateOptimalPoolSize(): { min: number; max: number } {
-    const cpuCores = require('os').cpus().length;
+    const cpuCores = os.cpus().length;
     const env = config.server.env;
     
     if (env === 'production') {

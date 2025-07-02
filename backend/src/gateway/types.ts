@@ -10,7 +10,7 @@ import { UserRoleUnified } from '../types/unified-user-roles';
 export interface GatewayUser {
   id: string;
   username: string;
-  role: UserRoleUnified | string; // Support unified roles while maintaining flexibility
+  role: UserRoleUnified; // Use unified roles for type safety
   scope?: string[];
   patient?: string;
   encounter?: string;

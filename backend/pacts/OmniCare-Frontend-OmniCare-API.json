@@ -1,0 +1,307 @@
+{
+  "consumer": {
+    "name": "OmniCare-Frontend"
+  },
+  "interactions": [
+    {
+      "description": "a request for a patient by ID",
+      "providerState": "A patient exists",
+      "request": {
+        "headers": {
+          "Accept": "application/json",
+          "Authorization": "Bearer token"
+        },
+        "matchingRules": {
+          "$.header.Authorization": {
+            "match": "type"
+          }
+        },
+        "method": "GET",
+        "path": "/api/patients/patient-123"
+      },
+      "response": {
+        "body": {
+          "address": [
+            {
+              "city": "Anytown",
+              "country": "US",
+              "line": [
+                "123 Main St"
+              ],
+              "postalCode": "12345",
+              "state": "NY",
+              "use": "home"
+            }
+          ],
+          "birthDate": "1990-01-01",
+          "gender": "male",
+          "id": "patient-123",
+          "identifier": [
+            {
+              "system": "http://hospital.smarthealthit.org",
+              "value": "MRN123456"
+            }
+          ],
+          "meta": {
+            "lastUpdated": "2015-08-06T16:53:10.123+01:00",
+            "versionId": "1"
+          },
+          "name": [
+            {
+              "family": "Doe",
+              "given": [
+                "John"
+              ],
+              "use": "official"
+            }
+          ],
+          "resourceType": "Patient",
+          "telecom": [
+            {
+              "system": "phone",
+              "use": "home",
+              "value": "555-0123"
+            }
+          ]
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "matchingRules": {
+          "$.body.address": {
+            "match": "type",
+            "min": 1
+          },
+          "$.body.address[*].city": {
+            "match": "type"
+          },
+          "$.body.address[*].country": {
+            "match": "type"
+          },
+          "$.body.address[*].line": {
+            "match": "type",
+            "min": 1
+          },
+          "$.body.address[*].postalCode": {
+            "match": "regex",
+            "regex": "^\\d{5}(-\\d{4})?$"
+          },
+          "$.body.address[*].state": {
+            "match": "type"
+          },
+          "$.body.birthDate": {
+            "match": "regex",
+            "regex": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "$.body.gender": {
+            "match": "regex",
+            "regex": "male|female|other|unknown"
+          },
+          "$.body.id": {
+            "match": "type"
+          },
+          "$.body.identifier": {
+            "match": "type",
+            "min": 1
+          },
+          "$.body.identifier[*].value": {
+            "match": "regex",
+            "regex": "^MRN\\d{6}$"
+          },
+          "$.body.meta.lastUpdated": {
+            "match": "regex",
+            "regex": "^\\d{4}-[01]\\d-[0-3]\\dT[0-2]\\d:[0-5]\\d:[0-5]\\d\\.\\d+([+-][0-2]\\d(:?[0-5]\\d)?|Z)$"
+          },
+          "$.body.meta.versionId": {
+            "match": "type"
+          },
+          "$.body.name": {
+            "match": "type",
+            "min": 1
+          },
+          "$.body.name[*].family": {
+            "match": "type"
+          },
+          "$.body.name[*].given": {
+            "match": "type",
+            "min": 1
+          },
+          "$.body.telecom": {
+            "match": "type",
+            "min": 1
+          },
+          "$.body.telecom[*].system": {
+            "match": "regex",
+            "regex": "phone|fax|email|pager|url|sms|other"
+          },
+          "$.body.telecom[*].use": {
+            "match": "regex",
+            "regex": "home|work|temp|old|mobile"
+          },
+          "$.body.telecom[*].value": {
+            "match": "type"
+          }
+        },
+        "status": 200
+      }
+    },
+    {
+      "description": "a request with invalid patient data",
+      "request": {
+        "body": {
+          "gender": "invalid-gender",
+          "resourceType": "Patient"
+        },
+        "headers": {
+          "Authorization": "Bearer token",
+          "Content-Type": "application/json"
+        },
+        "matchingRules": {
+          "$.header.Authorization": {
+            "match": "type"
+          }
+        },
+        "method": "POST",
+        "path": "/api/patients"
+      },
+      "response": {
+        "body": {
+          "code": "VALIDATION_ERROR",
+          "details": [
+            {
+              "field": "name",
+              "message": "Name is required"
+            }
+          ],
+          "error": "Validation failed"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "matchingRules": {
+          "$.body.code": {
+            "match": "type"
+          },
+          "$.body.details": {
+            "match": "type",
+            "min": 1
+          },
+          "$.body.details[*].field": {
+            "match": "type"
+          },
+          "$.body.details[*].message": {
+            "match": "type"
+          },
+          "$.body.error": {
+            "match": "type"
+          }
+        },
+        "status": 400
+      }
+    },
+    {
+      "description": "a request without authorization",
+      "request": {
+        "method": "GET",
+        "path": "/api/patients/patient-123"
+      },
+      "response": {
+        "body": {
+          "code": "UNAUTHORIZED",
+          "error": "Unauthorized"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "matchingRules": {
+          "$.body.code": {
+            "match": "type"
+          },
+          "$.body.error": {
+            "match": "type"
+          }
+        },
+        "status": 401
+      }
+    },
+    {
+      "description": "a search request for patients named John",
+      "providerState": "Patients with name John exist",
+      "request": {
+        "headers": {
+          "Authorization": "Bearer token"
+        },
+        "matchingRules": {
+          "$.header.Authorization": {
+            "match": "type"
+          }
+        },
+        "method": "GET",
+        "path": "/api/patients",
+        "query": "gender=male&name=John"
+      },
+      "response": {
+        "body": {
+          "data": [
+            {
+              "gender": "male",
+              "id": "patient-123",
+              "name": [
+                {
+                  "given": [
+                    "John"
+                  ]
+                }
+              ],
+              "resourceType": "Patient"
+            }
+          ],
+          "pagination": {
+            "limit": 20,
+            "offset": 0,
+            "total": 5
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "matchingRules": {
+          "$.body.data": {
+            "match": "type",
+            "min": 1
+          },
+          "$.body.data[*].id": {
+            "match": "type"
+          },
+          "$.body.data[*].name": {
+            "match": "type",
+            "min": 1
+          },
+          "$.body.data[*].name[*].given": {
+            "match": "type",
+            "min": 1
+          },
+          "$.body.pagination": {
+            "match": "type"
+          }
+        },
+        "status": 200
+      }
+    }
+  ],
+  "metadata": {
+    "pact-js": {
+      "version": "15.0.1"
+    },
+    "pactRust": {
+      "ffi": "0.4.22",
+      "models": "1.2.3"
+    },
+    "pactSpecification": {
+      "version": "2.0.0"
+    }
+  },
+  "provider": {
+    "name": "OmniCare-API"
+  }
+}

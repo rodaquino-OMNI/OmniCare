@@ -1,3 +1,5 @@
+import * as crypto from 'crypto';
+
 // Import ajv with fallback for tests
 let Ajv: any;
 let addFormats: any;
@@ -529,7 +531,7 @@ export class FHIRValidationService {
    */
   private generateCacheKey(resource: any, resourceType: string): string {
     const resourceString = JSON.stringify(resource);
-    const hash = require('crypto').createHash('md5').update(resourceString).digest('hex');
+    const hash = crypto.createHash('md5').update(resourceString).digest('hex');
     return `${resourceType}:${hash}`;
   }
 

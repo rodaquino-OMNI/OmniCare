@@ -3,6 +3,7 @@
  * Generates comprehensive HIPAA compliance and security assessment report
  */
 
+import * as fs from 'fs';
 import { AppDataSource, initializeTypeORM } from '../config/typeorm.config';
 import { enhancedAuditService } from '../services/enhanced-audit.service';
 import { redisSessionStore } from '../services/redis-session.service';
@@ -456,7 +457,6 @@ async function generateComplianceReport() {
   }
 
   // Save report to file
-  const fs = require('fs');
   const reportPath = `./security-compliance-report-${Date.now()}.json`;
   fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
   console.log(`\nFull report saved to: ${reportPath}`);

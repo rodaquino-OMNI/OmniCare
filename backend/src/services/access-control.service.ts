@@ -5,7 +5,7 @@
 
 import { auditService } from './audit.service';
 
-import { AuditLogEntry, Permission, User, UserRole } from '@/types/auth.types';
+import { User, UserRole } from '@/types/auth.types';
 import logger from '@/utils/logger';
 
 export interface AccessContext {
