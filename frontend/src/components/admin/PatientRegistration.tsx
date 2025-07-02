@@ -620,7 +620,7 @@ const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onComplete, o
         <Card padding="lg" withBorder>
           <Group justify="space-between">
             <div>
-              {currentStep > ResourceHistoryTable && (
+              {currentStep > 0 && (
                 <Button
                   variant="light"
                   onClick={() => setCurrentStep(currentStep - 1)}

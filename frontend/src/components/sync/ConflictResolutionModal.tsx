@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useId } from 'react';
 import {
   Modal,
   Button,
@@ -35,7 +35,7 @@ import {
 } from '@tabler/icons-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { Patient, Observation, MedicationRequest, Resource } from '@medplum/fhirtypes';
-import { SyncConflict, ConflictResolution, ConflictResolutionStrategy } from '@/services/offline-sync.service';
+import { SyncConflict, ConflictResolution, ConflictResolutionStrategy } from '@/services/offline-sync-wrapper';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import ReactDiffViewer from 'react-diff-viewer-continued';
 
@@ -55,6 +55,11 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
   const { resolveConflict } = useOfflineSync();
   const [selectedStrategy, setSelectedStrategy] = useState<ConflictResolutionStrategy>('last-write-wins');
   const [isResolving, setIsResolving] = useState(false);
+  
+  // Accessibility IDs
+  const titleId = useId();
+  const descriptionId = useId();
+  const strategyGroupId = useId();
 
   // Parse dates
   const localDate = new Date(conflict.localResource.meta?.lastUpdated || 0);
@@ -238,11 +243,18 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
       opened={isOpen} 
       onClose={onClose} 
       size="90%"
+      role="dialog"
+      aria-labelledby={titleId}
+      aria-describedby={descriptionId}
+      trapFocus
+      closeOnEscape
       title={
         <Stack gap={4}>
-          <Text size="lg" fw={600}>Resolve Sync Conflict</Text>
+          <Text size="lg" fw={600} id={titleId}>Resolve Sync Conflict</Text>
           <Group gap="xs">
-            <Badge color="violet">{conflictSummary.resourceType}</Badge>
+            <Badge color="violet" aria-label={`Resource type: ${conflictSummary.resourceType}`}>
+              {conflictSummary.resourceType}
+            </Badge>
             <Text size="sm" c="dimmed">
               {conflictSummary.resourceDisplay}
             </Text>
@@ -252,19 +264,28 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
     >
       <Stack gap="md">
         {/* Conflict Summary */}
-        <Alert icon={<IconAlertTriangle />} color="orange">
+        <Alert 
+          icon={<IconAlertTriangle aria-hidden="true" />} 
+          color="orange"
+          role="alert"
+          id={descriptionId}
+        >
           <Stack gap="xs">
             <Text size="sm">
               This {conflictSummary.resourceType} has been modified both locally and on the server.
             </Text>
             {conflictSummary.conflicts.length > 0 && (
-              <List size="sm" gap="xs">
+              <List size="sm" gap="xs" role="list" aria-label="Conflict details">
                 {conflictSummary.conflicts.map((conflict: string, index: number) => (
-                  <List.Item key={index} icon={
-                    <ThemeIcon color="orange" size="xs" variant="light">
-                      <IconAlertTriangle size={12} />
-                    </ThemeIcon>
-                  }>
+                  <List.Item 
+                    key={index} 
+                    role="listitem"
+                    icon={
+                      <ThemeIcon color="orange" size="xs" variant="light">
+                        <IconAlertTriangle size={12} aria-hidden="true" />
+                      </ThemeIcon>
+                    }
+                  >
                     {conflict}
                   </List.Item>
                 ))}
@@ -274,15 +295,16 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
         </Alert>
 
         {/* Version Information */}
-        <SimpleGrid cols={2}>
-          <Card padding="sm">
+        <SimpleGrid cols={2} role="region" aria-labelledby="version-comparison">
+          <Text id="version-comparison" className="sr-only">Version comparison information</Text>
+          <Card padding="sm" role="article" aria-labelledby="local-version-header">
             <Group gap="xs" mb="xs">
               <ThemeIcon color="blue" variant="light" size="sm">
-                <IconDeviceDesktop size={16} />
+                <IconDeviceDesktop size={16} aria-hidden="true" />
               </ThemeIcon>
-              <Text fw={600} size="sm">Local Version</Text>
+              <Text fw={600} size="sm" id="local-version-header">Local Version</Text>
               {newerResource === 'local' && (
-                <Badge color="green" size="xs">Newer</Badge>
+                <Badge color="green" size="xs" aria-label="This version is newer">Newer</Badge>
               )}
             </Group>
             <Stack gap={4}>
@@ -291,14 +313,14 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
             </Stack>
           </Card>
 
-          <Card padding="sm">
+          <Card padding="sm" role="article" aria-labelledby="remote-version-header">
             <Group gap="xs" mb="xs">
               <ThemeIcon color="green" variant="light" size="sm">
-                <IconCloud size={16} />
+                <IconCloud size={16} aria-hidden="true" />
               </ThemeIcon>
-              <Text fw={600} size="sm">Remote Version</Text>
+              <Text fw={600} size="sm" id="remote-version-header">Remote Version</Text>
               {newerResource === 'remote' && (
-                <Badge color="green" size="xs">Newer</Badge>
+                <Badge color="green" size="xs" aria-label="This version is newer">Newer</Badge>
               )}
             </Group>
             <Stack gap={4}>
@@ -311,72 +333,101 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
         <Divider />
 
         {/* Comparison View */}
-        <Tabs defaultValue="diff">
-          <Tabs.List>
-            <Tabs.Tab value="diff">Visual Diff</Tabs.Tab>
-            <Tabs.Tab value="side">Side by Side</Tabs.Tab>
-            <Tabs.Tab value="raw">Raw JSON</Tabs.Tab>
+        <Tabs defaultValue="diff" role="region" aria-labelledby="comparison-tabs">
+          <Text id="comparison-tabs" className="sr-only">Data comparison views</Text>
+          <Tabs.List role="tablist" aria-label="Comparison view options">
+            <Tabs.Tab value="diff" role="tab" aria-controls="diff-panel">Visual Diff</Tabs.Tab>
+            <Tabs.Tab value="side" role="tab" aria-controls="side-panel">Side by Side</Tabs.Tab>
+            <Tabs.Tab value="raw" role="tab" aria-controls="raw-panel">Raw JSON</Tabs.Tab>
           </Tabs.List>
 
-          <Tabs.Panel value="diff" pt="md">
-            <ScrollArea h={400} type="auto">
-              <ReactDiffViewer
-                oldValue={formatJSON(conflict.remoteResource)}
-                newValue={formatJSON(conflict.localResource)}
-                splitView={false}
-                showDiffOnly={true}
-                leftTitle="Remote (Server)"
-                rightTitle="Local"
-                styles={{
-                  variables: {
-                    light: {
-                      diffViewerBackground: '#fafbfc',
-                    },
-                    dark: {
-                      diffViewerBackground: '#2e2e2e',
+          <Tabs.Panel 
+            value="diff" 
+            pt="md"
+            role="tabpanel"
+            id="diff-panel"
+            aria-labelledby="diff-tab"
+          >
+            <ScrollArea h={400} type="auto" aria-label="Visual difference comparison">
+              <div role="img" aria-label="Visual comparison showing differences between local and remote versions">
+                <ReactDiffViewer
+                  oldValue={formatJSON(conflict.remoteResource)}
+                  newValue={formatJSON(conflict.localResource)}
+                  splitView={false}
+                  showDiffOnly={true}
+                  leftTitle="Remote (Server)"
+                  rightTitle="Local"
+                  styles={{
+                    variables: {
+                      light: {
+                        diffViewerBackground: '#fafbfc',
+                      },
+                      dark: {
+                        diffViewerBackground: '#2e2e2e',
+                      }
                     }
-                  }
-                }}
-              />
+                  }}
+                />
+              </div>
             </ScrollArea>
           </Tabs.Panel>
 
-          <Tabs.Panel value="side" pt="md">
-            <ScrollArea h={400} type="auto">
-              <ReactDiffViewer
-                oldValue={formatJSON(conflict.remoteResource)}
-                newValue={formatJSON(conflict.localResource)}
-                splitView={true}
-                leftTitle="Remote (Server)"
-                rightTitle="Local"
-                styles={{
-                  variables: {
-                    light: {
-                      diffViewerBackground: '#fafbfc',
-                    },
-                    dark: {
-                      diffViewerBackground: '#2e2e2e',
+          <Tabs.Panel 
+            value="side" 
+            pt="md"
+            role="tabpanel"
+            id="side-panel"
+            aria-labelledby="side-tab"
+          >
+            <ScrollArea h={400} type="auto" aria-label="Side-by-side comparison">
+              <div role="img" aria-label="Side-by-side view of local and remote versions">
+                <ReactDiffViewer
+                  oldValue={formatJSON(conflict.remoteResource)}
+                  newValue={formatJSON(conflict.localResource)}
+                  splitView={true}
+                  leftTitle="Remote (Server)"
+                  rightTitle="Local"
+                  styles={{
+                    variables: {
+                      light: {
+                        diffViewerBackground: '#fafbfc',
+                      },
+                      dark: {
+                        diffViewerBackground: '#2e2e2e',
+                      }
                     }
-                  }
-                }}
-              />
+                  }}
+                />
+              </div>
             </ScrollArea>
           </Tabs.Panel>
 
-          <Tabs.Panel value="raw" pt="md">
+          <Tabs.Panel 
+            value="raw" 
+            pt="md"
+            role="tabpanel"
+            id="raw-panel"
+            aria-labelledby="raw-tab"
+          >
             <SimpleGrid cols={2}>
-              <Box>
-                <Text fw={600} size="sm" mb="xs">Local Resource</Text>
-                <ScrollArea h={350}>
-                  <Code block>
+              <Box role="region" aria-labelledby="local-json-header">
+                <Text fw={600} size="sm" mb="xs" id="local-json-header">Local Resource</Text>
+                <ScrollArea h={350} aria-label="Local resource JSON data">
+                  <Code 
+                    block
+                    aria-label="Local resource data in JSON format"
+                  >
                     {formatJSON(conflict.localResource)}
                   </Code>
                 </ScrollArea>
               </Box>
-              <Box>
-                <Text fw={600} size="sm" mb="xs">Remote Resource</Text>
-                <ScrollArea h={350}>
-                  <Code block>
+              <Box role="region" aria-labelledby="remote-json-header">
+                <Text fw={600} size="sm" mb="xs" id="remote-json-header">Remote Resource</Text>
+                <ScrollArea h={350} aria-label="Remote resource JSON data">
+                  <Code 
+                    block
+                    aria-label="Remote resource data in JSON format"
+                  >
                     {formatJSON(conflict.remoteResource)}
                   </Code>
                 </ScrollArea>
@@ -388,74 +439,79 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
         <Divider />
 
         {/* Resolution Options */}
-        <Box>
-          <Text fw={600} mb="md">Choose Resolution Strategy</Text>
+        <Box role="group" aria-labelledby={strategyGroupId}>
+          <Text fw={600} mb="md" id={strategyGroupId}>Choose Resolution Strategy</Text>
           <Radio.Group 
             value={selectedStrategy} 
             onChange={(value) => setSelectedStrategy(value as ConflictResolutionStrategy)}
+            aria-labelledby={strategyGroupId}
+            aria-describedby="strategy-help"
           >
-            <Stack gap="md">
+          <div id="strategy-help" className="sr-only">
+            Select how you want to resolve this sync conflict
+          </div>
+            <Stack gap="md" role="radiogroup">
               <Flex align="flex-start">
-                <Radio value="local-wins" mr="sm" />
+                <Radio value="local-wins" mr="sm" aria-describedby="local-wins-desc" />
                 <Box style={{ flex: 1 }}>
                   <Group gap="xs" mb={4}>
                     <ThemeIcon color="blue" variant="light" size="sm">
-                      <IconDeviceDesktop size={16} />
+                      <IconDeviceDesktop size={16} aria-hidden="true" />
                     </ThemeIcon>
                     <Text fw={500} size="sm">Keep Local Changes</Text>
                   </Group>
-                  <Text size="xs" c="dimmed">
+                  <Text size="xs" c="dimmed" id="local-wins-desc">
                     Use your local version and discard server changes
                   </Text>
                 </Box>
               </Flex>
 
               <Flex align="flex-start">
-                <Radio value="remote-wins" mr="sm" />
+                <Radio value="remote-wins" mr="sm" aria-describedby="remote-wins-desc" />
                 <Box style={{ flex: 1 }}>
                   <Group gap="xs" mb={4}>
                     <ThemeIcon color="green" variant="light" size="sm">
-                      <IconCloud size={16} />
+                      <IconCloud size={16} aria-hidden="true" />
                     </ThemeIcon>
                     <Text fw={500} size="sm">Keep Remote Changes</Text>
                   </Group>
-                  <Text size="xs" c="dimmed">
+                  <Text size="xs" c="dimmed" id="remote-wins-desc">
                     Use the server version and discard your local changes
                   </Text>
                 </Box>
               </Flex>
 
               <Flex align="flex-start">
-                <Radio value="last-write-wins" mr="sm" />
+                <Radio value="last-write-wins" mr="sm" aria-describedby="last-write-desc" />
                 <Box style={{ flex: 1 }}>
                   <Group gap="xs" mb={4}>
                     <ThemeIcon color="orange" variant="light" size="sm">
-                      <IconClock size={16} />
+                      <IconClock size={16} aria-hidden="true" />
                     </ThemeIcon>
                     <Text fw={500} size="sm">Keep Newest Version</Text>
                     {newerResource === 'local' ? (
-                      <Badge color="blue" size="xs">Local is newer</Badge>
+                      <Badge color="blue" size="xs" aria-label="Local version is newer">Local is newer</Badge>
                     ) : (
-                      <Badge color="green" size="xs">Remote is newer</Badge>
+                      <Badge color="green" size="xs" aria-label="Remote version is newer">Remote is newer</Badge>
                     )}
                   </Group>
-                  <Text size="xs" c="dimmed">
+                  <Text size="xs" c="dimmed" id="last-write-desc">
                     Automatically use the most recently modified version
                   </Text>
                 </Box>
               </Flex>
 
               <Flex align="flex-start">
-                <Radio value="merge" mr="sm" />
+                <Radio value="merge" mr="sm" aria-describedby="merge-desc" />
                 <Box style={{ flex: 1 }}>
                   <Group gap="xs" mb={4}>
                     <ThemeIcon color="violet" variant="light" size="sm">
-                      <IconGitMerge size={16} />
+                      <IconGitMerge size={16} aria-hidden="true" />
                     </ThemeIcon>
                     <Text fw={500} size="sm">Merge Changes</Text>
-                    <Badge color="yellow" size="xs">Beta</Badge>
+                    <Badge color="yellow" size="xs" aria-label="Beta feature">Beta</Badge>
                   </Group>
-                  <Text size="xs" c="dimmed">
+                  <Text size="xs" c="dimmed" id="merge-desc">
                     Attempt to merge both versions (may require manual review)
                   </Text>
                 </Box>
@@ -466,7 +522,12 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
 
         {/* Warning for data loss */}
         {(selectedStrategy === 'local-wins' || selectedStrategy === 'remote-wins') && (
-          <Alert icon={<IconInfoCircle />} color="blue">
+          <Alert 
+            icon={<IconInfoCircle aria-hidden="true" />} 
+            color="blue"
+            role="alert"
+            aria-live="polite"
+          >
             <Text size="sm">
               {selectedStrategy === 'local-wins' 
                 ? 'Server changes will be permanently discarded.'
@@ -477,17 +538,27 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
         )}
 
         {/* Actions */}
-        <Group justify="flex-end" mt="md">
-          <Button variant="subtle" onClick={onClose} disabled={isResolving}>
+        <Group justify="flex-end" mt="md" role="group" aria-label="Conflict resolution actions">
+          <Button 
+            variant="subtle" 
+            onClick={onClose} 
+            disabled={isResolving}
+            aria-label="Cancel conflict resolution"
+          >
             Cancel
           </Button>
           <Button
             onClick={handleResolve}
             loading={isResolving}
-            leftSection={<IconCircleCheck size={16} />}
+            leftSection={<IconCircleCheck size={16} aria-hidden="true" />}
+            aria-label={`Resolve conflict using ${selectedStrategy} strategy`}
+            aria-describedby="resolve-button-help"
           >
             Resolve Conflict
           </Button>
+          <div id="resolve-button-help" className="sr-only">
+            This will apply the selected resolution strategy and resolve the conflict
+          </div>
         </Group>
       </Stack>
     </Modal>

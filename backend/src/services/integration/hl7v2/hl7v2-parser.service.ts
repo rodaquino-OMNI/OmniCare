@@ -12,8 +12,9 @@ import {
   HL7v2ErrorCondition
 } from '../types/hl7v2.types';
 import { IntegrationValidationResult } from '../types/integration.types';
-import logger from '@/utils/logger';
+
 import { getErrorMessage } from '@/utils/error.utils';
+import logger from '@/utils/logger';
 
 /**
  * HL7 v2 Parser Service
@@ -583,7 +584,7 @@ export class HL7v2ParserService {
     const processingId = 'P'; // Production
     const versionId = '2.5.1';
     
-    let msh = `MSH|^~\\&|${sendingApplication}|${sendingFacility}|${receivingApplication || ''}|${receivingFacility || ''}|${timestamp}||ACK|${ack.messageControlId}|${processingId}|${versionId}`;
+    const msh = `MSH|^~\\&|${sendingApplication}|${sendingFacility}|${receivingApplication || ''}|${receivingFacility || ''}|${timestamp}||ACK|${ack.messageControlId}|${processingId}|${versionId}`;
     
     let msa = `MSA|${ack.acknowledgmentCode}|${ack.messageControlId}`;
     if (ack.textMessage) {

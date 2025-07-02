@@ -1,0 +1,265 @@
+{
+  "metadata": {
+    "generated": "2025-07-01T00:00:00Z",
+    "analyst": "Strategic Planning Specialist",
+    "currentReadiness": 35,
+    "targetReadiness": 100,
+    "estimatedTimeToProduction": "4-6 weeks"
+  },
+  "phases": {
+    "phase0": {
+      "name": "Critical Blockers",
+      "duration": "1 week",
+      "priority": "P0",
+      "tasks": [
+        {
+          "id": "backend-typescript-fix",
+          "name": "Backend TypeScript Compilation Fix",
+          "duration": "2 days",
+          "impact": "Unblocks deployment",
+          "status": "pending"
+        },
+        {
+          "id": "database-setup",
+          "name": "Database Test Environment Setup",
+          "duration": "1 day",
+          "impact": "Enables test execution",
+          "status": "pending"
+        },
+        {
+          "id": "frontend-typescript",
+          "name": "Frontend TypeScript Resolution",
+          "duration": "2 days",
+          "impact": "Resolves 153 errors",
+          "status": "pending"
+        },
+        {
+          "id": "test-stabilization",
+          "name": "Test Suite Stabilization",
+          "duration": "2 days",
+          "impact": "282 failing tests fixed",
+          "status": "pending"
+        }
+      ]
+    },
+    "phase1": {
+      "name": "Quick Wins",
+      "duration": "1 week",
+      "priority": "P0-P1",
+      "tasks": [
+        {
+          "id": "virtual-scrolling",
+          "name": "Patient List Virtual Scrolling",
+          "duration": "1 day",
+          "impact": "Handle 10k+ patients",
+          "status": "pending"
+        },
+        {
+          "id": "medplum-search",
+          "name": "Medplum SearchControl Integration",
+          "duration": "2 days",
+          "impact": "30% code reduction",
+          "status": "pending"
+        },
+        {
+          "id": "dark-mode",
+          "name": "Dark Mode Implementation",
+          "duration": "1 day",
+          "impact": "User preference support",
+          "status": "pending"
+        },
+        {
+          "id": "performance-quick-wins",
+          "name": "Component Performance Optimizations",
+          "duration": "2 days",
+          "impact": "50-70% fewer re-renders",
+          "status": "partially-complete"
+        }
+      ]
+    },
+    "phase2": {
+      "name": "Medium-term Improvements",
+      "duration": "3 weeks",
+      "priority": "P1-P2",
+      "categories": {
+        "pageEnhancements": {
+          "dashboard": {
+            "features": ["customizable-widgets", "real-time-updates", "smart-notifications"],
+            "estimatedHours": 68
+          },
+          "patientSummary": {
+            "features": ["timeline-view", "smart-graphs", "resource-badges"],
+            "estimatedHours": 38
+          },
+          "clinicalNotes": {
+            "features": ["template-library", "smart-snippets", "reference-linking"],
+            "estimatedHours": 44
+          }
+        },
+        "architectureUpgrades": {
+          "displayInputPattern": {
+            "impact": "Consistent architecture",
+            "effort": "1 week"
+          },
+          "dynamicForms": {
+            "impact": "50% form code reduction",
+            "effort": "1 week"
+          }
+        },
+        "performanceOptimizations": {
+          "codeSplitting": {
+            "impact": "40% faster load",
+            "effort": "3 days"
+          },
+          "advancedCaching": {
+            "impact": "60% fewer API calls",
+            "effort": "1 week"
+          }
+        }
+      }
+    },
+    "phase3": {
+      "name": "Long-term Enhancements",
+      "duration": "2-3 months",
+      "priority": "P2-P3",
+      "features": [
+        {
+          "category": "clinical",
+          "items": [
+            "appointment-calendar-system",
+            "drug-interaction-checking",
+            "formulary-integration",
+            "clinical-decision-support"
+          ]
+        },
+        {
+          "category": "offline",
+          "items": [
+            "predictive-caching",
+            "advanced-conflict-resolution",
+            "bandwidth-aware-sync"
+          ]
+        },
+        {
+          "category": "enterprise",
+          "items": [
+            "multi-organization-support",
+            "advanced-analytics",
+            "custom-report-builder"
+          ]
+        }
+      ]
+    }
+  },
+  "pageSpecificImprovements": {
+    "dashboard": {
+      "priority": "HIGH",
+      "totalEstimatedHours": 84,
+      "keyFeatures": [
+        "customizable-widgets",
+        "real-time-updates",
+        "smart-notifications",
+        "performance-metrics"
+      ]
+    },
+    "patientSummary": {
+      "priority": "HIGH",
+      "totalEstimatedHours": 38,
+      "keyFeatures": [
+        "timeline-view",
+        "smart-graphs",
+        "resource-badges",
+        "quick-actions"
+      ]
+    },
+    "clinicalNotes": {
+      "priority": "HIGH",
+      "totalEstimatedHours": 68,
+      "keyFeatures": [
+        "template-library",
+        "voice-dictation",
+        "smart-snippets",
+        "reference-linking"
+      ]
+    },
+    "appointments": {
+      "priority": "HIGH",
+      "totalEstimatedHours": 92,
+      "keyFeatures": [
+        "calendar-integration",
+        "availability-checker",
+        "bulk-scheduling",
+        "smart-reminders"
+      ]
+    },
+    "medications": {
+      "priority": "HIGH",
+      "totalEstimatedHours": 92,
+      "keyFeatures": [
+        "drug-interaction-checker",
+        "medication-timeline",
+        "formulary-integration",
+        "refill-management"
+      ]
+    }
+  },
+  "riskMitigation": {
+    "technicalRisks": [
+      {
+        "risk": "Medplum Integration Issues",
+        "likelihood": "medium",
+        "impact": "high",
+        "mitigation": "Incremental adoption with fallbacks"
+      },
+      {
+        "risk": "Performance Regressions",
+        "likelihood": "low",
+        "impact": "high",
+        "mitigation": "Feature flags and monitoring"
+      },
+      {
+        "risk": "Offline Sync Conflicts",
+        "likelihood": "medium",
+        "impact": "medium",
+        "mitigation": "Comprehensive testing and manual queue"
+      }
+    ],
+    "resourceRisks": [
+      {
+        "risk": "Timeline Slippage",
+        "likelihood": "medium",
+        "impact": "medium",
+        "mitigation": "20% time buffer per phase"
+      },
+      {
+        "risk": "Skill Gaps",
+        "likelihood": "low",
+        "impact": "medium",
+        "mitigation": "Team training and vendor support"
+      }
+    ]
+  },
+  "successMetrics": {
+    "phase1": {
+      "backendCompiles": true,
+      "frontendBuilds": true,
+      "testsPassingPercent": 50,
+      "medplumComponentsIntegrated": 3,
+      "pageLoadTimeSeconds": 2
+    },
+    "phase2": {
+      "typeScriptErrorsResolved": true,
+      "testCoveragePercent": 80,
+      "medplumComponentsIntegrated": 10,
+      "bundleSizeReductionPercent": 30,
+      "apiResponseTimeMs": 500
+    },
+    "phase3": {
+      "productionReadyPercent": 100,
+      "offlineCapability": "full",
+      "hipaaCompliant": true,
+      "concurrentUsersSupported": 1000,
+      "errorRatePercent": 1
+    }
+  }
+}

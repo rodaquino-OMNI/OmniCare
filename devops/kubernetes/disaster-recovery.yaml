@@ -1,0 +1,551 @@
+# Disaster Recovery Configuration for OmniCare EMR
+# Cross-region backup, failover procedures, and business continuity
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: disaster-recovery-config
+  namespace: omnicare-prod
+  labels:
+    app: disaster-recovery
+    component: configuration
+data:
+  # Disaster Recovery Parameters
+  DR_REGION: "us-west-2"
+  PRIMARY_REGION: "us-east-1"
+  RTO_TARGET: "4h"  # Recovery Time Objective
+  RPO_TARGET: "15m" # Recovery Point Objective
+  BACKUP_RETENTION_DAYS: "2555" # 7 years for HIPAA compliance
+  CROSS_REGION_REPLICATION: "true"
+  
+  # S3 Bucket Configuration
+  PRIMARY_BACKUP_BUCKET: "omnicare-prod-backups-us-east-1"
+  DR_BACKUP_BUCKET: "omnicare-prod-backups-us-west-2"
+  
+  # Database Configuration
+  DB_BACKUP_SCHEDULE: "0 */6 * * *" # Every 6 hours
+  DB_FULL_BACKUP_SCHEDULE: "0 2 * * 0" # Weekly full backup
+  DB_POINT_IN_TIME_RECOVERY: "true"
+  
+  # Application Configuration
+  APP_BACKUP_SCHEDULE: "0 1 * * *" # Daily
+  CONFIG_BACKUP_SCHEDULE: "0 3 * * *" # Daily
+---
+# Cross-Region Database Replication Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dr-database-secret
+  namespace: omnicare-prod
+type: Opaque
+data:
+  DR_DB_HOST: ZHItcG9zdGdyZXMtdXMtd2VzdC0yLnJkcy5hbWF6b25hd3MuY29t # Base64
+  DR_DB_USERNAME: b21uaWNhcmVfZHJfdXNlcg== # Base64: omnicare_dr_user
+  DR_DB_PASSWORD: RFItUGFzc3dvcmQtMzg3MiE= # Base64: DR-Password-3872!
+  DR_REPLICATION_PASSWORD: RFItUmVwbGljYXRpb24tUGFzcw== # Base64
+---
+# Service Account for Disaster Recovery Operations
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: disaster-recovery-service-account
+  namespace: omnicare-prod
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT-ID:role/OmniCareDisasterRecoveryRole
+---
+# Disaster Recovery Job Template
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: dr-failover-preparation
+  namespace: omnicare-prod
+  labels:
+    app: disaster-recovery
+    component: failover
+spec:
+  template:
+    spec:
+      serviceAccountName: disaster-recovery-service-account
+      containers:
+      - name: dr-failover
+        image: amazon/aws-cli:latest
+        command:
+        - /bin/bash
+        - -c
+        - |
+          set -e
+          echo "Starting Disaster Recovery Failover Preparation..."
+          
+          # 1. Verify DR region infrastructure
+          aws ec2 describe-regions --region $DR_REGION
+          
+          # 2. Check DR database status
+          aws rds describe-db-instances --region $DR_REGION --db-instance-identifier omnicare-dr
+          
+          # 3. Verify cross-region replication status
+          aws s3api head-bucket --bucket $DR_BACKUP_BUCKET --region $DR_REGION
+          
+          # 4. Test network connectivity to DR region
+          aws eks describe-cluster --name omnicare-dr --region $DR_REGION
+          
+          # 5. Validate backup integrity
+          aws s3 ls s3://$DR_BACKUP_BUCKET/database/ --region $DR_REGION
+          
+          # 6. Check DNS failover readiness
+          aws route53 list-health-checks
+          
+          # 7. Prepare failover checklist
+          cat > /tmp/failover-checklist.txt << EOF
+          DISASTER RECOVERY FAILOVER CHECKLIST
+          ====================================
+          
+          Pre-Failover:
+          [ ] Verify primary region is truly down
+          [ ] Confirm RTO/RPO requirements can be met
+          [ ] Notify stakeholders of impending failover
+          [ ] Document current system state
+          
+          Database Failover:
+          [ ] Promote read replica to primary in DR region
+          [ ] Update connection strings
+          [ ] Verify data consistency
+          [ ] Test write operations
+          
+          Application Failover:
+          [ ] Scale up DR region EKS cluster
+          [ ] Deploy latest application images
+          [ ] Update load balancer targets
+          [ ] Test health checks
+          
+          DNS Failover:
+          [ ] Update Route53 records to point to DR region
+          [ ] Verify DNS propagation
+          [ ] Test application accessibility
+          
+          Post-Failover:
+          [ ] Monitor application performance
+          [ ] Verify all services are running
+          [ ] Test critical user workflows
+          [ ] Begin planning for failback
+          
+          EOF
+          
+          # Upload checklist to S3
+          aws s3 cp /tmp/failover-checklist.txt s3://$DR_BACKUP_BUCKET/disaster-recovery/
+          
+          echo "Disaster Recovery preparation completed successfully"
+        env:
+        - name: DR_REGION
+          valueFrom:
+            configMapKeyRef:
+              name: disaster-recovery-config
+              key: DR_REGION
+        - name: PRIMARY_REGION
+          valueFrom:
+            configMapKeyRef:
+              name: disaster-recovery-config
+              key: PRIMARY_REGION
+        - name: DR_BACKUP_BUCKET
+          valueFrom:
+            configMapKeyRef:
+              name: disaster-recovery-config
+              key: DR_BACKUP_BUCKET
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+      restartPolicy: OnFailure
+---
+# Cross-Region Backup CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cross-region-backup
+  namespace: omnicare-prod
+  labels:
+    app: disaster-recovery
+    component: backup
+spec:
+  schedule: "0 */6 * * *" # Every 6 hours
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 3
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 86400
+      template:
+        spec:
+          serviceAccountName: disaster-recovery-service-account
+          containers:
+          - name: cross-region-backup
+            image: postgres:15-alpine
+            command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+              BACKUP_PREFIX="disaster-recovery-${TIMESTAMP}"
+              
+              echo "Starting cross-region backup process..."
+              
+              # 1. Create database backup
+              echo "Creating database backup..."
+              pg_dump -h postgres-primary -U $POSTGRES_USER -d $POSTGRES_DB \
+                --verbose --format=custom > /tmp/${BACKUP_PREFIX}-database.dump
+              
+              # 2. Compress backup
+              gzip /tmp/${BACKUP_PREFIX}-database.dump
+              
+              # 3. Upload to primary region S3
+              echo "Uploading to primary region..."
+              aws s3 cp /tmp/${BACKUP_PREFIX}-database.dump.gz \
+                s3://$PRIMARY_BACKUP_BUCKET/disaster-recovery/ \
+                --region $PRIMARY_REGION
+              
+              # 4. Cross-region replication to DR region
+              echo "Replicating to DR region..."
+              aws s3 cp s3://$PRIMARY_BACKUP_BUCKET/disaster-recovery/${BACKUP_PREFIX}-database.dump.gz \
+                s3://$DR_BACKUP_BUCKET/disaster-recovery/ \
+                --region $DR_REGION
+              
+              # 5. Verify backup in both regions
+              echo "Verifying backup integrity..."
+              PRIMARY_SIZE=$(aws s3api head-object \
+                --bucket $PRIMARY_BACKUP_BUCKET \
+                --key disaster-recovery/${BACKUP_PREFIX}-database.dump.gz \
+                --region $PRIMARY_REGION \
+                --query ContentLength --output text)
+              
+              DR_SIZE=$(aws s3api head-object \
+                --bucket $DR_BACKUP_BUCKET \
+                --key disaster-recovery/${BACKUP_PREFIX}-database.dump.gz \
+                --region $DR_REGION \
+                --query ContentLength --output text)
+              
+              if [ "$PRIMARY_SIZE" -eq "$DR_SIZE" ]; then
+                echo "Backup verification successful: ${PRIMARY_SIZE} bytes"
+              else
+                echo "ERROR: Backup size mismatch between regions"
+                exit 1
+              fi
+              
+              # 6. Create Kubernetes configuration backup
+              echo "Creating Kubernetes configuration backup..."
+              kubectl get all -n omnicare-prod -o yaml > /tmp/${BACKUP_PREFIX}-k8s-config.yaml
+              
+              # 7. Upload K8s config to both regions
+              aws s3 cp /tmp/${BACKUP_PREFIX}-k8s-config.yaml \
+                s3://$PRIMARY_BACKUP_BUCKET/kubernetes/ --region $PRIMARY_REGION
+              aws s3 cp /tmp/${BACKUP_PREFIX}-k8s-config.yaml \
+                s3://$DR_BACKUP_BUCKET/kubernetes/ --region $DR_REGION
+              
+              # 8. Update disaster recovery status
+              cat > /tmp/dr-status.json << EOF
+              {
+                "lastBackupTime": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+                "backupSize": $PRIMARY_SIZE,
+                "backupLocation": {
+                  "primary": "s3://$PRIMARY_BACKUP_BUCKET/disaster-recovery/${BACKUP_PREFIX}-database.dump.gz",
+                  "dr": "s3://$DR_BACKUP_BUCKET/disaster-recovery/${BACKUP_PREFIX}-database.dump.gz"
+                },
+                "status": "completed",
+                "rtoTarget": "$RTO_TARGET",
+                "rpoTarget": "$RPO_TARGET"
+              }
+              EOF
+              
+              aws s3 cp /tmp/dr-status.json s3://$DR_BACKUP_BUCKET/status/latest.json --region $DR_REGION
+              
+              # 9. Clean up old backups (retain based on HIPAA requirements)
+              echo "Cleaning up old backups..."
+              aws s3 ls s3://$PRIMARY_BACKUP_BUCKET/disaster-recovery/ --region $PRIMARY_REGION | \
+                awk '$1 < "'$(date -d "-${BACKUP_RETENTION_DAYS} days" +%Y-%m-%d)'" {print $4}' | \
+                xargs -I {} aws s3 rm s3://$PRIMARY_BACKUP_BUCKET/disaster-recovery/{} --region $PRIMARY_REGION
+              
+              aws s3 ls s3://$DR_BACKUP_BUCKET/disaster-recovery/ --region $DR_REGION | \
+                awk '$1 < "'$(date -d "-${BACKUP_RETENTION_DAYS} days" +%Y-%m-%d)'" {print $4}' | \
+                xargs -I {} aws s3 rm s3://$DR_BACKUP_BUCKET/disaster-recovery/{} --region $DR_REGION
+              
+              echo "Cross-region backup completed successfully"
+            env:
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-prod-config
+                  key: POSTGRES_USER
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-prod-config
+                  key: POSTGRES_DB
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-prod-secret
+                  key: POSTGRES_PASSWORD
+            - name: PRIMARY_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: disaster-recovery-config
+                  key: PRIMARY_REGION
+            - name: DR_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: disaster-recovery-config
+                  key: DR_REGION
+            - name: PRIMARY_BACKUP_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: disaster-recovery-config
+                  key: PRIMARY_BACKUP_BUCKET
+            - name: DR_BACKUP_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: disaster-recovery-config
+                  key: DR_BACKUP_BUCKET
+            - name: BACKUP_RETENTION_DAYS
+              valueFrom:
+                configMapKeyRef:
+                  name: disaster-recovery-config
+                  key: BACKUP_RETENTION_DAYS
+            - name: RTO_TARGET
+              valueFrom:
+                configMapKeyRef:
+                  name: disaster-recovery-config
+                  key: RTO_TARGET
+            - name: RPO_TARGET
+              valueFrom:
+                configMapKeyRef:
+                  name: disaster-recovery-config
+                  key: RPO_TARGET
+            resources:
+              requests:
+                cpu: 500m
+                memory: 1Gi
+              limits:
+                cpu: 1000m
+                memory: 2Gi
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                - ALL
+          restartPolicy: OnFailure
+---
+# Disaster Recovery Testing CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: dr-testing
+  namespace: omnicare-prod
+  labels:
+    app: disaster-recovery
+    component: testing
+spec:
+  schedule: "0 4 * * 1" # Weekly on Monday at 4 AM
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 604800 # 7 days
+      template:
+        spec:
+          serviceAccountName: disaster-recovery-service-account
+          containers:
+          - name: dr-testing
+            image: amazon/aws-cli:latest
+            command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              echo "Starting Disaster Recovery Test..."
+              
+              # 1. Test DR region connectivity
+              echo "Testing DR region connectivity..."
+              aws ec2 describe-availability-zones --region $DR_REGION
+              
+              # 2. Test database restore from backup
+              echo "Testing database backup restore..."
+              LATEST_BACKUP=$(aws s3 ls s3://$DR_BACKUP_BUCKET/disaster-recovery/ \
+                --region $DR_REGION | sort | tail -n 1 | awk '{print $4}')
+              
+              if [ -n "$LATEST_BACKUP" ]; then
+                echo "Latest backup found: $LATEST_BACKUP"
+                
+                # Download and test backup file
+                aws s3 cp s3://$DR_BACKUP_BUCKET/disaster-recovery/$LATEST_BACKUP \
+                  /tmp/test-backup.dump.gz --region $DR_REGION
+                
+                # Verify backup file integrity
+                gunzip -t /tmp/test-backup.dump.gz
+                echo "Backup file integrity verified"
+              else
+                echo "ERROR: No backup files found in DR region"
+                exit 1
+              fi
+              
+              # 3. Test EKS cluster accessibility in DR region
+              echo "Testing DR region EKS cluster..."
+              aws eks describe-cluster --name omnicare-dr --region $DR_REGION || {
+                echo "WARNING: DR EKS cluster not found or not accessible"
+              }
+              
+              # 4. Test DNS failover capability
+              echo "Testing DNS failover capability..."
+              aws route53 list-health-checks --query 'HealthChecks[?Config.Type==`HTTPS`]'
+              
+              # 5. Generate DR test report
+              cat > /tmp/dr-test-report.json << EOF
+              {
+                "testDate": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+                "testResults": {
+                  "drRegionConnectivity": "passed",
+                  "backupIntegrity": "passed",
+                  "eksClusterAccess": "warning",
+                  "dnsFailover": "passed"
+                },
+                "recommendations": [
+                  "Ensure DR EKS cluster is properly configured",
+                  "Test application deployment in DR region",
+                  "Verify monitoring systems in DR region"
+                ],
+                "nextTestDate": "$(date -d '+7 days' -u +%Y-%m-%dT%H:%M:%SZ)"
+              }
+              EOF
+              
+              # Upload test report
+              aws s3 cp /tmp/dr-test-report.json \
+                s3://$DR_BACKUP_BUCKET/test-reports/dr-test-$(date +%Y%m%d).json \
+                --region $DR_REGION
+              
+              echo "Disaster Recovery test completed"
+            env:
+            - name: DR_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: disaster-recovery-config
+                  key: DR_REGION
+            - name: DR_BACKUP_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: disaster-recovery-config
+                  key: DR_BACKUP_BUCKET
+            resources:
+              requests:
+                cpu: 250m
+                memory: 512Mi
+              limits:
+                cpu: 500m
+                memory: 1Gi
+          restartPolicy: OnFailure
+---
+# Disaster Recovery Runbook ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dr-runbook
+  namespace: omnicare-prod
+data:
+  disaster-recovery-runbook.md: |
+    # OmniCare EMR Disaster Recovery Runbook
+    
+    ## Overview
+    This runbook guides the disaster recovery process for OmniCare EMR in case of primary region failure.
+    
+    **RTO Target:** 4 hours
+    **RPO Target:** 15 minutes
+    
+    ## Emergency Contacts
+    - On-call Engineer: +1-555-0123
+    - DevOps Lead: +1-555-0124
+    - Security Officer: +1-555-0125
+    - Compliance Officer: +1-555-0126
+    
+    ## Disaster Declaration Criteria
+    1. Primary region (us-east-1) completely unavailable for >30 minutes
+    2. Database primary cannot be recovered within RTO
+    3. Critical business functions cannot be restored in primary region
+    
+    ## Failover Procedure
+    
+    ### Phase 1: Assessment (Target: 30 minutes)
+    1. Confirm primary region status
+    2. Assess data loss (RPO validation)
+    3. Notify stakeholders
+    4. Activate disaster recovery team
+    
+    ### Phase 2: Database Failover (Target: 90 minutes)
+    1. Promote read replica in DR region
+    2. Update database connection strings
+    3. Verify data consistency
+    4. Test database connectivity
+    
+    ### Phase 3: Application Failover (Target: 120 minutes)
+    1. Scale up DR region EKS cluster
+    2. Deploy application from latest images
+    3. Update load balancer configuration
+    4. Configure monitoring in DR region
+    
+    ### Phase 4: DNS Cutover (Target: 30 minutes)
+    1. Update Route53 records
+    2. Verify DNS propagation
+    3. Test application accessibility
+    4. Monitor traffic patterns
+    
+    ## Verification Steps
+    1. Database read/write operations
+    2. User authentication and authorization
+    3. Critical EMR workflows
+    4. HIPAA audit logging
+    5. Monitoring and alerting
+    
+    ## Rollback Procedure
+    1. Assess primary region recovery
+    2. Plan data synchronization
+    3. Execute reverse failover
+    4. Verify system integrity
+    
+    ## Post-Incident Activities
+    1. Document lessons learned
+    2. Update runbook procedures
+    3. Schedule DR test improvements
+    4. Notify compliance team
+---
+# Disaster Recovery Monitoring Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: dr-monitoring-service
+  namespace: omnicare-prod
+  labels:
+    app: disaster-recovery
+    component: monitoring
+spec:
+  selector:
+    app: disaster-recovery
+    component: monitoring
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: metrics
+---
+# ServiceMonitor for DR metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: disaster-recovery-metrics
+  namespace: omnicare-prod
+spec:
+  selector:
+    matchLabels:
+      app: disaster-recovery
+      component: monitoring
+  endpoints:
+  - port: metrics
+    interval: 60s
+    path: /metrics

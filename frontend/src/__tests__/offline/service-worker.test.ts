@@ -290,7 +290,7 @@ describe('Service Worker Tests', () => {
       const cache = await caches.open('static-v1');
       const keys = await cache.keys();
       
-      expect(keys.length).toBeGreaterThan(ResourceHistoryTable);
+      expect(keys.length).toBeGreaterThan(0);
       expect(keys.map(req => req.url)).toContain('/offline.html');
     });
 
@@ -509,7 +509,7 @@ describe('Service Worker Tests', () => {
     });
 
     it('should retry failed sync operations', async () => {
-      let attempts = ResourceHistoryTable;
+      let attempts = 0;
       global.fetch = jest.fn().mockImplementation(() => {
         attempts++;
         if (attempts < 3) {
@@ -520,7 +520,7 @@ describe('Service Worker Tests', () => {
 
       // Mock sync with retry logic
       const syncWithRetry = async () => {
-        for (let i = ResourceHistoryTable; i < 3; i++) {
+        for (let i = 0; i < 3; i++) {
           try {
             await (swImplementation as any).syncPatientData();
             break;

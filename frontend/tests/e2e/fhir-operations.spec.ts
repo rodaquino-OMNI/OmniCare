@@ -166,7 +166,7 @@ test.describe('FHIR Operations - Comprehensive Integration', () => {
           firstName: 'John',
           lastName: 'Doe',
           dateOfBirth: '1980-05-15',
-          gender: 'male',
+          gender: 'male' as const,
           email: 'invalid-email-format',
           phone: '123' // Invalid phone
         });
@@ -585,7 +585,7 @@ test.describe('FHIR Operations - Comprehensive Integration', () => {
           firstName: 'John',
           lastName: 'Doe',
           dateOfBirth: 'invalid-date',
-          gender: 'male'
+          gender: 'male' as const
         });
         
         await page.getByLabel(/consent to treatment/i).check();

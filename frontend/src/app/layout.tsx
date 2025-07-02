@@ -4,6 +4,7 @@ import { ColorSchemeScript } from '@mantine/core';
 import { Providers } from "@/lib/providers";
 import { APP_NAME, APP_DESCRIPTION } from "@/constants";
 import "./globals.css";
+import "./mobile.css";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -44,11 +45,6 @@ export const metadata: Metadata = {
       follow: false,
     },
   },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-  },
 };
 
 export default function RootLayout({
@@ -57,18 +53,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
       <head>
-        <ColorSchemeScript />
+        <ColorSchemeScript defaultColorScheme="light" forceColorScheme="light" />
         <link rel="icon" href="/favicon.ico" />
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#ResourceHistoryTable91FF" />
+        <meta name="theme-color" content="#1c7ed6" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="OmniCare EMR" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
-      <body className="font-inter antialiased">
+      <body className="font-inter antialiased" suppressHydrationWarning>
         <Providers>
           {children}
         </Providers>

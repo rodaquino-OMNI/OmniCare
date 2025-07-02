@@ -3,55 +3,49 @@ version: '3.8'
 services:
   postgres:
     image: postgres:15-alpine
+    container_name: omnicare-test-postgres
     environment:
-      POSTGRES_DB: omnicare_test
       POSTGRES_USER: omnicare
       POSTGRES_PASSWORD: omnicare123
-      POSTGRES_EXTENSIONS: "uuid-ossp,pgcrypto,pg_trgm"
+      POSTGRES_DB: omnicare_test
+      POSTGRES_HOST_AUTH_METHOD: md5
     ports:
-      - "5433:5432"
+      - "5433:5432"  # Different port to avoid conflicts with dev DB
     volumes:
-      - ./database/init-scripts:/docker-entrypoint-initdb.d
+      - test-postgres-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U omnicare -d omnicare_test"]
       interval: 10s
       timeout: 5s
       retries: 5
-    tmpfs:
-      - /var/lib/postgresql/data
+      start_period: 30s
+    networks:
+      - omnicare-test-network
 
   redis:
     image: redis:7-alpine
+    container_name: omnicare-test-redis
+    command: redis-server --appendonly yes
     ports:
-      - "6380:6379"
-    command: redis-server --appendonly yes --databases 16
+      - "6380:6379"  # Different port to avoid conflicts with dev Redis
+    volumes:
+      - test-redis-data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
-    tmpfs:
-      - /data
+      start_period: 30s
+    networks:
+      - omnicare-test-network
 
-  medplum:
-    image: medplum/medplum-server:latest
-    depends_on:
-      - postgres
-      - redis
-    environment:
-      NODE_ENV: test
-      DATABASE_URL: postgres://omnicare:omnicare123@postgres:5432/omnicare_test
-      REDIS_URL: redis://redis:6379/2
-      BASE_URL: http://localhost:8103
-      PORT: 8103
-    ports:
-      - "8103:8103"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8103/healthcheck"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+volumes:
+  test-postgres-data:
+    driver: local
+  test-redis-data:
+    driver: local
 
 networks:
-  default:
+  omnicare-test-network:
+    driver: bridge
     name: omnicare-test-network

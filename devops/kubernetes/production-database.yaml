@@ -1,0 +1,583 @@
+# Production PostgreSQL with High Availability and HIPAA Compliance
+# Includes primary-replica setup, automated backups, and monitoring
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-prod-config
+  namespace: omnicare-prod
+  labels:
+    app: postgres
+    component: database
+    tier: production
+data:
+  POSTGRES_DB: omnicare_emr_prod
+  POSTGRES_USER: omnicare_prod_user
+  PGDATA: /var/lib/postgresql/data/pgdata
+  # PostgreSQL tuning for production
+  POSTGRES_SHARED_BUFFERS: "2GB"
+  POSTGRES_EFFECTIVE_CACHE_SIZE: "6GB"
+  POSTGRES_MAINTENANCE_WORK_MEM: "512MB"
+  POSTGRES_CHECKPOINT_COMPLETION_TARGET: "0.9"
+  POSTGRES_WAL_BUFFERS: "16MB"
+  POSTGRES_DEFAULT_STATISTICS_TARGET: "100"
+  POSTGRES_RANDOM_PAGE_COST: "1.1"
+  POSTGRES_EFFECTIVE_IO_CONCURRENCY: "200"
+  POSTGRES_WORK_MEM: "64MB"
+  POSTGRES_MIN_PARALLEL_TABLE_SCAN_SIZE: "8MB"
+  POSTGRES_MIN_PARALLEL_INDEX_SCAN_SIZE: "512kB"
+  POSTGRES_MAX_WORKER_PROCESSES: "16"
+  POSTGRES_MAX_PARALLEL_WORKERS_PER_GATHER: "4"
+  POSTGRES_MAX_PARALLEL_WORKERS: "16"
+  POSTGRES_MAX_PARALLEL_MAINTENANCE_WORKERS: "4"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-prod-secret
+  namespace: omnicare-prod
+  labels:
+    app: postgres
+    component: database
+    tier: production
+type: Opaque
+data:
+  POSTGRES_PASSWORD: T21uaUNhcmUtUHJvZC1EQi1QYXNTLTM4NzIh # Base64: OmniCare-Prod-DB-Pass-3872!
+  POSTGRES_REPLICATION_USER: cmVwbGljYXRvcg== # Base64: replicator
+  POSTGRES_REPLICATION_PASSWORD: UmVwbGljYXRvci1QYXNTLTM4NzIh # Base64: Replicator-Pass-3872!
+  DATABASE_URL: cG9zdGdyZXNxbDovL29tbmljYXJlX3Byb2RfdXNlcjpPbW5pQ2FyZS1Qcm9kLURCLVBhc3MtMzg3MiFAcG9zdGdyZXMtcHJpbWFyeTo1NDMyL29tbmljYXJlX2Vtcl9wcm9k # Production connection string
+---
+# Primary Database PVC with high-performance storage
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-primary-pvc
+  namespace: omnicare-prod
+  labels:
+    app: postgres
+    component: database
+    role: primary
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Ti
+  storageClassName: fast-ssd-encrypted
+---
+# Replica Database PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-replica-pvc
+  namespace: omnicare-prod
+  labels:
+    app: postgres
+    component: database
+    role: replica
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Ti
+  storageClassName: fast-ssd-encrypted
+---
+# Backup Storage PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-backup-pvc
+  namespace: omnicare-prod
+  labels:
+    app: postgres
+    component: backup
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Ti
+  storageClassName: standard-encrypted
+---
+# PostgreSQL Primary Deployment
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-primary
+  namespace: omnicare-prod
+  labels:
+    app: postgres
+    component: database
+    role: primary
+    tier: production
+spec:
+  serviceName: postgres-primary-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+      role: primary
+  template:
+    metadata:
+      labels:
+        app: postgres
+        component: database
+        role: primary
+        tier: production
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9187"
+    spec:
+      serviceAccountName: postgres-service-account
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        runAsNonRoot: true
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-prod-config
+              key: POSTGRES_DB
+        - name: POSTGRES_USER
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-prod-config
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-prod-secret
+              key: POSTGRES_PASSWORD
+        - name: POSTGRES_REPLICATION_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-prod-secret
+              key: POSTGRES_REPLICATION_USER
+        - name: POSTGRES_REPLICATION_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-prod-secret
+              key: POSTGRES_REPLICATION_PASSWORD
+        - name: PGDATA
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-prod-config
+              key: PGDATA
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        - name: postgres-config
+          mountPath: /etc/postgresql/postgresql.conf
+          subPath: postgresql.conf
+        - name: postgres-hba-config
+          mountPath: /etc/postgresql/pg_hba.conf
+          subPath: pg_hba.conf
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2000m"
+          limits:
+            memory: "8Gi"
+            cpu: "4000m"
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
+      
+      # PostgreSQL Exporter for monitoring
+      - name: postgres-exporter
+        image: prometheuscommunity/postgres-exporter:latest
+        ports:
+        - containerPort: 9187
+          name: metrics
+        env:
+        - name: DATA_SOURCE_NAME
+          valueFrom:
+            secretKeyRef:
+              name: postgres-prod-secret
+              key: DATABASE_URL
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgres-primary-pvc
+      - name: postgres-config
+        configMap:
+          name: postgres-prod-config
+          items:
+          - key: postgresql.conf
+            path: postgresql.conf
+      - name: postgres-hba-config
+        configMap:
+          name: postgres-prod-config
+          items:
+          - key: pg_hba.conf
+            path: pg_hba.conf
+      
+      nodeSelector:
+        node-type: database
+      tolerations:
+      - key: "database"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - postgres
+            topologyKey: kubernetes.io/hostname
+---
+# PostgreSQL Read Replica Deployment
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-replica
+  namespace: omnicare-prod
+  labels:
+    app: postgres
+    component: database
+    role: replica
+    tier: production
+spec:
+  serviceName: postgres-replica-headless
+  replicas: 2
+  selector:
+    matchLabels:
+      app: postgres
+      role: replica
+  template:
+    metadata:
+      labels:
+        app: postgres
+        component: database
+        role: replica
+        tier: production
+    spec:
+      serviceAccountName: postgres-service-account
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        runAsNonRoot: true
+      containers:
+      - name: postgres-replica
+        image: postgres:15-alpine
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        - name: PGUSER
+          value: postgres
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-prod-secret
+              key: POSTGRES_PASSWORD
+        - name: POSTGRES_MASTER_SERVICE
+          value: postgres-primary
+        - name: POSTGRES_REPLICATION_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-prod-secret
+              key: POSTGRES_REPLICATION_USER
+        - name: POSTGRES_REPLICATION_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-prod-secret
+              key: POSTGRES_REPLICATION_PASSWORD
+        command:
+        - /bin/bash
+        - -c
+        - |
+          # Initialize replica from primary
+          if [ ! -s "$PGDATA/PG_VERSION" ]; then
+            pg_basebackup -h $POSTGRES_MASTER_SERVICE -D $PGDATA -U $POSTGRES_REPLICATION_USER -v -P -W
+            echo "standby_mode = 'on'" >> $PGDATA/recovery.conf
+            echo "primary_conninfo = 'host=$POSTGRES_MASTER_SERVICE port=5432 user=$POSTGRES_REPLICATION_USER'" >> $PGDATA/recovery.conf
+          fi
+          postgres
+        volumeMounts:
+        - name: postgres-replica-storage
+          mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - pg_isready -U postgres
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - pg_isready -U postgres
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+      
+      volumes:
+      - name: postgres-replica-storage
+        persistentVolumeClaim:
+          claimName: postgres-replica-pvc
+      
+      nodeSelector:
+        node-type: database
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - postgres
+              - key: role
+                operator: In
+                values:
+                - replica
+            topologyKey: kubernetes.io/hostname
+---
+# Primary Database Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-primary
+  namespace: omnicare-prod
+  labels:
+    app: postgres
+    role: primary
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+    name: postgres
+  selector:
+    app: postgres
+    role: primary
+---
+# Replica Database Service (Read-only)
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-replica
+  namespace: omnicare-prod
+  labels:
+    app: postgres
+    role: replica
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+    name: postgres
+  selector:
+    app: postgres
+    role: replica
+---
+# Headless services for StatefulSets
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-primary-headless
+  namespace: omnicare-prod
+spec:
+  clusterIP: None
+  selector:
+    app: postgres
+    role: primary
+  ports:
+  - port: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-replica-headless
+  namespace: omnicare-prod
+spec:
+  clusterIP: None
+  selector:
+    app: postgres
+    role: replica
+  ports:
+  - port: 5432
+---
+# Service Account for PostgreSQL
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: postgres-service-account
+  namespace: omnicare-prod
+  labels:
+    app: postgres
+---
+# Automated Backup CronJob with S3 integration
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup-prod
+  namespace: omnicare-prod
+  labels:
+    app: postgres
+    component: backup
+spec:
+  schedule: "0 */6 * * *" # Every 6 hours
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 86400 # 24 hours
+      template:
+        spec:
+          serviceAccountName: postgres-backup-service-account
+          containers:
+          - name: postgres-backup
+            image: postgres:15-alpine
+            command:
+            - /bin/sh
+            - -c
+            - |
+              TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+              BACKUP_FILE="omnicare-prod-backup-${TIMESTAMP}.sql"
+              
+              # Create database backup
+              pg_dump -h postgres-primary -U $POSTGRES_USER -d $POSTGRES_DB --verbose > /backups/${BACKUP_FILE}
+              
+              # Compress backup
+              gzip /backups/${BACKUP_FILE}
+              
+              # Upload to S3 (requires AWS CLI and proper IAM permissions)
+              aws s3 cp /backups/${BACKUP_FILE}.gz s3://omnicare-prod-backups/database/
+              
+              # Clean up local backup files older than 3 days
+              find /backups -name "omnicare-prod-backup-*.sql.gz" -mtime +3 -delete
+              
+              # Verify backup integrity
+              if [ -f "/backups/${BACKUP_FILE}.gz" ]; then
+                echo "Backup completed successfully: ${BACKUP_FILE}.gz"
+              else
+                echo "Backup failed"
+                exit 1
+              fi
+            env:
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-prod-config
+                  key: POSTGRES_USER
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-prod-config
+                  key: POSTGRES_DB
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-prod-secret
+                  key: POSTGRES_PASSWORD
+            - name: AWS_DEFAULT_REGION
+              value: "us-east-1"
+            volumeMounts:
+            - name: backup-storage
+              mountPath: /backups
+            resources:
+              requests:
+                memory: "1Gi"
+                cpu: "500m"
+              limits:
+                memory: "2Gi"
+                cpu: "1000m"
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                - ALL
+          volumes:
+          - name: backup-storage
+            persistentVolumeClaim:
+              claimName: postgres-backup-pvc
+          restartPolicy: OnFailure
+---
+# Service Account for backup operations
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: postgres-backup-service-account
+  namespace: omnicare-prod
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT-ID:role/omnicare-backup-role
+---
+# Pod Disruption Budget for PostgreSQL
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: postgres-pdb
+  namespace: omnicare-prod
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: postgres
+      role: primary

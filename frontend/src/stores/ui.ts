@@ -129,7 +129,7 @@ interface UIState {
   
   // Breadcrumbs
   setBreadcrumbs: (breadcrumbs: UIState['breadcrumbs']) => void;
-  addBreadcrumb: (breadcrumb: UIState['breadcrumbs'][ResourceHistoryTable]) => void;
+  addBreadcrumb: (breadcrumb: UIState['breadcrumbs'][0]) => void;
   
   // Page state
   setCurrentPage: (page: string) => void;
@@ -142,7 +142,9 @@ interface UIState {
 const defaultPreferences: UIState['preferences'] = {
   theme: 'light',
   language: 'en',
-  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  timezone: typeof window !== 'undefined' 
+    ? Intl.DateTimeFormat().resolvedOptions().timeZone 
+    : 'UTC',
   dateFormat: 'MM/DD/YYYY',
   timeFormat: '12h',
   compactMode: false,
@@ -163,7 +165,7 @@ export const useUIStore = create<UIState>()(
         activeSection: null,
       },
       headerHeight: 64,
-      footerHeight: ResourceHistoryTable,
+      footerHeight: 0,
       globalLoading: false,
       loadingStates: {},
       modal: {
@@ -345,7 +347,7 @@ export const useUIStore = create<UIState>()(
         set((state) => {
           const filtered = state.recentSearches.filter((s) => s !== query);
           return {
-            recentSearches: [query, ...filtered].slice(ResourceHistoryTable, 10), // Keep last 10
+            recentSearches: [query, ...filtered].slice(0, 10), // Keep last 10
           };
         });
       },
@@ -383,7 +385,7 @@ export const useUIStore = create<UIState>()(
           return {
             quickActions: {
               ...state.quickActions,
-              recentActions: [action, ...filtered].slice(ResourceHistoryTable, 5), // Keep last 5
+              recentActions: [action, ...filtered].slice(0, 5), // Keep last 5
             },
           };
         });
@@ -419,7 +421,7 @@ export const useUIStore = create<UIState>()(
         set({ breadcrumbs });
       },
 
-      addBreadcrumb: (breadcrumb: UIState['breadcrumbs'][ResourceHistoryTable]) => {
+      addBreadcrumb: (breadcrumb: UIState['breadcrumbs'][0]) => {
         set((state) => ({
           breadcrumbs: [...state.breadcrumbs, breadcrumb],
         }));
@@ -436,7 +438,8 @@ export const useUIStore = create<UIState>()(
 
       // Utility actions
       resetUI: () => {
-        set({
+        set((state) => ({
+          ...state,
           sidebar: {
             isOpen: true,
             isCollapsed: false,
@@ -468,12 +471,18 @@ export const useUIStore = create<UIState>()(
           currentPage: '',
           pageTitle: '',
           pageSubtitle: undefined,
-        });
+        }));
       },
     }),
     {
       name: 'omnicare-ui-storage',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => 
+        typeof window !== 'undefined' ? localStorage : {
+          getItem: () => null,
+          setItem: () => {},
+          removeItem: () => {},
+        }
+      ),
       partialize: (state) => ({
         preferences: state.preferences,
         sidebar: {
@@ -484,80 +493,126 @@ export const useUIStore = create<UIState>()(
           favoriteActions: state.quickActions.favoriteActions,
         },
       }),
+      skipHydration: true,
     }
   )
 );
 
 // Convenience hooks for specific UI features
 export const useSidebar = () => {
-  return useUIStore((state) => ({
-    isOpen: state.sidebar.isOpen,
-    isCollapsed: state.sidebar.isCollapsed,
-    activeSection: state.sidebar.activeSection,
-    setOpen: state.setSidebarOpen,
-    setCollapsed: state.setSidebarCollapsed,
-    toggle: state.toggleSidebar,
-    toggleCollapse: state.toggleSidebarCollapse,
-    setActiveSection: state.setActiveSection,
-  }));
+  const isOpen = useUIStore((state) => state.sidebar.isOpen);
+  const isCollapsed = useUIStore((state) => state.sidebar.isCollapsed);
+  const activeSection = useUIStore((state) => state.sidebar.activeSection);
+  const setOpen = useUIStore((state) => state.setSidebarOpen);
+  const setCollapsed = useUIStore((state) => state.setSidebarCollapsed);
+  const toggle = useUIStore((state) => state.toggleSidebar);
+  const toggleCollapse = useUIStore((state) => state.toggleSidebarCollapse);
+  const setActiveSection = useUIStore((state) => state.setActiveSection);
+
+  return {
+    isOpen,
+    isCollapsed,
+    activeSection,
+    setOpen,
+    setCollapsed,
+    toggle,
+    toggleCollapse,
+    setActiveSection,
+  };
 };
 
 export const useModal = () => {
-  return useUIStore((state) => ({
-    isOpen: state.modal.isOpen,
-    type: state.modal.type,
-    data: state.modal.data,
-    size: state.modal.size,
-    open: state.openModal,
-    close: state.closeModal,
-  }));
+  const isOpen = useUIStore((state) => state.modal.isOpen);
+  const type = useUIStore((state) => state.modal.type);
+  const data = useUIStore((state) => state.modal.data);
+  const size = useUIStore((state) => state.modal.size);
+  const open = useUIStore((state) => state.openModal);
+  const close = useUIStore((state) => state.closeModal);
+
+  return {
+    isOpen,
+    type,
+    data,
+    size,
+    open,
+    close,
+  };
 };
 
 export const useDrawer = () => {
-  return useUIStore((state) => ({
-    isOpen: state.drawer.isOpen,
-    type: state.drawer.type,
-    data: state.drawer.data,
-    position: state.drawer.position,
-    open: state.openDrawer,
-    close: state.closeDrawer,
-  }));
+  const isOpen = useUIStore((state) => state.drawer.isOpen);
+  const type = useUIStore((state) => state.drawer.type);
+  const data = useUIStore((state) => state.drawer.data);
+  const position = useUIStore((state) => state.drawer.position);
+  const open = useUIStore((state) => state.openDrawer);
+  const close = useUIStore((state) => state.closeDrawer);
+
+  return {
+    isOpen,
+    type,
+    data,
+    position,
+    open,
+    close,
+  };
 };
 
 export const useNotifications = () => {
-  return useUIStore((state) => ({
-    notifications: state.notifications,
-    add: state.addNotification,
-    remove: state.removeNotification,
-    clear: state.clearNotifications,
-  }));
+  const notifications = useUIStore((state) => state.notifications);
+  const add = useUIStore((state) => state.addNotification);
+  const remove = useUIStore((state) => state.removeNotification);
+  const clear = useUIStore((state) => state.clearNotifications);
+
+  return {
+    notifications,
+    add,
+    remove,
+    clear,
+  };
 };
 
 export const useGlobalSearch = () => {
-  return useUIStore((state) => ({
-    isOpen: state.globalSearchOpen,
-    query: state.globalSearchQuery,
-    recentSearches: state.recentSearches,
-    setOpen: state.setGlobalSearchOpen,
-    setQuery: state.setGlobalSearchQuery,
-    addRecent: state.addRecentSearch,
-    clearRecent: state.clearRecentSearches,
-  }));
+  const isOpen = useUIStore((state) => state.globalSearchOpen);
+  const query = useUIStore((state) => state.globalSearchQuery);
+  const recentSearches = useUIStore((state) => state.recentSearches);
+  const setOpen = useUIStore((state) => state.setGlobalSearchOpen);
+  const setQuery = useUIStore((state) => state.setGlobalSearchQuery);
+  const addRecent = useUIStore((state) => state.addRecentSearch);
+  const clearRecent = useUIStore((state) => state.clearRecentSearches);
+
+  return {
+    isOpen,
+    query,
+    recentSearches,
+    setOpen,
+    setQuery,
+    addRecent,
+    clearRecent,
+  };
 };
 
 export const usePreferences = () => {
-  return useUIStore((state) => ({
-    preferences: state.preferences,
-    setPreference: state.setPreference,
-    reset: state.resetPreferences,
-  }));
+  const preferences = useUIStore((state) => state.preferences);
+  const setPreference = useUIStore((state) => state.setPreference);
+  const reset = useUIStore((state) => state.resetPreferences);
+
+  return {
+    preferences,
+    setPreference,
+    reset,
+  };
 };
 
 export const useLoading = () => {
-  return useUIStore((state) => ({
-    globalLoading: state.globalLoading,
-    setGlobalLoading: state.setGlobalLoading,
-    setLoading: state.setLoading,
-    getLoading: state.getLoading,
-  }));
+  const globalLoading = useUIStore((state) => state.globalLoading);
+  const setGlobalLoading = useUIStore((state) => state.setGlobalLoading);
+  const setLoading = useUIStore((state) => state.setLoading);
+  const getLoading = useUIStore((state) => state.getLoading);
+
+  return {
+    globalLoading,
+    setGlobalLoading,
+    setLoading,
+    getLoading,
+  };
 };

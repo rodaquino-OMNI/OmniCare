@@ -164,7 +164,7 @@ function UnauthorizedAccess({
   }
 
   return (
-    <Center h="10vh">
+    <Center h="100vh">
       <Stack align="center" gap="md" maw={500}>
         <IconShield size={48} className="text-red-4" />
         
@@ -177,7 +177,7 @@ function UnauthorizedAccess({
         >
           <Stack gap="sm">
             <Text size="sm">
-              You don't have permission to access this page.
+              You don\'t have permission to access this page.
             </Text>
             
             {user && (

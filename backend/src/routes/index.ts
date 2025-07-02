@@ -1,19 +1,37 @@
 import express from 'express';
 
+import { clinicalTemplatesRoutes } from './clinical-templates.routes';
+import clinicalWorkflowRoutes from './clinical-workflow.routes';
+import networkRoutes from './network.routes';
+import { orderRoutes } from './order.routes';
+import performanceRoutes from './performance.routes';
+import syncRoutes from './sync.routes';
+
 import { authController } from '@/controllers/auth.controller';
 import { fhirController } from '@/controllers/fhir.controller';
 import { 
+  fhirResourceCache, 
+  patientDataCache, 
+  analyticsCache 
+} from '@/middleware/api-cache.middleware';
+import { 
+  auditLog,
   authenticate, 
-  requireScope, 
+  requireAdmin,
   requirePatientAccess, 
   requireResourceAccess, 
-  requireAdmin,
-  auditLog
+  requireScope
 } from '@/middleware/auth.middleware';
-import networkRoutes from './network.routes';
-import syncRoutes from './sync.routes';
+
 
 const router = express.Router();
+
+// Wrapper for async route handlers
+const asyncHandler = (fn: (req: express.Request, res: express.Response, next: express.NextFunction) => Promise<void>) => {
+  return (req: express.Request, res: express.Response, next: express.NextFunction): void => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+};
 
 // Apply audit logging to all routes
 router.use(auditLog);
@@ -25,41 +43,65 @@ router.use(auditLog);
 router.use('/api', networkRoutes);
 
 // ===============================
+// PERFORMANCE MONITORING ROUTES
+// ===============================
+
+router.use('/api/performance', performanceRoutes);
+
+// ===============================
 // SYNC ROUTES
 // ===============================
 
 router.use('/api/sync', syncRoutes);
 
 // ===============================
+// CLINICAL WORKFLOW ROUTES
+// ===============================
+
+router.use('/api/clinical-workflow', clinicalWorkflowRoutes);
+
+// ===============================
+// ORDER MANAGEMENT ROUTES
+// ===============================
+
+router.use('/api/orders', orderRoutes);
+
+// ===============================
+// CLINICAL TEMPLATES ROUTES
+// ===============================
+
+router.use('/api/clinical-templates', clinicalTemplatesRoutes);
+
+// ===============================
 // HEALTH CHECK ROUTES
 // ===============================
 
-router.get('/health', fhirController.healthCheck.bind(fhirController));
+router.get('/health', asyncHandler(fhirController.healthCheck.bind(fhirController)));
 
 // ===============================
 // AUTHENTICATION ROUTES
 // ===============================
 
 // SMART on FHIR OAuth2 endpoints
-router.get('/auth/authorize', authController.authorize.bind(authController));
-router.post('/auth/token', authController.token.bind(authController));
-router.post('/auth/introspect', authController.introspect.bind(authController));
+router.get('/auth/authorize', asyncHandler(authController.authorize.bind(authController)));
+router.post('/auth/token', asyncHandler(authController.token.bind(authController)));
+router.post('/auth/introspect', asyncHandler(authController.introspect.bind(authController)));
 
 // Internal API authentication
-router.post('/auth/login', authController.login.bind(authController));
-router.post('/auth/refresh', authController.refreshToken.bind(authController));
-router.post('/auth/logout', authController.logout.bind(authController));
+router.post('/auth/login', asyncHandler(authController.login.bind(authController)));
+router.post('/auth/refresh', asyncHandler(authController.refreshToken.bind(authController)));
+router.post('/auth/logout', asyncHandler(authController.logout.bind(authController)));
 router.get('/auth/me', 
   authenticate,
-  authController.getCurrentUser.bind(authController)
+  asyncHandler(authController.getCurrentUser.bind(authController))
 );
 router.post('/auth/setup-mfa',
   authenticate,
-  authController.setupMfa.bind(authController)
+  asyncHandler(authController.setupMfa.bind(authController))
 );
 router.post('/auth/verify-mfa',
   authenticate,
-  authController.verifyMfa.bind(authController)
+  asyncHandler(authController.verifyMfa.bind(authController))
 );
 
 // ===============================
@@ -67,7 +109,10 @@ router.post('/auth/verify-mfa',
 // ===============================
 
 // FHIR Capability Statement (publicly accessible)
-router.get('/fhir/R4/metadata', fhirController.getCapabilityStatement.bind(fhirController));
+router.get('/fhir/R4/metadata', 
+  fhirResourceCache(3600), // Cache metadata for 1 hour
+  asyncHandler(fhirController.getCapabilityStatement.bind(fhirController))
+);
 
 // ===============================
 // FHIR RESOURCE ROUTES
@@ -77,21 +122,21 @@ router.get('/fhir/R4/metadata', fhirController.getCapabilityStatement.bind(fhirC
 router.post('/fhir/R4', 
   authenticate,
   requireScope(['system/*.write', 'user/*.write']),
-  fhirController.processBatch.bind(fhirController)
+  asyncHandler(fhirController.processBatch.bind(fhirController))
 );
 
 // GraphQL endpoint
 router.post('/fhir/R4/$graphql',
   authenticate,
   requireScope(['system/*.read', 'user/*.read']),
-  fhirController.executeGraphQL.bind(fhirController)
+  asyncHandler(fhirController.executeGraphQL.bind(fhirController))
 );
 
 // Resource validation
 router.post('/fhir/R4/:resourceType/$validate',
   authenticate,
   requireScope(['system/*.read', 'user/*.read']),
-  fhirController.validateResource.bind(fhirController)
+  asyncHandler(fhirController.validateResource.bind(fhirController))
 );
 
 // Patient-specific operations
@@ -99,7 +144,8 @@ router.get('/fhir/R4/Patient/:id/$everything',
   authenticate,
   requirePatientAccess,
   requireResourceAccess('Patient', 'read'),
-  fhirController.getPatientEverything.bind(fhirController)
+  patientDataCache(600), // Cache patient everything data for 10 minutes
+  asyncHandler(fhirController.getPatientEverything.bind(fhirController))
 );
 
 // Generic resource CRUD operations
@@ -107,7 +153,7 @@ router.get('/fhir/R4/Patient/:id/$everything',
 // CREATE - POST /fhir/R4/{resourceType}
 router.post('/fhir/R4/:resourceType',
   authenticate,
-  (req, res, next) => {
+  async (req, res, next) => {
     // Dynamic resource access check
     const resourceType = req.params.resourceType;
     if (!resourceType) {
@@ -123,13 +169,13 @@ router.post('/fhir/R4/:resourceType',
     }
     return requireResourceAccess(resourceType, 'create')(req, res, next);
   },
-  fhirController.createResource.bind(fhirController)
+  asyncHandler(fhirController.createResource.bind(fhirController))
 );
 
 // SEARCH - GET /fhir/R4/{resourceType}
 router.get('/fhir/R4/:resourceType',
   authenticate,
-  (req, res, next) => {
+  async (req, res, next) => {
     // Dynamic resource access check with patient access for patient-scoped searches
     const resourceType = req.params.resourceType;
     const patientParam = req.query.patient || req.query['subject:Patient'];
@@ -143,13 +189,14 @@ router.get('/fhir/R4/:resourceType',
       return requireResourceAccess(resourceType || '', 'read')(req, res, next);
     }
   },
-  fhirController.searchResources.bind(fhirController)
+  fhirResourceCache(300), // Cache FHIR resource searches for 5 minutes
+  asyncHandler(fhirController.searchResources.bind(fhirController))
 );
 
 // READ - GET /fhir/R4/{resourceType}/{id}
 router.get('/fhir/R4/:resourceType/:id',
   authenticate,
-  (req, res, next) => {
+  async (req, res, next) => {
     const resourceType = req.params.resourceType;
     if (!resourceType) {
       res.status(400).json({
@@ -182,13 +229,14 @@ router.get('/fhir/R4/:resourceType/:id',
       return requireResourceAccess(resourceType, 'read')(req, res, next);
     }
   },
-  fhirController.readResource.bind(fhirController)
+  fhirResourceCache(600), // Cache individual FHIR resources for 10 minutes
+  asyncHandler(fhirController.readResource.bind(fhirController))
 );
 
 // UPDATE - PUT /fhir/R4/{resourceType}/{id}
 router.put('/fhir/R4/:resourceType/:id',
   authenticate,
-  (req, res, next) => {
+  async (req, res, next) => {
     const resourceType = req.params.resourceType;
     if (!resourceType) {
       res.status(400).json({
@@ -218,13 +266,13 @@ router.put('/fhir/R4/:resourceType/:id',
       return requireResourceAccess(resourceType, 'write')(req, res, next);
     }
   },
-  fhirController.updateResource.bind(fhirController)
+  asyncHandler(fhirController.updateResource.bind(fhirController))
 );
 
 // DELETE - DELETE /fhir/R4/{resourceType}/{id}
 router.delete('/fhir/R4/:resourceType/:id',
   authenticate,
-  (req, res, next) => {
+  async (req, res, next) => {
     const resourceType = req.params.resourceType;
     if (!resourceType) {
       res.status(400).json({
@@ -254,7 +302,7 @@ router.delete('/fhir/R4/:resourceType/:id',
       return requireResourceAccess(resourceType, 'delete')(req, res, next);
     }
   },
-  fhirController.deleteResource.bind(fhirController)
+  asyncHandler(fhirController.deleteResource.bind(fhirController))
 );
 
 // ===============================
@@ -265,7 +313,7 @@ router.delete('/fhir/R4/:resourceType/:id',
 router.get('/fhir/R4/Subscription',
   authenticate,
   requireAdmin,
-  fhirController.listSubscriptions.bind(fhirController)
+  asyncHandler(fhirController.listSubscriptions.bind(fhirController))
 );
 
 // ===============================
@@ -273,13 +321,13 @@ router.get('/fhir/R4/Subscription',
 // ===============================
 
 // CDS Hooks discovery (publicly accessible)
-router.get('/cds-services', fhirController.getCDSServices.bind(fhirController));
+router.get('/cds-services', asyncHandler(fhirController.getCDSServices.bind(fhirController)));
 
 // CDS Hook execution
 router.post('/cds-services/:serviceId',
   authenticate,
   requireScope(['user/*.read', 'system/*.read']),
-  fhirController.executeCDSHook.bind(fhirController)
+  asyncHandler(fhirController.executeCDSHook.bind(fhirController))
 );
 
 // ===============================
@@ -290,21 +338,48 @@ router.post('/cds-services/:serviceId',
 router.get('/admin/stats',
   authenticate,
   requireAdmin,
-  async (req, res) => {
+  analyticsCache(60), // Cache admin stats for 1 minute
+  asyncHandler(async (req, res) => {
     try {
-      // Get system statistics
+      // Get system statistics with enhanced performance metrics
+      const [cacheHealth, cacheStats] = await Promise.all([
+        (async () => {
+          try {
+            const { databaseCacheService } = await import('@/services/database-cache.service');
+            return databaseCacheService.getCacheHealth();
+          } catch (error) {
+            return { redis: { health: { status: 'error' } }, stats: {}, memoryUsage: {} };
+          }
+        })(),
+        (async () => {
+          try {
+            const { redisService } = await import('@/services/redis.service');
+            return redisService.getStats();
+          } catch (error) {
+            return { hits: 0, misses: 0, hitRate: 0, totalRequests: 0 };
+          }
+        })()
+      ]);
+      
       const stats = {
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
         memory: process.memoryUsage(),
-        // Add more stats as needed
+        cache: {
+          health: cacheHealth,
+          stats: cacheStats
+        },
+        performance: {
+          responseTime: Date.now() - (req as any).startTime || 0,
+          version: process.env.npm_package_version || '1.0.0'
+        }
       };
       
       res.json(stats);
     } catch (error) {
       res.status(500).json({ error: 'Failed to get system stats' });
     }
-  }
+  })
 );
 
 // ===============================
@@ -316,7 +391,7 @@ router.post('/api/vitals/:patientId',
   authenticate,
   requirePatientAccess,
   requireResourceAccess('Observation', 'create'),
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     try {
       const { patientId } = req.params;
       const { encounterId, vitals } = req.body;
@@ -343,14 +418,14 @@ router.post('/api/vitals/:patientId',
         }],
       });
     }
-  }
+  })
 );
 
 // Medication Management APIs
 router.post('/api/prescriptions',
   authenticate,
   requireScope(['user/*.write', 'system/*.write']),
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     try {
       const medicationRequest = req.body;
       
@@ -368,14 +443,14 @@ router.post('/api/prescriptions',
         }],
       });
     }
-  }
+  })
 );
 
 // Care Plan Management APIs
 router.post('/api/care-plans',
   authenticate,
   requireScope(['user/*.write', 'system/*.write']),
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     try {
       const carePlan = req.body;
       
@@ -393,7 +468,7 @@ router.post('/api/care-plans',
         }],
       });
     }
-  }
+  })
 );
 
 // ===============================

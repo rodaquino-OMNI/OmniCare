@@ -18,8 +18,6 @@ async function globalSetup(config: FullConfig) {
   // Launch browser for setup
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
-    // Set reasonable timeouts
-    timeout: 30000,
     // Ignore HTTPS errors in test environment
     ignoreHTTPSErrors: true,
     // Set user agent
@@ -129,10 +127,10 @@ async function setupTestEnvironment(page: any) {
   
   try {
     // Set test mode flag
-    await page.evaluate(() => {
+    await page.evaluate((testRunId: string) => {
       window.localStorage.setItem('E2E_TEST_MODE', 'true');
-      window.localStorage.setItem('TEST_RUN_ID', window.TEST_RUN_ID);
-    });
+      window.localStorage.setItem('TEST_RUN_ID', testRunId);
+    }, TEST_RUN_ID);
     
     // Disable analytics and tracking in test mode
     await page.evaluate(() => {
@@ -349,7 +347,16 @@ async function captureSetupFailure(page: any, error: any) {
     const fs = require('fs');
     const path = require('path');
     
-    const failureInfo = {
+    const failureInfo: {
+      error: string;
+      stack?: string;
+      url: string;
+      timestamp: string;
+      userAgent: string;
+      viewport: { width: number; height: number } | null;
+      localStorage: any;
+      screenshot?: string;
+    } = {
       error: error.message,
       stack: error.stack,
       url: page.url(),

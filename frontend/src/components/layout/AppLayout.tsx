@@ -7,6 +7,9 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 import { OfflineStatusBanner, SyncProgressIndicator } from '@/components/offline';
 import { useSyncStore } from '@/stores/sync';
+import { PWAManager } from '@/components/pwa/PWAManager';
+import { MobileAccessibilityEnhancements, ScrollToTop } from '@/components/mobile/MobileOptimizations';
+import { OptimizedLazyPerformanceMonitor } from '@/components/performance/OptimizedComponents';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -30,7 +33,15 @@ export function AppLayout({
   const { isSyncing } = useSyncStore();
 
   return (
-    <>
+    <MobileAccessibilityEnhancements>
+      {/* PWA Manager - Handles installation, updates, and mobile optimizations */}
+      <PWAManager 
+        enableInstallPrompt={true}
+        enableUpdatePrompt={true}
+        enableOfflineIndicator={true}
+        enablePerformanceOptimizations={true}
+      />
+      
       {/* Offline Status Banner - Fixed position */}
       <OfflineStatusBanner position="top" />
       
@@ -44,7 +55,7 @@ export function AppLayout({
         padding="md"
       >
         {/* Sidebar Navigation */}
-        <AppShell.Navbar p={ResourceHistoryTable}>
+        <AppShell.Navbar p="md">
           <Sidebar />
         </AppShell.Navbar>
 
@@ -72,7 +83,13 @@ export function AppLayout({
           showDetails={true}
         />
       )}
-    </>
+      
+      {/* Mobile scroll to top */}
+      <ScrollToTop />
+      
+      {/* Performance Monitor - Development and production monitoring */}
+      <OptimizedLazyPerformanceMonitor />
+    </MobileAccessibilityEnhancements>
   );
 }
 

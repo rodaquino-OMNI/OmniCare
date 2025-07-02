@@ -1,0 +1,659 @@
+/* OmniCare EMR Mobile-First CSS */
+
+/* Mobile Breakpoints */
+:root {
+  /* Screen Size Breakpoints */
+  --mobile-xs: 320px;  /* Small phones */
+  --mobile-sm: 375px;  /* Standard phones */
+  --mobile-md: 414px;  /* Large phones */
+  --mobile-lg: 480px;  /* XL phones/small tablets portrait */
+  --tablet-sm: 600px;  /* Small tablets portrait */
+  --tablet-md: 768px;  /* Tablets portrait */
+  --tablet-lg: 834px;  /* iPad portrait */
+  --desktop-sm: 1024px; /* Tablets landscape/small desktop */
+  --desktop-md: 1280px; /* Desktop */
+  --desktop-lg: 1440px; /* Large desktop */
+
+  /* Touch-Friendly Sizing */
+  --touch-target-min: 44px; /* iOS minimum */
+  --touch-target-recommended: 48px; /* Material Design */
+  --touch-spacing: 8px;
+  
+  /* Mobile-Specific Spacing */
+  --mobile-padding-xs: 8px;
+  --mobile-padding-sm: 12px;
+  --mobile-padding-md: 16px;
+  --mobile-padding-lg: 20px;
+  
+  /* Safe Areas (for devices with notches) */
+  --safe-area-inset-top: env(safe-area-inset-top);
+  --safe-area-inset-right: env(safe-area-inset-right);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom);
+  --safe-area-inset-left: env(safe-area-inset-left);
+}
+
+/* Base Mobile Styles (Mobile-First Approach) */
+@media screen and (max-width: 767px) {
+  /* Optimize body for mobile */
+  body {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: pan-y;
+    overscroll-behavior-y: contain;
+  }
+
+  /* Touch-friendly interactive elements */
+  button,
+  a,
+  input,
+  select,
+  textarea,
+  [role="button"],
+  [tabindex]:not([tabindex="-1"]) {
+    min-height: var(--touch-target-min);
+    min-width: var(--touch-target-min);
+    padding: var(--touch-spacing);
+  }
+
+  /* Mobile-optimized typography */
+  html {
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+
+  h1 { font-size: 24px; }
+  h2 { font-size: 20px; }
+  h3 { font-size: 18px; }
+  h4 { font-size: 16px; }
+  h5, h6 { font-size: 14px; }
+
+  /* Mobile container adjustments */
+  .container {
+    padding-left: var(--mobile-padding-md);
+    padding-right: var(--mobile-padding-md);
+    padding-left: max(var(--mobile-padding-md), var(--safe-area-inset-left));
+    padding-right: max(var(--mobile-padding-md), var(--safe-area-inset-right));
+  }
+
+  /* Mobile card styles */
+  .patient-card,
+  .clinical-note,
+  .medication-item,
+  .chart-container {
+    margin-left: calc(var(--mobile-padding-md) * -1);
+    margin-right: calc(var(--mobile-padding-md) * -1);
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  /* Stack layouts on mobile */
+  .mobile-stack {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: var(--spacing-sm);
+  }
+
+  /* Full width on mobile */
+  .mobile-full {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Hide on mobile */
+  .mobile-hide {
+    display: none !important;
+  }
+
+  /* Mobile-specific show */
+  .mobile-only {
+    display: block !important;
+  }
+}
+
+/* Small Mobile (320px - 374px) */
+@media screen and (max-width: 374px) {
+  :root {
+    --font-size-xs: 11px;
+    --font-size-sm: 12px;
+    --font-size-md: 14px;
+    --font-size-lg: 16px;
+  }
+
+  .container {
+    padding-left: var(--mobile-padding-sm);
+    padding-right: var(--mobile-padding-sm);
+  }
+}
+
+/* Tablet Styles (768px - 1023px) */
+@media screen and (min-width: 768px) and (max-width: 1023px) {
+  .tablet-stack {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .tablet-hide {
+    display: none !important;
+  }
+
+  .tablet-only {
+    display: block !important;
+  }
+}
+
+/* Touch Device Optimizations */
+@media (hover: none) and (pointer: coarse) {
+  /* Remove hover effects on touch devices */
+  .patient-card:hover,
+  button:hover,
+  a:hover {
+    transform: none !important;
+    box-shadow: var(--shadow-sm) !important;
+  }
+
+  /* Add active states for feedback */
+  button:active,
+  a:active,
+  .touchable:active {
+    opacity: 0.8;
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+}
+
+/* Landscape Mobile Adjustments */
+@media screen and (max-width: 767px) and (orientation: landscape) {
+  /* Reduce vertical spacing in landscape */
+  :root {
+    --spacing-md: 12px;
+    --spacing-lg: 16px;
+    --spacing-xl: 24px;
+  }
+
+  /* Compact header in landscape */
+  .mobile-header {
+    padding-top: var(--mobile-padding-xs);
+    padding-bottom: var(--mobile-padding-xs);
+  }
+}
+
+/* Bottom Navigation Safe Area */
+.mobile-bottom-nav {
+  padding-bottom: var(--safe-area-inset-bottom);
+  padding-bottom: max(var(--mobile-padding-md), var(--safe-area-inset-bottom));
+}
+
+/* Swipeable Areas */
+.swipeable {
+  touch-action: pan-x;
+  -webkit-user-select: none;
+  user-select: none;
+  will-change: transform;
+}
+
+.swipeable-vertical {
+  touch-action: pan-y;
+}
+
+/* Pull to Refresh Container */
+.pull-to-refresh {
+  position: relative;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+.pull-to-refresh-indicator {
+  position: absolute;
+  top: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 40px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.pull-to-refresh.refreshing .pull-to-refresh-indicator {
+  opacity: 1;
+}
+
+/* Mobile Form Optimizations */
+@media screen and (max-width: 767px) {
+  /* Stack form groups */
+  .form-group {
+    margin-bottom: var(--spacing-md);
+  }
+
+  /* Full width inputs */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="date"],
+  input[type="time"],
+  select,
+  textarea {
+    width: 100%;
+    font-size: 16px; /* Prevent zoom on iOS */
+    padding: var(--mobile-padding-sm);
+    min-height: var(--touch-target-recommended);
+  }
+
+  /* Mobile-friendly date/time inputs */
+  input[type="date"],
+  input[type="time"] {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* Larger checkboxes and radios */
+  input[type="checkbox"],
+  input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    margin-right: var(--spacing-sm);
+  }
+
+  /* Touch-friendly buttons */
+  button,
+  .btn {
+    min-height: var(--touch-target-recommended);
+    padding: var(--mobile-padding-sm) var(--mobile-padding-lg);
+    font-size: var(--font-size-md);
+    width: 100%;
+    margin-bottom: var(--spacing-sm);
+  }
+
+  /* Button groups */
+  .btn-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .btn-group.horizontal {
+    flex-direction: row;
+  }
+
+  .btn-group.horizontal button {
+    flex: 1;
+  }
+}
+
+/* Mobile Tables */
+@media screen and (max-width: 767px) {
+  /* Convert tables to cards on mobile */
+  .responsive-table {
+    display: block;
+  }
+
+  .responsive-table thead {
+    display: none;
+  }
+
+  .responsive-table tbody,
+  .responsive-table tr,
+  .responsive-table td {
+    display: block;
+  }
+
+  .responsive-table tr {
+    margin-bottom: var(--spacing-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--mobile-padding-md);
+  }
+
+  .responsive-table td {
+    padding: var(--spacing-xs) 0;
+    position: relative;
+    padding-left: 40%;
+  }
+
+  .responsive-table td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 0;
+    width: 35%;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+  }
+}
+
+/* Mobile Modal Adjustments */
+@media screen and (max-width: 767px) {
+  .modal {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .modal-content {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modal-body {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Bottom sheet style modals */
+  .modal.bottom-sheet {
+    position: fixed;
+    bottom: 0;
+    height: auto;
+    max-height: 90vh;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding-bottom: var(--safe-area-inset-bottom);
+  }
+}
+
+/* Mobile Loading States */
+.skeleton-mobile {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Floating Action Button */
+.fab {
+  position: fixed;
+  bottom: calc(16px + var(--safe-area-inset-bottom));
+  right: 16px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-sticky);
+}
+
+/* Mobile Performance Optimizations */
+@media screen and (max-width: 767px) {
+  /* Reduce animations on mobile */
+  * {
+    animation-duration: 0.2s !important;
+    transition-duration: 0.2s !important;
+  }
+
+  /* Hardware acceleration for smooth scrolling */
+  .scroll-container {
+    -webkit-overflow-scrolling: touch;
+    will-change: scroll-position;
+  }
+
+  /* Optimize images */
+  img {
+    will-change: auto;
+  }
+}
+
+/* Four-Panel Dashboard Mobile Optimizations */
+@media screen and (max-width: 767px) {
+  /* Panel container mobile adjustments */
+  .four-panel-dashboard {
+    padding: var(--mobile-padding-sm);
+  }
+  
+  .panel-container {
+    min-height: 280px;
+    max-height: 50vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .panel-header {
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 10;
+    border-bottom: 1px solid #e9ecef;
+    backdrop-filter: blur(10px);
+    min-height: var(--touch-target-recommended);
+  }
+  
+  .panel-header .mantine-ActionIcon-root {
+    min-width: var(--touch-target-min);
+    min-height: var(--touch-target-min);
+  }
+  
+  /* Mobile panel grid */
+  .mobile-panel-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--mobile-padding-sm);
+  }
+  
+  /* Mobile tab optimization */
+  .mobile-tabs .mantine-Tabs-tab {
+    flex: 1;
+    text-align: center;
+    min-height: var(--touch-target-recommended);
+    font-size: 0.875rem;
+    padding: var(--mobile-padding-xs) var(--mobile-padding-sm);
+  }
+  
+  /* Patient summary mobile adjustments */
+  .mobile-patient-summary {
+    padding: var(--mobile-padding-md);
+  }
+  
+  .mobile-patient-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--mobile-padding-md);
+  }
+  
+  .mobile-quick-actions {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--mobile-padding-xs);
+    width: 100%;
+  }
+  
+  .mobile-metric-card {
+    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: var(--mobile-padding-sm);
+  }
+  
+  /* Mobile navigation search */
+  .mobile-nav-search {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    padding: var(--mobile-padding-md);
+    padding-top: max(var(--mobile-padding-lg), var(--safe-area-inset-top));
+  }
+  
+  .mobile-breadcrumbs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .mobile-breadcrumbs::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Unified patient summary mobile */
+  .unified-patient-mobile {
+    .container {
+      padding: var(--mobile-padding-sm);
+    }
+    
+    .patient-header-mobile {
+      padding: var(--mobile-padding-md);
+      border-radius: var(--radius-md);
+    }
+    
+    .health-metrics-mobile {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--mobile-padding-xs);
+    }
+    
+    .clinical-summary-mobile {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--mobile-padding-sm);
+    }
+  }
+}
+
+/* Tablet specific optimizations for panels */
+@media screen and (min-width: 768px) and (max-width: 1023px) {
+  .tablet-panel-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-md);
+  }
+  
+  .tablet-panel-container {
+    height: 450px;
+  }
+  
+  .tablet-patient-summary {
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--spacing-sm);
+    }
+  }
+}
+
+/* Touch gesture optimizations */
+.swipe-area {
+  touch-action: pan-x;
+  overflow-x: hidden;
+  position: relative;
+}
+
+.panel-swipe-indicator {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 40px;
+  background: var(--color-primary);
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.panel-swipe-indicator.left {
+  left: 8px;
+}
+
+.panel-swipe-indicator.right {
+  right: 8px;
+}
+
+.swipe-area.swiping .panel-swipe-indicator {
+  opacity: 0.6;
+}
+
+/* Landscape orientation optimizations */
+@media screen and (max-width: 767px) and (orientation: landscape) and (max-height: 500px) {
+  .landscape-panel {
+    height: 75vh;
+    max-height: 75vh;
+  }
+  
+  .landscape-header {
+    min-height: 48px;
+    padding: var(--mobile-padding-xs) var(--mobile-padding-sm);
+  }
+  
+  .landscape-patient-header {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--mobile-padding-sm);
+  }
+  
+  .landscape-quick-actions {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--mobile-padding-xs);
+  }
+}
+
+/* Dark mode mobile optimizations */
+@media (prefers-color-scheme: dark) and (max-width: 767px) {
+  .panel-header {
+    background: #1a1b1e;
+    border-bottom-color: #373a40;
+  }
+  
+  .mobile-nav-search {
+    background: rgba(26, 27, 30, 0.95);
+  }
+  
+  .mobile-metric-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Accessibility improvements for mobile panels */
+@media (prefers-reduced-motion: reduce) {
+  .panel-transition,
+  .swipe-area {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .panel-container {
+    border: 2px solid;
+  }
+  
+  .panel-header {
+    border-bottom: 2px solid;
+  }
+  
+  .mobile-metric-card {
+    border: 2px solid;
+  }
+}
+
+/* Print styles remain hidden on mobile */
+@media print {
+  .no-print,
+  .mobile-only,
+  .mobile-bottom-nav,
+  .fab,
+  .panel-controls,
+  .mobile-nav-search {
+    display: none !important;
+  }
+  
+  .panel-container {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+}

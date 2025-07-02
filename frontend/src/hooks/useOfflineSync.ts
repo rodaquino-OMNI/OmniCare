@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useServiceWorker } from '@/lib/service-worker';
 import { useOfflineFHIR } from '@/services/offline-fhir.service';
-import { showNotification } from '@mantine/notifications';
+import { notifications } from '@mantine/notifications';
+import { useOfflineSyncService } from '@/components/providers/OfflineSyncProvider';
 
 interface OfflineSyncOptions {
   autoSync?: boolean;
@@ -21,7 +22,7 @@ export function useOfflineSync(options: OfflineSyncOptions = {}) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'complete' | 'error'>('idle');
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
-  const [pendingChanges, setPendingChanges] = useState(ResourceHistoryTable);
+  const [pendingChanges, setPendingChanges] = useState(0);
 
   const { isOffline, queueForSync } = useServiceWorker();
   const { service: fhirService } = useOfflineFHIR();
@@ -29,7 +30,7 @@ export function useOfflineSync(options: OfflineSyncOptions = {}) {
   // Monitor online/offline status
   useEffect(() => {
     const handleOnline = async () => {
-      if (autoSync && pendingChanges > ResourceHistoryTable) {
+      if (autoSync && pendingChanges > 0) {
         await performSync();
       }
     };
@@ -90,9 +91,9 @@ export function useOfflineSync(options: OfflineSyncOptions = {}) {
 
       setSyncStatus('complete');
       setLastSyncTime(new Date());
-      setPendingChanges(ResourceHistoryTable);
+      setPendingChanges(0);
       
-      showNotification({
+      notifications.show({
         title: 'Sync Complete',
         message: 'All changes have been synchronized',
         color: 'green',
@@ -103,7 +104,7 @@ export function useOfflineSync(options: OfflineSyncOptions = {}) {
       setSyncStatus('error');
       console.error('Sync failed:', error);
       
-      showNotification({
+      notifications.show({
         title: 'Sync Failed',
         message: 'Unable to sync changes. Will retry when connection is stable.',
         color: 'red',

@@ -1,15 +1,21 @@
-import express from 'express';
+import compression from 'compression';
 import cors from 'cors';
+import express from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import compression from 'compression';
-import rateLimit from 'express-rate-limit';
-import { medplumService } from '@/services/medplum.service';
-import { subscriptionsService } from '@/services/subscriptions.service';
-import { databaseService } from '@/services/database.service';
+
 import config from '@/config';
-import logger from '@/utils/logger';
+import { fhirResourceCache, analyticsCache } from '@/middleware/api-cache.middleware';
+import { createEnhancedRateLimit, createAbuseProtectionMiddleware } from '@/middleware/enhanced-rate-limit.middleware';
 import routes from '@/routes';
+import { databaseService } from '@/services/database.service';
+import { medplumService } from '@/services/medplum.service';
+import { redisCacheService } from '@/services/redis-cache.service';
+import { redisRateLimiterService } from '@/services/redis-rate-limiter.service';
+import { redisSessionStore } from '@/services/redis-session.service';
+import { redisService } from '@/services/redis.service';
+import { subscriptionsService } from '@/services/subscriptions.service';
+import logger from '@/utils/logger';
 
 /**
  * OmniCare EMR FHIR Backend Server
@@ -129,10 +135,12 @@ class OmniCareServer {
       }));
     }
 
-    // Rate limiting
-    const limiter = rateLimit({
+    // Enhanced rate limiting with Redis
+    const generalRateLimit = createEnhancedRateLimit({
       windowMs: config.rateLimit.windowMs,
-      max: config.rateLimit.maxRequests,
+      maxRequests: config.rateLimit.maxRequests,
+      standardHeaders: true,
+      legacyHeaders: false,
       message: {
         resourceType: 'OperationOutcome',
         issue: [{
@@ -141,15 +149,13 @@ class OmniCareServer {
           diagnostics: 'Too many requests. Please try again later.',
         }],
       },
-      standardHeaders: true,
-      legacyHeaders: false,
-      keyGenerator: (req) => {
-        // Use user ID if authenticated, otherwise fall back to IP
-        return (req as any).user?.id || req.ip;
-      },
     });
 
-    this.app.use(limiter);
+    // Apply general rate limiting
+    this.app.use(generalRateLimit);
+
+    // Apply abuse protection middleware
+    this.app.use(createAbuseProtectionMiddleware());
 
     // Request ID middleware for tracing
     this.app.use((req, res, next) => {
@@ -162,19 +168,31 @@ class OmniCareServer {
     // Health check endpoint (before authentication)
     this.app.get('/ping', async (_req, res) => {
       try {
-        const dbHealth = await databaseService.checkHealth();
+        const [dbHealth, redisHealth] = await Promise.all([
+          databaseService.checkHealth(),
+          redisCacheService.checkHealth()
+        ]);
+        
+        const overallStatus = dbHealth.status === 'healthy' && redisHealth.status === 'healthy' ? 'OK' : 'DEGRADED';
+        
         res.json({ 
-          status: 'OK', 
+          status: overallStatus, 
           timestamp: new Date().toISOString(),
           version: process.env.npm_package_version || '1.0.0',
-          database: dbHealth
+          database: dbHealth,
+          cache: redisHealth,
+          performance: {
+            uptime: Math.floor(process.uptime()),
+            memory: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB'
+          }
         });
       } catch (error) {
         res.json({ 
-          status: 'OK', 
+          status: 'ERROR', 
           timestamp: new Date().toISOString(),
           version: process.env.npm_package_version || '1.0.0',
-          database: { status: 'unhealthy', message: 'Failed to check database health' }
+          database: { status: 'unknown', message: 'Health check failed' },
+          cache: { status: 'unknown', message: 'Health check failed' }
         });
       }
     });
@@ -293,7 +311,25 @@ class OmniCareServer {
     logger.info('Initializing OmniCare FHIR backend services...');
 
     try {
-      // Initialize database connection first
+      // Initialize Redis services first (needed by other services)
+      logger.info('Initializing Redis services...');
+      
+      // Initialize base Redis service
+      await redisService.initialize();
+      logger.info('Base Redis service initialized');
+      
+      // Initialize Redis cache service
+      await redisCacheService.initialize();
+      const redisHealth = await redisCacheService.checkHealth();
+      logger.info('Redis cache service initialized:', redisHealth);
+      
+      // Initialize Redis session store
+      logger.info('Redis session store ready');
+      
+      // Initialize Redis rate limiter
+      logger.info('Redis rate limiter service ready');
+
+      // Initialize database connection
       logger.info('Initializing database connection...');
       await databaseService.initialize();
       await databaseService.ensureAuditSchema();
@@ -303,13 +339,37 @@ class OmniCareServer {
       const dbHealth = await databaseService.checkHealth();
       logger.info('Database health check:', dbHealth);
 
-      // Initialize Medplum service
-      logger.info('Initializing Medplum FHIR server connection...');
-      await medplumService.initialize();
-      logger.info('Medplum FHIR server connection established');
+      // Cache service is ready to use (no specific warmup needed)
+      logger.info('Cache service ready for operations');
+
+      // Initialize Medplum service (optional for development)
+      try {
+        logger.info('Initializing Medplum FHIR server connection...');
+        await medplumService.initialize();
+        logger.info('Medplum FHIR server connection established');
+      } catch (error) {
+        logger.warn('Medplum FHIR server connection failed, continuing without external FHIR:', error);
+      }
 
       // Initialize subscriptions service (already initialized in constructor)
       logger.info('Subscriptions service initialized');
+
+      // Log performance metrics
+      const cacheStats = redisService.getStats();
+      logger.info('Initial Redis statistics:', cacheStats);
+      
+      // Verify Redis connectivity for all services
+      const [baseHealth, cacheHealthCheck, rateLimitStats] = await Promise.all([
+        redisService.healthCheck(),
+        redisCacheService.checkHealth(),
+        redisRateLimiterService.getRateLimitingStats()
+      ]);
+      
+      logger.info('Redis services health check:', {
+        base: baseHealth,
+        cache: cacheHealthCheck,
+        rateLimiter: rateLimitStats
+      });
 
       logger.info('All services initialized successfully');
     } catch (error) {
@@ -323,10 +383,7 @@ class OmniCareServer {
    */
   async start(): Promise<void> {
     try {
-      // Initialize all services first
-      await this.initializeServices();
-
-      // Start HTTP server
+      // Start HTTP server first
       this.server = this.app.listen(config.server.port, config.server.host, () => {
         logger.info(`OmniCare FHIR Backend Server started`, {
           host: config.server.host,
@@ -347,6 +404,9 @@ class OmniCareServer {
           websocket: `ws://${config.server.host}:${config.subscriptions.websocketPort}`,
         });
       });
+
+      // Initialize services after server is running
+      await this.initializeServices();
 
       this.server.on('error', (error: any) => {
         if (error.code === 'EADDRINUSE') {
@@ -386,6 +446,13 @@ class OmniCareServer {
 
         // Shutdown Medplum service
         await medplumService.shutdown();
+        
+        // Shutdown Redis connections
+        await Promise.all([
+          redisCacheService.shutdown(),
+          redisService.shutdown()
+        ]);
+        logger.info('Redis services shutdown completed');
         
         // Shutdown database connection
         await databaseService.shutdown();

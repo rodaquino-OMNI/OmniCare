@@ -339,9 +339,9 @@ export function PatientSummary({
                       </div>
                       <Group gap="sm" align="center">
                         <Text size="lg" fw={600} className={
-                          vital.status === 'normal' ? 'text-green-6ResourceHistoryTable' :
-                          vital.status === 'abnormal' ? 'text-yellow-6ResourceHistoryTable' :
-                          'text-red-6ResourceHistoryTable'
+                          vital.status === 'normal' ? 'text-green-600' :
+                          vital.status === 'abnormal' ? 'text-yellow-600' :
+                          'text-red-600'
                         }>
                           {vital.value} {vital.unit}
                         </Text>

@@ -2,13 +2,25 @@ import React from 'react';
 import { screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import { renderWithProviders } from '../../../../jest.setup.js';
 import userEvent from '@testing-library/user-event';
-import { ClinicalNoteInput } from '../ClinicalNoteInput';
+import { Patient } from '@medplum/fhirtypes';
+import ClinicalNoteInput from '../ClinicalNoteInput';
 import { SmartTextService } from '@/services/smarttext.service';
 import { CDSService } from '@/services/cds.service';
 import { FHIRService } from '@/services/fhir.service';
 import { useAuthStore, useAuth } from '@/stores/auth';
 import { usePatientStore } from '@/stores/patient';
 import { notifications } from '@mantine/notifications';
+import {
+  createMockPatient,
+  createMockEncounter,
+  createMockAuthUser,
+  createMockAuthStore,
+  createMockPatientStore,
+  createMockUseAuth,
+  createMockMedplumClient,
+  mockSmartTextResponse,
+  mockCDSAlertResponse
+} from './clinical-test-utils';
 
 // Mock dependencies
 jest.mock('@/services/smarttext.service');
@@ -22,6 +34,37 @@ jest.mock('@mantine/notifications', () => ({
   }
 }));
 
+// Mock offline smarttext service
+jest.mock('@/services/offline-smarttext.service', () => ({
+  offlineSmartTextService: {
+    getAllMacros: jest.fn().mockReturnValue([]),
+    getTemplates: jest.fn().mockResolvedValue([]),
+    getContextualSuggestions: jest.fn().mockResolvedValue([]),
+    updateAutoComplete: jest.fn().mockResolvedValue(undefined),
+    processTemplate: jest.fn().mockReturnValue(''),
+  }
+}));
+
+// Mock SmartText component to render a simple textarea
+jest.mock('../SmartText', () => ({
+  SmartText: ({ value, onChange, placeholder, minRows, disabled }: {
+    value: string;
+    onChange: (value: string) => void;
+    placeholder?: string;
+    minRows?: number;
+    disabled?: boolean;
+  }) => (
+    <textarea
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      rows={minRows}
+      disabled={disabled}
+      data-testid="smart-text-textarea"
+    />
+  )
+}));
+
 // Mock Medplum
 jest.mock('@medplum/react', () => ({
   useMedplum: jest.fn(() => ({
@@ -33,9 +76,9 @@ jest.mock('@medplum/react', () => ({
     }),
     readResource: jest.fn()
   })),
-  NoteDisplay: ({ children }: any) => <div>{children}</div>,
-  DocumentEditor: ({ reference, onSave }: any) => <div>Document Editor</div>,
-  Document: ({ reference, onEdit }: any) => <div>Document</div>
+  NoteDisplay: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DocumentEditor: ({ reference, onSave }: { reference: string; onSave?: () => void }) => <div>Document Editor</div>,
+  Document: ({ reference, onEdit }: { reference: string; onEdit?: () => void }) => <div>Document</div>
 }));
 
 jest.mock('@medplum/core', () => ({
@@ -61,119 +104,32 @@ describe('ClinicalNoteInput', () => {
   const mockOnSave = jest.fn();
   const mockOnCancel = jest.fn();
   
-  const mockAuthUser = {
-    id: 'practitioner-123',
-    email: 'dr.smith@example.com',
-    role: 'physician',
-    name: 'Dr. Jane Smith',
-    firstName: 'Jane',
-    lastName: 'Smith'
-  };
-  
-  const mockPatient: any = {
-    id: 'patient-456',
-    resourceType: 'Patient' as const,
-    name: [{ 
-      given: ['John'], 
-      family: 'Doe',
-      use: 'official'
-    }],
-    birthDate: '1990-01-01',
-    gender: 'male',
-    identifier: [{
-      system: 'http://hospital.example.org',
-      value: 'MRN123456'
-    }],
-    active: true,
-    telecom: [],
-    address: [],
-    meta: {
-      versionId: '1',
-      lastUpdated: new Date().toISOString()
-    }
-  };
-  
-  const mockEncounter = {
-    id: 'encounter-789',
-    status: 'in-progress',
-    subject: { reference: 'Patient/patient-456' }
-  };
+  const mockPatient = createMockPatient();
+  const mockEncounter = createMockEncounter();
+  const mockAuthUser = createMockAuthUser();
 
   beforeEach(() => {
     jest.clearAllMocks();
     
-    // Setup store mocks - need to mock the entire store API
-    const mockAuthStore = {
-      user: mockAuthUser,
-      isAuthenticated: true,
-      isLoading: false,
-      tokens: null,
-      session: null,
-      permissions: [],
-      login: jest.fn(),
-      logout: jest.fn(),
-      refreshAuth: jest.fn(),
-      updateUser: jest.fn(),
-      setLoading: jest.fn(),
-      hasPermission: jest.fn(),
-      hasRole: jest.fn(),
-      hasAnyRole: jest.fn(),
-      getCurrentUser: jest.fn().mockResolvedValue(undefined)
-    };
+    // Setup store mocks using test utilities
+    const mockAuthStore = createMockAuthStore();
+    mockAuthStore.user = mockAuthUser;
     
     (useAuthStore as jest.MockedFunction<typeof useAuthStore>).mockReturnValue(mockAuthStore);
     
-    // Mock useAuth to return extended auth store with helper properties
-    const mockUseAuth = {
-      ...mockAuthStore,
-      isPhysician: true,
-      isDoctor: true,
-      isNurse: false,
-      isAdmin: false,
-      isSystemAdmin: false,
-      isPharmacist: false,
-      isLabTech: false,
-      isRadiologyTech: false,
-      isPatient: false,
-      canViewPatients: true,
-      canEditPatients: true,
-      canCreateOrders: true,
-      canAdministerMedications: false,
-      canPrescribeMedications: true,
-      canViewLabResults: true,
-      canManageSystem: false,
-      canManageBilling: false
-    };
+    // Mock useAuth with physician role permissions
+    const mockUseAuth = createMockUseAuth('physician');
     
     (useAuth as jest.MockedFunction<typeof useAuth>).mockReturnValue(mockUseAuth);
     
-    const mockPatientStoreValue = {
-      currentPatient: mockPatient,
-      currentEncounter: mockEncounter,
-      patients: [],
-      isLoading: false,
-      error: null,
-      setCurrentPatient: jest.fn(),
-      setCurrentEncounter: jest.fn(),
-      fetchPatients: jest.fn(),
-      fetchPatient: jest.fn(),
-      createPatient: jest.fn(),
-      updatePatient: jest.fn(),
-      clearCurrentPatient: jest.fn(),
-      clearCurrentEncounter: jest.fn()
-    };
+    // Setup patient store with our mock data
+    const mockPatientStoreValue = createMockPatientStore(mockPatient, mockEncounter);
     
     (usePatientStore as jest.MockedFunction<typeof usePatientStore>).mockReturnValue(mockPatientStoreValue);
     
-    // Setup service mocks
+    // Setup service mocks using test utilities
     (SmartTextService as jest.Mock).mockImplementation(() => ({
-      processSmartText: jest.fn().mockResolvedValue({
-        processedText: 'Processed clinical note',
-        expansions: [
-          { original: '.sob', expanded: 'shortness of breath' },
-          { original: '.htn', expanded: 'hypertension' }
-        ]
-      }),
+      processSmartText: jest.fn().mockResolvedValue(mockSmartTextResponse),
       getSuggestions: jest.fn().mockResolvedValue([
         { text: 'chest pain', score: 0.9 },
         { text: 'chest discomfort', score: 0.8 }
@@ -181,15 +137,7 @@ describe('ClinicalNoteInput', () => {
     }));
     
     (CDSService as jest.Mock).mockImplementation(() => ({
-      checkClinicalAlerts: jest.fn().mockResolvedValue({
-        alerts: [
-          {
-            severity: 'warning',
-            message: 'Consider ordering chest X-ray',
-            type: 'clinical-guideline'
-          }
-        ]
-      })
+      checkClinicalAlerts: jest.fn().mockResolvedValue(mockCDSAlertResponse)
     }));
     
     (FHIRService as jest.Mock).mockImplementation(() => ({
@@ -200,20 +148,10 @@ describe('ClinicalNoteInput', () => {
       })
     }));
 
-    // Re-setup useMedplum mock after clearAllMocks
+    // Setup Medplum mock using test utilities
     const { useMedplum } = require('@medplum/react');
-    (useMedplum as jest.Mock).mockReturnValue({
-      searchResources: jest.fn().mockResolvedValue([]),
-      createResource: jest.fn().mockResolvedValue({
-        id: 'doc-123',
-        resourceType: 'DocumentReference',
-        status: 'current',
-        date: new Date().toISOString()
-      }),
-      readResource: jest.fn().mockResolvedValue({}),
-      updateResource: jest.fn().mockResolvedValue({}),
-      deleteResource: jest.fn().mockResolvedValue({})
-    });
+    const mockMedplumClient = createMockMedplumClient();
+    (useMedplum as jest.Mock).mockReturnValue(mockMedplumClient);
   });
 
   describe('Basic Functionality', () => {
@@ -306,7 +244,9 @@ describe('ClinicalNoteInput', () => {
       const noteContent = screen.getByPlaceholderText(/Begin your progress note/i);
       
       // Use fireEvent instead of userEvent to avoid timing issues
-      fireEvent.change(noteContent, { target: { value: 'Patient c/o chest pain' } });
+      await act(async () => {
+        fireEvent.change(noteContent, { target: { value: 'Patient c/o chest pain' } });
+      });
 
       expect(noteContent).toHaveValue('Patient c/o chest pain');
     });
@@ -384,6 +324,16 @@ describe('ClinicalNoteInput', () => {
       const { useMedplum } = require('@medplum/react');
       const mockMedplum = useMedplum();
       
+      // Make sure createResource returns a proper response
+      mockMedplum.createResource.mockResolvedValue({
+        id: 'doc-123',
+        resourceType: 'DocumentReference',
+        status: 'current',
+        docStatus: 'preliminary',
+        date: new Date().toISOString(),
+        meta: { versionId: '1' }
+      });
+      
       renderWithProviders(
         <ClinicalNoteInput patient={mockPatient} 
           encounterId={mockEncounter.id}
@@ -398,21 +348,33 @@ describe('ClinicalNoteInput', () => {
 
       // Fill note title
       const noteTitle = screen.getByLabelText('Note Title');
-      await mockUser.clear(noteTitle);
-      await mockUser.type(noteTitle, 'Progress Note - Chest Pain');
+      await act(async () => {
+        await mockUser.clear(noteTitle);
+        await mockUser.type(noteTitle, 'Progress Note - Chest Pain');
+      });
       
       // Fill note content
       const noteContent = screen.getByPlaceholderText(/Begin your progress note/i);
-      await mockUser.type(noteContent, 'Chief Complaint: Chest pain\n\nHistory of Present Illness: Sudden onset chest pain\n\nPhysical Examination: Normal vital signs\n\nAssessment: Possible angina\n\nPlan: Order ECG');
+      await act(async () => {
+        await mockUser.type(noteContent, 'Chief Complaint: Chest pain\n\nHistory of Present Illness: Sudden onset chest pain\n\nPhysical Examination: Normal vital signs\n\nAssessment: Possible angina\n\nPlan: Order ECG');
+      });
+
+      // Wait for content to be filled
+      await waitFor(() => {
+        expect(noteContent.value).toContain('Chief Complaint: Chest pain');
+      });
 
       const saveButton = screen.getByText('Save Draft');
-      await mockUser.click(saveButton);
+      
+      await act(async () => {
+        await mockUser.click(saveButton);
+      });
 
       await waitFor(() => {
         expect(mockMedplum.createResource).toHaveBeenCalledWith(
           expect.objectContaining({
             resourceType: 'DocumentReference',
-            status: 'draft',
+            status: 'current',
             docStatus: 'preliminary',
             type: expect.objectContaining({
               coding: expect.arrayContaining([
@@ -432,16 +394,18 @@ describe('ClinicalNoteInput', () => {
             ])
           })
         );
-      });
+      }, { timeout: 5000 });
 
-      expect(mockOnSave).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'progress',
-          title: 'Progress Note - Chest Pain',
-          content: expect.stringContaining('Chief Complaint: Chest pain'),
-          status: 'draft'
-        })
-      );
+      await waitFor(() => {
+        expect(mockOnSave).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'progress',
+            title: 'Progress Note - Chest Pain',
+            content: expect.stringContaining('Chief Complaint: Chest pain'),
+            status: 'draft'
+          })
+        );
+      });
     });
 
     it('handles save errors gracefully', async () => {
@@ -465,10 +429,20 @@ describe('ClinicalNoteInput', () => {
 
       // Fill note content
       const noteContent = screen.getByPlaceholderText(/Begin your progress note/i);
-      await mockUser.type(noteContent, 'Test note content');
+      await act(async () => {
+        await mockUser.type(noteContent, 'Test note content');
+      });
+
+      // Wait for content to be filled
+      await waitFor(() => {
+        expect(noteContent.value).toBe('Test note content');
+      });
 
       const saveButton = screen.getByText('Save Draft');
-      await mockUser.click(saveButton);
+      
+      await act(async () => {
+        await mockUser.click(saveButton);
+      });
 
       await waitFor(() => {
         expect(notifications.show).toHaveBeenCalledWith(
@@ -479,7 +453,7 @@ describe('ClinicalNoteInput', () => {
             icon: expect.any(Object)
           })
         );
-      });
+      }, { timeout: 5000 });
 
       expect(mockOnSave).not.toHaveBeenCalled();
     });

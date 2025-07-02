@@ -10,7 +10,6 @@ import {
   Practitioner, 
   Encounter, 
   Observation, 
-  MedicationRequest,
   OperationOutcome,
   CapabilityStatement,
   Resource
@@ -29,28 +28,28 @@ export class MedplumMockData {
       },
       active: true,
       name: [{
-        use: 'official',
+        use: 'official' as const,
         family: 'Doe',
         given: ['John'],
       }],
       gender: 'male',
       birthDate: '1990-01-01',
       identifier: [{
-        use: 'usual',
+        use: 'usual' as const,
         system: 'http://omnicare.com/patient-id',
         value: `MRN${Math.random().toString(36).substr(2, 6).toUpperCase()}`
       }],
       telecom: [{
         system: 'phone',
         value: '555-0123',
-        use: 'mobile'
+        use: 'mobile' as const
       }, {
         system: 'email',
         value: 'john.doe@example.com',
-        use: 'home'
+        use: 'home' as const
       }],
       address: [{
-        use: 'home',
+        use: 'home' as const,
         line: ['123 Main St'],
         city: 'Anytown',
         state: 'NY',
@@ -72,7 +71,7 @@ export class MedplumMockData {
       },
       active: true,
       name: [{
-        use: 'official',
+        use: 'official' as const,
         family: 'Smith',
         given: ['Jane'],
         prefix: ['Dr.']
@@ -84,7 +83,7 @@ export class MedplumMockData {
       telecom: [{
         system: 'phone',
         value: '555-0456',
-        use: 'work'
+        use: 'work' as const
       }],
       qualification: [{
         code: {
@@ -286,7 +285,7 @@ export class MockMedplumClient {
   }
 
   // CRUD Operations
-  async createResource<T extends Resource>(resource: T): Promise<T> {
+  createResource<T extends Resource>(resource: T): Promise<T> {
     const resourceType = resource.resourceType;
     const id = resource.id || `${resourceType.toLowerCase()}-${this.nextId++}`;
     
@@ -308,7 +307,7 @@ export class MockMedplumClient {
     return createdResource;
   }
 
-  async readResource<T extends Resource>(resourceType: string, id: string): Promise<T> {
+  readResource<T extends Resource>(resourceType: string, id: string): Promise<T> {
     const typeMap = this.resources.get(resourceType);
     if (!typeMap || !typeMap.has(id)) {
       throw new Error(`${resourceType}/${id} not found`);
@@ -316,7 +315,7 @@ export class MockMedplumClient {
     return typeMap.get(id) as T;
   }
 
-  async updateResource<T extends Resource>(resource: T): Promise<T> {
+  updateResource<T extends Resource>(resource: T): Promise<T> {
     const { resourceType, id } = resource;
     if (!id) {
       throw new Error('Resource must have an ID for update');
@@ -343,7 +342,7 @@ export class MockMedplumClient {
     return updatedResource;
   }
 
-  async deleteResource(resourceType: string, id: string): Promise<void> {
+  deleteResource(resourceType: string, id: string): Promise<void> {
     const typeMap = this.resources.get(resourceType);
     if (!typeMap || !typeMap.has(id)) {
       throw new Error(`${resourceType}/${id} not found`);
@@ -352,7 +351,7 @@ export class MockMedplumClient {
   }
 
   // Search Operations
-  async search<T extends Resource>(
+  search<T extends Resource>(
     resourceType: string, 
     params: Record<string, any> = {}
   ): Promise<Bundle<T>> {
@@ -415,7 +414,7 @@ export class MockMedplumClient {
         responses.push({
           response: {
             status: '400 Bad Request',
-            outcome: MedplumMockData.createOperationOutcome('error', error.message)
+            outcome: MedplumMockData.createOperationOutcome('error', error instanceof Error ? error.message : 'Unknown error')
           }
         });
       }
@@ -429,7 +428,7 @@ export class MockMedplumClient {
   }
 
   // Validation
-  async validateResource(resource: Resource): Promise<OperationOutcome> {
+  validateResource(resource: Resource): Promise<OperationOutcome> {
     // Perform basic validation
     const issues: any[] = [];
 
@@ -444,7 +443,7 @@ export class MockMedplumClient {
 
     // Resource-specific validation
     if (resource.resourceType === 'Patient') {
-      const patient = resource as Patient;
+      const patient = resource;
       if (!patient.name || patient.name.length === 0) {
         issues.push({
           severity: 'error',
@@ -462,11 +461,11 @@ export class MockMedplumClient {
   }
 
   // Utility methods
-  async getCapabilityStatement(): Promise<CapabilityStatement> {
+  getCapabilityStatement(): Promise<CapabilityStatement> {
     return MedplumMockData.createCapabilityStatement();
   }
 
-  async getHealthStatus(): Promise<any> {
+  getHealthStatus(): Promise<any> {
     return {
       status: 'UP',
       details: {
@@ -495,23 +494,23 @@ export const mockMedplumClient = new MockMedplumClient();
 // Jest mock functions
 export const createMedplumServiceMock = () => ({
   // Core FHIR operations
-  createResource: jest.fn().mockImplementation((resource) => 
+  createResource: jest.fn().mockImplementation((resource: Resource) => 
     mockMedplumClient.createResource(resource)
   ),
-  readResource: jest.fn().mockImplementation((type, id) => 
+  readResource: jest.fn().mockImplementation((type: string, id: string) => 
     mockMedplumClient.readResource(type, id)
   ),
-  updateResource: jest.fn().mockImplementation((resource) => 
+  updateResource: jest.fn().mockImplementation((resource: Resource) => 
     mockMedplumClient.updateResource(resource)
   ),
-  deleteResource: jest.fn().mockImplementation((type, id) => 
+  deleteResource: jest.fn().mockImplementation((type: string, id: string) => 
     mockMedplumClient.deleteResource(type, id)
   ),
   searchResources: jest.fn().mockImplementation((type, params) => 
-    mockMedplumClient.searchResources(type, params)
+    mockMedplumClient.searchResources(type as string, params)
   ),
   search: jest.fn().mockImplementation((type, params) => 
-    mockMedplumClient.search(type, params)
+    mockMedplumClient.search(type as string, params)
   ),
 
   // Batch operations
@@ -520,8 +519,8 @@ export const createMedplumServiceMock = () => ({
   ),
 
   // Validation
-  validateResource: jest.fn().mockImplementation((resource) => 
-    mockMedplumClient.validateResource(resource)
+  validateResource: jest.fn().mockImplementation(async (resource) => 
+    await mockMedplumClient.validateResource(resource as Resource)
   ),
 
   // Utility
@@ -531,7 +530,7 @@ export const createMedplumServiceMock = () => ({
   getHealthStatus: jest.fn().mockImplementation(() => 
     mockMedplumClient.getHealthStatus()
   ),
-  initialize: jest.fn().mockResolvedValue(undefined),
+  initialize: jest.fn().mockResolvedValue({}),
 
   // Test utilities
   reset: jest.fn().mockImplementation(() => mockMedplumClient.reset()),

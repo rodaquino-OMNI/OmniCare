@@ -4,8 +4,9 @@
  */
 
 import { faker } from '@faker-js/faker';
-import { OmniCarePatient, PatientEmergencyContact, InsuranceInformation, PatientAlert } from '../../../src/models/patient.model';
+
 import { HumanName, Address, ContactPoint, CodeableConcept } from '../../../src/models/base.model';
+import { OmniCarePatient, PatientEmergencyContact, InsuranceInformation, PatientAlert } from '../../../src/models/patient.model';
 
 // Healthcare-specific faker extensions
 export class HealthcareFaker {
@@ -121,7 +122,7 @@ export class PatientGenerator {
       active: true,
       identifier: [
         {
-          use: 'usual',
+          use: 'usual' as const,
           type: {
             coding: [{
               system: 'http://terminology.hl7.org/CodeSystem/v2-0203',
@@ -133,7 +134,7 @@ export class PatientGenerator {
           value: HealthcareFaker.mrn()
         },
         {
-          use: 'official',
+          use: 'official' as const,
           type: {
             coding: [{
               system: 'http://terminology.hl7.org/CodeSystem/v2-0203',
@@ -185,7 +186,7 @@ export class PatientGenerator {
 
   private static generateName(firstName: string, lastName: string, language: string): HumanName[] {
     const names: HumanName[] = [{
-      use: 'official',
+      use: 'official' as const,
       given: [firstName],
       family: lastName
     }];
@@ -203,13 +204,13 @@ export class PatientGenerator {
       {
         system: 'phone',
         value: faker.phone.number(),
-        use: 'mobile',
+        use: 'mobile' as const,
         rank: 1
       },
       {
         system: 'email',
         value: faker.internet.email(),
-        use: 'home',
+        use: 'home' as const,
         rank: 2
       }
     ];

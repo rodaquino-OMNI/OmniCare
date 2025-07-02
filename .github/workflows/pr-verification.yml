@@ -1,0 +1,162 @@
+name: PR Build Verification
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Quick checks that should pass before running full CI
+  quick-checks:
+    name: Quick Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js 18.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18.x
+        cache: 'npm'
+    
+    - name: Check package.json format
+      run: |
+        npx prettier --check "*/package.json" "package.json"
+    
+    - name: Check for merge conflicts
+      run: |
+        if grep -r "^<<<<<<< \|^======= \|^>>>>>>> " --exclude-dir=.git .; then
+          echo "Merge conflicts found!"
+          exit 1
+        fi
+    
+    - name: Check for console.log statements
+      run: |
+        if grep -r "console\.log" --include="*.ts" --include="*.tsx" --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=dist .; then
+          echo "console.log statements found! Please remove them."
+          exit 1
+        fi
+    
+  # Parallel linting for speed
+  lint:
+    name: Linting
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: [backend, frontend]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js 18.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18.x
+        cache: 'npm'
+        cache-dependency-path: ${{ matrix.package }}/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: ./${{ matrix.package }}
+      run: npm ci
+    
+    - name: Run linting
+      working-directory: ./${{ matrix.package }}
+      run: npm run lint
+    
+  # Type checking
+  typecheck:
+    name: Type Checking
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: [backend, frontend]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js 18.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18.x
+        cache: 'npm'
+        cache-dependency-path: ${{ matrix.package }}/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: ./${{ matrix.package }}
+      run: npm ci
+    
+    - name: Run type checking
+      working-directory: ./${{ matrix.package }}
+      run: npm run typecheck
+    
+  # Build verification
+  build-check:
+    name: Build Check
+    runs-on: ubuntu-latest
+    needs: [quick-checks, lint, typecheck]
+    strategy:
+      matrix:
+        package: [backend, frontend]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js 18.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18.x
+        cache: 'npm'
+        cache-dependency-path: ${{ matrix.package }}/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: ./${{ matrix.package }}
+      run: npm ci
+    
+    - name: Build ${{ matrix.package }}
+      working-directory: ./${{ matrix.package }}
+      run: npm run build
+      env:
+        NEXT_PUBLIC_MEDPLUM_URL: ${{ matrix.package == 'frontend' && 'https://api.medplum.com' || '' }}
+        NEXT_PUBLIC_API_URL: ${{ matrix.package == 'frontend' && 'http://localhost:3001' || '' }}
+    
+  # PR size check
+  pr-size:
+    name: PR Size Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Check PR size
+      run: |
+        FILES_CHANGED=$(git diff --name-only origin/${{ github.base_ref }}..HEAD | wc -l)
+        LINES_CHANGED=$(git diff --stat origin/${{ github.base_ref }}..HEAD | tail -1 | awk '{print $4}')
+        
+        echo "Files changed: $FILES_CHANGED"
+        echo "Lines changed: $LINES_CHANGED"
+        
+        if [ $FILES_CHANGED -gt 30 ]; then
+          echo "::warning::This PR changes $FILES_CHANGED files. Consider breaking it into smaller PRs."
+        fi
+        
+        if [ $LINES_CHANGED -gt 1000 ]; then
+          echo "::warning::This PR changes $LINES_CHANGED lines. Consider breaking it into smaller PRs."
+        fi
+    
+  # All checks passed
+  pr-ready:
+    name: PR Ready
+    runs-on: ubuntu-latest
+    needs: [quick-checks, lint, typecheck, build-check, pr-size]
+    
+    steps:
+    - name: PR checks passed
+      run: |
+        echo "✅ All PR checks passed!"
+        echo "This PR is ready for review."

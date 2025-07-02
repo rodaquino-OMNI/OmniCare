@@ -1,6 +1,7 @@
+import { Patient, Encounter, Observation, MedicationRequest, Bundle, Practitioner, ServiceRequest } from '@medplum/fhirtypes';
+
 import { FHIRResourcesService } from '../../../src/services/fhir-resources.service';
 import { medplumService } from '../../../src/services/medplum.service';
-import { Patient, Encounter, Observation, MedicationRequest, Bundle, Practitioner, ServiceRequest } from '@medplum/fhirtypes';
 import { OmniCarePatient, OmniCareEncounter, OmniCareObservation, FHIRSearchParams } from '../../../src/types/fhir';
 
 // Mock the medplum service

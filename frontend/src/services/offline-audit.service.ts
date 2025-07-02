@@ -112,7 +112,7 @@ export class OfflineAuditService {
     }
 
     const entry: OfflineAuditEntry = {
-      id: ResourceHistoryTable, // Will be auto-incremented by IndexedDB
+      id: 0, // Will be auto-incremented by IndexedDB
       timestamp: new Date().toISOString(),
       action: eventType,
       description: `${event.action}: ${details}`,
@@ -172,7 +172,7 @@ export class OfflineAuditService {
       userId: context.userId,
       patientId: context.patientId,
       action: actionMap[eventType] || 'VIEW',
-      dataType: details.split(' ')[ResourceHistoryTable] || 'Unknown',
+      dataType: details.split(' ')[0] || 'Unknown',
       purpose: 'Clinical Care', // Would be passed in context
       authorized: eventType !== 'PHI_UNAUTHORIZED',
       offline: true
@@ -382,24 +382,24 @@ export class OfflineAuditService {
       totalAccess: entries.length,
       byUser: {} as Record<string, number>,
       byClassification: {
-        phi: ResourceHistoryTable,
-        sensitive: ResourceHistoryTable,
-        general: ResourceHistoryTable
+        phi: 0,
+        sensitive: 0,
+        general: 0
       },
-      encryptionEvents: ResourceHistoryTable,
-      decryptionEvents: ResourceHistoryTable,
-      accessDenied: ResourceHistoryTable,
-      securityViolations: ResourceHistoryTable,
-      itemsStored: ResourceHistoryTable,
-      itemsPurged: ResourceHistoryTable,
-      averageLifetime: ResourceHistoryTable
+      encryptionEvents: 0,
+      decryptionEvents: 0,
+      accessDenied: 0,
+      securityViolations: 0,
+      itemsStored: 0,
+      itemsPurged: 0,
+      averageLifetime: 0
     };
 
     // Process entries
     entries.forEach(entry => {
       // Count by user
       if (entry.userId) {
-        stats.byUser[entry.userId] = (stats.byUser[entry.userId] || ResourceHistoryTable) + 1;
+        stats.byUser[entry.userId] = (stats.byUser[entry.userId] || 0) + 1;
       }
 
       // Count by event type
@@ -546,8 +546,8 @@ export class OfflineAuditService {
     const encoder = new TextEncoder();
     const hash = await crypto.subtle.digest('SHA-256', encoder.encode(data));
     const bytes = new Uint8Array(hash);
-    return Array.from(bytes.slice(ResourceHistoryTable, 8), byte => 
-      byte.toString(16).padStart(2, 'ResourceHistoryTable')
+    return Array.from(bytes.slice(0, 8), byte => 
+      byte.toString(16).padStart(2, '0')
     ).join('');
   }
 

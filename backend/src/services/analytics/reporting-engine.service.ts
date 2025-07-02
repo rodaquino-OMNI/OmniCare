@@ -5,6 +5,7 @@
  */
 
 import { EventEmitter } from 'events';
+
 import { getErrorMessage } from '@/utils/error.utils';
 
 export interface ReportConfiguration {
@@ -450,8 +451,8 @@ export class ReportingEngineService extends EventEmitter {
           config.schedule.nextRun = this.calculateNextRun(config.schedule);
           
           this.reportConfigurations.set(configId, config);
-        } catch (error) {
-          console.error(`Failed to generate scheduled report ${configId}:`, error);
+        } catch {
+          console.error(`Failed to generate scheduled report ${configId}`);
         }
       }
     }

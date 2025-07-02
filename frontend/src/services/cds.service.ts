@@ -77,7 +77,7 @@ export class CDSService {
     }
 
     // Check for allergies
-    if (context.allergies && context.allergies.length > ResourceHistoryTable) {
+    if (context.allergies && context.allergies.length > 0) {
       alerts.push({
         id: 'allergy-check',
         title: 'Allergy Alert',
@@ -117,7 +117,7 @@ export class CDSService {
     const recommendations: string[] = [];
 
     // Check for duplicate orders
-    if (context.orders && context.orders.length > ResourceHistoryTable) {
+    if (context.orders && context.orders.length > 0) {
       alerts.push({
         id: 'duplicate-order-check',
         title: 'Duplicate Order Check',

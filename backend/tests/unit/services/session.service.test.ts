@@ -1,5 +1,5 @@
-import { SessionManager, InMemorySessionStore, SessionStore } from '../../../src/services/session.service';
 import { AuditService } from '../../../src/services/audit.service';
+import { SessionManager, InMemorySessionStore, SessionStore } from '../../../src/services/session.service';
 import { SessionInfo, User, UserRoles } from '../../../src/types/auth.types';
 
 // Mock dependencies
@@ -23,6 +23,9 @@ describe('SessionService', () => {
     firstName: 'John',
     lastName: 'Doe',
     isActive: true,
+    isMfaEnabled: false,
+    passwordChangedAt: new Date(),
+    failedLoginAttempts: 0,
     lastLogin: new Date(),
     createdAt: new Date(),
     updatedAt: new Date(),

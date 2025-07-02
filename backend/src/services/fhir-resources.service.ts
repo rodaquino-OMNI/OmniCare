@@ -1,22 +1,12 @@
 import {
   Patient,
   Practitioner,
-  Organization,
-  Location,
   Encounter,
   Observation,
-  Medication,
   MedicationRequest,
   ServiceRequest,
   DiagnosticReport,
   CarePlan,
-  Communication,
-  Task,
-  DocumentReference,
-  Condition,
-  Procedure,
-  AllergyIntolerance,
-  Immunization,
   Bundle,
   Resource,
 } from '@medplum/fhirtypes';
@@ -92,15 +82,87 @@ export class FHIRResourcesService {
 
   /**
    * Search for patients with various criteria
+   * Supports advanced search parameters including:
+   * - name (given, family, or full name search)
+   * - identifier (MRN, SSN, etc.)
+   * - birthdate (exact or range)
+   * - gender
+   * - phone
+   * - email
+   * - address (city, state, postal code)
+   * - general-practitioner
+   * - active status
+   * - _sort (sorting)
+   * - _count (pagination)
+   * - _offset (pagination)
    */
   async searchPatients(searchParams: FHIRSearchParams): Promise<Bundle<Patient>> {
     try {
-      const result = await medplumService.searchResources<Patient>('Patient', searchParams);
+      // Build enhanced search parameters
+      const enhancedParams: FHIRSearchParams = {
+        ...searchParams,
+      };
+
+      // Handle special search parameters
+      if (searchParams.name) {
+        // Support partial name matching
+        enhancedParams.name = searchParams.name;
+        enhancedParams['name:contains'] = searchParams.name;
+      }
+
+      if (searchParams.birthdate) {
+        // Support date range searches - handle birthdate as string or object
+        if (typeof searchParams.birthdate === 'string') {
+          enhancedParams['birthdate'] = searchParams.birthdate;
+        } else if (typeof searchParams.birthdate === 'object' && searchParams.birthdate !== null) {
+          const birthdateObj = searchParams.birthdate as any;
+          if ('start' in birthdateObj) {
+            enhancedParams['birthdate'] = `ge${birthdateObj.start}`;
+            if ('end' in birthdateObj && birthdateObj.end) {
+              enhancedParams['birthdate'] = `${enhancedParams['birthdate']}&le${birthdateObj.end}`;
+            }
+          }
+        }
+      }
+
+      // Add default sorting if not specified
+      if (!enhancedParams._sort) {
+        enhancedParams._sort = '-_lastUpdated';
+      }
+
+      // Add default count if not specified
+      if (!enhancedParams._count) {
+        enhancedParams._count = 20;
+      }
+
+      const result = await medplumService.searchResources<Patient>('Patient', enhancedParams);
+      
+      // Add caching headers for offline support
+      const cacheHeaders = {
+        'Cache-Control': 'private, max-age=300', // 5 minutes
+        'ETag': `W/"${Date.now()}"`,
+        'Last-Modified': new Date().toUTCString(),
+      };
+
       logger.fhir('Patient search completed', { 
         resultCount: result.entry?.length || 0,
         total: result.total,
+        searchParams: enhancedParams,
+        cacheHeaders,
       });
-      return result;
+
+      // Enhance result with cache metadata - store cache headers separately
+      const enhancedResult = {
+        ...result,
+        meta: {
+          ...result.meta,
+        },
+      } as Bundle<Patient> & { cacheHeaders?: Record<string, string> };
+      
+      // Add cache headers as a custom property
+      enhancedResult.cacheHeaders = cacheHeaders;
+      
+      return enhancedResult;
     } catch (error) {
       logger.error('Failed to search patients:', error);
       throw error;
@@ -126,11 +188,137 @@ export class FHIRResourcesService {
    */
   async updatePatient(patient: Patient): Promise<Patient> {
     try {
+      // Validate patient data before update
+      const validationResult = await this.validateResource(patient);
+      if (!validationResult.valid) {
+        throw new Error(`Patient validation failed: ${validationResult.errors.map(e => e.message).join(', ')}`);
+      }
+
+      // Update last modified timestamp
+      patient.meta = {
+        ...patient.meta,
+        lastUpdated: new Date().toISOString(),
+      };
+
       const result = await medplumService.updateResource(patient);
       logger.fhir('Patient updated successfully', { patientId: result.id });
       return result;
     } catch (error) {
       logger.error('Failed to update patient:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete patient (soft delete by marking as inactive)
+   */
+  async deletePatient(patientId: string, hardDelete: boolean = false): Promise<void> {
+    try {
+      if (hardDelete) {
+        // Hard delete - permanently remove from database
+        await medplumService.deleteResource('Patient', patientId);
+        logger.fhir('Patient hard deleted', { patientId });
+      } else {
+        // Soft delete - mark as inactive
+        const patient = await this.getPatient(patientId);
+        patient.active = false;
+        patient.meta = {
+          ...patient.meta,
+          lastUpdated: new Date().toISOString(),
+        };
+        await medplumService.updateResource(patient);
+        logger.fhir('Patient soft deleted (marked inactive)', { patientId });
+      }
+    } catch (error) {
+      logger.error('Failed to delete patient:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Batch create patients
+   */
+  async createPatientsBatch(patients: Partial<OmniCarePatient>[]): Promise<Bundle<Patient>> {
+    try {
+      const bundle: Bundle = {
+        resourceType: 'Bundle',
+        type: 'batch',
+        entry: patients.map(patientData => ({
+          request: {
+            method: 'POST',
+            url: 'Patient',
+          },
+          resource: {
+            resourceType: 'Patient',
+            active: true,
+            name: patientData.name || [],
+            gender: patientData.gender,
+            birthDate: patientData.birthDate,
+            address: patientData.address || [],
+            telecom: patientData.telecom || [],
+            identifier: [
+              ...(patientData.identifier || []),
+              {
+                system: 'http://omnicare.com/patient-id',
+                value: patientData.omnicarePatientId || `P${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              },
+            ],
+            contact: patientData.contact || [],
+            communication: patientData.communication || [],
+            generalPractitioner: patientData.generalPractitioner || [],
+            managingOrganization: patientData.managingOrganization,
+            extension: [
+              ...(patientData.extension || []),
+              {
+                url: 'http://omnicare.com/fhir/StructureDefinition/registration-date',
+                valueDateTime: patientData.registrationDate || new Date().toISOString(),
+              },
+              {
+                url: 'http://omnicare.com/fhir/StructureDefinition/preferred-language',
+                valueString: patientData.preferredLanguage || 'en',
+              },
+            ],
+          } as Patient,
+        })),
+      };
+
+      const result = await medplumService.executeBatch(bundle);
+      logger.fhir('Batch patient creation completed', {
+        requestedCount: patients.length,
+        successCount: result.entry?.filter(e => e.response?.status?.startsWith('2')).length || 0,
+      });
+      return result as Bundle<Patient>;
+    } catch (error) {
+      logger.error('Failed to create patients batch:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get patient summary (optimized for list views)
+   */
+  async getPatientSummary(patientId: string): Promise<Partial<Patient>> {
+    try {
+      const patient = await this.getPatient(patientId);
+      
+      // Return only essential fields for summary views
+      return {
+        id: patient.id,
+        resourceType: patient.resourceType,
+        identifier: patient.identifier,
+        active: patient.active,
+        name: patient.name,
+        gender: patient.gender,
+        birthDate: patient.birthDate,
+        telecom: patient.telecom?.filter(t => t.use === 'mobile' || t.use === 'home'),
+        address: patient.address?.filter(a => a.use === 'home'),
+        meta: {
+          lastUpdated: patient.meta?.lastUpdated,
+          versionId: patient.meta?.versionId,
+        },
+      };
+    } catch (error) {
+      logger.error('Failed to get patient summary:', error);
       throw error;
     }
   }
@@ -511,7 +699,7 @@ export class FHIRResourcesService {
   // ===============================
 
   /**
-   * Create a service request (order)
+   * Create a service request (order) with enhanced CPOE functionality
    */
   async createServiceRequest(serviceRequestData: Partial<ServiceRequest>): Promise<ServiceRequest> {
     try {
@@ -534,11 +722,27 @@ export class FHIRResourcesService {
         authoredOn: serviceRequestData.authoredOn || new Date().toISOString(),
         requester: serviceRequestData.requester,
         reasonCode: serviceRequestData.reasonCode || [],
+        bodySite: serviceRequestData.bodySite,
+        note: serviceRequestData.note || [],
+        patientInstruction: serviceRequestData.patientInstruction,
+        specimen: serviceRequestData.specimen,
+        supportingInfo: serviceRequestData.supportingInfo || [],
         identifier: [
           ...(serviceRequestData.identifier || []),
           {
             system: 'http://omnicare.com/service-request-id',
             value: `SR${Date.now()}`,
+          },
+        ],
+        extension: [
+          ...(serviceRequestData.extension || []),
+          {
+            url: 'http://omnicare.com/fhir/StructureDefinition/order-urgency',
+            valueString: serviceRequestData.priority || 'routine',
+          },
+          {
+            url: 'http://omnicare.com/fhir/StructureDefinition/order-created-date',
+            valueDateTime: new Date().toISOString(),
           },
         ],
       };
@@ -550,6 +754,373 @@ export class FHIRResourcesService {
       logger.error('Failed to create service request:', error);
       throw error;
     }
+  }
+
+  /**
+   * Search service requests with enhanced filtering for CPOE
+   */
+  async searchServiceRequests(searchParams: FHIRSearchParams): Promise<Bundle<ServiceRequest>> {
+    try {
+      // Build enhanced search parameters for order management
+      const enhancedParams: FHIRSearchParams = {
+        ...searchParams,
+      };
+
+      // Add default sorting if not specified (most recent first)
+      if (!enhancedParams._sort) {
+        enhancedParams._sort = '-authored';
+      }
+
+      // Add default count if not specified
+      if (!enhancedParams._count) {
+        enhancedParams._count = 50;
+      }
+
+      // Add includes for related resources
+      enhancedParams._include = 'ServiceRequest:subject,ServiceRequest:requester,ServiceRequest:encounter';
+
+      const result = await medplumService.searchResources<ServiceRequest>('ServiceRequest', enhancedParams);
+      
+      logger.fhir('Service request search completed', { 
+        resultCount: result.entry?.length || 0,
+        total: result.total,
+        searchParams: enhancedParams,
+      });
+
+      return result;
+    } catch (error) {
+      logger.error('Failed to search service requests:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update service request status (for order tracking)
+   */
+  async updateServiceRequestStatus(serviceRequestId: string, status: string, note?: string): Promise<ServiceRequest> {
+    try {
+      const serviceRequest = await medplumService.readResource<ServiceRequest>('ServiceRequest', serviceRequestId);
+      
+      // Validate status transition
+      const validStatuses = ['draft', 'active', 'on-hold', 'revoked', 'completed', 'entered-in-error', 'unknown'];
+      if (!validStatuses.includes(status)) {
+        throw new Error(`Invalid status: ${status}. Valid statuses are: ${validStatuses.join(', ')}`);
+      }
+
+      // Update the service request
+      const updatedServiceRequest: ServiceRequest = {
+        ...serviceRequest,
+        status: status as ServiceRequest['status'],
+        meta: {
+          ...serviceRequest.meta,
+          lastUpdated: new Date().toISOString(),
+        },
+        note: note ? [
+          ...(serviceRequest.note || []),
+          {
+            text: note,
+            time: new Date().toISOString(),
+          },
+        ] : serviceRequest.note,
+      };
+
+      const result = await medplumService.updateResource(updatedServiceRequest);
+      logger.fhir('Service request status updated', { 
+        serviceRequestId, 
+        oldStatus: serviceRequest.status, 
+        newStatus: status 
+      });
+      
+      return result;
+    } catch (error) {
+      logger.error('Failed to update service request status:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create laboratory order with specific lab test details
+   */
+  async createLabOrder(labOrderData: {
+    patientId: string;
+    encounterId?: string;
+    tests: Array<{
+      code: string;
+      display: string;
+      system?: string;
+    }>;
+    priority?: 'routine' | 'urgent' | 'asap' | 'stat';
+    reason?: string;
+    specimenType?: string;
+    notes?: string;
+    requesterId?: string;
+  }): Promise<ServiceRequest[]> {
+    try {
+      const { patientId, encounterId, tests, priority = 'routine', reason, specimenType, notes, requesterId } = labOrderData;
+
+      const labOrders: ServiceRequest[] = [];
+
+      for (const test of tests) {
+        const serviceRequest: ServiceRequest = {
+          resourceType: 'ServiceRequest',
+          status: 'active',
+          intent: 'order',
+          category: [{
+            coding: [{
+              system: 'http://snomed.info/sct',
+              code: '108252007',
+              display: 'Laboratory procedure',
+            }],
+          }],
+          priority,
+          code: {
+            coding: [{
+              system: test.system || 'http://loinc.org',
+              code: test.code,
+              display: test.display,
+            }],
+          },
+          subject: { reference: `Patient/${patientId}` },
+          encounter: encounterId ? { reference: `Encounter/${encounterId}` } : undefined,
+          authoredOn: new Date().toISOString(),
+          requester: requesterId ? { reference: `Practitioner/${requesterId}` } : undefined,
+          reasonCode: reason ? [{
+            text: reason,
+          }] : undefined,
+          specimen: specimenType ? [{
+            reference: `Specimen/lab-specimen-${Date.now()}`,
+            display: specimenType,
+          }] : undefined,
+          note: notes ? [{
+            text: notes,
+            time: new Date().toISOString(),
+          }] : undefined,
+          identifier: [{
+            system: 'http://omnicare.com/lab-order-id',
+            value: `LAB${Date.now()}-${test.code}`,
+          }],
+          extension: [{
+            url: 'http://omnicare.com/fhir/StructureDefinition/lab-test-type',
+            valueString: test.code,
+          }],
+        };
+
+        const result = await medplumService.createResource(serviceRequest);
+        labOrders.push(result);
+      }
+
+      logger.fhir('Lab orders created successfully', { 
+        patientId, 
+        testCount: tests.length,
+        orderIds: labOrders.map(order => order.id),
+      });
+
+      return labOrders;
+    } catch (error) {
+      logger.error('Failed to create lab orders:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create imaging order with specific imaging details
+   */
+  async createImagingOrder(imagingOrderData: {
+    patientId: string;
+    encounterId?: string;
+    imagingType: string;
+    bodyRegion?: string;
+    priority?: 'routine' | 'urgent' | 'asap' | 'stat';
+    reason?: string;
+    contrast?: boolean;
+    notes?: string;
+    requesterId?: string;
+  }): Promise<ServiceRequest> {
+    try {
+      const { 
+        patientId, 
+        encounterId, 
+        imagingType, 
+        bodyRegion, 
+        priority = 'routine', 
+        reason, 
+        contrast = false, 
+        notes, 
+        requesterId 
+      } = imagingOrderData;
+
+      const serviceRequest: ServiceRequest = {
+        resourceType: 'ServiceRequest',
+        status: 'active',
+        intent: 'order',
+        category: [{
+          coding: [{
+            system: 'http://snomed.info/sct',
+            code: '363679005',
+            display: 'Imaging',
+          }],
+        }],
+        priority,
+        code: {
+          coding: [{
+            system: 'http://snomed.info/sct',
+            code: this.getImagingCode(imagingType),
+            display: imagingType,
+          }],
+        },
+        subject: { reference: `Patient/${patientId}` },
+        encounter: encounterId ? { reference: `Encounter/${encounterId}` } : undefined,
+        authoredOn: new Date().toISOString(),
+        requester: requesterId ? { reference: `Practitioner/${requesterId}` } : undefined,
+        reasonCode: reason ? [{
+          text: reason,
+        }] : undefined,
+        bodySite: bodyRegion ? [{
+          text: bodyRegion,
+        }] : undefined,
+        note: notes ? [{
+          text: notes,
+          time: new Date().toISOString(),
+        }] : undefined,
+        identifier: [{
+          system: 'http://omnicare.com/imaging-order-id',
+          value: `IMG${Date.now()}`,
+        }],
+        extension: [
+          {
+            url: 'http://omnicare.com/fhir/StructureDefinition/imaging-type',
+            valueString: imagingType,
+          },
+          {
+            url: 'http://omnicare.com/fhir/StructureDefinition/contrast-used',
+            valueBoolean: contrast,
+          },
+          ...(bodyRegion ? [{
+            url: 'http://omnicare.com/fhir/StructureDefinition/body-region',
+            valueString: bodyRegion,
+          }] : []),
+        ],
+      };
+
+      const result = await medplumService.createResource(serviceRequest);
+      logger.fhir('Imaging order created successfully', { 
+        patientId, 
+        imagingType, 
+        orderId: result.id,
+      });
+
+      return result;
+    } catch (error) {
+      logger.error('Failed to create imaging order:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get orders by patient for order tracking
+   */
+  async getOrdersByPatient(patientId: string, filters?: {
+    status?: string;
+    category?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }): Promise<Bundle<ServiceRequest>> {
+    try {
+      const searchParams: FHIRSearchParams = {
+        subject: `Patient/${patientId}`,
+        _sort: '-authored',
+        _count: 100,
+        _include: 'ServiceRequest:requester',
+      };
+
+      if (filters?.status) {
+        searchParams.status = filters.status;
+      }
+
+      if (filters?.category) {
+        searchParams.category = filters.category;
+      }
+
+      if (filters?.dateFrom) {
+        searchParams.authored = `ge${filters.dateFrom}`;
+      }
+
+      if (filters?.dateTo) {
+        const existingDate = searchParams.authored || '';
+        searchParams.authored = `${existingDate}&le${filters.dateTo}`;
+      }
+
+      const result = await this.searchServiceRequests(searchParams);
+      
+      logger.fhir('Patient orders retrieved', { 
+        patientId, 
+        orderCount: result.entry?.length || 0,
+        filters,
+      });
+
+      return result;
+    } catch (error) {
+      logger.error('Failed to get orders by patient:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cancel/revoke an order
+   */
+  async cancelOrder(serviceRequestId: string, reason: string, requesterId?: string): Promise<ServiceRequest> {
+    try {
+      const serviceRequest = await medplumService.readResource<ServiceRequest>('ServiceRequest', serviceRequestId);
+      
+      // Check if order can be cancelled
+      if (serviceRequest.status === 'completed' || serviceRequest.status === 'entered-in-error') {
+        throw new Error(`Cannot cancel order with status: ${serviceRequest.status}`);
+      }
+
+      const cancelledRequest: ServiceRequest = {
+        ...serviceRequest,
+        status: 'revoked',
+        meta: {
+          ...serviceRequest.meta,
+          lastUpdated: new Date().toISOString(),
+        },
+        note: [
+          ...(serviceRequest.note || []),
+          {
+            text: `Order cancelled: ${reason}`,
+            time: new Date().toISOString(),
+            authorReference: requesterId ? { reference: `Practitioner/${requesterId}` } : undefined,
+          },
+        ],
+      };
+
+      const result = await medplumService.updateResource(cancelledRequest);
+      logger.fhir('Order cancelled successfully', { 
+        serviceRequestId, 
+        reason, 
+        cancelledBy: requesterId 
+      });
+
+      return result;
+    } catch (error) {
+      logger.error('Failed to cancel order:', error);
+      throw error;
+    }
+  }
+
+  // Helper method for imaging codes
+  private getImagingCode(imagingType: string): string {
+    const imagingCodes: Record<string, string> = {
+      'X-ray': '168537006',
+      'CT scan': '77477000',
+      'MRI': '113091000',
+      'Ultrasound': '16310003',
+      'Mammography': '71651007',
+      'Nuclear medicine': '363680008',
+      'PET scan': '82918005',
+      'Fluoroscopy': '44491008',
+    };
+    return imagingCodes[imagingType] || '363679005'; // Default to general imaging
   }
 
   // ===============================

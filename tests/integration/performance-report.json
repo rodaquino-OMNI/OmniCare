@@ -1,0 +1,11 @@
+{
+  "timestamp": "2025-07-02T14:17:43.469Z",
+  "summary": {
+    "totalOperations": 0,
+    "avgResponseTime": null,
+    "maxP95": null,
+    "overallThroughput": 0
+  },
+  "details": [],
+  "recommendations": []
+}

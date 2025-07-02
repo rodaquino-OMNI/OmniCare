@@ -1,7 +1,9 @@
-import { Patient, Observation, MedicationRequest, Resource } from '@medplum/fhirtypes';
+import { Resource } from '@medplum/fhirtypes';
+
+import logger from '../utils/logger';
+
 import { AuditService } from './audit.service';
 import { ValidationService } from './validation.service';
-import logger from '../utils/logger';
 
 export interface ComplianceReport {
   status: 'compliant' | 'non-compliant' | 'partial';
@@ -157,7 +159,7 @@ export class ComplianceService {
   async validateDataMinimization(resource: Resource): Promise<boolean> {
     // Check if the resource contains only necessary PHI
     if (resource.resourceType === 'Patient') {
-      const patient = resource as Patient;
+      const patient = resource;
       // Validate that sensitive fields are properly marked
       if (patient.extension?.some(ext => 
         ext.url === 'http://hl7.org/fhir/StructureDefinition/patient-importance'
@@ -169,7 +171,7 @@ export class ComplianceService {
     return true;
   }
 
-  private async checkAccessControls(organizationId: string): Promise<ComplianceFinding> {
+  private async checkAccessControls(_organizationId: string): Promise<ComplianceFinding> {
     // Check if proper access controls are in place
     const hasRBAC = true; // Simplified for now
     
@@ -182,7 +184,7 @@ export class ComplianceService {
     };
   }
 
-  private async checkAuditLogging(organizationId: string): Promise<ComplianceFinding> {
+  private async checkAuditLogging(_organizationId: string): Promise<ComplianceFinding> {
     // Check if audit logging is properly configured
     const hasAuditLogs = true; // Simplified
     
@@ -208,7 +210,7 @@ export class ComplianceService {
     };
   }
 
-  private async checkDataIntegrity(organizationId: string): Promise<ComplianceFinding> {
+  private async checkDataIntegrity(_organizationId: string): Promise<ComplianceFinding> {
     // Check data integrity controls
     const hasIntegrityControls = true; // Simplified
     
@@ -221,7 +223,7 @@ export class ComplianceService {
     };
   }
 
-  private async checkBreachNotification(organizationId: string): Promise<ComplianceFinding> {
+  private async checkBreachNotification(_organizationId: string): Promise<ComplianceFinding> {
     // Check breach notification procedures
     const hasBreachProcedures = true; // Simplified
     
@@ -235,9 +237,9 @@ export class ComplianceService {
   }
 
   private async checkUserPermission(
-    userId: string,
-    resource: string,
-    action: string
+    _userId: string,
+    _resource: string,
+    _action: string
   ): Promise<boolean> {
     // Simplified permission check
     return true;

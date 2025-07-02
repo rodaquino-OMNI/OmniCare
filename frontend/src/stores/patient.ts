@@ -220,12 +220,12 @@ export const usePatientStore = create<PatientState>((set, get) => ({
           bValue = new Date(b.updatedAt);
           break;
         default:
-          return ResourceHistoryTable;
+          return 0;
       }
 
       if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
       if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
-      return ResourceHistoryTable;
+      return 0;
     });
 
     set({ filteredPatients: filtered });
@@ -299,7 +299,7 @@ export const usePatientStore = create<PatientState>((set, get) => ({
         .slice(ResourceHistoryTable, 10)
         .map(p => p.id);
       
-      if (frequentPatientIds.length > ResourceHistoryTable) {
+      if (frequentPatientIds.length > 0) {
         patientCacheService.warmupCache(frequentPatientIds);
       }
       
@@ -400,7 +400,7 @@ function calculateAge(dateOfBirth: string): number {
   let age = today.getFullYear() - birthDate.getFullYear();
   const monthDiff = today.getMonth() - birthDate.getMonth();
   
-  if (monthDiff < ResourceHistoryTable || (monthDiff === ResourceHistoryTable && today.getDate() < birthDate.getDate())) {
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
     age--;
   }
   

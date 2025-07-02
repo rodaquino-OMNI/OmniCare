@@ -4,7 +4,9 @@
  */
 
 import { performance } from 'perf_hooks';
+
 import { Pool, PoolClient } from 'pg';
+
 import { PerformanceTestBase, TestConfiguration } from '../framework/performance-test-base';
 
 export interface QueryPerformanceResult {
@@ -552,7 +554,7 @@ export class DatabasePerformanceTests extends PerformanceTestBase {
     observationResults: QueryPerformanceResult[],
     joinResults: QueryPerformanceResult[]
   ): string {
-    let report = `
+    const report = `
 Database Performance Test Report
 ===============================
 

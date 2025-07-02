@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "lib": ["ES2020", "DOM"],
+    "lib": ["ES2020"],
     "module": "commonjs",
     "moduleResolution": "node",
     "resolveJsonModule": true,
@@ -19,35 +19,31 @@
     "skipLibCheck": true,
     "declaration": true,
     "outDir": "./dist",
-    "rootDir": "./src",
     "removeComments": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
     "sourceMap": true,
-    "jsx": "react-jsx",
     "isolatedModules": true,
     "baseUrl": "./",
     "paths": {
-      "@/*": ["src/*"],
-      "@/types/*": ["src/types/*"],
-      "@/config/*": ["src/config/*"],
-      "@/auth/*": ["src/auth/*"],
-      "@/middleware/*": ["src/middleware/*"],
-      "@/services/*": ["src/services/*"],
-      "@/models/*": ["src/models/*"],
-      "@/controllers/*": ["src/controllers/*"],
-      "@/utils/*": ["src/utils/*"]
+      "@/shared/*": ["shared/*"],
+      "@/types/*": ["types/*"],
+      "@/utils/*": ["utils/*"]
     }
   },
   "include": [
-    "src/**/*"
+    "shared/**/*",
+    "types/**/*",
+    "utils/**/*",
+    "tests/integration/**/*"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "tests",
     "frontend",
     "backend", 
     "mobile"
+  ],
+  "references": [
+    { "path": "./backend" },
+    { "path": "./frontend" }
   ]
 }

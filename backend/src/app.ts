@@ -3,16 +3,24 @@
  * Provides access to the Express application without starting the server
  */
 
-import express from 'express';
+import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import cors from 'cors';
+import express from 'express';
+import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import compression from 'compression';
-import rateLimit from 'express-rate-limit';
 
 import config from './config';
-import logger from './utils/logger';
+// Removed unused imports: fhirResourceCache, analyticsCache
+import { createAPIPerformanceMonitor, addOptimizationHintsHeaders } from './middleware/api-performance-monitor.middleware';
+import { csrfProtect, csrfAttachToken } from './middleware/csrf.middleware';
+import { createEnhancedCompression } from './middleware/enhanced-compression.middleware';
+import { createEnhancedRateLimit, createAbuseProtectionMiddleware } from './middleware/enhanced-rate-limit.middleware';
+import { setupSecureErrorHandling } from './middleware/secure-error-handler.middleware';
+import { sanitizationMiddleware, fhirSanitizationMiddleware } from './middleware/security-sanitization.middleware';
 import routes from './routes';
+import logger from './utils/logger';
 
 // Create Express app for testing
 const app = express();
@@ -33,7 +41,34 @@ app.use(helmet({
     },
   },
   crossOriginEmbedderPolicy: false,
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  },
+  noSniff: true,
+  xssFilter: true,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  permittedCrossDomainPolicies: false
 }));
+
+// Add comprehensive security headers
+app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+  // Additional security headers for HIPAA compliance
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  
+  // Remove server information header
+  res.removeHeader('X-Powered-By');
+  
+  next();
+});
 
 app.use(cors({
   origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
@@ -56,6 +91,9 @@ app.use(cors({
   credentials: true,
 }));
 
+// Cookie parser for CSRF tokens
+app.use(cookieParser(process.env.COOKIE_SECRET || 'omnicare-secure-secret-2024'));
+
 app.use(express.json({ 
   limit: config.performance.maxRequestSize,
   type: ['application/json', 'application/fhir+json'],
@@ -65,30 +103,92 @@ app.use(express.urlencoded({
   limit: config.performance.maxRequestSize,
 }));
 
-app.use(compression());
+// Enhanced compression with adaptive algorithms and caching
+app.use(createEnhancedCompression({
+  level: 6,
+  threshold: 1024,
+  enableBrotli: true,
+  enablePrecompression: true,
+  cacheCompressed: true,
+  adaptiveCompression: true,
+}));
 
 // Simplified logging for tests
 if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }
 
-// Rate limiting (relaxed for tests)
-const limiter = rateLimit({
-  windowMs: config.rateLimit.windowMs,
-  max: process.env.NODE_ENV === 'test' ? 1000 : config.rateLimit.maxRequests,
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+// Enhanced rate limiting with Redis (relaxed for tests)
+if (process.env.NODE_ENV !== 'test') {
+  const generalRateLimit = createEnhancedRateLimit({
+    windowMs: config.rateLimit.windowMs,
+    maxRequests: config.rateLimit.maxRequests,
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  
+  app.use(generalRateLimit);
+  app.use(createAbuseProtectionMiddleware());
+}
 
-app.use(limiter);
+// API Performance monitoring and optimization hints
+app.use(createAPIPerformanceMonitor({
+  trackMemory: true,
+  trackQueries: true,
+  logSlowRequests: true,
+  slowThreshold: 1000,
+  enableOptimizationHints: true,
+}));
+
+// Add optimization hints in development
+if (process.env.NODE_ENV === 'development') {
+  app.use(addOptimizationHintsHeaders());
+}
 
 // Request ID middleware
 app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
   const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  (req as any).requestId = requestId;
+  req.requestId = requestId;
   res.setHeader('X-Request-ID', requestId);
   next();
 });
+
+// Security sanitization middleware with enhanced logging
+app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const startTime = Date.now();
+  
+  // Wrap the sanitization middleware to add logging
+  const originalJson = res.json;
+  res.json = function(body: unknown) {
+    const duration = Date.now() - startTime;
+    
+    // Log sanitization activity
+    logger.security('Request sanitized', {
+      path: req.path,
+      method: req.method,
+      duration: `${duration}ms`,
+      sanitizationApplied: true,
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+    
+    return originalJson.call(this, body);
+  };
+  
+  next();
+});
+
+app.use(sanitizationMiddleware({
+  allowHTML: false,
+  maxLength: 10000,
+}));
+
+// FHIR-specific sanitization for FHIR endpoints
+app.use('/fhir', fhirSanitizationMiddleware());
+
+// CSRF protection middleware
+app.use(csrfAttachToken);
+app.use(csrfProtect);
 
 // Health check endpoint
 app.get('/ping', (_req: express.Request, res: express.Response) => {
@@ -132,38 +232,8 @@ app.get('/.well-known/smart_configuration', (_req: express.Request, res: express
   res.json(smartConfig);
 });
 
-// Error handling
-app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  logger.error('Unhandled application error:', {
-    error: err.message,
-    stack: err.stack,
-    requestId: (req as any).requestId,
-    url: req.url,
-    method: req.method,
-  });
-
-  const message = config.server.env === 'development' ? err.message : 'Internal server error';
-
-  res.status(err.status || 500).json({
-    resourceType: 'OperationOutcome',
-    issue: [{
-      severity: 'error',
-      code: 'exception',
-      diagnostics: message,
-    }],
-  });
-});
-
-// 404 handler
-app.use((req: express.Request, res: express.Response) => {
-  res.status(404).json({
-    resourceType: 'OperationOutcome',
-    issue: [{
-      severity: 'error',
-      code: 'not-found',
-      diagnostics: `Endpoint not found: ${req.method} ${req.url}`,
-    }],
-  });
-});
+// Setup secure error handling with PHI protection
+// This replaces the default error handlers to prevent PHI exposure
+setupSecureErrorHandling(app);
 
 export { app };

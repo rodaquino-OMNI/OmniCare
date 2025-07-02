@@ -4,10 +4,18 @@
  */
 
 import { Resource } from '@medplum/fhirtypes';
+import { 
+  getMergedObjectStores, 
+  getMergedEncryptedFields, 
+  getMergedRetentionPolicies,
+  CLINICAL_OBJECT_STORES,
+  CLINICAL_ENCRYPTED_FIELDS,
+  CLINICAL_RETENTION_POLICIES
+} from './indexeddb.clinical-schemas';
 
 // Database configuration
 export const DB_NAME = 'OmniCareOfflineDB';
-export const DB_VERSION = 1;
+export const DB_VERSION = 3; // Incremented for clinical workflow support
 
 // Encryption metadata for tracking encrypted fields
 export interface EncryptionMetadata {
@@ -24,6 +32,26 @@ export interface SyncMetadata {
   syncStatus: 'pending' | 'synced' | 'conflict' | 'error';
   conflictResolution?: 'local' | 'server' | 'merged';
   syncError?: string;
+  resumeToken?: string;
+  lastResumeTime?: number;
+  partialData?: boolean;
+}
+
+// Resume metadata for interrupted operations
+export interface ResumeMetadata {
+  operationId: string;
+  operationType: 'query' | 'sync' | 'cache' | 'batch';
+  totalItems: number;
+  processedItems: number;
+  lastProcessedIndex: number;
+  resumeToken: string;
+  checkpointData: any;
+  createdAt: number;
+  lastResumeAt?: number;
+  retryCount: number;
+  maxRetries: number;
+  status: 'pending' | 'in_progress' | 'paused' | 'completed' | 'failed';
+  errorMessage?: string;
 }
 
 // Base interface for all stored resources
@@ -306,6 +334,32 @@ export const OBJECT_STORES: ObjectStoreConfig[] = [
     keyPath: 'key',
     autoIncrement: false,
     indexes: []
+  },
+
+  // Resume operations store for interrupted operations
+  {
+    name: 'resumeOperations',
+    keyPath: 'operationId',
+    autoIncrement: false,
+    indexes: [
+      { name: 'operationType', keyPath: 'operationType', unique: false },
+      { name: 'status', keyPath: 'status', unique: false },
+      { name: 'createdAt', keyPath: 'createdAt', unique: false },
+      { name: 'lastResumeAt', keyPath: 'lastResumeAt', unique: false }
+    ]
+  },
+
+  // Query resume states for large result sets
+  {
+    name: 'queryResumeStates',
+    keyPath: 'id',
+    autoIncrement: true,
+    indexes: [
+      { name: 'queryId', keyPath: 'queryId', unique: true },
+      { name: 'resourceType', keyPath: 'resourceType', unique: false },
+      { name: 'status', keyPath: 'status', unique: false },
+      { name: 'createdAt', keyPath: 'createdAt', unique: false }
+    ]
   }
 ];
 
@@ -334,14 +388,14 @@ export const RETENTION_POLICIES: Record<string, number> = {
   diagnosticReports: 365,  // 1 year for diagnostic reports
   serviceRequests: 3,     // 3 days for service requests
   // Permanent storage (no expiration)
-  patients: ResourceHistoryTable,
-  conditions: ResourceHistoryTable,
-  allergyIntolerances: ResourceHistoryTable,
-  medicationRequests: ResourceHistoryTable,
-  immunizations: ResourceHistoryTable,
-  carePlans: ResourceHistoryTable,
-  practitioners: ResourceHistoryTable,
-  organizations: ResourceHistoryTable
+  patients: 0,
+  conditions: 0,
+  allergyIntolerances: 0,
+  medicationRequests: 0,
+  immunizations: 0,
+  carePlans: 0,
+  practitioners: 0,
+  organizations: 0
 };
 
 // Sync queue operation types
@@ -351,10 +405,38 @@ export interface SyncQueueEntry {
   resourceType: string;
   operation: 'create' | 'update' | 'delete';
   data?: any;
-  status: 'pending' | 'syncing' | 'completed' | 'failed';
+  status: 'pending' | 'syncing' | 'completed' | 'failed' | 'paused';
   attempts: number;
   lastAttempt?: number;
   error?: string;
   createdAt: number;
   completedAt?: number;
+  resumeToken?: string;
+  checkpointData?: any;
+  batchId?: string;
+  batchIndex?: number;
+  totalBatchSize?: number;
 }
+
+// Query resume state for large result sets
+export interface QueryResumeState {
+  id?: number;
+  queryId: string;
+  resourceType: string;
+  filters: Record<string, any>;
+  totalCount?: number;
+  processedCount: number;
+  lastOffset: number;
+  resumeToken: string;
+  batchSize: number;
+  status: 'pending' | 'in_progress' | 'paused' | 'completed' | 'failed';
+  createdAt: number;
+  lastResumeAt?: number;
+  completedAt?: number;
+  errorMessage?: string;
+}
+
+// Export merged configurations with clinical workflow support
+export const ALL_OBJECT_STORES = getMergedObjectStores(OBJECT_STORES);
+export const ALL_ENCRYPTED_FIELDS = getMergedEncryptedFields(ENCRYPTED_FIELDS);
+export const ALL_RETENTION_POLICIES = getMergedRetentionPolicies(RETENTION_POLICIES);

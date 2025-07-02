@@ -1,0 +1,163 @@
+# Prometheus Configuration for OmniCare EMR
+# Development and staging environments
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'omnicare-dev'
+    environment: 'development'
+
+# Rules for alerting
+rule_files:
+  - "alert_rules.yml"
+  - "hipaa_compliance_rules.yml"
+
+# Alert manager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # Node Exporter for system metrics
+  - job_name: 'node'
+    static_configs:
+      - targets: ['host.docker.internal:9100']
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # Backend API application metrics
+  - job_name: 'backend'
+    static_configs:
+      - targets: ['backend:3001']
+    metrics_path: /metrics
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    honor_labels: true
+    params:
+      format: ['prometheus']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: backend:3001
+
+  # Frontend Next.js application metrics
+  - job_name: 'frontend'
+    static_configs:
+      - targets: ['frontend:3000']
+    metrics_path: /api/metrics
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # PostgreSQL database metrics
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    metrics_path: /metrics
+    scrape_interval: 30s
+    params:
+      collect[]:
+        - 'pg_database'
+        - 'pg_locks'
+        - 'pg_replication'
+        - 'pg_stat_bgwriter'
+        - 'pg_stat_database'
+        - 'pg_stat_user_tables'
+
+  # Redis cache metrics
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # Nginx reverse proxy metrics
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:9113']
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # Docker container metrics
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # Healthcare API endpoints monitoring
+  - job_name: 'healthcare-api-health'
+    static_configs:
+      - targets: ['backend:3001']
+    metrics_path: /health
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    scheme: http
+    params:
+      format: ['prometheus']
+
+  # FHIR endpoint monitoring
+  - job_name: 'fhir-endpoints'
+    static_configs:
+      - targets: ['backend:3001']
+    metrics_path: /fhir/metadata
+    scrape_interval: 60s
+    scrape_timeout: 10s
+    scheme: http
+
+  # Application security metrics
+  - job_name: 'security-metrics'
+    static_configs:
+      - targets: ['backend:3001']
+    metrics_path: /metrics/security
+    scrape_interval: 30s
+    honor_labels: true
+
+  # HIPAA compliance monitoring
+  - job_name: 'hipaa-compliance'
+    static_configs:
+      - targets: ['backend:3001']
+    metrics_path: /metrics/compliance
+    scrape_interval: 60s
+    scrape_timeout: 15s
+
+# Remote write configuration for long-term storage
+remote_write:
+  - url: "http://localhost:9201/api/v1/write"
+    write_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'omnicare_.*'
+        action: keep
+
+# Storage configuration
+storage:
+  tsdb:
+    path: /prometheus
+    retention.time: 15d
+    retention.size: 10GB
+
+# Global configuration
+global:
+  # How often to scrape targets by default
+  scrape_interval: 15s
+  # How often to evaluate rules
+  evaluation_interval: 15s
+  # Attach these labels to any time series or alerts when communicating with external systems
+  external_labels:
+    monitor: 'omnicare-monitor'
+    cluster: 'omnicare-dev'
+    datacenter: 'local'
+    env: 'development'

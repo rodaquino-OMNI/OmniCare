@@ -16,14 +16,14 @@ export const mockPatients: Patient[] = [
     active: true,
     identifier: [
       {
-        use: 'usual',
+        use: 'usual' as const,
         system: 'http://omnicare.com/patient-id',
         value: 'MRN123456',
       },
     ],
     name: [
       {
-        use: 'official',
+        use: 'official' as const,
         family: 'Doe',
         given: ['John'],
       },
@@ -32,19 +32,19 @@ export const mockPatients: Patient[] = [
       {
         system: 'phone',
         value: '555-0123',
-        use: 'mobile',
+        use: 'mobile' as const,
       },
       {
         system: 'email',
         value: 'john.doe@example.com',
-        use: 'home',
+        use: 'home' as const,
       },
     ],
-    gender: 'male',
+    gender: 'male' as const,
     birthDate: '1990-01-15',
     address: [
       {
-        use: 'home',
+        use: 'home' as const,
         line: ['123 Main St'],
         city: 'Anytown',
         state: 'NY',
@@ -63,14 +63,14 @@ export const mockPatients: Patient[] = [
     active: true,
     identifier: [
       {
-        use: 'usual',
+        use: 'usual' as const,
         system: 'http://omnicare.com/patient-id',
         value: 'MRN789012',
       },
     ],
     name: [
       {
-        use: 'official',
+        use: 'official' as const,
         family: 'Smith',
         given: ['Jane'],
       },
@@ -79,19 +79,19 @@ export const mockPatients: Patient[] = [
       {
         system: 'phone',
         value: '555-0456',
-        use: 'mobile',
+        use: 'mobile' as const,
       },
       {
         system: 'email',
         value: 'jane.smith@example.com',
-        use: 'home',
+        use: 'home' as const,
       },
     ],
-    gender: 'female',
+    gender: 'female' as const,
     birthDate: '1985-05-15',
     address: [
       {
-        use: 'home',
+        use: 'home' as const,
         line: ['456 Oak Ave'],
         city: 'Another City',
         state: 'CA',
@@ -110,19 +110,19 @@ export const mockPatients: Patient[] = [
     active: false,
     identifier: [
       {
-        use: 'usual',
+        use: 'usual' as const,
         system: 'http://omnicare.com/patient-id',
         value: 'MRN345678',
       },
     ],
     name: [
       {
-        use: 'official',
+        use: 'official' as const,
         family: 'Johnson',
         given: ['Bob'],
       },
     ],
-    gender: 'male',
+    gender: 'male' as const,
     birthDate: '1975-12-01',
   },
 ];

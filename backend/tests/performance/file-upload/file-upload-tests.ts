@@ -3,11 +3,13 @@
  * Tests for medical document and image upload performance
  */
 
-import supertest from 'supertest';
-import { performance } from 'perf_hooks';
+import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as crypto from 'crypto';
+import { performance } from 'perf_hooks';
+
+import supertest from 'supertest';
+
 import { PerformanceTestBase, TestConfiguration } from '../framework/performance-test-base';
 
 export interface FileUploadMetrics {

@@ -1,0 +1,472 @@
+/**
+ * OmniCare EMR API Gateway
+ * Centralized gateway for authentication, routing, and load balancing
+ */
+
+import http from 'http';
+import https from 'https';
+
+import compression from 'compression';
+import cors from 'cors';
+import express, { Application, Request, Response, NextFunction } from 'express';
+import helmet from 'helmet';
+import { createProxyMiddleware, Options as ProxyOptions } from 'http-proxy-middleware';
+import { WebSocketServer } from 'ws';
+
+import logger from '../utils/logger';
+
+import { GatewayAuthMiddleware } from './auth-middleware';
+import { CircuitBreaker } from './circuit-breaker';
+import { HealthChecker } from './health-checker';
+import { LoadBalancer } from './load-balancer';
+import { MetricsCollector } from './metrics-collector';
+import { GatewayRateLimiter } from './rate-limiter';
+import { RequestTransformer } from './request-transformer';
+import { ResponseTransformer } from './response-transformer';
+import { ServiceRegistry } from './service-registry';
+import { GatewayConfig, ServiceDefinition } from './types';
+import { ApiVersionRouter } from './version-router';
+
+
+export class ApiGateway {
+  private app: Application;
+  private server: http.Server | https.Server;
+  private wsServer: WebSocketServer;
+  private serviceRegistry: ServiceRegistry;
+  private loadBalancer: LoadBalancer;
+  private circuitBreakers: Map<string, CircuitBreaker>;
+  private authMiddleware: GatewayAuthMiddleware;
+  private rateLimiter: GatewayRateLimiter;
+  private requestTransformer: RequestTransformer;
+  private responseTransformer: ResponseTransformer;
+  private versionRouter: ApiVersionRouter;
+  private metricsCollector: MetricsCollector;
+  private healthChecker: HealthChecker;
+  private config: GatewayConfig;
+
+  constructor(config: GatewayConfig) {
+    this.config = config;
+    this.app = express();
+    this.serviceRegistry = new ServiceRegistry();
+    this.loadBalancer = new LoadBalancer(config.loadBalancing);
+    this.circuitBreakers = new Map();
+    this.authMiddleware = new GatewayAuthMiddleware(config.auth);
+    this.rateLimiter = new GatewayRateLimiter(config.rateLimit);
+    this.requestTransformer = new RequestTransformer(config.transformations);
+    this.responseTransformer = new ResponseTransformer(config.transformations);
+    this.versionRouter = new ApiVersionRouter(config.versioning);
+    this.metricsCollector = new MetricsCollector();
+    this.healthChecker = new HealthChecker(this.serviceRegistry);
+
+    this.setupMiddleware();
+    this.setupRoutes();
+    this.setupWebSocketProxy();
+  }
+
+  private setupMiddleware(): void {
+    // Security middleware
+    this.app.use(helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'"],
+          imgSrc: ["'self'", "data:", "https:"],
+          connectSrc: ["'self'"],
+          fontSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          mediaSrc: ["'self'"],
+          frameSrc: ["'none'"],
+        },
+      },
+      crossOriginEmbedderPolicy: false,
+    }));
+
+    // CORS configuration
+    this.app.use(cors({
+      origin: this.config.cors.allowedOrigins,
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Version', 'X-Request-ID'],
+      exposedHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
+    }));
+
+    // Compression
+    this.app.use(compression());
+
+    // Body parsing
+    this.app.use(express.json({ 
+      limit: this.config.maxRequestSize,
+      type: ['application/json', 'application/fhir+json'],
+    }));
+    this.app.use(express.urlencoded({ 
+      extended: true, 
+      limit: this.config.maxRequestSize,
+    }));
+
+    // Request ID middleware
+    this.app.use((req: Request, res: Response, next: NextFunction) => {
+      const requestId = req.headers['x-request-id'] as string || 
+        `gw_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      req.headers['x-request-id'] = requestId;
+      res.setHeader('X-Request-ID', requestId);
+      
+      // Log request
+      logger.info('Gateway request', {
+        requestId,
+        method: req.method,
+        path: req.path,
+        userAgent: req.get('User-Agent'),
+        ip: req.ip,
+      });
+
+      // Track metrics
+      const startTime = Date.now();
+      res.on('finish', () => {
+        const duration = Date.now() - startTime;
+        this.metricsCollector.recordRequest({
+          method: req.method,
+          path: req.path,
+          statusCode: res.statusCode,
+          duration,
+          service: (req as any).targetService,
+        });
+      });
+
+      next();
+    });
+
+    // Gateway-level rate limiting
+    this.app.use(this.rateLimiter.getMiddleware());
+
+    // Authentication middleware (centralized)
+    this.app.use(this.authMiddleware.getMiddleware());
+  }
+
+  private setupRoutes(): void {
+    // Health check endpoint
+    this.app.get('/health', async (req: Request, res: Response) => {
+      const health = await this.healthChecker.checkHealth();
+      res.status(health.healthy ? 200 : 503).json(health);
+    });
+
+    // Service discovery endpoint
+    this.app.get('/services', this.authMiddleware.requireAdmin(), (req: Request, res: Response) => {
+      const services = this.serviceRegistry.getAllServices();
+      res.json({ services });
+    });
+
+    // Metrics endpoint
+    this.app.get('/metrics', this.authMiddleware.requireAdmin(), (req: Request, res: Response) => {
+      const metrics = this.metricsCollector.getMetrics();
+      res.json(metrics);
+    });
+
+    // Circuit breaker status
+    this.app.get('/circuit-breakers', this.authMiddleware.requireAdmin(), (req: Request, res: Response) => {
+      const status: Record<string, any> = {};
+      this.circuitBreakers.forEach((cb, service) => {
+        status[service] = cb.getStatus();
+      });
+      res.json({ circuitBreakers: status });
+    });
+
+    // API versioning routes
+    this.setupVersionedRoutes();
+
+    // Proxy all other requests
+    this.app.use('*', this.createProxyMiddleware());
+  }
+
+  private setupVersionedRoutes(): void {
+    // Version-specific route handling
+    this.app.use('/api/:version/*', (req: Request, res: Response, next: NextFunction) => {
+      const version = req.params.version;
+      const service = this.versionRouter.getServiceForVersion(req.path, version);
+      
+      if (!service) {
+        return res.status(400).json({
+          error: 'INVALID_API_VERSION',
+          message: `API version ${version} is not supported`,
+          supportedVersions: this.config.versioning.supportedVersions,
+        });
+      }
+
+      (req as any).targetService = service;
+      next();
+    });
+  }
+
+  private createProxyMiddleware() {
+    return async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        // Determine target service
+        const targetService = (req as any).targetService || this.getTargetService(req);
+        if (!targetService) {
+          return res.status(404).json({
+            error: 'SERVICE_NOT_FOUND',
+            message: 'No service available for this route',
+          });
+        }
+
+        // Get service instances
+        const instances = this.serviceRegistry.getHealthyInstances(targetService);
+        if (instances.length === 0) {
+          return res.status(503).json({
+            error: 'SERVICE_UNAVAILABLE',
+            message: `Service ${targetService} is currently unavailable`,
+          });
+        }
+
+        // Select instance using load balancer
+        const instance = this.loadBalancer.selectInstance(instances, req);
+
+        // Get or create circuit breaker for this service
+        let circuitBreaker = this.circuitBreakers.get(targetService);
+        if (!circuitBreaker) {
+          circuitBreaker = new CircuitBreaker(this.config.circuitBreaker);
+          this.circuitBreakers.set(targetService, circuitBreaker);
+        }
+
+        // Check circuit breaker
+        if (!circuitBreaker.canRequest()) {
+          return res.status(503).json({
+            error: 'CIRCUIT_BREAKER_OPEN',
+            message: `Service ${targetService} is temporarily unavailable due to high error rate`,
+            retryAfter: circuitBreaker.getRetryAfter(),
+          });
+        }
+
+        // Transform request
+        const transformedReq = await this.requestTransformer.transform(req, targetService);
+
+        // Create proxy options
+        const proxyOptions: ProxyOptions = {
+          target: `${instance.protocol}://${instance.host}:${instance.port}`,
+          changeOrigin: true,
+          ws: true,
+          onProxyReq: (proxyReq, req, res) => {
+            // Forward authentication headers
+            if (req.headers.authorization) {
+              proxyReq.setHeader('Authorization', req.headers.authorization);
+            }
+            
+            // Forward request ID
+            if (req.headers['x-request-id']) {
+              proxyReq.setHeader('X-Request-ID', req.headers['x-request-id']);
+            }
+
+            // Add gateway headers
+            proxyReq.setHeader('X-Forwarded-For', req.ip || '');
+            proxyReq.setHeader('X-Forwarded-Host', req.hostname);
+            proxyReq.setHeader('X-Forwarded-Proto', req.protocol);
+            proxyReq.setHeader('X-Gateway-Service', targetService);
+          },
+          onProxyRes: async (proxyRes, req, res) => {
+            // Record circuit breaker success/failure
+            if (proxyRes.statusCode && proxyRes.statusCode >= 500) {
+              circuitBreaker.recordFailure();
+            } else {
+              circuitBreaker.recordSuccess();
+            }
+
+            // Transform response
+            const transformedRes = await this.responseTransformer.transform(
+              proxyRes,
+              targetService
+            );
+          },
+          onError: (err, req, res) => {
+            logger.error('Proxy error', {
+              error: err.message,
+              service: targetService,
+              target: instance,
+            });
+
+            // Record circuit breaker failure
+            circuitBreaker.recordFailure();
+
+            res.status(502).json({
+              error: 'BAD_GATEWAY',
+              message: 'Error communicating with backend service',
+            });
+          },
+        };
+
+        // Create and execute proxy
+        const proxy = createProxyMiddleware(proxyOptions);
+        proxy(req, res, next);
+
+      } catch (error) {
+        logger.error('Gateway error', error);
+        res.status(500).json({
+          error: 'GATEWAY_ERROR',
+          message: 'Internal gateway error',
+        });
+      }
+    };
+  }
+
+  private setupWebSocketProxy(): void {
+    this.wsServer = new WebSocketServer({ noServer: true });
+
+    this.server.on('upgrade', async (request, socket, head) => {
+      try {
+        // Authenticate WebSocket connection
+        const authResult = await this.authMiddleware.authenticateWebSocket(request);
+        if (!authResult.authenticated) {
+          socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+          socket.destroy();
+          return;
+        }
+
+        // Determine target service
+        const targetService = this.getTargetService(request as any);
+        if (!targetService) {
+          socket.write('HTTP/1.1 404 Not Found\r\n\r\n');
+          socket.destroy();
+          return;
+        }
+
+        // Get healthy instance
+        const instances = this.serviceRegistry.getHealthyInstances(targetService);
+        if (instances.length === 0) {
+          socket.write('HTTP/1.1 503 Service Unavailable\r\n\r\n');
+          socket.destroy();
+          return;
+        }
+
+        const instance = this.loadBalancer.selectInstance(instances, request as any);
+
+        // Proxy WebSocket connection
+        const target = `${instance.protocol === 'https' ? 'wss' : 'ws'}://${instance.host}:${instance.port}`;
+        
+        // Forward the WebSocket connection
+        this.wsServer.handleUpgrade(request, socket, head, (ws) => {
+          this.wsServer.emit('connection', ws, request);
+          
+          // Create WebSocket proxy
+          const WebSocket = require('ws');
+          const targetWs = new WebSocket(target + request.url, {
+            headers: {
+              ...request.headers,
+              'X-Forwarded-For': request.socket.remoteAddress,
+              'X-Gateway-Service': targetService,
+            },
+          });
+
+          // Relay messages
+          ws.on('message', (data) => {
+            if (targetWs.readyState === WebSocket.OPEN) {
+              targetWs.send(data);
+            }
+          });
+
+          targetWs.on('message', (data) => {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(data);
+            }
+          });
+
+          // Handle errors and closing
+          ws.on('error', (err) => logger.error('WebSocket client error', err));
+          targetWs.on('error', (err) => logger.error('WebSocket target error', err));
+          
+          ws.on('close', () => targetWs.close());
+          targetWs.on('close', () => ws.close());
+        });
+
+      } catch (error) {
+        logger.error('WebSocket upgrade error', error);
+        socket.write('HTTP/1.1 500 Internal Server Error\r\n\r\n');
+        socket.destroy();
+      }
+    });
+  }
+
+  private getTargetService(req: Request): string | null {
+    // Route mapping logic
+    const path = req.path;
+    
+    // API routes
+    if (path.startsWith('/api/')) {
+      if (path.startsWith('/api/sync')) return 'sync-service';
+      if (path.startsWith('/api/clinical-workflow')) return 'clinical-service';
+      if (path.startsWith('/api/performance')) return 'monitoring-service';
+      if (path.startsWith('/api/network')) return 'network-service';
+    }
+    
+    // FHIR routes
+    if (path.startsWith('/fhir/')) return 'fhir-service';
+    
+    // Auth routes
+    if (path.startsWith('/auth/')) return 'auth-service';
+    
+    // CDS Hooks
+    if (path.startsWith('/cds-services')) return 'cds-service';
+    
+    // Default to main backend
+    return 'backend-main';
+  }
+
+  public async start(): Promise<void> {
+    // Register default services
+    this.registerDefaultServices();
+
+    // Create server
+    if (this.config.ssl.enabled) {
+      const fs = require('fs');
+      this.server = https.createServer({
+        key: fs.readFileSync(this.config.ssl.keyPath),
+        cert: fs.readFileSync(this.config.ssl.certPath),
+      }, this.app);
+    } else {
+      this.server = http.createServer(this.app);
+    }
+
+    // Start server
+    this.server.listen(this.config.port, this.config.host, () => {
+      logger.info(`API Gateway started on ${this.config.host}:${this.config.port}`);
+    });
+
+    // Start health checking
+    this.healthChecker.startHealthChecks();
+  }
+
+  private registerDefaultServices(): void {
+    // Register main backend service
+    this.serviceRegistry.registerService({
+      name: 'backend-main',
+      instances: [{
+        id: 'backend-main-1',
+        host: process.env.BACKEND_HOST || 'localhost',
+        port: parseInt(process.env.BACKEND_PORT || '8080'),
+        protocol: 'http',
+        weight: 1,
+        healthy: true,
+        metadata: {
+          version: '1.0.0',
+          region: 'us-east-1',
+        },
+      }],
+      healthCheck: {
+        path: '/health',
+        interval: 30000,
+        timeout: 5000,
+        unhealthyThreshold: 3,
+        healthyThreshold: 2,
+      },
+    });
+
+    // Additional services can be registered here
+  }
+
+  public async stop(): Promise<void> {
+    this.healthChecker.stopHealthChecks();
+    this.server.close();
+    this.wsServer.close();
+  }
+}
+
+// Export for use
+export default ApiGateway;

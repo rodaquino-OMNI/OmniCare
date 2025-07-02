@@ -1,7 +1,12 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "lib": ["dom", "dom.iterable", "esnext", "webworker"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext",
+      "webworker"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -13,17 +18,38 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "types": ["jest", "@testing-library/jest-dom"],
+    "composite": false,
+    "types": [
+      "jest",
+      "@testing-library/jest-dom"
+    ],
     "plugins": [
       {
         "name": "next"
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@test-utils/*": ["./test-utils/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@/test-utils/*": [
+        "./test-utils/*"
+      ],
+      "@test-utils/*": [
+        "./test-utils/*"
+      ]
     }
   },
-  "include": ["next-env.d.ts", "src/types/global.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "test-utils/**/*"],
-  "exclude": ["node_modules"]
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "next-env.d.ts",
+    "src/types/global.d.ts",
+    "test-utils/**/*",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ],
+  "references": []
 }

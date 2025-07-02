@@ -1,0 +1,281 @@
+# HIPAA Compliance Monitoring Rules for OmniCare EMR
+# Ensures healthcare data protection and audit trail compliance
+
+groups:
+  # Access Control and Authentication
+  - name: hipaa.access_control
+    rules:
+      - alert: UnauthorizedPHIAccess
+        expr: rate(omnicare_phi_access_unauthorized_total[5m]) > 0
+        for: 0s  # Immediate alert for any unauthorized PHI access
+        labels:
+          severity: critical
+          compliance: hipaa
+          category: access_control
+        annotations:
+          summary: "CRITICAL: Unauthorized PHI access detected"
+          description: "Unauthorized access to Protected Health Information detected. User: {{ $labels.user_id }}, Resource: {{ $labels.resource_type }}, IP: {{ $labels.source_ip }}"
+          runbook_url: "https://docs.omnicare.com/security/unauthorized-access-response"
+          
+      - alert: FailedAuthentication
+        expr: rate(omnicare_authentication_failures_total[5m]) > 5
+        for: 1m
+        labels:
+          severity: warning
+          compliance: hipaa
+          category: authentication
+        annotations:
+          summary: "High authentication failure rate"
+          description: "Authentication failure rate is {{ $value }} failures/second from IP {{ $labels.source_ip }}"
+
+      - alert: WeakPasswordDetected
+        expr: omnicare_weak_password_attempts_total > 0
+        for: 0s
+        labels:
+          severity: warning
+          compliance: hipaa
+          category: authentication
+        annotations:
+          summary: "Weak password attempt detected"
+          description: "User {{ $labels.user_id }} attempted to set a weak password"
+
+  # Audit Trail and Logging
+  - name: hipaa.audit_trail
+    rules:
+      - alert: AuditLogFailure
+        expr: rate(omnicare_audit_log_failures_total[5m]) > 0
+        for: 0s
+        labels:
+          severity: critical
+          compliance: hipaa
+          category: audit
+        annotations:
+          summary: "CRITICAL: Audit log failure"
+          description: "Audit logging has failed. This is a HIPAA compliance violation. Action: {{ $labels.action }}, User: {{ $labels.user_id }}"
+
+      - alert: AuditLogGaps
+        expr: time() - omnicare_last_audit_log_timestamp > 300  # 5 minutes
+        for: 1m
+        labels:
+          severity: critical
+          compliance: hipaa
+          category: audit
+        annotations:
+          summary: "Audit log gap detected"
+          description: "No audit logs received for {{ $value }} seconds. Potential compliance violation."
+
+      - alert: MassDataExport
+        expr: rate(omnicare_data_export_records_total[5m]) > 1000
+        for: 1m
+        labels:
+          severity: warning
+          compliance: hipaa
+          category: data_export
+        annotations:
+          summary: "Large data export detected"
+          description: "Large volume data export: {{ $value }} records/second by user {{ $labels.user_id }}"
+
+  # Data Encryption and Security
+  - name: hipaa.encryption
+    rules:
+      - alert: UnencryptedDataTransmission
+        expr: rate(omnicare_unencrypted_requests_total[5m]) > 0
+        for: 0s
+        labels:
+          severity: critical
+          compliance: hipaa
+          category: encryption
+        annotations:
+          summary: "CRITICAL: Unencrypted data transmission"
+          description: "Unencrypted PHI transmission detected from {{ $labels.source_ip }}"
+
+      - alert: EncryptionKeyRotationOverdue
+        expr: time() - omnicare_last_key_rotation_timestamp > 7776000  # 90 days
+        for: 1m
+        labels:
+          severity: warning
+          compliance: hipaa
+          category: encryption
+        annotations:
+          summary: "Encryption key rotation overdue"
+          description: "Encryption keys have not been rotated for {{ $value | humanizeDuration }}"
+
+      - alert: DatabaseEncryptionFailure
+        expr: omnicare_database_encryption_status != 1
+        for: 0s
+        labels:
+          severity: critical
+          compliance: hipaa
+          category: encryption
+        annotations:
+          summary: "Database encryption failure"
+          description: "Database encryption is not functioning properly"
+
+  # Data Integrity and Backup
+  - name: hipaa.data_integrity
+    rules:
+      - alert: DataIntegrityCheckFailure
+        expr: rate(omnicare_data_integrity_failures_total[5m]) > 0
+        for: 0s
+        labels:
+          severity: critical
+          compliance: hipaa
+          category: data_integrity
+        annotations:
+          summary: "Data integrity check failure"
+          description: "Data integrity verification failed for {{ $labels.table_name }}"
+
+      - alert: BackupFailure
+        expr: time() - omnicare_last_backup_timestamp > 86400  # 24 hours
+        for: 1m
+        labels:
+          severity: critical
+          compliance: hipaa
+          category: backup
+        annotations:
+          summary: "Backup failure or overdue"
+          description: "Database backup has not completed successfully for {{ $value | humanizeDuration }}"
+
+      - alert: BackupCorruption
+        expr: omnicare_backup_verification_status != 1
+        for: 0s
+        labels:
+          severity: critical
+          compliance: hipaa
+          category: backup
+        annotations:
+          summary: "Backup corruption detected"
+          description: "Backup verification failed for backup {{ $labels.backup_id }}"
+
+  # Session Management
+  - name: hipaa.session_management
+    rules:
+      - alert: SessionTimeoutViolation
+        expr: omnicare_session_duration_seconds > 1800  # 30 minutes
+        for: 1m
+        labels:
+          severity: warning
+          compliance: hipaa
+          category: session
+        annotations:
+          summary: "Session timeout policy violation"
+          description: "Session for user {{ $labels.user_id }} has exceeded maximum duration: {{ $value | humanizeDuration }}"
+
+      - alert: ConcurrentSessionViolation
+        expr: omnicare_concurrent_sessions_per_user > 3
+        for: 1m
+        labels:
+          severity: warning
+          compliance: hipaa
+          category: session
+        annotations:
+          summary: "Excessive concurrent sessions"
+          description: "User {{ $labels.user_id }} has {{ $value }} concurrent sessions"
+
+      - alert: SessionHijackingAttempt
+        expr: rate(omnicare_session_hijacking_attempts_total[5m]) > 0
+        for: 0s
+        labels:
+          severity: critical
+          compliance: hipaa
+          category: session
+        annotations:
+          summary: "Session hijacking attempt detected"
+          description: "Potential session hijacking for user {{ $labels.user_id }} from IP {{ $labels.source_ip }}"
+
+  # Data Access Patterns
+  - name: hipaa.data_access
+    rules:
+      - alert: BreakGlassAccess
+        expr: rate(omnicare_break_glass_access_total[5m]) > 0
+        for: 0s
+        labels:
+          severity: warning
+          compliance: hipaa
+          category: emergency_access
+        annotations:
+          summary: "Break glass emergency access used"
+          description: "Emergency break glass access by user {{ $labels.user_id }} for patient {{ $labels.patient_id }}"
+
+      - alert: OffHoursDataAccess
+        expr: (hour() < 6 or hour() > 22) and rate(omnicare_phi_access_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          compliance: hipaa
+          category: access_pattern
+        annotations:
+          summary: "High off-hours data access"
+          description: "Unusual data access pattern during off hours by user {{ $labels.user_id }}"
+
+      - alert: GeographicallyAnomalousAccess
+        expr: omnicare_access_geographical_anomaly == 1
+        for: 0s
+        labels:
+          severity: warning
+          compliance: hipaa
+          category: access_pattern
+        annotations:
+          summary: "Geographically anomalous access"
+          description: "Access from unusual geographical location for user {{ $labels.user_id }} from {{ $labels.country }}"
+
+  # Compliance Reporting
+  - name: hipaa.reporting
+    rules:
+      - alert: ComplianceReportingFailure
+        expr: time() - omnicare_last_compliance_report_timestamp > 86400  # 24 hours
+        for: 1m
+        labels:
+          severity: warning
+          compliance: hipaa
+          category: reporting
+        annotations:
+          summary: "Compliance reporting failure"
+          description: "Daily compliance report has not been generated for {{ $value | humanizeDuration }}"
+
+      - alert: AuditTrailExportFailure
+        expr: rate(omnicare_audit_export_failures_total[5m]) > 0
+        for: 0s
+        labels:
+          severity: warning
+          compliance: hipaa
+          category: reporting
+        annotations:
+          summary: "Audit trail export failure"
+          description: "Failed to export audit trail for compliance reporting"
+
+  # System Security
+  - name: hipaa.system_security
+    rules:
+      - alert: SecurityUpdateRequired
+        expr: omnicare_security_updates_pending > 0
+        for: 24h  # Alert after 24 hours of pending updates
+        labels:
+          severity: warning
+          compliance: hipaa
+          category: security
+        annotations:
+          summary: "Security updates pending"
+          description: "{{ $value }} security updates are pending installation"
+
+      - alert: VulnerabilityDetected
+        expr: omnicare_security_vulnerabilities_high > 0
+        for: 1m
+        labels:
+          severity: critical
+          compliance: hipaa
+          category: security
+        annotations:
+          summary: "High severity vulnerability detected"
+          description: "{{ $value }} high severity vulnerabilities detected in the system"
+
+      - alert: AntivirusFailure
+        expr: omnicare_antivirus_status != 1
+        for: 5m
+        labels:
+          severity: warning
+          compliance: hipaa
+          category: security
+        annotations:
+          summary: "Antivirus protection failure"
+          description: "Antivirus protection is not functioning properly"

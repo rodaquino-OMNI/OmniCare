@@ -23,6 +23,7 @@ if (process.env.NODE_ENV !== 'test') {
 import { createHash, createSign, createVerify, randomBytes } from 'crypto';
 import { X509Certificate } from 'crypto';
 import { readFileSync } from 'fs';
+
 import {
   DirectMessage,
   DirectAddress,
@@ -38,10 +39,11 @@ import {
   DirectEncryptionInfo,
   DirectSignatureInfo
 } from '../types/direct.types';
-import { getErrorMessage } from '@/utils/error.utils';
 import { IntegrationResult, IntegrationError } from '../types/integration.types';
-import logger from '@/utils/logger';
+
 import config from '@/config';
+import { getErrorMessage } from '@/utils/error.utils';
+import logger from '@/utils/logger';
 
 /**
  * Direct Trust Service

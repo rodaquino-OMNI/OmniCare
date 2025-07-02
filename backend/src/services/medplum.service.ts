@@ -6,9 +6,9 @@ import {
 } from '@medplum/fhirtypes';
 
 import config from '../config';
-import { FHIRSearchParams, BundleRequest } from '../types/fhir';
+import { BundleRequest, FHIRSearchParams } from '../types/fhir';
+import { getErrorMessage, getFHIRErrorMessage, isError, isFHIRError } from '../utils/error.utils';
 import logger from '../utils/logger';
-import { getErrorMessage, isFHIRError, getFHIRErrorMessage, isError } from '../utils/error.utils';
 
 // Import MedplumClient only if not in test environment
 interface MedplumClientInterface {
@@ -30,7 +30,7 @@ if (process.env.NODE_ENV !== 'test') {
   try {
     const medplumCore = require('@medplum/core');
     MedplumClient = medplumCore.MedplumClient;
-  } catch (error) {
+  } catch {
     // Mock MedplumClient for environments where Medplum isn't available
     MedplumClient = class MockMedplumClient implements MedplumClientInterface {
       constructor(_options: Record<string, unknown>) {}
@@ -53,10 +53,10 @@ if (process.env.NODE_ENV !== 'test') {
       async executeBatch(_bundle: Bundle) {
         return Promise.resolve({ resourceType: 'Bundle' as const, type: 'batch-response' as const, entry: [] } as Bundle<Resource>);
       }
-      async get(_url: string, _options?: any) {
+      async get(_url: string, _options?: Record<string, unknown>) {
         return Promise.resolve({});
       }
-      async graphql(_query: string, _variables?: any) {
+      async graphql(_query: string, _variables?: string) {
         return Promise.resolve({});
       }
       async validateResource(_resource: Resource) {
@@ -67,33 +67,33 @@ if (process.env.NODE_ENV !== 'test') {
 } else {
   // Mock for tests
   MedplumClient = class MockMedplumClient implements MedplumClientInterface {
-    constructor(_options: any) {}
+    constructor(_options: Record<string, unknown>) {}
     async startClientLogin(_clientId: string, _clientSecret: string) { return Promise.resolve(); }
     async readResource(resourceType: string, id: string) { 
       return Promise.resolve({ resourceType, id, active: true } as Resource); 
     }
-    async createResource(resource: any) { 
+    async createResource(resource: Resource) { 
       return Promise.resolve({ ...resource, id: `mock-${Date.now()}` }); 
     }
-    async updateResource(resource: any) { 
+    async updateResource(resource: Resource) { 
       return Promise.resolve(resource); 
     }
     async deleteResource(_resourceType: string, _id: string) { 
       return Promise.resolve(); 
     }
-    async searchResources(_resourceType: string, _params: any) { 
+    async searchResources(_resourceType: string, _params: Record<string, unknown>) { 
       return Promise.resolve({ resourceType: 'Bundle' as const, type: 'searchset' as const, entry: [] } as Bundle<Resource>); 
     }
-    async executeBatch(_bundle: any) {
+    async executeBatch(_bundle: Bundle) {
       return Promise.resolve({ resourceType: 'Bundle' as const, type: 'batch-response' as const, entry: [] } as Bundle<Resource>);
     }
-    async get(_url: string, _options?: any) {
+    async get(_url: string, _options?: Record<string, unknown>) {
       return Promise.resolve({});
     }
-    async graphql(_query: string, _variables?: any) {
+    async graphql(_query: string, _variables?: string) {
       return Promise.resolve({});
     }
-    async validateResource(_resource: any) {
+    async validateResource(_resource: Resource) {
       return Promise.resolve({ resourceType: 'OperationOutcome', issue: [] });
     }
   };
@@ -170,7 +170,7 @@ export class MedplumService {
     try {
       await this.medplum.readResource('Patient', 'test-patient-id').catch(() => null);
       logger.debug('Connection test completed successfully');
-    } catch (error) {
+    } catch {
       logger.warn('Connection test failed, but proceeding...');
     }
   }
@@ -313,14 +313,14 @@ export class MedplumService {
       
       // Extract resources from the ResourceArray structure
       const resources = Array.isArray(resourceArray) ? resourceArray : 
-                       (resourceArray as any).bundle?.entry?.map((entry: any) => entry.resource) || [];
+                       ((resourceArray as { bundle?: Bundle<T> }).bundle?.entry?.map((entry) => entry.resource) || []);
       
       // Create Bundle response
       const bundle: Bundle<T> = {
         resourceType: 'Bundle',
         type: 'searchset',
         total: resources.length,
-        entry: resources.map((resource: any) => ({
+        entry: resources.map((resource) => ({
           resource: resource as T,
           fullUrl: `${resource.resourceType}/${resource.id}`
         }))
@@ -339,10 +339,16 @@ export class MedplumService {
   }
 
   /**
-   * Execute a batch or transaction bundle
+   * Execute a batch or transaction bundle with enhanced error handling and retry logic
    */
-  async executeBatch(bundleRequest: BundleRequest | Bundle): Promise<Bundle> {
+  async executeBatch(bundleRequest: BundleRequest | Bundle, options?: {
+    retryOnConflict?: boolean;
+    maxRetries?: number;
+    validateBeforeSubmit?: boolean;
+  }): Promise<Bundle> {
     this.ensureInitialized();
+    
+    const { retryOnConflict = true, maxRetries = 3, validateBeforeSubmit = true } = options || {};
     
     try {
       // Handle both Bundle and BundleRequest types
@@ -350,7 +356,7 @@ export class MedplumService {
       
       if ('entry' in bundleRequest) {
         // Already a Bundle
-        bundle = bundleRequest as Bundle;
+        bundle = bundleRequest;
         logger.debug(`Executing ${bundle.type} bundle with ${bundle.entry?.length || 0} entries`);
       } else {
         // BundleRequest needs conversion
@@ -371,13 +377,81 @@ export class MedplumService {
         };
       }
 
-      const result = await this.medplum.executeBatch(bundle);
+      // Validate resources before submission if requested
+      if (validateBeforeSubmit && bundle.entry) {
+        const validationErrors: string[] = [];
+        
+        for (const [index, entry] of bundle.entry.entries()) {
+          if (entry.resource) {
+            try {
+              const validationResult = await this.validateResource(entry.resource);
+              if (validationResult && 'issue' in validationResult) {
+                const issues = (validationResult as any).issue || [];
+                const errors = issues.filter((issue: any) => 
+                  issue.severity === 'error' || issue.severity === 'fatal'
+                );
+                if (errors.length > 0) {
+                  validationErrors.push(`Entry ${index}: ${errors.map((e: any) => e.diagnostics).join(', ')}`);
+                }
+              }
+            } catch (valError) {
+              logger.warn(`Validation failed for entry ${index}:`, valError);
+            }
+          }
+        }
+        
+        if (validationErrors.length > 0) {
+          throw new Error(`Bundle validation failed: ${validationErrors.join('; ')}`);
+        }
+      }
+
+      // Execute with retry logic
+      let lastError: Error | null = null;
       
-      logger.info(`Successfully executed ${bundle.type} bundle`);
-      return result;
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const result = await this.medplum.executeBatch(bundle);
+          
+          // Check for partial failures
+          const failedEntries = result.entry?.filter(entry => 
+            entry.response?.status && !entry.response.status.startsWith('2')
+          ) || [];
+          
+          if (failedEntries.length > 0 && bundle.type === 'transaction') {
+            throw new Error(`Transaction bundle failed with ${failedEntries.length} errors`);
+          }
+          
+          logger.info(`Successfully executed ${bundle.type} bundle`, {
+            totalEntries: bundle.entry?.length || 0,
+            successfulEntries: (result.entry?.length || 0) - failedEntries.length,
+            failedEntries: failedEntries.length,
+          });
+          
+          return result;
+        } catch (error) {
+          lastError = error as Error;
+          
+          if (retryOnConflict && attempt < maxRetries) {
+            const errorMessage = getErrorMessage(error);
+            if (errorMessage.includes('conflict') || errorMessage.includes('version')) {
+              logger.warn(`Batch execution failed due to conflict, retrying... (attempt ${attempt}/${maxRetries})`);
+              // Exponential backoff
+              await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+              continue;
+            }
+          }
+          
+          if (attempt === maxRetries) {
+            break;
+          }
+        }
+      }
+      
+      logger.error(`Failed to execute batch bundle after ${maxRetries} attempts:`, lastError);
+      throw new Error(`Failed to execute batch operation: ${getErrorMessage(lastError)}`);
     } catch (error) {
       logger.error(`Failed to execute batch bundle:`, error);
-      throw new Error('Failed to execute batch operation');
+      throw this.handleFHIRError(error);
     }
   }
 
@@ -418,33 +492,109 @@ export class MedplumService {
   }
 
   /**
-   * Subscribe to resource changes
+   * Subscribe to resource changes with enhanced configuration
    */
-  async createSubscription(criteria: string, channelType: string, endpoint?: string): Promise<Resource> {
+  async createSubscription(
+    criteria: string, 
+    channelType: string, 
+    endpoint?: string,
+    options?: {
+      reason?: string;
+      end?: string; // Subscription end date
+      headers?: string[]; // Additional headers
+      payloadMimeType?: string;
+      payloadContent?: 'empty' | 'id-only' | 'full-resource';
+    }
+  ): Promise<Resource> {
     this.ensureInitialized();
+    
+    const { 
+      reason = 'OmniCare EMR Integration',
+      end,
+      headers = [],
+      payloadMimeType = 'application/fhir+json',
+      payloadContent = 'full-resource'
+    } = options || {};
     
     try {
       logger.debug(`Creating subscription for criteria: ${criteria}`);
       
+      // Build headers array
+      const channelHeaders = [...headers];
+      if (endpoint && config.medplum.clientSecret) {
+        channelHeaders.push(`Authorization: Bearer ${config.medplum.clientSecret}`);
+      }
+      
       const subscription = {
         resourceType: 'Subscription' as const,
         status: 'requested' as const,
-        reason: 'OmniCare EMR Integration',
+        reason,
         criteria,
         channel: {
           type: channelType as "message" | "email" | "rest-hook" | "websocket" | "sms",
           endpoint,
-          payload: 'application/fhir+json',
-          header: endpoint ? [`Authorization: Bearer ${config.medplum.clientSecret}`] : undefined
+          payload: payloadMimeType,
+          header: channelHeaders.length > 0 ? channelHeaders : undefined,
+          _payload: {
+            extension: [{
+              url: 'http://hl7.org/fhir/uv/subscriptions-backport/StructureDefinition/backport-payload-content',
+              valueCode: payloadContent
+            }]
+          }
         },
+        end: end || undefined,
       };
 
       const result = await this.medplum.createResource(subscription);
       
-      logger.info(`Successfully created subscription with ID: ${result.id}`);
-      return result as Resource;
+      logger.info(`Successfully created subscription with ID: ${result.id}`, {
+        criteria,
+        channelType,
+        endpoint,
+        payloadContent
+      });
+      
+      return result;
     } catch (error) {
       logger.error('Failed to create subscription:', error);
+      throw this.handleFHIRError(error);
+    }
+  }
+
+  /**
+   * Delete a subscription
+   */
+  async deleteSubscription(subscriptionId: string): Promise<void> {
+    this.ensureInitialized();
+    
+    try {
+      logger.debug(`Deleting subscription with ID: ${subscriptionId}`);
+      await this.medplum.deleteResource('Subscription', subscriptionId);
+      logger.info(`Successfully deleted subscription with ID: ${subscriptionId}`);
+    } catch (error) {
+      logger.error('Failed to delete subscription:', error);
+      throw this.handleFHIRError(error);
+    }
+  }
+
+  /**
+   * Get all active subscriptions
+   */
+  async getActiveSubscriptions(): Promise<Bundle<Resource>> {
+    this.ensureInitialized();
+    
+    try {
+      logger.debug('Fetching active subscriptions');
+      const result = await this.medplum.searchResources('Subscription', {
+        status: 'active,requested',
+        _sort: '-_lastUpdated',
+      });
+      
+      const bundleResult = result as Bundle<Resource>;
+      logger.info(`Found ${bundleResult.entry?.length || 0} active subscriptions`);
+      return bundleResult;
+    } catch (error) {
+      logger.error('Failed to fetch active subscriptions:', error);
       throw this.handleFHIRError(error);
     }
   }

@@ -1,0 +1,750 @@
+# Production Monitoring and Alerting for OmniCare EMR
+# Comprehensive monitoring with HIPAA-compliant alerting and SLA tracking
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: monitoring-config
+  namespace: omnicare-prod
+  labels:
+    app: monitoring
+    component: configuration
+data:
+  # Monitoring Configuration
+  PROMETHEUS_RETENTION: "90d"
+  GRAFANA_SESSION_TIMEOUT: "30m"
+  ALERT_EVALUATION_INTERVAL: "30s"
+  
+  # SLA Targets
+  AVAILABILITY_SLA: "99.9"
+  RESPONSE_TIME_SLA: "2000"
+  ERROR_RATE_SLA: "0.1"
+  
+  # Alert Thresholds
+  HIGH_CPU_THRESHOLD: "80"
+  HIGH_MEMORY_THRESHOLD: "85"
+  HIGH_DISK_USAGE_THRESHOLD: "90"
+  DATABASE_CONNECTION_THRESHOLD: "80"
+  
+  # HIPAA Compliance Monitoring
+  AUDIT_LOG_ALERT_ENABLED: "true"
+  FAILED_LOGIN_THRESHOLD: "10"
+  DATA_ACCESS_MONITORING: "true"
+  ENCRYPTION_STATUS_CHECK: "true"
+---
+# Prometheus Production Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-prod-config
+  namespace: omnicare-prod
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 30s
+      evaluation_interval: 30s
+      external_labels:
+        cluster: 'omnicare-prod'
+        region: 'us-east-1'
+        environment: 'production'
+    
+    rule_files:
+      - '/etc/prometheus/rules/*.yml'
+    
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets:
+              - alertmanager:9093
+    
+    scrape_configs:
+      # Kubernetes API Server
+      - job_name: 'kubernetes-apiservers'
+        kubernetes_sd_configs:
+        - role: endpoints
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+          action: keep
+          regex: default;kubernetes;https
+      
+      # Kubernetes Nodes
+      - job_name: 'kubernetes-nodes'
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        kubernetes_sd_configs:
+        - role: node
+        relabel_configs:
+        - action: labelmap
+          regex: __meta_kubernetes_node_label_(.+)
+        - target_label: __address__
+          replacement: kubernetes.default.svc:443
+        - source_labels: [__meta_kubernetes_node_name]
+          regex: (.+)
+          target_label: __metrics_path__
+          replacement: /api/v1/nodes/${1}/proxy/metrics
+      
+      # OmniCare Backend
+      - job_name: 'omnicare-backend'
+        kubernetes_sd_configs:
+        - role: endpoints
+          namespaces:
+            names:
+            - omnicare-prod
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+          action: keep
+          regex: true
+        - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
+          action: replace
+          target_label: __metrics_path__
+          regex: (.+)
+        - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
+          action: replace
+          regex: ([^:]+)(?::\d+)?;(\d+)
+          replacement: $1:$2
+          target_label: __address__
+        - action: labelmap
+          regex: __meta_kubernetes_service_label_(.+)
+        - source_labels: [__meta_kubernetes_namespace]
+          action: replace
+          target_label: kubernetes_namespace
+        - source_labels: [__meta_kubernetes_service_name]
+          action: replace
+          target_label: kubernetes_name
+      
+      # PostgreSQL
+      - job_name: 'postgresql'
+        static_configs:
+        - targets: ['postgres-primary:9187', 'postgres-replica:9187']
+        scrape_interval: 30s
+        metrics_path: /metrics
+      
+      # Redis
+      - job_name: 'redis'
+        static_configs:
+        - targets: ['redis-master:9121', 'redis-replica:9121']
+        scrape_interval: 30s
+      
+      # NGINX Ingress
+      - job_name: 'nginx-ingress'
+        kubernetes_sd_configs:
+        - role: pod
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_pod_label_app]
+          action: keep
+          regex: nginx-ingress
+        - source_labels: [__address__]
+          action: replace
+          regex: ([^:]+)(?::\d+)?
+          replacement: $1:10254
+          target_label: __address__
+        - action: labelmap
+          regex: __meta_kubernetes_pod_label_(.+)
+      
+      # Falco Security Events
+      - job_name: 'falco'
+        kubernetes_sd_configs:
+        - role: pod
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_pod_label_app]
+          action: keep
+          regex: falco
+        - source_labels: [__address__]
+          action: replace
+          regex: ([^:]+)(?::\d+)?
+          replacement: $1:8765
+          target_label: __address__
+---
+# Prometheus Alerting Rules
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-alert-rules
+  namespace: omnicare-prod
+data:
+  omnicare-alerts.yml: |
+    groups:
+    - name: omnicare.hipaa.compliance
+      interval: 30s
+      rules:
+      - alert: HipaaAuditLogFailure
+        expr: increase(audit_log_errors_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          service: audit
+          compliance: hipaa
+        annotations:
+          summary: "HIPAA audit logging failure detected"
+          description: "Audit log errors have been detected. This is a HIPAA compliance violation."
+          action: "Investigate audit log system immediately"
+      
+      - alert: UnauthorizedDataAccess
+        expr: rate(http_requests_total{status="401"}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          service: authentication
+          compliance: hipaa
+        annotations:
+          summary: "High rate of unauthorized access attempts"
+          description: "{{ $value }} unauthorized access attempts per second"
+          action: "Review authentication logs and consider IP blocking"
+      
+      - alert: DatabaseConnectionExhaustion
+        expr: postgres_connections_used / postgres_connections_max * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "{{ $value }}% of database connections are in use"
+          action: "Scale database or investigate connection leaks"
+    
+    - name: omnicare.application.sla
+      interval: 30s
+      rules:
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) * 100 > 0.1
+        for: 5m
+        labels:
+          severity: critical
+          service: application
+          sla: error-rate
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value }}% which exceeds SLA threshold"
+          action: "Investigate application errors and consider rollback"
+      
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) * 1000 > 2000
+        for: 5m
+        labels:
+          severity: warning
+          service: application
+          sla: response-time
+        annotations:
+          summary: "High response time detected"
+          description: "95th percentile response time is {{ $value }}ms"
+          action: "Investigate performance bottlenecks"
+      
+      - alert: LowAvailability
+        expr: up{job="omnicare-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: application
+          sla: availability
+        annotations:
+          summary: "Application instance down"
+          description: "Backend service instance {{ $labels.instance }} is down"
+          action: "Investigate pod status and trigger automatic failover if needed"
+    
+    - name: omnicare.infrastructure
+      interval: 30s
+      rules:
+      - alert: HighCPUUsage
+        expr: (100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)) > 80
+        for: 10m
+        labels:
+          severity: warning
+          service: infrastructure
+        annotations:
+          summary: "High CPU usage on node {{ $labels.instance }}"
+          description: "CPU usage is {{ $value }}%"
+          action: "Consider scaling or load balancing"
+      
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+          service: infrastructure
+        annotations:
+          summary: "High memory usage on node {{ $labels.instance }}"
+          description: "Memory usage is {{ $value }}%"
+          action: "Investigate memory leaks or scale resources"
+      
+      - alert: HighDiskUsage
+        expr: (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+          service: infrastructure
+        annotations:
+          summary: "High disk usage on {{ $labels.instance }}"
+          description: "Disk usage is {{ $value }}% on {{ $labels.mountpoint }}"
+          action: "Clean up disk space or expand storage"
+      
+      - alert: PodCrashLooping
+        expr: rate(kube_pod_container_status_restarts_total[5m]) > 0
+        for: 10m
+        labels:
+          severity: warning
+          service: kubernetes
+        annotations:
+          summary: "Pod {{ $labels.pod }} is crash looping"
+          description: "Pod has restarted {{ $value }} times in the last 5 minutes"
+          action: "Investigate pod logs and resource constraints"
+    
+    - name: omnicare.security
+      interval: 30s
+      rules:
+      - alert: SecurityThreatDetected
+        expr: increase(falco_events_total{priority="Critical"}[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          service: security
+          compliance: hipaa
+        annotations:
+          summary: "Critical security threat detected by Falco"
+          description: "{{ $value }} critical security events detected"
+          action: "Investigate security events immediately and consider isolation"
+      
+      - alert: MultipleFailedLogins
+        expr: increase(failed_login_attempts_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          service: authentication
+          compliance: hipaa
+        annotations:
+          summary: "Multiple failed login attempts detected"
+          description: "{{ $value }} failed login attempts in 5 minutes"
+          action: "Review authentication logs and consider IP blocking"
+      
+      - alert: TLSCertificateExpiring
+        expr: (cert_expiry_timestamp - time()) / 86400 < 30
+        for: 1h
+        labels:
+          severity: warning
+          service: security
+        annotations:
+          summary: "TLS certificate expiring soon"
+          description: "Certificate {{ $labels.certificate }} expires in {{ $value }} days"
+          action: "Renew TLS certificate before expiration"
+---
+# AlertManager Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: omnicare-prod
+data:
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+      smtp_smarthost: 'localhost:587'
+      smtp_from: 'alerts@omnicare-health.com'
+    
+    route:
+      group_by: ['alertname', 'cluster', 'service']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 12h
+      receiver: 'default'
+      routes:
+      - match:
+          severity: critical
+        receiver: pagerduty-critical
+        continue: true
+      - match:
+          compliance: hipaa
+        receiver: hipaa-compliance
+        continue: true
+      - match:
+          severity: warning
+        receiver: slack-warnings
+      - match:
+          service: security
+        receiver: security-team
+    
+    receivers:
+    - name: 'default'
+      slack_configs:
+      - api_url: 'SLACK_WEBHOOK_URL_PLACEHOLDER'
+        channel: '#omnicare-alerts'
+        title: 'OmniCare EMR Alert'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+        send_resolved: true
+    
+    - name: 'pagerduty-critical'
+      pagerduty_configs:
+      - service_key: 'PAGERDUTY_SERVICE_KEY_PLACEHOLDER'
+        description: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+        severity: 'critical'
+    
+    - name: 'hipaa-compliance'
+      email_configs:
+      - to: 'compliance@omnicare-health.com'
+        subject: 'HIPAA Compliance Alert: {{ .GroupLabels.alertname }}'
+        body: |
+          HIPAA COMPLIANCE ALERT
+          
+          Alert: {{ range .Alerts }}{{ .Annotations.summary }}{{ end }}
+          Description: {{ range .Alerts }}{{ .Annotations.description }}{{ end }}
+          Action Required: {{ range .Alerts }}{{ .Annotations.action }}{{ end }}
+          
+          Time: {{ .Alerts.StartsAt }}
+          Severity: {{ .GroupLabels.severity }}
+      slack_configs:
+      - api_url: 'SLACK_WEBHOOK_URL_PLACEHOLDER'
+        channel: '#hipaa-compliance'
+        title: '🚨 HIPAA Compliance Alert'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+        send_resolved: true
+    
+    - name: 'security-team'
+      email_configs:
+      - to: 'security@omnicare-health.com'
+        subject: 'Security Alert: {{ .GroupLabels.alertname }}'
+        body: |
+          SECURITY ALERT
+          
+          Alert: {{ range .Alerts }}{{ .Annotations.summary }}{{ end }}
+          Description: {{ range .Alerts }}{{ .Annotations.description }}{{ end }}
+          Action Required: {{ range .Alerts }}{{ .Annotations.action }}{{ end }}
+          
+          Time: {{ .Alerts.StartsAt }}
+          Instance: {{ .GroupLabels.instance }}
+      slack_configs:
+      - api_url: 'SLACK_WEBHOOK_URL_PLACEHOLDER'
+        channel: '#security-alerts'
+        title: '🔒 Security Alert'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+        send_resolved: true
+    
+    - name: 'slack-warnings'
+      slack_configs:
+      - api_url: 'SLACK_WEBHOOK_URL_PLACEHOLDER'
+        channel: '#omnicare-warnings'
+        title: '⚠️ OmniCare Warning'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+        send_resolved: true
+    
+    inhibit_rules:
+    - source_match:
+        severity: 'critical'
+      target_match:
+        severity: 'warning'
+      equal: ['alertname', 'cluster', 'service']
+---
+# Grafana Dashboard ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: omnicare-prod
+data:
+  omnicare-overview.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "OmniCare EMR Production Overview",
+        "tags": ["omnicare", "production", "hipaa"],
+        "timezone": "UTC",
+        "panels": [
+          {
+            "id": 1,
+            "title": "SLA Metrics",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "avg(up{job=\"omnicare-backend\"}) * 100",
+                "refId": "A",
+                "legendFormat": "Availability %"
+              },
+              {
+                "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) * 1000",
+                "refId": "B",
+                "legendFormat": "95th %ile Response Time (ms)"
+              },
+              {
+                "expr": "(rate(http_requests_total{status=~\"5..\"}[5m]) / rate(http_requests_total[5m])) * 100",
+                "refId": "C",
+                "legendFormat": "Error Rate %"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "thresholds": {
+                  "steps": [
+                    {"color": "red", "value": 0},
+                    {"color": "yellow", "value": 95},
+                    {"color": "green", "value": 99}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 2,
+            "title": "Request Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(http_requests_total{job=\"omnicare-backend\"}[5m])",
+                "refId": "A",
+                "legendFormat": "{{method}} {{status}}"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Database Connections",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "postgres_connections_used",
+                "refId": "A",
+                "legendFormat": "Used Connections"
+              },
+              {
+                "expr": "postgres_connections_max",
+                "refId": "B",
+                "legendFormat": "Max Connections"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Security Events",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(falco_events_total[5m])",
+                "refId": "A",
+                "legendFormat": "{{priority}} Events"
+              }
+            ]
+          },
+          {
+            "id": 5,
+            "title": "HIPAA Audit Events",
+            "type": "table",
+            "targets": [
+              {
+                "expr": "increase(audit_log_entries_total[1h])",
+                "refId": "A",
+                "format": "table"
+              }
+            ]
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "refresh": "30s"
+      }
+    }
+  
+  database-performance.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "Database Performance",
+        "tags": ["database", "postgresql", "performance"],
+        "panels": [
+          {
+            "id": 1,
+            "title": "Query Performance",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(postgres_queries_total[5m])",
+                "refId": "A",
+                "legendFormat": "Queries/sec"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Connection Pool",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "postgres_connections_active",
+                "refId": "A",
+                "legendFormat": "Active"
+              },
+              {
+                "expr": "postgres_connections_idle",
+                "refId": "B",
+                "legendFormat": "Idle"
+              }
+            ]
+          }
+        ]
+      }
+    }
+---
+# SLA Monitoring Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: sla-monitor-service
+  namespace: omnicare-prod
+  labels:
+    app: sla-monitor
+    component: monitoring
+spec:
+  selector:
+    app: sla-monitor
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: metrics
+---
+# SLA Monitor Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sla-monitor
+  namespace: omnicare-prod
+  labels:
+    app: sla-monitor
+    component: monitoring
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sla-monitor
+  template:
+    metadata:
+      labels:
+        app: sla-monitor
+        component: monitoring
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: sla-monitor
+        image: prom/prometheus:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          # Simple SLA monitoring script
+          while true; do
+            # Calculate availability
+            UPTIME=$(curl -s http://prometheus:9090/api/v1/query?query='avg(up{job="omnicare-backend"})' | \
+              jq -r '.data.result[0].value[1] // "0"')
+            
+            # Calculate error rate
+            ERROR_RATE=$(curl -s http://prometheus:9090/api/v1/query?query='(rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m])) * 100' | \
+              jq -r '.data.result[0].value[1] // "0"')
+            
+            # Calculate response time
+            RESPONSE_TIME=$(curl -s http://prometheus:9090/api/v1/query?query='histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) * 1000' | \
+              jq -r '.data.result[0].value[1] // "0"')
+            
+            # Generate SLA metrics
+            cat > /tmp/sla_metrics.txt << EOF
+            # HELP omnicare_sla_availability_percentage Current availability percentage
+            # TYPE omnicare_sla_availability_percentage gauge
+            omnicare_sla_availability_percentage{service="omnicare-emr"} ${UPTIME}
+            
+            # HELP omnicare_sla_error_rate_percentage Current error rate percentage
+            # TYPE omnicare_sla_error_rate_percentage gauge
+            omnicare_sla_error_rate_percentage{service="omnicare-emr"} ${ERROR_RATE}
+            
+            # HELP omnicare_sla_response_time_ms 95th percentile response time in milliseconds
+            # TYPE omnicare_sla_response_time_ms gauge
+            omnicare_sla_response_time_ms{service="omnicare-emr"} ${RESPONSE_TIME}
+            EOF
+            
+            # Serve metrics on port 8080
+            echo "HTTP/1.1 200 OK" > /tmp/response_header.txt
+            echo "Content-Type: text/plain" >> /tmp/response_header.txt
+            echo "" >> /tmp/response_header.txt
+            
+            nc -l -p 8080 < /tmp/sla_metrics.txt &
+            
+            sleep 60
+          done
+        ports:
+        - containerPort: 8080
+          name: metrics
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true
+          runAsUser: 1001
+---
+# ServiceMonitor for SLA Monitoring
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: sla-monitor-metrics
+  namespace: omnicare-prod
+spec:
+  selector:
+    matchLabels:
+      app: sla-monitor
+  endpoints:
+  - port: metrics
+    interval: 60s
+    path: /metrics
+---
+# Alert Rules for SLA Violations
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: sla-violation-alerts
+  namespace: omnicare-prod
+spec:
+  groups:
+  - name: sla.violations
+    rules:
+    - alert: SLAAvailabilityViolation
+      expr: omnicare_sla_availability_percentage < 99.9
+      for: 5m
+      labels:
+        severity: critical
+        sla: availability
+        compliance: hipaa
+      annotations:
+        summary: "SLA availability violation"
+        description: "Current availability {{ $value }}% is below SLA target of 99.9%"
+        action: "Investigate system availability and initiate incident response"
+    
+    - alert: SLAErrorRateViolation
+      expr: omnicare_sla_error_rate_percentage > 0.1
+      for: 5m
+      labels:
+        severity: critical
+        sla: error-rate
+      annotations:
+        summary: "SLA error rate violation"
+        description: "Current error rate {{ $value }}% exceeds SLA target of 0.1%"
+        action: "Investigate application errors and consider rollback"
+    
+    - alert: SLAResponseTimeViolation
+      expr: omnicare_sla_response_time_ms > 2000
+      for: 5m
+      labels:
+        severity: warning
+        sla: response-time
+      annotations:
+        summary: "SLA response time violation"
+        description: "95th percentile response time {{ $value }}ms exceeds SLA target of 2000ms"
+        action: "Investigate performance bottlenecks and optimize system"

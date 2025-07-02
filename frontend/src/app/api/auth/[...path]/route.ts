@@ -9,37 +9,42 @@ const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:8080';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
-  return handleRequest(request, params.path, 'GET');
+  const { path } = await params;
+  return handleRequest(request, path, 'GET');
 }
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
-  return handleRequest(request, params.path, 'POST');
+  const { path } = await params;
+  return handleRequest(request, path, 'POST');
 }
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
-  return handleRequest(request, params.path, 'PUT');
+  const { path } = await params;
+  return handleRequest(request, path, 'PUT');
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
-  return handleRequest(request, params.path, 'DELETE');
+  const { path } = await params;
+  return handleRequest(request, path, 'DELETE');
 }
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
-  return handleRequest(request, params.path, 'PATCH');
+  const { path } = await params;
+  return handleRequest(request, path, 'PATCH');
 }
 
 async function handleRequest(
@@ -75,13 +80,19 @@ async function handleRequest(
     // Add body for non-GET requests
     if (method !== 'GET' && method !== 'DELETE') {
       try {
-        const body = await request.json();
+        // Clone the request to safely read the body
+        const clonedRequest = request.clone();
+        const body = await clonedRequest.json();
         requestOptions.body = JSON.stringify(body);
       } catch {
-        // If body is not JSON, try to get it as text
-        const body = await request.text();
-        if (body) {
-          requestOptions.body = body;
+        try {
+          // Try reading as text from the original request
+          const body = await request.text();
+          if (body) {
+            requestOptions.body = body;
+          }
+        } catch (error) {
+          console.warn('Failed to read request body:', error);
         }
       }
     }

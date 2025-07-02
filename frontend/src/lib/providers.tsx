@@ -11,6 +11,8 @@ import { MANTINE_THEME } from '@/constants/theme';
 import { medplumClient } from './medplum';
 import { ServiceWorkerProvider } from '@/components/providers/ServiceWorkerProvider';
 import { NetworkStatusProvider } from '@/contexts/NetworkStatusContext';
+import { OfflineSyncProvider } from '@/components/providers/OfflineSyncProvider';
+import { HydrationProvider } from '@/components/providers/HydrationProvider';
 
 // Import Mantine styles
 import '@mantine/core/styles.css';
@@ -222,26 +224,30 @@ export function Providers({ children }: ProvidersProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <MedplumProvider medplum={medplumClient}>
-        <MantineProvider theme={theme} defaultColorScheme="light">
-          <NetworkStatusProvider defaultMode="auto">
+        <MantineProvider theme={theme} defaultColorScheme="light" forceColorScheme="light">
+          <HydrationProvider>
+            <NetworkStatusProvider defaultMode="auto">
             <ServiceWorkerProvider>
-              <ModalsProvider
-                modalProps={{
-                  centered: true,
-                  overlayProps: { backgroundOpacity: 0.55, blur: 3 },
-                  transitionProps: { transition: 'fade', duration: 200 },
-                }}
-              >
-                <Notifications
-                  position="top-right"
-                  autoClose={5000}
-                  limit={5}
-                  containerWidth={400}
-                />
-                {children}
-              </ModalsProvider>
+              <OfflineSyncProvider>
+                <ModalsProvider
+                  modalProps={{
+                    centered: true,
+                    overlayProps: { backgroundOpacity: 0.55, blur: 3 },
+                    transitionProps: { transition: 'fade', duration: 200 },
+                  }}
+                >
+                  <Notifications
+                    position="top-right"
+                    autoClose={5000}
+                    limit={5}
+                    containerWidth={400}
+                  />
+                  {children}
+                </ModalsProvider>
+              </OfflineSyncProvider>
             </ServiceWorkerProvider>
-          </NetworkStatusProvider>
+            </NetworkStatusProvider>
+          </HydrationProvider>
         </MantineProvider>
       </MedplumProvider>
       <ReactQueryDevtools

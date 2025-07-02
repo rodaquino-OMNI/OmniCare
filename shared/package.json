@@ -1,0 +1,20 @@
+{
+  "name": "@omnicare/shared-types",
+  "version": "1.0.0",
+  "description": "Shared TypeScript types for OmniCare EMR",
+  "main": "types/index.ts",
+  "types": "types/index.ts",
+  "exports": {
+    ".": "./types/index.ts",
+    "./user-roles": "./types/user-roles.types.ts",
+    "./user": "./types/user.types.ts",
+    "./auth": "./types/auth.types.ts",
+    "./sync": "./types/sync.types.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

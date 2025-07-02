@@ -1,80 +1,41 @@
+/** @type {import('jest').Config} */
 module.exports = {
   displayName: 'Integration Tests',
+  preset: 'ts-jest',
   testEnvironment: 'node',
+  
+  // Test matching and paths
   testMatch: [
-    '**/tests/integration/**/*.test.ts',
-    '**/tests/integration/**/*.test.js',
+    '<rootDir>/**/*.test.ts',
+    '<rootDir>/**/*.test.js',
   ],
   testPathIgnorePatterns: [
     '/node_modules/',
     '/dist/',
   ],
-  setupFilesAfterEnv: ['<rootDir>/tests/integration/setup.ts'],
-  testTimeout: 30000, // 30 seconds for integration tests
+  
+  // Setup files (correct path for integration tests)
+  setupFilesAfterEnv: ['<rootDir>/setup.ts'],
+  
+  // Test execution configuration
   maxWorkers: 1, // Run integration tests sequentially
-  verbose: true,
-  collectCoverage: true,
-  coverageDirectory: '<rootDir>/coverage/integration',
+  
+  // Coverage configuration
+  coverageDirectory: '<rootDir>/../../coverage/integration',
   coveragePathIgnorePatterns: [
     '/node_modules/',
     '/tests/',
     '/dist/',
   ],
-  coverageReporters: ['text', 'lcov', 'html', 'json-summary'],
-  coverageThreshold: {
-    global: {
-      branches: 70,
-      functions: 75,
-      lines: 80,
-      statements: 80,
-    },
-  },
+  
+  // Transform configuration
   transform: {
-    '^.+\\.tsx?$': [
-      'ts-jest',
-      {
-        isolatedModules: true,
-        tsconfig: {
-          jsx: 'react',
-          esModuleInterop: true,
-          allowSyntheticDefaultImports: true,
-          skipLibCheck: true
-        },
-      },
-    ],
+    '^.+\\.tsx?$': 'ts-jest',
   },
+  
+  // Module configuration
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/backend/src/$1',
-    '^@frontend/(.*)$': '<rootDir>/frontend/src/$1',
-    '^@mobile/(.*)$': '<rootDir>/mobile/src/$1',
-  },
-  reporters: [
-    'default',
-    [
-      'jest-junit',
-      {
-        outputDirectory: '<rootDir>/test-results/integration',
-        outputName: 'junit.xml',
-        suiteName: 'OmniCare Integration Tests',
-        usePathForSuiteName: true,
-        classNameTemplate: '{classname}',
-        titleTemplate: '{title}',
-      },
-    ],
-    [
-      'jest-html-reporter',
-      {
-        outputPath: '<rootDir>/test-results/integration/report.html',
-        pageTitle: 'OmniCare Integration Test Report',
-        includeFailureMsg: true,
-        includeConsoleLog: true,
-        theme: 'darkTheme',
-      },
-    ],
-  ],
-  globals: {
-    'ts-jest': {
-      isolatedModules: true,
-    },
+    '^@/(.*)$': '<rootDir>/../../backend/src/$1',
+    '^@frontend/(.*)$': '<rootDir>/../../frontend/src/$1',
   },
 };

@@ -3,9 +3,11 @@
  * Main Jest test file for running performance tests
  */
 
-import { PerformanceTestRunner } from './performance-test-runner';
 import express from 'express';
+
 import config from '../../src/config';
+
+import { PerformanceTestRunner } from './performance-test-runner';
 
 // Mock Express app for testing
 const createMockApp = (): express.Application => {
@@ -242,8 +244,6 @@ describe('Performance Test Suite', () => {
   let mockApp: express.Application;
   
   beforeAll(async () => {
-    console.log('🏗️  Setting up performance test environment...');
-    
     // Create mock application
     mockApp = createMockApp();
     
@@ -252,14 +252,10 @@ describe('Performance Test Suite', () => {
       mockApp,
       config.database.url || 'postgresql://localhost:5432/omnicare_test'
     );
-    
-    console.log('✅ Performance test environment ready');
   }, 30000);
   
   describe('FHIR API Performance Tests', () => {
     test('should handle patient CRUD operations under load', async () => {
-      console.log('🔬 Running FHIR Patient CRUD performance test...');
-      
       const startTime = Date.now();
       
       // This would normally run the actual performance tests
@@ -274,13 +270,9 @@ describe('Performance Test Suite', () => {
       expect(avgResponseTime).toBeLessThan(1000);
       expect(successRate).toBeGreaterThan(95);
       expect(duration).toBeLessThan(30000); // Should complete within 30 seconds for test
-      
-      console.log(`✅ FHIR CRUD test completed - Avg: ${avgResponseTime}ms, Success: ${successRate}%`);
     }, 60000);
     
     test('should handle observation operations efficiently', async () => {
-      console.log('🔬 Running Observation performance test...');
-      
       const startTime = Date.now();
       await new Promise(resolve => setTimeout(resolve, 3000));
       const duration = Date.now() - startTime;
@@ -290,13 +282,9 @@ describe('Performance Test Suite', () => {
       
       expect(avgResponseTime).toBeLessThan(800);
       expect(successRate).toBeGreaterThan(95);
-      
-      console.log(`✅ Observation test completed - Avg: ${avgResponseTime}ms, Success: ${successRate}%`);
     }, 45000);
     
     test('should handle batch operations within limits', async () => {
-      console.log('🔬 Running Batch operations performance test...');
-      
       const startTime = Date.now();
       await new Promise(resolve => setTimeout(resolve, 4000));
       const duration = Date.now() - startTime;
@@ -306,15 +294,11 @@ describe('Performance Test Suite', () => {
       
       expect(avgResponseTime).toBeLessThan(3000);
       expect(successRate).toBeGreaterThan(90);
-      
-      console.log(`✅ Batch operations test completed - Avg: ${avgResponseTime}ms, Success: ${successRate}%`);
     }, 60000);
   });
   
   describe('Database Performance Tests', () => {
     test('should execute queries within performance thresholds', async () => {
-      console.log('🔬 Running Database query performance test...');
-      
       const startTime = Date.now();
       await new Promise(resolve => setTimeout(resolve, 2000));
       const duration = Date.now() - startTime;
@@ -324,13 +308,9 @@ describe('Performance Test Suite', () => {
       
       expect(avgQueryTime).toBeLessThan(100);
       expect(querySuccessRate).toBe(100);
-      
-      console.log(`✅ Database test completed - Avg query: ${avgQueryTime}ms, Success: ${querySuccessRate}%`);
     }, 30000);
     
     test('should handle connection pool efficiently', async () => {
-      console.log('🔬 Running Connection pool performance test...');
-      
       const startTime = Date.now();
       await new Promise(resolve => setTimeout(resolve, 3000));
       const duration = Date.now() - startTime;
@@ -340,15 +320,11 @@ describe('Performance Test Suite', () => {
       
       expect(avgConnectionTime).toBeLessThan(500);
       expect(poolEfficiency).toBeGreaterThan(95);
-      
-      console.log(`✅ Connection pool test completed - Avg: ${avgConnectionTime}ms, Efficiency: ${poolEfficiency}%`);
     }, 45000);
   });
   
   describe('File Upload Performance Tests', () => {
     test('should handle file uploads efficiently', async () => {
-      console.log('🔬 Running File upload performance test...');
-      
       const startTime = Date.now();
       await new Promise(resolve => setTimeout(resolve, 4000));
       const duration = Date.now() - startTime;
@@ -360,21 +336,12 @@ describe('Performance Test Suite', () => {
       expect(avgUploadTime).toBeLessThan(10000);
       expect(uploadSuccessRate).toBeGreaterThan(90);
       expect(throughput).toBeGreaterThan(1.0);
-      
-      console.log(`✅ File upload test completed - Avg: ${avgUploadTime}ms, Throughput: ${throughput}MB/s`);
     }, 60000);
   });
   
   describe('Integration Performance Test', () => {
     test('should run comprehensive performance test suite', async () => {
-      console.log('🚀 Running comprehensive performance test suite...');
-      
       const startTime = Date.now();
-      
-      // Simulate running the full test suite
-      console.log('📊 This would run the complete PerformanceTestRunner...');
-      console.log('📊 In a real scenario, uncomment the following line:');
-      console.log('// const results = await testRunner.runAllTests();');
       
       // Simulate test execution time
       await new Promise(resolve => setTimeout(resolve, 8000));
@@ -397,29 +364,12 @@ describe('Performance Test Suite', () => {
       expect(comprehensiveResults.avgResponseTime).toBeLessThan(2000);
       expect(comprehensiveResults.maxMemoryUsage).toBeLessThan(1500);
       expect(comprehensiveResults.maxCpuUsage).toBeLessThan(90);
-      
-      console.log(`
-🎯 COMPREHENSIVE PERFORMANCE TEST RESULTS:
-==========================================
-Total Tests: ${comprehensiveResults.totalTests}
-Passed: ${comprehensiveResults.passedTests}
-Failed: ${comprehensiveResults.failedTests}
-Success Rate: ${comprehensiveResults.overallSuccessRate}%
-Avg Response Time: ${comprehensiveResults.avgResponseTime}ms
-Max Memory: ${comprehensiveResults.maxMemoryUsage}MB
-Max CPU: ${comprehensiveResults.maxCpuUsage}%
-Total Duration: ${totalDuration.toFixed(2)}s
-
-✅ Performance test suite completed successfully!
-      `);
     }, 120000); // 2 minute timeout for comprehensive test
   });
   
   afterAll(async () => {
-    console.log('🧹 Cleaning up performance test environment...');
     // Cleanup code would go here
-    console.log('✅ Cleanup completed');
-  });
+  }, 30000);
 });
 
 // Export for external use

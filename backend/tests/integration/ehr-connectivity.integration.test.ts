@@ -1,8 +1,9 @@
-import { smartFHIRService } from '../../src/services/smart-fhir.service';
-import { medplumService } from '../../src/services/medplum.service';
-import { fhirResourcesService } from '../../src/services/fhir-resources.service';
 import { Patient } from '@medplum/fhirtypes';
 import axios from 'axios';
+
+import { fhirResourcesService } from '../../src/services/fhir-resources.service';
+import { medplumService } from '../../src/services/medplum.service';
+import { smartFHIRService } from '../../src/services/smart-fhir.service';
 import logger from '../../src/utils/logger';
 
 /**
@@ -17,7 +18,7 @@ describe('EHR Connectivity Integration Tests', () => {
     await medplumService.initialize();
     // Setup test data
     await setupTestPatient();
-  });
+  }, 30000);
 
   describe('Epic EHR Integration', () => {
     test('should authenticate with Epic using JWT client credentials', async () => {
@@ -577,5 +578,5 @@ describe('EHR Connectivity Integration Tests', () => {
         logger.warn('Failed to cleanup EHR test patient:', errorMessage);
       }
     }
-  });
+  }, 30000);
 });

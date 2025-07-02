@@ -1,15 +1,16 @@
 // Specialized UI Interaction Tests for OmniCare Components
 import React from 'react';
-import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MantineProvider } from '@mantine/core';
+import { Patient } from '@medplum/fhirtypes';
 
 // Component imports
 import PatientRegistration from '@/components/admin/PatientRegistration';
 import ClinicalNoteInput from '@/components/clinical/ClinicalNoteInput';
 import AppointmentManagement from '@/components/admin/AppointmentManagement';
-import { NetworkSimulator } from '@/tests/offline/network-simulation-utils';
+import { NetworkSimulator } from '../offline/network-simulation-utils';
 
 // Test wrapper
 const TestWrapper = ({ children }: { children: React.ReactNode }) => {
@@ -29,20 +30,30 @@ const TestWrapper = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
+// Using Patient type from @medplum/fhirtypes
+
 // Mock data
-const mockPatient = {
+const mockPatient: Patient = {
+  resourceType: 'Patient',
   id: 'PAT-UI-001',
   name: [{ given: ['Jane'], family: 'Doe' }],
   birthDate: '1990-03-20',
-  gender: 'female'
+  gender: 'female',
+  identifier: [{ system: 'http://omnicare.com/patient', value: 'PAT-UI-001' }],
+  telecom: [],
+  address: []
 };
 
 const mockUser = {
   id: 'USER-UI-001',
   firstName: 'Dr. Emily',
   lastName: 'Chen',
-  role: 'physician',
-  email: 'emily.chen@omnicare.com'
+  role: 'physician' as const,
+  email: 'emily.chen@omnicare.com',
+  permissions: [],
+  isMfaEnabled: false,
+  passwordChangedAt: new Date(),
+  failedLoginAttempts: 0
 };
 
 // Mock authentication
@@ -62,8 +73,8 @@ jest.mock('@medplum/react', () => ({
     searchResources: jest.fn().mockResolvedValue([]),
     updateResource: jest.fn().mockResolvedValue({ id: 'RES-001' })
   }),
-  Document: ({ children }: any) => <div>{children}</div>,
-  NoteDisplay: ({ note }: any) => <div>{note?.content || 'Note content'}</div>
+  Document: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  NoteDisplay: ({ note }: { note?: { content?: string } }) => <div>{note?.content || 'Note content'}</div>
 }));
 
 describe('UI Interaction Tests', () => {
@@ -307,7 +318,7 @@ describe('UI Interaction Tests', () => {
       expect(uploadButton).toBeInTheDocument();
 
       // Simulate file selection
-      const file = new File(['test content'], 'test.pdf', { type: 'application/pdf' });
+      // Note: File created but not used - would be used in actual drag-drop simulation
       
       // In a real implementation, we would simulate drag and drop
       // For now, we verify the upload button is interactive
@@ -482,9 +493,6 @@ describe('UI Interaction Tests', () => {
       const buttons = screen.getAllByRole('button');
       buttons.forEach(button => {
         // Verify buttons are large enough for touch (minimum 44px recommended)
-        const computedStyle = window.getComputedStyle(button);
-        const minSize = 44; // pixels
-        
         // In real implementation, we would check actual computed dimensions
         expect(button).toBeInTheDocument();
       });
@@ -492,9 +500,16 @@ describe('UI Interaction Tests', () => {
 
     it('should handle swipe gestures for navigation', async () => {
       // Mock touch events for swipe simulation
-      const createTouchEvent = (type: string, touches: any[]) => {
+      interface Touch {
+        identifier: number;
+        pageX: number;
+        pageY: number;
+        target: EventTarget;
+      }
+      
+      const createTouchEvent = (type: string, touches: Touch[]) => {
         const event = new Event(type, { bubbles: true });
-        (event as any).touches = touches;
+        Object.defineProperty(event, 'touches', { value: touches, writable: true });
         return event;
       };
 
@@ -507,8 +522,22 @@ describe('UI Interaction Tests', () => {
       
       if (calendarElement) {
         // Simulate swipe left gesture
-        const startTouch = { clientX: 300, clientY: 100 };
-        const endTouch = { clientX: 100, clientY: 100 };
+        const startTouch = { 
+          clientX: 300, 
+          clientY: 100, 
+          identifier: 0, 
+          pageX: 300, 
+          pageY: 100, 
+          target: calendarElement 
+        } as Touch;
+        const endTouch = { 
+          clientX: 100, 
+          clientY: 100, 
+          identifier: 0, 
+          pageX: 100, 
+          pageY: 100, 
+          target: calendarElement 
+        } as Touch;
 
         fireEvent(calendarElement, createTouchEvent('touchstart', [startTouch]));
         fireEvent(calendarElement, createTouchEvent('touchmove', [endTouch]));

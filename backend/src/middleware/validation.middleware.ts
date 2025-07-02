@@ -3,9 +3,17 @@
  * Provides request validation using Zod schemas
  */
 
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
+// Import multer types to enable Express.Multer namespace
+import 'multer';
+
 import { AppError } from '../utils/error.utils';
+
+interface MulterRequest extends Request {
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | { [fieldname: string]: Express.Multer.File[] };
+}
 
 /**
  * Validation middleware factory
@@ -13,14 +21,14 @@ import { AppError } from '../utils/error.utils';
  * @param property - Which property of the request to validate ('body', 'query', 'params')
  */
 export function validate(
-  schema: z.ZodSchema<any>,
+  schema: z.ZodSchema<unknown>,
   property: 'body' | 'query' | 'params' = 'body'
 ) {
   return (req: Request, _res: Response, next: NextFunction): void => {
     try {
       const dataToValidate = req[property];
       const validatedData = schema.parse(dataToValidate);
-      req[property] = validatedData;
+      (req as any)[property] = validatedData;
       next();
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -32,7 +40,7 @@ export function validate(
 
         const errorMessage = `Validation failed for ${property}`;
         const appError = new AppError(errorMessage, 400, true, 'VALIDATION_ERROR');
-        (appError as any).validationErrors = validationErrors;
+        Object.assign(appError, { validationErrors });
         next(appError);
       } else {
         next(new AppError('Validation error', 400));
@@ -144,11 +152,11 @@ export const ValidationSchemas = {
       display: z.string().optional(),
     }),
     subject: z.object({
-      reference: z.string().regex(/^Patient\/[\w\-]+$/, 'Subject must reference a Patient'),
+      reference: z.string().regex(/^Patient\/[\w-]+$/, 'Subject must reference a Patient'),
     }),
     participant: z.array(z.object({
       individual: z.object({
-        reference: z.string().regex(/^(Practitioner|RelatedPerson)\/[\w\-]+$/, 'Participant must reference a Practitioner or RelatedPerson'),
+        reference: z.string().regex(/^(Practitioner|RelatedPerson)\/[\w-]+$/, 'Participant must reference a Practitioner or RelatedPerson'),
       }).optional(),
       type: z.array(z.object({
         coding: z.array(z.object({
@@ -178,7 +186,7 @@ export const ValidationSchemas = {
       text: z.string().optional(),
     }),
     subject: z.object({
-      reference: z.string().regex(/^Patient\/[\w\-]+$/, 'Subject must reference a Patient'),
+      reference: z.string().regex(/^Patient\/[\w-]+$/, 'Subject must reference a Patient'),
     }),
     valueQuantity: z.object({
       value: z.number(),
@@ -200,7 +208,7 @@ export function validateFileUpload(
   allowedTypes: string[] = ['image/jpeg', 'image/png', 'application/pdf'],
   maxSize: number = 5 * 1024 * 1024 // 5MB
 ) {
-  return (req: Request & { file?: any; files?: any }, _res: Response, next: NextFunction): void => {
+  return (req: MulterRequest, _res: Response, next: NextFunction): void => {
     if (!req.file && !req.files) {
       return next(new AppError('No file uploaded', 400));
     }
@@ -263,11 +271,21 @@ export function validateContentType(allowedTypes: string[]) {
 
 /**
  * Sanitize request data
+ * @deprecated Use security-sanitization.middleware.ts instead for comprehensive protection
  */
 export function sanitizeInput() {
   return (req: Request, _res: Response, next: NextFunction): void => {
-    // Remove any potentially dangerous characters from string inputs
-    const sanitizeObject = (obj: any): any => {
+    // This function is now deprecated in favor of the comprehensive
+    // security-sanitization.middleware.ts which provides protection against:
+    // - XSS attacks
+    // - SQL injection
+    // - NoSQL injection
+    // - Command injection
+    // - Path traversal
+    // - LDAP injection
+    
+    // For backward compatibility, we still trim strings
+    const sanitizeObject = (obj: unknown): unknown => {
       if (typeof obj === 'string') {
         return obj.trim();
       }
@@ -275,7 +293,7 @@ export function sanitizeInput() {
         return obj.map(sanitizeObject);
       }
       if (obj && typeof obj === 'object') {
-        const sanitized: any = {};
+        const sanitized: Record<string, unknown> = {};
         for (const [key, value] of Object.entries(obj)) {
           sanitized[key] = sanitizeObject(value);
         }
@@ -288,12 +306,55 @@ export function sanitizeInput() {
       req.body = sanitizeObject(req.body);
     }
     if (req.query) {
-      req.query = sanitizeObject(req.query);
+      req.query = sanitizeObject(req.query) as any;
     }
     if (req.params) {
-      req.params = sanitizeObject(req.params);
+      req.params = sanitizeObject(req.params) as any;
     }
 
     next();
   };
+}
+
+/**
+ * Create validation chain for multiple fields
+ * This is a compatibility layer for the clinical workflow controller
+ */
+export function createValidationChain(rules: Array<{
+  field: string;
+  rules: Array<{ type: string; [key: string]: any }>;
+}>) {
+  // Convert the rules to a Zod schema
+  const schemaFields: Record<string, any> = {};
+  
+  rules.forEach(({ field, rules: fieldRules }) => {
+    let fieldSchema: any = z.string();
+    
+    fieldRules.forEach((rule) => {
+      switch (rule.type) {
+        case 'required':
+          // Already handled by default z.string()
+          break;
+        case 'optional':
+          fieldSchema = fieldSchema.optional();
+          break;
+        case 'string':
+          if (rule.min) fieldSchema = fieldSchema.min(rule.min);
+          if (rule.max) fieldSchema = fieldSchema.max(rule.max);
+          break;
+        case 'enum':
+          if (rule.values) {
+            fieldSchema = z.enum(rule.values as [string, ...string[]]);
+          }
+          break;
+      }
+    });
+    
+    schemaFields[field] = fieldSchema;
+  });
+  
+  const schema = z.object(schemaFields);
+  
+  // Return a middleware array that can be used with Express
+  return [validate(schema)];
 }

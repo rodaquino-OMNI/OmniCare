@@ -22,7 +22,7 @@ import {
   IconPill,
   IconFlask,
   IconDatabase,
-  IconSync,
+  IconRefresh,
   IconAlertCircle
 } from '@tabler/icons-react';
 import { useParams } from 'next/navigation';
@@ -99,7 +99,7 @@ export function PatientDashboard() {
         {/* Sync Status Bar */}
         {syncStatus !== SyncStatus.CONNECTED && (
           <Alert
-            icon={<IconSync />}
+            icon={<IconRefresh />}
             color={syncStatus === SyncStatus.ERROR ? 'red' : 'yellow'}
             variant="light"
           >

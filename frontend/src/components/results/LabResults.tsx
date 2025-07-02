@@ -11,7 +11,6 @@ import {
 } from '@medplum/fhirtypes';
 import { 
   ObservationTable,
-  ObservationGraph,
   DiagnosticReportDisplay,
   ResourceTable,
   useMedplum,
@@ -325,10 +324,10 @@ export function LabResults({ patient, encounterId }: LabResultsProps) {
                   />
                 ) : (
                   <Paper p="md" withBorder>
-                    <ObservationGraph
-                      observations={observations}
-                      height={400}
-                    />
+                    {/* ObservationGraph is not available in @medplum/react */}
+                    <Text c="dimmed" ta="center" py="xl">
+                      Graphical view is temporarily unavailable
+                    </Text>
                   </Paper>
                 )}
               </Stack>
@@ -418,11 +417,11 @@ function TrendingResults({ patient, observations }: TrendingResultsProps) {
 
       {selectedTest && filteredObservations.length > 0 ? (
         <Paper p="md" withBorder>
-          <ObservationGraph
-            observations={filteredObservations}
-            height={400}
-            title={`${selectedTest} Trend`}
-          />
+          {/* ObservationGraph is not available in @medplum/react */}
+          <Stack align="center" py="xl">
+            <Text c="dimmed">Trend graph for {selectedTest}</Text>
+            <Text size="sm" c="dimmed">Graphical view is temporarily unavailable</Text>
+          </Stack>
         </Paper>
       ) : (
         <Text c="dimmed" ta="center" py="xl">
@@ -441,3 +440,5 @@ function TrendingResults({ patient, observations }: TrendingResultsProps) {
     </Stack>
   );
 }
+
+export default LabResults;

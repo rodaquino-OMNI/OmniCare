@@ -1,19 +1,30 @@
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
-import { syncService, SyncRequest } from '@/services/sync.service';
-import logger from '@/utils/logger';
+
+import { SyncRequest, syncService } from '@/services/sync.service';
+import { ConflictResolutionData, SyncResourceData } from '@/types/database.types';
 import { AppError } from '@/utils/error.utils';
+import logger from '@/utils/logger';
 
 // ===============================
 // VALIDATION SCHEMAS
 // ===============================
+
+const syncResourceSchema = z.object({
+  id: z.string(),
+  resourceType: z.string(),
+  meta: z.object({
+    versionId: z.string().optional(),
+    lastUpdated: z.string().optional()
+  }).optional()
+}).passthrough();
 
 const syncOperationSchema = z.object({
   id: z.string(),
   resourceType: z.string(),
   resourceId: z.string(),
   operation: z.enum(['create', 'update', 'delete']),
-  resource: z.any().optional(),
+  resource: syncResourceSchema.optional() as z.ZodOptional<z.ZodType<SyncResourceData>>,
   version: z.number().optional(),
   timestamp: z.string(),
   checksum: z.string().optional()
@@ -29,7 +40,7 @@ const syncRequestSchema = z.object({
 const conflictResolutionSchema = z.object({
   conflictId: z.string(),
   strategy: z.enum(['local-wins', 'remote-wins', 'last-write-wins', 'merge', 'manual']),
-  winningResource: z.any(),
+  winningResource: syncResourceSchema as z.ZodType<ConflictResolutionData>,
   reason: z.string().optional()
 });
 
@@ -99,7 +110,7 @@ export class SyncController {
    * Validate sync token
    * POST /api/sync/validate-token
    */
-  async validateToken(req: Request, res: Response, next: NextFunction): Promise<void> {
+  validateToken(req: Request, res: Response, next: NextFunction): void {
     try {
       const { token } = req.body;
 
@@ -107,7 +118,7 @@ export class SyncController {
         throw new AppError('Sync token required', 400);
       }
 
-      const isValid = await syncService.validateSyncToken(token);
+      const isValid = syncService.validateSyncToken(token);
 
       res.json({
         success: true,
@@ -123,7 +134,7 @@ export class SyncController {
    * Resolve conflict
    * POST /api/sync/resolve-conflict
    */
-  async resolveConflict(req: Request, res: Response, next: NextFunction): Promise<void> {
+  resolveConflict(req: Request, res: Response, next: NextFunction): void {
     try {
       // Validate request body
       const validatedData = conflictResolutionSchema.parse(req.body);
@@ -159,7 +170,7 @@ export class SyncController {
    * Get pending conflicts
    * GET /api/sync/conflicts
    */
-  async getConflicts(req: Request, res: Response, next: NextFunction): Promise<void> {
+  getConflicts(req: Request, res: Response, next: NextFunction): void {
     try {
       const _userId = req.user?.id || 'anonymous';
       const { resolved: _resolved = 'false' } = req.query;
@@ -199,14 +210,14 @@ export class SyncController {
 
       // Process each sync request
       const results = await Promise.all(
-        requests.map(async (request: any) => {
+        requests.map(async (request) => {
           try {
             const validatedData = syncRequestSchema.parse(request);
             return await syncService.processSync(validatedData as SyncRequest, userId);
-          } catch (error: any) {
+          } catch (error) {
             return {
               success: false,
-              error: error.message,
+              error: error instanceof Error ? error.message : 'Unknown error occurred',
               clientId: request.clientId
             };
           }
@@ -232,7 +243,7 @@ export class SyncController {
    * Get sync configuration
    * GET /api/sync/config
    */
-  async getConfig(_req: Request, res: Response, next: NextFunction): Promise<void> {
+  getConfig(_req: Request, res: Response, next: NextFunction): void {
     try {
       // Return sync configuration
       res.json({
@@ -276,7 +287,7 @@ export class SyncController {
    * Health check for sync service
    * GET /api/sync/health
    */
-  async healthCheck(_req: Request, res: Response, next: NextFunction): Promise<void> {
+  healthCheck(_req: Request, res: Response, next: NextFunction): void {
     try {
       res.json({
         success: true,

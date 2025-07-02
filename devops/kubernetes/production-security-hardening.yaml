@@ -1,0 +1,759 @@
+# Production Security Hardening for OmniCare EMR
+# HIPAA-compliant security policies, RBAC, and audit configurations
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: security-hardening-config
+  namespace: omnicare-prod
+  labels:
+    app: security-hardening
+    component: configuration
+data:
+  # Security Configuration
+  SECURITY_SCAN_SCHEDULE: "0 2 * * *" # Daily security scans
+  VULNERABILITY_SCAN_SCHEDULE: "0 3 * * 1" # Weekly vulnerability scans
+  COMPLIANCE_AUDIT_SCHEDULE: "0 1 1 * *" # Monthly compliance audits
+  
+  # HIPAA Compliance Settings
+  AUDIT_LOG_RETENTION_DAYS: "2555" # 7 years
+  ACCESS_LOG_RETENTION_DAYS: "2555"
+  ENCRYPTION_ALGORITHM: "AES-256"
+  KEY_ROTATION_DAYS: "90"
+  
+  # Security Thresholds
+  FAILED_LOGIN_THRESHOLD: "5"
+  ACCOUNT_LOCKOUT_DURATION: "30m"
+  SESSION_TIMEOUT: "30m"
+  PASSWORD_COMPLEXITY_ENABLED: "true"
+  MFA_REQUIRED: "true"
+---
+# Enhanced RBAC for Production
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: omnicare-admin-role
+  namespace: omnicare-prod
+rules:
+# Full access to application resources
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps", "secrets", "persistentvolumeclaims"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["extensions", "networking.k8s.io"]
+  resources: ["ingresses", "networkpolicies"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["autoscaling"]
+  resources: ["horizontalpodautoscalers"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: omnicare-developer-role
+  namespace: omnicare-prod
+rules:
+# Read-only access for developers
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps", "persistentvolumeclaims"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods/log", "pods/exec"]
+  verbs: ["get", "list"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets", "statefulsets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["extensions", "networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list", "watch"]
+# Limited update access for troubleshooting
+- apiGroups: ["apps"]
+  resources: ["deployments/scale"]
+  verbs: ["update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: omnicare-readonly-role
+  namespace: omnicare-prod
+rules:
+# Read-only access for monitoring and compliance
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps", "persistentvolumeclaims"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets", "statefulsets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["extensions", "networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch"]
+---
+# Service Accounts with specific roles
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: omnicare-admin-sa
+  namespace: omnicare-prod
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT-ID:role/OmniCareAdminRole
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: omnicare-developer-sa
+  namespace: omnicare-prod
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT-ID:role/OmniCareDeveloperRole
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: omnicare-readonly-sa
+  namespace: omnicare-prod
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT-ID:role/OmniCareReadOnlyRole
+---
+# RoleBindings
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: omnicare-admin-binding
+  namespace: omnicare-prod
+subjects:
+- kind: ServiceAccount
+  name: omnicare-admin-sa
+  namespace: omnicare-prod
+- kind: User
+  name: admin@omnicare-health.com
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: omnicare-admin-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: omnicare-developer-binding
+  namespace: omnicare-prod
+subjects:
+- kind: ServiceAccount
+  name: omnicare-developer-sa
+  namespace: omnicare-prod
+- kind: Group
+  name: developers
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: omnicare-developer-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: omnicare-readonly-binding
+  namespace: omnicare-prod
+subjects:
+- kind: ServiceAccount
+  name: omnicare-readonly-sa
+  namespace: omnicare-prod
+- kind: Group
+  name: auditors
+  apiGroup: rbac.authorization.k8s.io
+- kind: Group
+  name: compliance
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: omnicare-readonly-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# Security Context Constraints
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  name: omnicare-restricted-scc
+  namespace: omnicare-prod
+allowHostDirVolumePlugin: false
+allowHostIPC: false
+allowHostNetwork: false
+allowHostPID: false
+allowHostPorts: false
+allowPrivilegedContainer: false
+allowedCapabilities: []
+defaultAddCapabilities: []
+requiredDropCapabilities:
+- ALL
+allowedFlexVolumes: []
+allowedUnsafeSysctls: []
+defaultAllowPrivilegeEscalation: false
+forbiddenSysctls:
+- "*"
+fsGroup:
+  type: MustRunAs
+  ranges:
+  - min: 1000
+  - max: 65535
+readOnlyRootFilesystem: true
+runAsUser:
+  type: MustRunAsNonRoot
+seLinuxContext:
+  type: MustRunAs
+supplementalGroups:
+  type: MustRunAs
+  ranges:
+  - min: 1000
+  - max: 65535
+volumes:
+- configMap
+- downwardAPI
+- emptyDir
+- persistentVolumeClaim
+- projected
+- secret
+users:
+- system:serviceaccount:omnicare-prod:omnicare-admin-sa
+- system:serviceaccount:omnicare-prod:omnicare-developer-sa
+- system:serviceaccount:omnicare-prod:omnicare-readonly-sa
+---
+# OPA Gatekeeper Constraints for HIPAA Compliance
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: ConstraintTemplate
+metadata:
+  name: hipaacomplianceconstraints
+  namespace: omnicare-prod
+spec:
+  crd:
+    spec:
+      names:
+        kind: HipaaComplianceConstraints
+      validation:
+        type: object
+        properties:
+          requiredLabels:
+            type: array
+            items:
+              type: string
+          requiredAnnotations:
+            type: array
+            items:
+              type: string
+          maxReplicas:
+            type: integer
+          minReplicas:
+            type: integer
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package hipaacomplianceconstraints
+        
+        violation[{"msg": msg}] {
+          # Ensure required compliance labels are present
+          required_labels := input.parameters.requiredLabels
+          missing_labels := required_labels[_]
+          not input.review.object.metadata.labels[missing_labels]
+          msg := sprintf("Missing required HIPAA compliance label: %v", [missing_labels])
+        }
+        
+        violation[{"msg": msg}] {
+          # Ensure required annotations are present
+          required_annotations := input.parameters.requiredAnnotations
+          missing_annotation := required_annotations[_]
+          not input.review.object.metadata.annotations[missing_annotation]
+          msg := sprintf("Missing required HIPAA compliance annotation: %v", [missing_annotation])
+        }
+        
+        violation[{"msg": msg}] {
+          # Ensure deployment replicas are within HIPAA availability requirements
+          input.review.object.kind == "Deployment"
+          replicas := input.review.object.spec.replicas
+          replicas < input.parameters.minReplicas
+          msg := sprintf("HIPAA compliance requires minimum %v replicas for high availability", [input.parameters.minReplicas])
+        }
+        
+        violation[{"msg": msg}] {
+          # Ensure containers run as non-root for security
+          container := input.review.object.spec.template.spec.containers[_]
+          container.securityContext.runAsUser == 0
+          msg := "HIPAA security requirements prohibit running containers as root"
+        }
+        
+        violation[{"msg": msg}] {
+          # Ensure resource limits are set for stability
+          container := input.review.object.spec.template.spec.containers[_]
+          not container.resources.limits
+          msg := "HIPAA stability requirements mandate resource limits on all containers"
+        }
+---
+# HIPAA Compliance Constraint Instance
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: HipaaComplianceConstraints
+metadata:
+  name: hipaa-compliance-prod
+  namespace: omnicare-prod
+spec:
+  match:
+    kinds:
+    - apiGroups: ["apps"]
+      kinds: ["Deployment"]
+    - apiGroups: [""]
+      kinds: ["Pod"]
+    namespaces: ["omnicare-prod"]
+  parameters:
+    requiredLabels:
+    - "compliance"
+    - "app.kubernetes.io/name"
+    - "environment"
+    requiredAnnotations:
+    - "audit.alpha.kubernetes.io/level"
+    minReplicas: 2
+    maxReplicas: 50
+---
+# Falco Security Monitoring DaemonSet
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: falco-security-monitor
+  namespace: omnicare-prod
+  labels:
+    app: falco
+    component: security-monitoring
+spec:
+  selector:
+    matchLabels:
+      app: falco
+  template:
+    metadata:
+      labels:
+        app: falco
+        component: security-monitoring
+    spec:
+      serviceAccountName: falco-service-account
+      hostNetwork: true
+      hostPID: true
+      containers:
+      - name: falco
+        image: falcosecurity/falco:latest
+        args:
+        - /usr/bin/falco
+        - --cri
+        - /host/run/containerd/containerd.sock
+        - --k8s-api
+        - --k8s-api-cert
+        - /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        - --k8s-api-token
+        - /var/run/secrets/kubernetes.io/serviceaccount/token
+        - --rule-file
+        - /etc/falco/hipaa-rules.yaml
+        env:
+        - name: FALCO_GRPC_ENABLED
+          value: "true"
+        - name: FALCO_GRPC_BIND_ADDRESS
+          value: "0.0.0.0:5060"
+        - name: FALCO_K8S_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /host/var/run/docker.sock
+          name: docker-socket
+        - mountPath: /host/run/containerd/containerd.sock
+          name: containerd-socket
+        - mountPath: /host/dev
+          name: dev-fs
+        - mountPath: /host/proc
+          name: proc-fs
+          readOnly: true
+        - mountPath: /host/boot
+          name: boot-fs
+          readOnly: true
+        - mountPath: /host/lib/modules
+          name: lib-modules
+          readOnly: true
+        - mountPath: /host/usr
+          name: usr-fs
+          readOnly: true
+        - mountPath: /host/etc
+          name: etc-fs
+          readOnly: true
+        - mountPath: /etc/falco
+          name: falco-config
+        resources:
+          requests:
+            cpu: 200m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+      volumes:
+      - name: docker-socket
+        hostPath:
+          path: /var/run/docker.sock
+      - name: containerd-socket
+        hostPath:
+          path: /run/containerd/containerd.sock
+      - name: dev-fs
+        hostPath:
+          path: /dev
+      - name: proc-fs
+        hostPath:
+          path: /proc
+      - name: boot-fs
+        hostPath:
+          path: /boot
+      - name: lib-modules
+        hostPath:
+          path: /lib/modules
+      - name: usr-fs
+        hostPath:
+          path: /usr
+      - name: etc-fs
+        hostPath:
+          path: /etc
+      - name: falco-config
+        configMap:
+          name: falco-hipaa-config
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/control-plane
+---
+# Falco HIPAA Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: falco-hipaa-config
+  namespace: omnicare-prod
+data:
+  hipaa-rules.yaml: |
+    # HIPAA-specific Falco rules for OmniCare EMR
+    - rule: HIPAA - Unauthorized File Access
+      desc: Detect unauthorized access to sensitive files
+      condition: >
+        open_read and sensitive_files and not proc_name_exists and
+        not user_known_read_sensitive_files_activities
+      output: >
+        Unauthorized file access (user=%user.name command=%proc.cmdline 
+        file=%fd.name container_id=%container.id image=%container.image.repository)
+      priority: CRITICAL
+      tags: [filesystem, hipaa, privacy]
+    
+    - rule: HIPAA - Privileged Container Launch
+      desc: Detect launch of privileged containers
+      condition: >
+        container and container.privileged=true and not allowed_privileged_containers
+      output: >
+        Privileged container launched (user=%user.name command=%proc.cmdline 
+        container_id=%container.id image=%container.image.repository)
+      priority: CRITICAL
+      tags: [container, hipaa, security]
+    
+    - rule: HIPAA - Database Access Outside Business Hours
+      desc: Detect database access outside of business hours
+      condition: >
+        proc.name in (psql, mysql, mongod) and 
+        not business_hours and not automated_backup_processes
+      output: >
+        Database access outside business hours (user=%user.name command=%proc.cmdline 
+        time=%evt.time container_id=%container.id)
+      priority: WARNING
+      tags: [database, hipaa, access-control]
+    
+    - rule: HIPAA - Suspicious Network Activity
+      desc: Detect suspicious network connections
+      condition: >
+        outbound and not known_outbound_connections and 
+        (fd.sip.name contains "suspicious" or fd.dip.name contains "malicious")
+      output: >
+        Suspicious network activity (connection=%fd.name user=%user.name 
+        command=%proc.cmdline container_id=%container.id)
+      priority: HIGH
+      tags: [network, hipaa, security]
+    
+    - rule: HIPAA - Failed Authentication Attempts
+      desc: Detect multiple failed authentication attempts
+      condition: >
+        proc.name in (sshd, login, su, sudo) and 
+        proc.args contains "authentication failure"
+      output: >
+        Failed authentication attempt (user=%user.name command=%proc.cmdline 
+        source_ip=%fd.cip container_id=%container.id)
+      priority: HIGH
+      tags: [authentication, hipaa, security]
+    
+    # Macros for HIPAA compliance
+    - macro: sensitive_files
+      condition: >
+        fd.name glob "/etc/passwd*" or fd.name glob "/etc/shadow*" or
+        fd.name glob "/etc/ssl/*" or fd.name glob "/var/log/*" or
+        fd.name contains "patient" or fd.name contains "medical" or
+        fd.name contains "hipaa"
+    
+    - macro: business_hours
+      condition: >
+        evt.hour >= 6 and evt.hour <= 18 and evt.weekday >= 1 and evt.weekday <= 5
+    
+    - macro: automated_backup_processes
+      condition: >
+        proc.name in (pg_dump, mysqldump, mongodump, aws, kubectl) and
+        user.name in (postgres, mysql, mongodb, backup-user)
+    
+    - macro: allowed_privileged_containers
+      condition: >
+        container.image.repository in (falcosecurity/falco, prom/node-exporter, 
+        datadog/agent, newrelic/infrastructure)
+    
+    - macro: known_outbound_connections
+      condition: >
+        fd.sip.name in (api.medplum.com, s3.amazonaws.com, ecr.amazonaws.com,
+        monitoring.amazonaws.com, logs.amazonaws.com)
+  
+  falco.yaml: |
+    rules_file:
+      - /etc/falco/hipaa-rules.yaml
+      - /etc/falco/falco_rules.yaml
+      - /etc/falco/falco_rules.local.yaml
+    
+    time_format_iso_8601: true
+    priority: DEBUG
+    buffered_outputs: true
+    
+    outputs:
+      rate: 1
+      max_burst: 1000
+    
+    syslog_output:
+      enabled: true
+    
+    file_output:
+      enabled: true
+      keep_alive: false
+      filename: /var/log/falco.log
+    
+    stdout_output:
+      enabled: true
+    
+    webserver:
+      enabled: true
+      listen_port: 8765
+      k8s_healthz_endpoint: /healthz
+      ssl_enabled: false
+    
+    grpc:
+      enabled: true
+      bind_address: "0.0.0.0:5060"
+      threadiness: 8
+    
+    grpc_output:
+      enabled: true
+---
+# Service Account for Falco
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: falco-service-account
+  namespace: omnicare-prod
+---
+# ClusterRole for Falco
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: falco-cluster-role
+rules:
+- apiGroups: [""]
+  resources: ["nodes", "namespaces", "pods", "replicationcontrollers", "services", "events"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["daemonsets", "deployments", "replicasets", "statefulsets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["extensions"]
+  resources: ["daemonsets", "deployments", "replicasets"]
+  verbs: ["get", "list", "watch"]
+---
+# ClusterRoleBinding for Falco
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: falco-cluster-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: falco-cluster-role
+subjects:
+- kind: ServiceAccount
+  name: falco-service-account
+  namespace: omnicare-prod
+---
+# Security Audit CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: security-audit
+  namespace: omnicare-prod
+  labels:
+    app: security-audit
+    component: compliance
+spec:
+  schedule: "0 1 1 * *" # Monthly on the 1st at 1 AM
+  successfulJobsHistoryLimit: 12
+  failedJobsHistoryLimit: 3
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 2592000 # 30 days
+      template:
+        spec:
+          serviceAccountName: security-audit-service-account
+          containers:
+          - name: security-audit
+            image: amazon/aws-cli:latest
+            command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              AUDIT_DATE=$(date +%Y%m%d)
+              REPORT_DIR="/tmp/security-audit-${AUDIT_DATE}"
+              mkdir -p $REPORT_DIR
+              
+              echo "Starting HIPAA Security Audit for $(date)"
+              
+              # 1. Kubernetes RBAC Audit
+              echo "Auditing Kubernetes RBAC..."
+              kubectl auth can-i --list --as=system:serviceaccount:omnicare-prod:omnicare-readonly-sa > $REPORT_DIR/rbac-readonly.txt
+              kubectl auth can-i --list --as=system:serviceaccount:omnicare-prod:omnicare-developer-sa > $REPORT_DIR/rbac-developer.txt
+              kubectl auth can-i --list --as=system:serviceaccount:omnicare-prod:omnicare-admin-sa > $REPORT_DIR/rbac-admin.txt
+              
+              # 2. Pod Security Context Audit
+              echo "Auditing Pod Security Contexts..."
+              kubectl get pods -n omnicare-prod -o json | \
+                jq '.items[] | select(.spec.securityContext.runAsUser == 0 or .spec.securityContext.runAsUser == null) | .metadata.name' > $REPORT_DIR/root-pods.txt
+              
+              # 3. Network Policies Audit
+              echo "Auditing Network Policies..."
+              kubectl get networkpolicies -n omnicare-prod -o yaml > $REPORT_DIR/network-policies.yaml
+              
+              # 4. Secret Access Audit
+              echo "Auditing Secret Access..."
+              kubectl get secrets -n omnicare-prod -o json | \
+                jq -r '.items[] | .metadata.name' > $REPORT_DIR/secrets-list.txt
+              
+              # 5. Resource Quotas and Limits Audit
+              echo "Auditing Resource Quotas..."
+              kubectl describe resourcequota -n omnicare-prod > $REPORT_DIR/resource-quotas.txt
+              kubectl describe limitrange -n omnicare-prod > $REPORT_DIR/limit-ranges.txt
+              
+              # 6. Generate Security Score
+              ROOT_PODS=$(cat $REPORT_DIR/root-pods.txt | wc -l)
+              NETWORK_POLICIES=$(kubectl get networkpolicies -n omnicare-prod --no-headers | wc -l)
+              SECRETS_COUNT=$(cat $REPORT_DIR/secrets-list.txt | wc -l)
+              
+              SECURITY_SCORE=$((100 - (ROOT_PODS * 10) + (NETWORK_POLICIES * 5)))
+              
+              # 7. Generate Compliance Report
+              cat > $REPORT_DIR/security-audit-report.json << EOF
+              {
+                "auditDate": "$AUDIT_DATE",
+                "namespace": "omnicare-prod",
+                "securityScore": $SECURITY_SCORE,
+                "findings": {
+                  "rootPods": $ROOT_PODS,
+                  "networkPolicies": $NETWORK_POLICIES,
+                  "secretsCount": $SECRETS_COUNT
+                },
+                "recommendations": [
+                  "Ensure all pods run as non-root users",
+                  "Implement comprehensive network policies",
+                  "Regular secret rotation and access review",
+                  "Enable pod security policies",
+                  "Monitor privileged container usage"
+                ],
+                "hipaaCompliance": {
+                  "accessControls": "$([ $ROOT_PODS -eq 0 ] && echo 'COMPLIANT' || echo 'NON-COMPLIANT')",
+                  "auditLogging": "COMPLIANT",
+                  "dataEncryption": "COMPLIANT",
+                  "networkSecurity": "$([ $NETWORK_POLICIES -gt 0 ] && echo 'COMPLIANT' || echo 'PARTIAL')"
+                },
+                "nextAuditDate": "$(date -d '+1 month' +%Y%m%d)"
+              }
+              EOF
+              
+              # 8. Upload audit report
+              tar -czf security-audit-${AUDIT_DATE}.tar.gz -C /tmp security-audit-${AUDIT_DATE}
+              aws s3 cp security-audit-${AUDIT_DATE}.tar.gz s3://omnicare-compliance-reports/security-audits/ --region us-east-1
+              
+              echo "Security audit completed successfully"
+              cat $REPORT_DIR/security-audit-report.json
+            env:
+            - name: AWS_DEFAULT_REGION
+              value: "us-east-1"
+            resources:
+              requests:
+                cpu: 250m
+                memory: 512Mi
+              limits:
+                cpu: 500m
+                memory: 1Gi
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                - ALL
+              runAsNonRoot: true
+              runAsUser: 1001
+          restartPolicy: OnFailure
+---
+# Service Account for Security Audit
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: security-audit-service-account
+  namespace: omnicare-prod
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT-ID:role/OmniCareSecurityAuditRole
+---
+# ClusterRole for Security Audit
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: security-audit-cluster-role
+rules:
+- apiGroups: [""]
+  resources: ["*"]
+  verbs: ["get", "list"]
+- apiGroups: ["apps"]
+  resources: ["*"]
+  verbs: ["get", "list"]
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["*"]
+  verbs: ["get", "list"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["*"]
+  verbs: ["get", "list"]
+- apiGroups: ["policy"]
+  resources: ["*"]
+  verbs: ["get", "list"]
+---
+# ClusterRoleBinding for Security Audit
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: security-audit-cluster-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: security-audit-cluster-role
+subjects:
+- kind: ServiceAccount
+  name: security-audit-service-account
+  namespace: omnicare-prod

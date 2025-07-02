@@ -26,7 +26,7 @@ describe('Patient Model', () => {
           active: true,
           identifier: [
             {
-              use: 'usual',
+              use: 'usual' as const,
               type: {
                 coding: [{
                   system: 'http://terminology.hl7.org/CodeSystem/v2-0203',
@@ -40,13 +40,13 @@ describe('Patient Model', () => {
           ],
           name: [{ given: ['John'], family: 'Doe' }],
           telecom: [
-            { system: 'phone', value: '555-0123', use: 'home' },
-            { system: 'email', value: 'john.doe@example.com', use: 'home' }
+            { system: 'phone', value: '555-0123', use: 'home' as const },
+            { system: 'email', value: 'john.doe@example.com', use: 'home' as const }
           ],
           gender: 'male',
           birthDate: '1990-01-01',
           address: [{
-            use: 'home',
+            use: 'home' as const,
             line: ['123 Main St'],
             city: 'Anytown',
             state: 'ST',
@@ -76,7 +76,7 @@ describe('Patient Model', () => {
             id: 'contact-1',
             relationship: 'spouse',
             name: { given: ['Jane'], family: 'Doe' },
-            telecom: [{ system: 'phone', value: '555-0456', use: 'mobile' }],
+            telecom: [{ system: 'phone', value: '555-0456', use: 'mobile' as const }],
             priority: 1,
             active: true
           }],
@@ -251,11 +251,11 @@ describe('Patient Model', () => {
           relationship: 'spouse',
           name: { given: ['Jane'], family: 'Doe' },
           telecom: [
-            { system: 'phone', value: '555-0456', use: 'mobile' },
-            { system: 'email', value: 'jane.doe@example.com', use: 'home' }
+            { system: 'phone', value: '555-0456', use: 'mobile' as const },
+            { system: 'email', value: 'jane.doe@example.com', use: 'home' as const }
           ],
           address: [{
-            use: 'home',
+            use: 'home' as const,
             line: ['123 Main St'],
             city: 'Anytown',
             state: 'ST',
@@ -667,7 +667,7 @@ describe('Patient Model', () => {
           resourceType: 'Patient',
           name: [
             {
-              use: 'official',
+              use: 'official' as const,
               prefix: ['Dr.'],
               given: ['John', 'Q.'],
               family: 'Doe',
@@ -685,8 +685,8 @@ describe('Patient Model', () => {
         const patient: OmniCarePatient = {
           resourceType: 'Patient',
           name: [
-            { use: 'official', given: ['John'], family: 'Doe' },
-            { use: 'nickname', given: ['Johnny'] }
+            { use: 'official' as const, given: ['John'], family: 'Doe' },
+            { use: 'nickname' as const, given: ['Johnny'] }
           ],
           omnicarePatientId: 'P12345678'
         };

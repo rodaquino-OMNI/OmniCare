@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+
 import { analyticsController } from '../../../src/controllers/analytics.controller';
 import { ClinicalQualityMeasuresService } from '../../../src/services/analytics/clinical-quality-measures.service';
 import { FinancialAnalyticsService } from '../../../src/services/analytics/financial-analytics.service';
@@ -6,6 +7,7 @@ import { OperationalMetricsService } from '../../../src/services/analytics/opera
 import { PopulationHealthService } from '../../../src/services/analytics/population-health.service';
 import { ReportingEngineService } from '../../../src/services/analytics/reporting-engine.service';
 import logger from '../../../src/utils/logger';
+import { createMockUser } from '../../test-helpers';
 
 // Mock all analytics services
 jest.mock('../../../src/services/analytics/clinical-quality-measures.service');
@@ -31,11 +33,11 @@ describe('Analytics Controller', () => {
       params: {},
       query: {},
       body: {},
-      user: {
+      user: createMockUser({
         id: 'test-user-1',
         role: 'administrative_staff',
         permissions: ['analytics:read', 'analytics:write']
-      }
+      })
     };
 
     mockResponse = {

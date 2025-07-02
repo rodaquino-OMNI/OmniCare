@@ -27,7 +27,7 @@ test.describe('Patient Registration Workflow', () => {
     // Demographics Section
     await test.step('Fill demographics information', async () => {
       await page.fill('input[name="firstName"]', mockPatient.firstName);
-      await page.fill('input[name="middleName"]', mockPatient.middleName);
+      await page.fill('input[name="middleName"]', mockPatient.middleName || '');
       await page.fill('input[name="lastName"]', mockPatient.lastName);
       await page.fill('input[name="dateOfBirth"]', mockPatient.dateOfBirth);
       await page.selectOption('select[name="gender"]', mockPatient.gender);

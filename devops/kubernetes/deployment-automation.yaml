@@ -1,0 +1,782 @@
+# Deployment Automation and Rollback Procedures for OmniCare EMR
+# Blue-Green deployment with automated rollback and canary releases
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: deployment-automation-config
+  namespace: omnicare-prod
+  labels:
+    app: deployment-automation
+    component: configuration
+data:
+  # Deployment Configuration
+  DEPLOYMENT_STRATEGY: "blue-green"
+  CANARY_PERCENTAGE: "10"
+  ROLLBACK_TIMEOUT: "600s"
+  HEALTH_CHECK_TIMEOUT: "300s"
+  HEALTH_CHECK_INTERVAL: "30s"
+  
+  # Blue-Green Configuration
+  TRAFFIC_SWITCH_DELAY: "120s"
+  BLUE_GREEN_VALIDATION_TIME: "300s"
+  AUTO_ROLLBACK_ENABLED: "true"
+  
+  # Monitoring Thresholds
+  ERROR_RATE_THRESHOLD: "5.0"
+  RESPONSE_TIME_THRESHOLD: "2000"
+  SUCCESS_RATE_THRESHOLD: "95.0"
+  
+  # Notification Settings
+  SLACK_CHANNEL: "#deployments"
+  NOTIFICATION_ENABLED: "true"
+---
+# Blue-Green Deployment Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: deployment-automation-sa
+  namespace: omnicare-prod
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT-ID:role/OmniCareDeploymentRole
+---
+# Deployment Automation Role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: deployment-automation-role
+  namespace: omnicare-prod
+rules:
+- apiGroups: [""]
+  resources: ["services", "configmaps", "secrets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["extensions", "networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch", "update", "patch"]
+- apiGroups: ["autoscaling"]
+  resources: ["horizontalpodautoscalers"]
+  verbs: ["get", "list", "watch", "update", "patch"]
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["get", "list", "watch", "create", "delete"]
+---
+# RoleBinding for Deployment Automation
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: deployment-automation-binding
+  namespace: omnicare-prod
+subjects:
+- kind: ServiceAccount
+  name: deployment-automation-sa
+  namespace: omnicare-prod
+roleRef:
+  kind: Role
+  name: deployment-automation-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# Blue Environment Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service-blue
+  namespace: omnicare-prod
+  labels:
+    app: backend
+    environment: blue
+    version: stable
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: backend
+    environment: blue
+---
+# Green Environment Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service-green
+  namespace: omnicare-prod
+  labels:
+    app: backend
+    environment: green
+    version: candidate
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: backend
+    environment: green
+---
+# Active Service (points to current live environment)
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: omnicare-prod
+  labels:
+    app: backend
+    environment: active
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: backend
+    environment: blue  # Initially points to blue
+---
+# Blue Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-blue
+  namespace: omnicare-prod
+  labels:
+    app: backend
+    environment: blue
+    version: stable
+spec:
+  replicas: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: backend
+      environment: blue
+  template:
+    metadata:
+      labels:
+        app: backend
+        environment: blue
+        version: stable
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: backend-service-account
+      containers:
+      - name: backend
+        image: ghcr.io/omnicare/backend:stable
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: ENVIRONMENT
+          value: "production-blue"
+        - name: VERSION
+          value: "stable"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: postgres-prod-secret
+              key: DATABASE_URL
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true
+          runAsUser: 1001
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - backend
+              - key: environment
+                operator: In
+                values:
+                - blue
+            topologyKey: kubernetes.io/hostname
+---
+# Green Deployment (initially scaled to 0)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-green
+  namespace: omnicare-prod
+  labels:
+    app: backend
+    environment: green
+    version: candidate
+spec:
+  replicas: 0  # Initially scaled down
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: backend
+      environment: green
+  template:
+    metadata:
+      labels:
+        app: backend
+        environment: green
+        version: candidate
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: backend-service-account
+      containers:
+      - name: backend
+        image: ghcr.io/omnicare/backend:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: ENVIRONMENT
+          value: "production-green"
+        - name: VERSION
+          value: "candidate"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: postgres-prod-secret
+              key: DATABASE_URL
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true
+          runAsUser: 1001
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - backend
+              - key: environment
+                operator: In
+                values:
+                - green
+            topologyKey: kubernetes.io/hostname
+---
+# Deployment Automation Job Template
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: blue-green-deployment
+  namespace: omnicare-prod
+  labels:
+    app: deployment-automation
+    component: blue-green
+spec:
+  template:
+    spec:
+      serviceAccountName: deployment-automation-sa
+      containers:
+      - name: deployment-controller
+        image: bitnami/kubectl:latest
+        command:
+        - /bin/bash
+        - -c
+        - |
+          set -e
+          
+          echo "Starting Blue-Green Deployment Process..."
+          
+          # Get current active environment
+          CURRENT_ENV=$(kubectl get service backend-service -n omnicare-prod -o jsonpath='{.spec.selector.environment}')
+          echo "Current active environment: $CURRENT_ENV"
+          
+          # Determine target environment
+          if [ "$CURRENT_ENV" = "blue" ]; then
+            TARGET_ENV="green"
+            SOURCE_ENV="blue"
+          else
+            TARGET_ENV="blue"
+            SOURCE_ENV="green"
+          fi
+          
+          echo "Deploying to environment: $TARGET_ENV"
+          
+          # Update target deployment with new image
+          kubectl set image deployment/backend-${TARGET_ENV} \
+            backend=${NEW_IMAGE} -n omnicare-prod
+          
+          # Scale up target environment
+          echo "Scaling up $TARGET_ENV environment..."
+          kubectl scale deployment backend-${TARGET_ENV} --replicas=5 -n omnicare-prod
+          
+          # Wait for target environment to be ready
+          echo "Waiting for $TARGET_ENV environment to be ready..."
+          kubectl wait --for=condition=available --timeout=${HEALTH_CHECK_TIMEOUT} \
+            deployment/backend-${TARGET_ENV} -n omnicare-prod
+          
+          # Health check for target environment
+          echo "Performing health checks on $TARGET_ENV environment..."
+          TARGET_POD=$(kubectl get pods -n omnicare-prod -l app=backend,environment=${TARGET_ENV} \
+            -o jsonpath='{.items[0].metadata.name}')
+          
+          # Test health endpoint
+          for i in {1..10}; do
+            if kubectl exec -n omnicare-prod $TARGET_POD -- curl -f http://localhost:8080/health; then
+              echo "Health check passed for $TARGET_ENV"
+              break
+            else
+              echo "Health check failed, attempt $i/10"
+              sleep 30
+            fi
+            
+            if [ $i -eq 10 ]; then
+              echo "Health checks failed, initiating rollback"
+              kubectl scale deployment backend-${TARGET_ENV} --replicas=0 -n omnicare-prod
+              exit 1
+            fi
+          done
+          
+          # Canary testing phase
+          echo "Starting canary testing with ${CANARY_PERCENTAGE}% traffic..."
+          
+          # Update ingress to send canary traffic to target environment
+          kubectl patch ingress omnicare-prod-ingress -n omnicare-prod --type='merge' \
+            -p='{"metadata":{"annotations":{"nginx.ingress.kubernetes.io/canary":"true","nginx.ingress.kubernetes.io/canary-weight":"'${CANARY_PERCENTAGE}'"}}}'
+          
+          # Monitor canary metrics for specified time
+          echo "Monitoring canary metrics for ${BLUE_GREEN_VALIDATION_TIME}..."
+          sleep ${BLUE_GREEN_VALIDATION_TIME}
+          
+          # Get canary metrics (simplified - in practice, integrate with monitoring system)
+          ERROR_RATE=$(curl -s "http://prometheus:9090/api/v1/query?query=rate(http_requests_total{status=~\"5..\"}[5m])" | \
+            jq -r '.data.result[0].value[1] // "0"')
+          
+          # Validate canary metrics
+          if (( $(echo "$ERROR_RATE > $ERROR_RATE_THRESHOLD" | bc -l) )); then
+            echo "Canary validation failed: Error rate $ERROR_RATE exceeds threshold $ERROR_RATE_THRESHOLD"
+            echo "Initiating rollback..."
+            
+            # Remove canary annotations
+            kubectl patch ingress omnicare-prod-ingress -n omnicare-prod --type='json' \
+              -p='[{"op":"remove","path":"/metadata/annotations/nginx.ingress.kubernetes.io~1canary"},{"op":"remove","path":"/metadata/annotations/nginx.ingress.kubernetes.io~1canary-weight"}]'
+            
+            # Scale down target environment
+            kubectl scale deployment backend-${TARGET_ENV} --replicas=0 -n omnicare-prod
+            
+            # Send failure notification
+            curl -X POST -H 'Content-type: application/json' \
+              --data '{"text":"🚨 OmniCare EMR deployment failed and rolled back due to high error rate"}' \
+              $SLACK_WEBHOOK_URL
+            
+            exit 1
+          fi
+          
+          echo "Canary validation passed, proceeding with full traffic switch..."
+          
+          # Remove canary annotations
+          kubectl patch ingress omnicare-prod-ingress -n omnicare-prod --type='json' \
+            -p='[{"op":"remove","path":"/metadata/annotations/nginx.ingress.kubernetes.io~1canary"},{"op":"remove","path":"/metadata/annotations/nginx.ingress.kubernetes.io~1canary-weight"}]'
+          
+          # Switch active service to target environment
+          kubectl patch service backend-service -n omnicare-prod \
+            -p '{"spec":{"selector":{"environment":"'${TARGET_ENV}'"}}}'
+          
+          echo "Traffic switched to $TARGET_ENV environment"
+          
+          # Wait for traffic switch delay
+          sleep ${TRAFFIC_SWITCH_DELAY}
+          
+          # Final health check
+          echo "Performing final health check..."
+          for i in {1..5}; do
+            if curl -f http://backend-service.omnicare-prod.svc.cluster.local:8080/health; then
+              echo "Final health check passed"
+              break
+            else
+              echo "Final health check failed, attempt $i/5"
+              sleep 10
+            fi
+            
+            if [ $i -eq 5 ]; then
+              echo "Final health check failed, initiating emergency rollback"
+              kubectl patch service backend-service -n omnicare-prod \
+                -p '{"spec":{"selector":{"environment":"'${SOURCE_ENV}'"}}}'
+              exit 1
+            fi
+          done
+          
+          # Scale down old environment
+          echo "Scaling down old environment: $SOURCE_ENV"
+          kubectl scale deployment backend-${SOURCE_ENV} --replicas=0 -n omnicare-prod
+          
+          # Update deployment labels
+          kubectl label deployment backend-${TARGET_ENV} version=stable -n omnicare-prod --overwrite
+          kubectl label deployment backend-${SOURCE_ENV} version=previous -n omnicare-prod --overwrite
+          
+          # Send success notification
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{"text":"✅ OmniCare EMR deployment completed successfully to '${TARGET_ENV}' environment"}' \
+            $SLACK_WEBHOOK_URL
+          
+          echo "Blue-Green deployment completed successfully"
+          
+          # Create deployment record
+          cat > /tmp/deployment-record.json << EOF
+          {
+            "deploymentId": "$(date +%Y%m%d-%H%M%S)",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "sourceEnvironment": "$SOURCE_ENV",
+            "targetEnvironment": "$TARGET_ENV",
+            "imageTag": "$NEW_IMAGE",
+            "deploymentType": "blue-green",
+            "status": "success",
+            "healthChecks": "passed",
+            "canaryValidation": "passed",
+            "rollbackAvailable": true
+          }
+          EOF
+          
+          # Store deployment record
+          kubectl create configmap deployment-record-$(date +%Y%m%d-%H%M%S) \
+            --from-file=/tmp/deployment-record.json -n omnicare-prod
+          
+        env:
+        - name: NEW_IMAGE
+          value: "ghcr.io/omnicare/backend:latest"
+        - name: HEALTH_CHECK_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              name: deployment-automation-config
+              key: HEALTH_CHECK_TIMEOUT
+        - name: CANARY_PERCENTAGE
+          valueFrom:
+            configMapKeyRef:
+              name: deployment-automation-config
+              key: CANARY_PERCENTAGE
+        - name: BLUE_GREEN_VALIDATION_TIME
+          valueFrom:
+            configMapKeyRef:
+              name: deployment-automation-config
+              key: BLUE_GREEN_VALIDATION_TIME
+        - name: TRAFFIC_SWITCH_DELAY
+          valueFrom:
+            configMapKeyRef:
+              name: deployment-automation-config
+              key: TRAFFIC_SWITCH_DELAY
+        - name: ERROR_RATE_THRESHOLD
+          valueFrom:
+            configMapKeyRef:
+              name: deployment-automation-config
+              key: ERROR_RATE_THRESHOLD
+        - name: SLACK_WEBHOOK_URL
+          valueFrom:
+            secretKeyRef:
+              name: notification-secrets
+              key: SLACK_WEBHOOK_URL
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true
+          runAsUser: 1001
+      restartPolicy: Never
+---
+# Rollback Job Template
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: emergency-rollback
+  namespace: omnicare-prod
+  labels:
+    app: deployment-automation
+    component: rollback
+spec:
+  template:
+    spec:
+      serviceAccountName: deployment-automation-sa
+      containers:
+      - name: rollback-controller
+        image: bitnami/kubectl:latest
+        command:
+        - /bin/bash
+        - -c
+        - |
+          set -e
+          
+          echo "Starting Emergency Rollback Process..."
+          
+          # Get current active environment
+          CURRENT_ENV=$(kubectl get service backend-service -n omnicare-prod -o jsonpath='{.spec.selector.environment}')
+          echo "Current active environment: $CURRENT_ENV"
+          
+          # Determine rollback target
+          if [ "$CURRENT_ENV" = "blue" ]; then
+            ROLLBACK_ENV="green"
+          else
+            ROLLBACK_ENV="blue"
+          fi
+          
+          echo "Rolling back to environment: $ROLLBACK_ENV"
+          
+          # Check if rollback environment has previous version
+          ROLLBACK_REPLICAS=$(kubectl get deployment backend-${ROLLBACK_ENV} -n omnicare-prod -o jsonpath='{.spec.replicas}')
+          
+          if [ "$ROLLBACK_REPLICAS" = "0" ]; then
+            echo "Scaling up rollback environment..."
+            kubectl scale deployment backend-${ROLLBACK_ENV} --replicas=5 -n omnicare-prod
+            
+            # Wait for rollback environment to be ready
+            kubectl wait --for=condition=available --timeout=300s \
+              deployment/backend-${ROLLBACK_ENV} -n omnicare-prod
+          fi
+          
+          # Health check rollback environment
+          echo "Health checking rollback environment..."
+          ROLLBACK_POD=$(kubectl get pods -n omnicare-prod -l app=backend,environment=${ROLLBACK_ENV} \
+            -o jsonpath='{.items[0].metadata.name}')
+          
+          if kubectl exec -n omnicare-prod $ROLLBACK_POD -- curl -f http://localhost:8080/health; then
+            echo "Rollback environment health check passed"
+          else
+            echo "ERROR: Rollback environment health check failed"
+            exit 1
+          fi
+          
+          # Switch traffic to rollback environment
+          kubectl patch service backend-service -n omnicare-prod \
+            -p '{"spec":{"selector":{"environment":"'${ROLLBACK_ENV}'"}}}'
+          
+          echo "Traffic switched to rollback environment: $ROLLBACK_ENV"
+          
+          # Scale down current environment
+          kubectl scale deployment backend-${CURRENT_ENV} --replicas=0 -n omnicare-prod
+          
+          # Send rollback notification
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{"text":"⚠️ OmniCare EMR emergency rollback completed from '${CURRENT_ENV}' to '${ROLLBACK_ENV}'"}' \
+            $SLACK_WEBHOOK_URL
+          
+          echo "Emergency rollback completed successfully"
+          
+          # Create rollback record
+          cat > /tmp/rollback-record.json << EOF
+          {
+            "rollbackId": "$(date +%Y%m%d-%H%M%S)",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "fromEnvironment": "$CURRENT_ENV",
+            "toEnvironment": "$ROLLBACK_ENV",
+            "reason": "emergency-rollback",
+            "status": "success",
+            "healthChecks": "passed"
+          }
+          EOF
+          
+          kubectl create configmap rollback-record-$(date +%Y%m%d-%H%M%S) \
+            --from-file=/tmp/rollback-record.json -n omnicare-prod
+          
+        env:
+        - name: SLACK_WEBHOOK_URL
+          valueFrom:
+            secretKeyRef:
+              name: notification-secrets
+              key: SLACK_WEBHOOK_URL
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true
+          runAsUser: 1001
+      restartPolicy: Never
+---
+# Deployment Health Monitor
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment-health-monitor
+  namespace: omnicare-prod
+  labels:
+    app: deployment-health-monitor
+    component: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deployment-health-monitor
+  template:
+    metadata:
+      labels:
+        app: deployment-health-monitor
+        component: monitoring
+    spec:
+      serviceAccountName: deployment-automation-sa
+      containers:
+      - name: health-monitor
+        image: curlimages/curl:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          while true; do
+            # Monitor deployment health
+            TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+            
+            # Check backend service health
+            if curl -f http://backend-service:8080/health; then
+              HEALTH_STATUS="healthy"
+            else
+              HEALTH_STATUS="unhealthy"
+              echo "ALERT: Backend service health check failed at $TIMESTAMP"
+              
+              # Trigger emergency rollback if configured
+              if [ "$AUTO_ROLLBACK_ENABLED" = "true" ]; then
+                echo "Triggering emergency rollback..."
+                kubectl create job --from=job/emergency-rollback emergency-rollback-$(date +%Y%m%d-%H%M%S) -n omnicare-prod
+              fi
+            fi
+            
+            # Check database connectivity
+            if nc -z postgres-primary 5432; then
+              DB_STATUS="connected"
+            else
+              DB_STATUS="disconnected"
+              echo "ALERT: Database connectivity check failed at $TIMESTAMP"
+            fi
+            
+            # Log health status
+            echo "$TIMESTAMP - Backend: $HEALTH_STATUS, Database: $DB_STATUS"
+            
+            sleep ${HEALTH_CHECK_INTERVAL}
+          done
+        env:
+        - name: AUTO_ROLLBACK_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: deployment-automation-config
+              key: AUTO_ROLLBACK_ENABLED
+        - name: HEALTH_CHECK_INTERVAL
+          valueFrom:
+            configMapKeyRef:
+              name: deployment-automation-config
+              key: HEALTH_CHECK_INTERVAL
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true
+          runAsUser: 1001
+---
+# Notification Secrets
+apiVersion: v1
+kind: Secret
+metadata:
+  name: notification-secrets
+  namespace: omnicare-prod
+type: Opaque
+data:
+  SLACK_WEBHOOK_URL: aHR0cHM6Ly9ob29rcy5zbGFjay5jb20vc2VydmljZXMvVEVTVC9URVNUL1RFU1Q= # Base64 encoded webhook URL
+---
+# ServiceMonitor for Deployment Metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: deployment-metrics
+  namespace: omnicare-prod
+spec:
+  selector:
+    matchLabels:
+      app: deployment-health-monitor
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics

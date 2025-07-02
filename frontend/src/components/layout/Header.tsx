@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   Group,
   Text,
@@ -55,6 +55,10 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
   const { toggle: toggleSidebar } = useSidebar();
   const { notifications } = useNotifications();
   const [searchValue, setSearchValue] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const unreadNotifications = notifications.filter(n => !n.autoClose);
 
@@ -64,7 +68,12 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
   };
 
   return (
-    <Paper shadow="sm" className="sticky top-0 z-20 border-b border-gray-200">
+    <Paper 
+      component="header"
+      role="banner"
+      shadow="sm" 
+      className="sticky top-0 z-20 border-b border-gray-200"
+    >
       <div className="px-6 py-3">
         <Group justify="space-between" align="center">
           {/* Left side - Menu, Breadcrumbs, Title */}
@@ -73,25 +82,31 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
               variant="subtle"
               onClick={toggleSidebar}
               className="md:hidden"
+              aria-label="Toggle navigation menu"
+              aria-expanded={false}
+              title="Menu"
             >
-              <IconMenu2 size={20} />
+              <IconMenu2 size={20} aria-hidden="true" />
             </ActionIcon>
 
             <div className="flex-1 min-w-0">
               {breadcrumbs.length > 0 && (
-                <Breadcrumbs className="mb-1">
-                  {breadcrumbs.map((item, index) => (
-                    <Anchor
-                      key={index}
-                      component={item.href ? Link : 'span' as any}
-                      href={item.href || undefined}
-                      size="sm"
-                      c={index === breadcrumbs.length - 1 ? 'dimmed' : 'primary'}
-                    >
-                      {item.title}
-                    </Anchor>
-                  ))}
-                </Breadcrumbs>
+                <nav aria-label="Breadcrumb">
+                  <Breadcrumbs className="mb-1">
+                    {breadcrumbs.map((item, index) => (
+                      <Anchor
+                        key={index}
+                        component={item.href ? Link : 'span' as any}
+                        href={item.href || undefined}
+                        size="sm"
+                        c={index === breadcrumbs.length - 1 ? 'dimmed' : 'primary'}
+                        aria-current={index === breadcrumbs.length - 1 ? 'page' : undefined}
+                      >
+                        {item.title}
+                      </Anchor>
+                    ))}
+                  </Breadcrumbs>
+                </nav>
               )}
               
               {title && (
@@ -112,14 +127,23 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
           {/* Center - Search */}
           <div className="hidden md:block flex-1 max-w-md">
             <TextInput
+              ref={searchInputRef}
               placeholder="Search patients, orders, results..."
-              leftSection={<IconSearch size={16} />}
+              leftSection={<IconSearch size={16} aria-hidden="true" />}
               value={searchValue}
               onChange={(e) => setSearchValue(e.currentTarget.value)}
-              onFocus={() => {}}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setIsSearchFocused(false)}
               className="w-full"
               size="sm"
+              aria-label="Global search"
+              aria-describedby="search-help"
+              role="searchbox"
+              autoComplete="off"
             />
+            <div id="search-help" className="sr-only">
+              Search for patients, orders, lab results, and other clinical data
+            </div>
           </div>
 
           {/* Right side - Actions and User Menu */}
@@ -130,33 +154,49 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
             {/* Mobile Search */}
             <ActionIcon
               variant="subtle"
-              onClick={() => {}}
+              onClick={() => searchInputRef.current?.focus()}
               className="md:hidden"
+              aria-label="Open search"
+              title="Search"
             >
-              <IconSearch size={20} />
+              <IconSearch size={20} aria-hidden="true" />
             </ActionIcon>
 
             {/* Notifications */}
-            <Menu shadow="md" width={320} position="bottom-end">
+            <Menu 
+              shadow="md" 
+              width={320} 
+              position="bottom-end"
+              opened={isNotificationMenuOpen}
+              onChange={setIsNotificationMenuOpen}
+            >
               <Menu.Target>
-                <ActionIcon variant="subtle" size="lg">
+                <ActionIcon 
+                  variant="subtle" 
+                  size="lg"
+                  aria-label={`Notifications ${unreadNotifications.length > 0 ? `(${unreadNotifications.length} unread)` : ''}`}
+                  aria-haspopup="menu"
+                  aria-expanded={isNotificationMenuOpen}
+                  title="Notifications"
+                >
                   <Indicator
                     size={16}
                     offset={7}
                     disabled={unreadNotifications.length === 0}
                     color="red"
                     label={unreadNotifications.length}
+                    aria-label={`${unreadNotifications.length} unread notifications`}
                   >
-                    <IconBell size={20} />
+                    <IconBell size={20} aria-hidden="true" />
                   </Indicator>
                 </ActionIcon>
               </Menu.Target>
 
-              <Menu.Dropdown>
+              <Menu.Dropdown role="menu" aria-label="Notifications menu">
                 <Menu.Label>
                   <Group justify="space-between">
-                    <Text>Notifications</Text>
-                    <Badge size="xs" color="red">
+                    <Text component="h3" size="sm" fw={600}>Notifications</Text>
+                    <Badge size="xs" color="red" aria-label={`${unreadNotifications.length} unread`}>
                       {unreadNotifications.length}
                     </Badge>
                   </Group>
@@ -164,7 +204,7 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
 
                 <ScrollArea h={300}>
                   {notifications.length === 0 ? (
-                    <div className="p-4 text-center">
+                    <div className="p-4 text-center" role="status" aria-live="polite">
                       <Text c="dimmed" size="sm">
                         No notifications
                       </Text>
@@ -177,6 +217,15 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
                           p="sm"
                           className="border border-gray-100 hover:bg-gray-50 cursor-pointer"
                           radius="sm"
+                          role="menuitem"
+                          tabIndex={0}
+                          aria-label={`Notification: ${notification.title}. ${notification.message || ''}`}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              // Handle notification click
+                            }
+                          }}
                         >
                           <Group gap="sm" align="flex-start">
                             <div className={`p-1 rounded-full ${
@@ -226,22 +275,34 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
 
             {/* User Menu */}
             {user && (
-              <Menu shadow="md" width={240} position="bottom-end">
+              <Menu 
+                shadow="md" 
+                width={240} 
+                position="bottom-end"
+                opened={isUserMenuOpen}
+                onChange={setIsUserMenuOpen}
+              >
                 <Menu.Target>
-                  <UnstyledButton className="p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                  <UnstyledButton 
+                    className="p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                    aria-label={`User menu for ${user.firstName} ${user.lastName}`}
+                    aria-haspopup="menu"
+                    aria-expanded={isUserMenuOpen}
+                  >
                     <Group gap="sm">
                       <Avatar
                         src={user.avatar}
-                        alt={`${user.firstName} ${user.lastName}`}
+                        alt={`Profile picture of ${user.firstName || ''} ${user.lastName || ''}`}
                         size="sm"
                         color="primary"
+                        role="img"
                       >
-                        {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                        {user.firstName?.charAt(0) || 'U'}{user.lastName?.charAt(0) || ''}
                       </Avatar>
                       
                       <div className="hidden sm:block text-left">
                         <Text size="sm" fw={500} className="text-gray-800">
-                          {user.firstName} {user.lastName}
+                          {user.firstName || ''} {user.lastName || ''}
                         </Text>
                         <Text size="xs" c="dimmed">
                           {user.role.replace('_', ' ')}
@@ -253,10 +314,10 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
                   </UnstyledButton>
                 </Menu.Target>
 
-                <Menu.Dropdown>
+                <Menu.Dropdown role="menu" aria-label="User account menu">
                   <Menu.Label>
                     <div>
-                      <Text size="sm" fw={500}>
+                      <Text size="sm" fw={500} component="h3">
                         {user.firstName} {user.lastName}
                       </Text>
                       <Text size="xs" c="dimmed">
@@ -266,17 +327,19 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
                   </Menu.Label>
 
                   <Menu.Item
-                    leftSection={<IconUser size={16} />}
+                    leftSection={<IconUser size={16} aria-hidden="true" />}
                     component={Link}
                     href="/profile"
+                    role="menuitem"
                   >
                     Profile
                   </Menu.Item>
 
                   <Menu.Item
-                    leftSection={<IconSettings size={16} />}
+                    leftSection={<IconSettings size={16} aria-hidden="true" />}
                     component={Link}
                     href="/settings"
+                    role="menuitem"
                   >
                     Settings
                   </Menu.Item>
@@ -284,9 +347,10 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
                   <Menu.Divider />
 
                   <Menu.Item
-                    leftSection={<IconShield size={16} />}
+                    leftSection={<IconShield size={16} aria-hidden="true" />}
                     component={Link}
                     href="/help"
+                    role="menuitem"
                   >
                     Help & Support
                   </Menu.Item>
@@ -294,9 +358,11 @@ export function Header({ title, subtitle, breadcrumbs = [] }: HeaderProps) {
                   <Menu.Divider />
 
                   <Menu.Item
-                    leftSection={<IconLogout size={16} />}
+                    leftSection={<IconLogout size={16} aria-hidden="true" />}
                     color="red"
                     onClick={handleLogout}
+                    role="menuitem"
+                    aria-label="Sign out of application"
                   >
                     Sign Out
                   </Menu.Item>

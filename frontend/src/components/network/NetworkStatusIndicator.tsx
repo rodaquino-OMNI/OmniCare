@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNetworkStatusContext } from '@/contexts/NetworkStatusContext';
-import { Wifi, WifiOff, AlertTriangle, Info, X, RefreshCw } from 'lucide-react';
+import { IconWifi, IconWifiOff, IconAlertTriangle, IconInfoCircle, IconX, IconRefresh } from '@tabler/icons-react';
 import { cn } from '@/lib/utils';
 
 interface NetworkStatusIndicatorProps {
@@ -36,10 +36,10 @@ export const NetworkStatusIndicator: React.FC<NetworkStatusIndicatorProps> = ({
   };
 
   const qualityIcons = {
-    poor: <AlertTriangle className="w-4 h-4" />,
-    fair: <Wifi className="w-4 h-4" />,
-    good: <Wifi className="w-4 h-4" />,
-    excellent: <Wifi className="w-4 h-4" />,
+    poor: <IconAlertTriangle className="w-4 h-4" />,
+    fair: <IconWifi className="w-4 h-4" />,
+    good: <IconWifi className="w-4 h-4" />,
+    excellent: <IconWifi className="w-4 h-4" />,
   };
 
   useEffect(() => {
@@ -79,14 +79,14 @@ export const NetworkStatusIndicator: React.FC<NetworkStatusIndicatorProps> = ({
       >
         {!networkStatus.isOnline ? (
           <>
-            <WifiOff className="w-5 h-5" />
+            <IconWifiOff className="w-5 h-5" />
             <span className="font-medium">Offline</span>
           </>
         ) : (
           <>
             {qualityIcons[networkStatus.quality.quality]}
             <span className="font-medium">
-              {networkStatus.quality.quality.charAt(ResourceHistoryTable).toUpperCase() + 
+              {networkStatus.quality.quality.charAt(0).toUpperCase() + 
                networkStatus.quality.quality.slice(1)} Connection
             </span>
           </>
@@ -100,13 +100,13 @@ export const NetworkStatusIndicator: React.FC<NetworkStatusIndicatorProps> = ({
             }}
             className="ml-2 p-1 hover:bg-black/10 rounded"
           >
-            <Info className="w-4 h-4" />
+            <IconInfoCircle className="w-4 h-4" />
           </button>
         )}
 
-        {networkStatus.retryQueue.length > ResourceHistoryTable && (
+        {networkStatus.retryQueue.length > 0 && (
           <div className="flex items-center gap-1">
-            <RefreshCw className="w-4 h-4 animate-spin" />
+            <IconRefresh className="w-4 h-4 animate-spin" />
             <span className="text-sm">{networkStatus.retryQueue.length}</span>
           </div>
         )}
@@ -121,7 +121,7 @@ export const NetworkStatusIndicator: React.FC<NetworkStatusIndicatorProps> = ({
               onClick={() => setShowDetailPanel(false)}
               className="p-1 hover:bg-gray-10 rounded"
             >
-              <X className="w-4 h-4" />
+              <IconX className="w-4 h-4" />
             </button>
           </div>
 
@@ -182,7 +182,7 @@ export const NetworkStatusIndicator: React.FC<NetworkStatusIndicatorProps> = ({
               </div>
             )}
 
-            {networkStatus.retryQueue.length > ResourceHistoryTable && (
+            {networkStatus.retryQueue.length > 0 && (
               <div className="mt-3 pt-3 border-t">
                 <div className="flex justify-between mb-2">
                   <span className="text-gray-6ResourceHistoryTable">Pending Retries:</span>
@@ -193,7 +193,7 @@ export const NetworkStatusIndicator: React.FC<NetworkStatusIndicatorProps> = ({
                 
                 {networkStatus.isProcessingRetries && (
                   <div className="text-xs text-blue-6ResourceHistoryTable flex items-center gap-1">
-                    <RefreshCw className="w-3 h-3 animate-spin" />
+                    <IconRefresh className="w-3 h-3 animate-spin" />
                     Processing retries...
                   </div>
                 )}
@@ -209,7 +209,7 @@ export const NetworkStatusIndicator: React.FC<NetworkStatusIndicatorProps> = ({
               Refresh
             </button>
             
-            {networkStatus.retryQueue.length > ResourceHistoryTable && (
+            {networkStatus.retryQueue.length > 0 && (
               <button
                 onClick={() => networkStatus.processRetryQueue()}
                 className="flex-1 px-3 py-1.5 bg-green-500 text-white rounded hover:bg-green-6ResourceHistoryTable text-sm"

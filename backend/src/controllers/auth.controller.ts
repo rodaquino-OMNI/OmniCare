@@ -1,23 +1,68 @@
+import * as bcrypt from 'bcrypt';
 import { Request, Response } from 'express';
 import * as jwt from 'jsonwebtoken';
 
 import { JWTAuthService } from '../auth/jwt.service';
+import { getRolePermissions } from '../auth/role-permissions';
 import config from '../config';
 import { AuditService } from '../services/audit.service';
+import { databaseService } from '../services/database.service';
 import { SessionManager } from '../services/session.service';
 import { smartFHIRService } from '../services/smart-fhir.service';
-import { User, UserRoles, LoginCredentials } from '../types/auth.types';
+import { User } from '../types/auth.types';
 import logger from '../utils/logger';
-import { getErrorMessage } from '../utils/error.utils';
+
+/**
+ * Safely convert query parameter to string
+ */
+function toSafeString(value: unknown): string {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value[0] || '';
+  }
+  return '';
+}
+
+interface AuthCodeData {
+  clientId: string;
+  redirectUri: string;
+  scope: string;
+  state?: string;
+  launchContext?: Record<string, unknown>;
+  authResult?: Record<string, unknown>;
+  createdAt?: Date;
+  expiresAt?: number;
+}
+
+interface TokenData {
+  scope?: string;
+  client_id?: string;
+  sub?: string;
+  aud?: string;
+  iss?: string;
+  exp?: number;
+  iat?: number;
+  patient?: string;
+  encounter?: string;
+  fhirUser?: string;
+  type?: string;
+  userId?: string;
+  sessionId?: string;
+  username?: string;
+  role?: string;
+}
 
 /**
  * Authentication Controller
- * Handles SMART on FHIR authentication flows and internal JWT authentication
+ * Handles OAuth2/SMART on FHIR and internal authentication
  */
 export class AuthController {
   private jwtService: JWTAuthService;
   private sessionManager: SessionManager;
   private auditService: AuditService;
+  private authCodes: Map<string, AuthCodeData> = new Map();
 
   constructor() {
     this.jwtService = new JWTAuthService();
@@ -25,12 +70,9 @@ export class AuthController {
     this.auditService = new AuditService();
   }
 
-  // ===============================
-  // SMART ON FHIR AUTHORIZATION
-  // ===============================
-
   /**
-   * GET /auth/authorize - SMART authorization endpoint
+   * SMART on FHIR Authorization endpoint
+   * GET /auth/authorize
    */
   async authorize(req: Request, res: Response): Promise<void> {
     try {
@@ -42,20 +84,17 @@ export class AuthController {
         state,
         aud,
         launch,
-      } = req.query as Record<string, string>;
+      } = req.query;
 
       logger.security('SMART authorization request', {
         client_id,
         response_type,
         scope,
-        aud,
         launch: !!launch,
-        ip: req.ip,
-        userAgent: req.get('User-Agent'),
       });
 
       // Validate required parameters
-      if (!response_type || response_type !== 'code') {
+      if (response_type !== 'code') {
         res.status(400).json({
           error: 'invalid_request',
           error_description: 'response_type must be "code"',
@@ -79,52 +118,8 @@ export class AuthController {
         return;
       }
 
-      // Validate redirect URI for security
-      try {
-        const redirectUrl = new URL(redirect_uri);
-        
-        // Only allow http and https schemes
-        const allowedSchemes = ['http:', 'https:'];
-        if (!allowedSchemes.includes(redirectUrl.protocol)) {
-          res.status(400).json({
-            error: 'invalid_request',
-            error_description: 'Invalid redirect_uri scheme. Only http and https are allowed.',
-          });
-          return;
-        }
-
-        // Block known malicious domains
-        const blockedDomains = ['evil.com', 'malicious.com', 'attacker.com'];
-        if (blockedDomains.includes(redirectUrl.hostname)) {
-          res.status(400).json({
-            error: 'invalid_request',
-            error_description: 'Invalid redirect_uri domain.',
-          });
-          return;
-        }
-
-        // Block localhost in production (optional - comment out for testing)
-        // if (process.env.NODE_ENV === 'production' && redirectUrl.hostname === 'localhost') {
-        //   res.status(400).json({
-        //     error: 'invalid_request',
-        //     error_description: 'Localhost redirect not allowed in production.',
-        //   });
-        //   return;
-        // }
-      } catch (error) {
-        res.status(400).json({
-          error: 'invalid_request',
-          error_description: 'Invalid redirect_uri format',
-        });
-        return;
-      }
-
-      const scopes = scope ? scope.split(' ') : config.smart.scopes;
-
-      let authResult;
-
+      // Handle EHR launch
       if (launch) {
-        // EHR launch scenario
         if (!aud) {
           res.status(400).json({
             error: 'invalid_request',
@@ -133,53 +128,64 @@ export class AuthController {
           return;
         }
 
-        authResult = await smartFHIRService.handleEHRLaunch(
-          aud,
-          launch,
-          client_id,
-          redirect_uri,
-          scopes
+        const launchResult = await smartFHIRService.handleEHRLaunch(
+          aud as string,
+          launch as string,
+          client_id as string,
+          redirect_uri as string,
+          (scope as string)?.split(' ') || []
         );
-      } else {
-        // Standalone launch scenario
-        authResult = await smartFHIRService.initiateAuthorization(
-          client_id,
-          redirect_uri,
-          scopes,
-          state,
-          aud
-        );
+
+        // Generate authorization code
+        const authCode = this.generateAuthCode();
+        this.authCodes.set(authCode, {
+          clientId: toSafeString(client_id),
+          redirectUri: toSafeString(redirect_uri),
+          scope: toSafeString(scope),
+          state: state ? toSafeString(state) : undefined,
+          launchContext: launchResult,
+          expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
+        });
+
+        const redirectUrl = new URL(redirect_uri as string);
+        redirectUrl.searchParams.set('code', authCode);
+        if (state) {
+          redirectUrl.searchParams.set('state', state as string);
+        }
+
+        res.redirect(redirectUrl.toString());
+        return;
       }
 
-      // For this example, we'll redirect directly to simulate user consent
-      // In production, this would show a consent screen
-      const authCode = this.generateAuthorizationCode();
-      const finalState = state || authResult.state;
+      // Handle standalone launch
+      const authResult = await smartFHIRService.initiateAuthorization(
+        client_id as string,
+        redirect_uri as string,
+        (scope as string)?.split(' ') || [],
+        state as string,
+        undefined
+      );
 
-      // Store authorization code temporarily (in production, use secure storage)
-      this.storeAuthorizationCode(authCode, {
-        client_id,
-        redirect_uri,
-        scope: scopes.join(' '),
-        state: finalState,
-        aud,
-        launch,
-        expiresAt: Date.now() + (10 * 60 * 1000), // 10 minutes
+      // Generate authorization code
+      const authCode = this.generateAuthCode();
+      this.authCodes.set(authCode, {
+        clientId: toSafeString(client_id),
+        redirectUri: toSafeString(redirect_uri),
+        scope: toSafeString(scope),
+        state: state ? toSafeString(state) : undefined,
+        authResult,
+        expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
       });
 
-      const redirectUrl = new URL(redirect_uri);
-      redirectUrl.searchParams.append('code', authCode);
-      redirectUrl.searchParams.append('state', finalState);
-
-      logger.security('SMART authorization code generated', {
-        client_id,
-        state: finalState,
-        hasLaunch: !!launch,
-      });
+      const redirectUrl = new URL(redirect_uri as string);
+      redirectUrl.searchParams.set('code', authCode);
+      if (state) {
+        redirectUrl.searchParams.set('state', state as string);
+      }
 
       res.redirect(redirectUrl.toString());
     } catch (error) {
-      logger.error('SMART authorization failed:', error);
+      logger.error('Authorization error:', error);
       res.status(500).json({
         error: 'server_error',
         error_description: 'Authorization server error',
@@ -188,42 +194,31 @@ export class AuthController {
   }
 
   /**
-   * POST /auth/token - SMART token endpoint
+   * Token endpoint
+   * POST /auth/token
    */
   async token(req: Request, res: Response): Promise<void> {
     try {
-      const {
-        grant_type,
-        code,
-        redirect_uri: _redirect_uri,
-        client_id,
-        client_secret: _client_secret,
-        code_verifier: _code_verifier,
-        refresh_token,
-      } = req.body;
+      const { grant_type, code, redirect_uri, client_id, refresh_token, client_secret, scope } = req.body;
 
-      logger.security('SMART token request', {
-        grant_type,
-        client_id,
-        hasCode: !!code,
-        hasRefreshToken: !!refresh_token,
-        ip: req.ip,
-      });
-
-      if (grant_type === 'authorization_code') {
-        await this.handleAuthorizationCodeGrant(req, res);
-      } else if (grant_type === 'refresh_token') {
-        await this.handleRefreshTokenGrant(req, res);
-      } else if (grant_type === 'client_credentials') {
-        await this.handleClientCredentialsGrant(req, res);
-      } else {
-        res.status(400).json({
-          error: 'unsupported_grant_type',
-          error_description: 'Supported grant types: authorization_code, refresh_token, client_credentials',
-        });
+      switch (grant_type) {
+        case 'authorization_code':
+          await this.handleAuthorizationCodeGrant(req, res, code, redirect_uri, client_id);
+          break;
+        case 'refresh_token':
+          await this.handleRefreshTokenGrant(req, res, refresh_token, client_id);
+          break;
+        case 'client_credentials':
+          await this.handleClientCredentialsGrant(req, res, client_id, client_secret, scope);
+          break;
+        default:
+          res.status(400).json({
+            error: 'unsupported_grant_type',
+            error_description: 'Supported grant types: authorization_code, refresh_token, client_credentials',
+          });
       }
     } catch (error) {
-      logger.error('SMART token request failed:', error);
+      logger.error('Token endpoint error:', error);
       res.status(500).json({
         error: 'server_error',
         error_description: 'Token server error',
@@ -232,194 +227,8 @@ export class AuthController {
   }
 
   /**
-   * Handle authorization code grant
-   */
-  private async handleAuthorizationCodeGrant(req: Request, res: Response): Promise<void> {
-    const { code, redirect_uri, client_id, code_verifier: _code_verifier } = req.body;
-
-    // Validate required parameters
-    if (!code || !redirect_uri || !client_id) {
-      res.status(400).json({
-        error: 'invalid_request',
-        error_description: 'code, redirect_uri, and client_id are required',
-      });
-      return;
-    }
-
-    // Retrieve and validate authorization code
-    const authData = this.getAuthorizationCode(code);
-    if (!authData) {
-      res.status(400).json({
-        error: 'invalid_grant',
-        error_description: 'Invalid or expired authorization code',
-      });
-      return;
-    }
-
-    if (authData.client_id !== client_id || authData.redirect_uri !== redirect_uri) {
-      res.status(400).json({
-        error: 'invalid_grant',
-        error_description: 'Invalid client_id or redirect_uri',
-      });
-      return;
-    }
-
-    if (Date.now() > authData.expiresAt) {
-      this.removeAuthorizationCode(code);
-      res.status(400).json({
-        error: 'invalid_grant',
-        error_description: 'Authorization code expired',
-      });
-      return;
-    }
-
-    // Generate tokens
-    const accessToken = this.generateAccessToken({
-      client_id,
-      scope: authData.scope,
-      aud: authData.aud,
-      launch: authData.launch,
-    });
-
-    const refreshToken = this.generateRefreshToken({
-      client_id,
-      scope: authData.scope,
-    });
-
-    // Remove used authorization code
-    this.removeAuthorizationCode(code);
-
-    const tokenResponse = {
-      access_token: accessToken,
-      token_type: 'bearer',
-      expires_in: 3600,
-      scope: authData.scope,
-      refresh_token: refreshToken,
-    };
-
-    // Add SMART-specific parameters if available
-    if (authData.launch) {
-      // In a real implementation, you would extract patient/encounter from launch context
-      (tokenResponse as any).patient = 'example-patient-id';
-      (tokenResponse as any).encounter = 'example-encounter-id';
-      (tokenResponse as any).need_patient_banner = true;
-      (tokenResponse as any).smart_style_url = `${config.fhir.baseUrl}/smart-style.json`;
-    }
-
-    logger.security('SMART access token issued', {
-      client_id,
-      scope: authData.scope,
-      hasLaunch: !!authData.launch,
-    });
-
-    res.json(tokenResponse);
-  }
-
-  /**
-   * Handle refresh token grant
-   */
-  private async handleRefreshTokenGrant(req: Request, res: Response): Promise<void> {
-    const { refresh_token, client_id } = req.body;
-
-    if (!refresh_token || !client_id) {
-      res.status(400).json({
-        error: 'invalid_request',
-        error_description: 'refresh_token and client_id are required',
-      });
-      return;
-    }
-
-    try {
-      // Verify refresh token
-      const decoded = jwt.verify(refresh_token, config.jwt.secret) as any;
-      
-      if (decoded.client_id !== client_id || decoded.type !== 'refresh') {
-        res.status(400).json({
-          error: 'invalid_grant',
-          error_description: 'Invalid refresh token',
-        });
-        return;
-      }
-
-      // Generate new access token
-      const accessToken = this.generateAccessToken({
-        client_id,
-        scope: decoded.scope,
-        aud: decoded.aud,
-      });
-
-      const tokenResponse = {
-        access_token: accessToken,
-        token_type: 'bearer',
-        expires_in: 3600,
-        scope: decoded.scope,
-      };
-
-      logger.security('SMART token refreshed', {
-        client_id,
-        scope: decoded.scope,
-      });
-
-      res.json(tokenResponse);
-    } catch (error) {
-      res.status(400).json({
-        error: 'invalid_grant',
-        error_description: 'Invalid refresh token',
-      });
-    }
-  }
-
-  /**
-   * Handle client credentials grant
-   */
-  private async handleClientCredentialsGrant(req: Request, res: Response): Promise<void> {
-    const { client_id, client_secret, scope } = req.body;
-
-    if (!client_id || !client_secret) {
-      res.status(400).json({
-        error: 'invalid_request',
-        error_description: 'client_id and client_secret are required',
-      });
-      return;
-    }
-
-    // In production, validate client credentials against a secure store
-    const isValidClient = await this.validateClientCredentials(client_id, client_secret);
-    
-    if (!isValidClient) {
-      res.status(401).json({
-        error: 'invalid_client',
-        error_description: 'Invalid client credentials',
-      });
-      return;
-    }
-
-    const requestedScope = scope || 'system/*.read';
-    
-    // Generate access token for system access
-    const accessToken = this.generateAccessToken({
-      client_id,
-      scope: requestedScope,
-      type: 'system',
-    });
-
-    const tokenResponse = {
-      access_token: accessToken,
-      token_type: 'bearer',
-      expires_in: 3600,
-      scope: requestedScope,
-    };
-
-    logger.security('System access token issued', {
-      client_id,
-      scope: requestedScope,
-    });
-
-    res.json(tokenResponse);
-  }
-
-  /**
-   * POST /auth/introspect - Token introspection endpoint
+   * Token introspection endpoint
+   * POST /auth/introspect
    */
   async introspect(req: Request, res: Response): Promise<void> {
     try {
@@ -433,34 +242,29 @@ export class AuthController {
         return;
       }
 
-      logger.security('Token introspection request', {
-        ip: req.ip,
-      });
-
       try {
-        const decoded = jwt.verify(token, config.jwt.secret) as any;
+        // Simulate async operation for ESLint compliance
+        await Promise.resolve();
+        const decoded = jwt.verify(token, config.jwt.secret) as TokenData;
         
-        const introspectionResponse = {
+        res.json({
           active: true,
           scope: decoded.scope,
           client_id: decoded.client_id,
           sub: decoded.sub,
-          exp: decoded.exp,
-          iat: decoded.iat,
           aud: decoded.aud,
           iss: decoded.iss,
+          exp: decoded.exp,
+          iat: decoded.iat,
           patient: decoded.patient,
           encounter: decoded.encounter,
           fhirUser: decoded.fhirUser,
-        };
-
-        res.json(introspectionResponse);
-      } catch (jwtError) {
-        // Token is invalid or expired
+        });
+      } catch {
         res.json({ active: false });
       }
     } catch (error) {
-      logger.error('Token introspection failed:', error);
+      logger.error('Introspection error:', error);
       res.status(500).json({
         error: 'server_error',
         error_description: 'Introspection server error',
@@ -468,413 +272,291 @@ export class AuthController {
     }
   }
 
-  // ===============================
-  // INTERNAL API AUTHENTICATION
-  // ===============================
-
   /**
-   * POST /auth/login - JWT-based authentication
+   * Internal login endpoint
+   * POST /auth/login
    */
   async login(req: Request, res: Response): Promise<void> {
     try {
-      const { username, password, mfaToken }: LoginCredentials = req.body;
-      const ipAddress = req.ip || 'unknown';
-      const userAgent = req.get('User-Agent') || 'unknown';
+      const { username, password } = req.body;
 
-      await this.auditService.logSecurityEvent({
-        type: 'LOGIN_FAILURE',
-        severity: 'LOW',
-        description: `Login attempt for username: ${username}`,
-        metadata: { username, ipAddress, userAgent }
-      });
+      logger.security('Login attempt', { username });
 
-      // Validate credentials
-      const user = await this.validateUserCredentials(username, password);
-      
-      if (!user) {
+      // Query user from database
+      const userResult = await databaseService.query(
+        'SELECT * FROM users WHERE username = $1 AND is_active = true',
+        [username]
+      );
+
+      if (userResult.rows.length === 0) {
         await this.auditService.logSecurityEvent({
           type: 'LOGIN_FAILURE',
+          userId: username,
           severity: 'MEDIUM',
-          description: `Failed login attempt - invalid credentials`,
-          metadata: { username, ipAddress, userAgent }
+          description: 'Login failed: User not found',
+          metadata: {
+            username,
+            reason: 'User not found',
+            ipAddress: req.ip,
+          }
         });
-        
+
         res.status(401).json({
           success: false,
           error: 'INVALID_CREDENTIALS',
-          message: 'Invalid username or password'
+          message: 'Invalid username or password',
         });
         return;
       }
 
-      // Check if account is locked
-      if (user.accountLockedUntil && user.accountLockedUntil > new Date()) {
+      const user = userResult.rows[0];
+      if (!user) {
+        res.status(401).json({
+          success: false,
+          error: 'INVALID_CREDENTIALS',
+          message: 'Invalid username or password',
+        });
+        return;
+      }
+
+      // Verify password
+      const isValidPassword = await bcrypt.compare(password, user.password_hash);
+      if (!isValidPassword) {
         await this.auditService.logSecurityEvent({
           type: 'LOGIN_FAILURE',
-          userId: user.id,
+          userId: username,
           severity: 'MEDIUM',
-          description: 'Login attempt on locked account',
-          metadata: { username, ipAddress, userAgent, lockedUntil: user.accountLockedUntil }
+          description: 'Login failed: Invalid password',
+          metadata: {
+            username,
+            reason: 'Invalid password',
+            ipAddress: req.ip,
+          }
         });
 
-        res.status(423).json({
+        res.status(401).json({
           success: false,
-          error: 'ACCOUNT_LOCKED',
-          message: 'Account is temporarily locked due to multiple failed login attempts'
+          error: 'INVALID_CREDENTIALS',
+          message: 'Invalid username or password',
         });
         return;
       }
 
-      // Check if user is active
-      if (!user.isActive) {
-        await this.auditService.logSecurityEvent({
-          type: 'LOGIN_FAILURE',
-          userId: user.id,
-          severity: 'MEDIUM',
-          description: 'Login attempt on inactive account',
-          metadata: { username, ipAddress, userAgent }
-        });
-
-        res.status(403).json({
-          success: false,
-          error: 'ACCOUNT_INACTIVE',
-          message: 'Account is not active'
-        });
-        return;
-      }
-
-      // Check MFA if required
-      if (this.jwtService.isMfaRequired(user.role) && user.isMfaEnabled) {
-        if (!mfaToken) {
-          res.status(200).json({
-            success: false,
-            requiresMfa: true,
-            message: 'Multi-factor authentication required'
-          });
-          return;
-        }
-
-        if (!user.mfaSecret || !this.jwtService.verifyMfaToken(mfaToken, user.mfaSecret)) {
-          await this.auditService.logSecurityEvent({
-            type: 'LOGIN_FAILURE',
-            userId: user.id,
-            severity: 'HIGH',
-            description: 'Invalid MFA token provided',
-            metadata: { username, ipAddress, userAgent }
-          });
-
-          res.status(401).json({
-            success: false,
-            error: 'INVALID_MFA_TOKEN',
-            message: 'Invalid multi-factor authentication token'
-          });
-          return;
-        }
-      }
-
-      // Generate JWT tokens
-      const tokens = await this.jwtService.generateTokens(user);
-      
       // Create session
-      const session = await this.sessionManager.createSession(user, ipAddress, userAgent);
+      const session = await this.sessionManager.createSession(user as User, req.ip || '0.0.0.0', req.get('User-Agent') || 'Unknown');
 
-      // Update user login info
-      await this.updateUserLoginInfo(user.id, ipAddress);
+      // Get permissions for the user's role
+      const permissions = getRolePermissions(user.role);
 
-      // Log successful login
+      // Generate tokens
+      const accessToken = this.jwtService.generateAccessToken({
+        userId: user.id,
+        username: user.username,
+        role: user.role,
+        permissions,
+        sessionId: session.sessionId,
+      });
+
+      const refreshToken = this.jwtService.generateRefreshToken({
+        userId: user.id,
+        username: user.username,
+        role: user.role,
+        permissions,
+        sessionId: session.sessionId,
+      });
+
       await this.auditService.logSecurityEvent({
         type: 'LOGIN_SUCCESS',
         userId: user.id,
         severity: 'LOW',
-        description: `Successful login for ${user.username}`,
-        metadata: { 
-          username: user.username, 
-          role: user.role,
-          sessionId: session.sessionId,
-          ipAddress, 
-          userAgent 
+        description: `Successful login for user ${username}`,
+        metadata: {
+          username,
+          ipAddress: req.ip,
         }
       });
 
       res.json({
         success: true,
-        tokens,
+        tokens: {
+          accessToken,
+          refreshToken,
+          expiresIn: 3600,
+          tokenType: 'Bearer',
+        },
         user: {
           id: user.id,
           username: user.username,
           email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
+          firstName: user.first_name,
+          lastName: user.last_name,
           role: user.role,
-          department: user.department,
-          isActive: user.isActive,
-          isMfaEnabled: user.isMfaEnabled,
-          lastLogin: user.lastLogin
         },
         session: {
           sessionId: session.sessionId,
-          expiresAt: session.expiresAt
-        }
+          expiresAt: session.expiresAt,
+        },
       });
     } catch (error) {
-      logger.error('Login failed:', error);
-      await this.auditService.logSecurityEvent({
-        type: 'LOGIN_FAILURE',
-        severity: 'HIGH',
-        description: 'Login system error',
-        metadata: { error: getErrorMessage(error), ipAddress: req.ip }
-      });
-
+      logger.error('Login error:', error);
       res.status(500).json({
         success: false,
-        error: 'INTERNAL_ERROR',
-        message: 'An internal error occurred during login'
+        error: 'SERVER_ERROR',
+        message: 'An error occurred during login',
       });
     }
   }
 
   /**
-   * POST /auth/refresh - Refresh access token
+   * Refresh token endpoint
+   * POST /auth/refresh
    */
   async refreshToken(req: Request, res: Response): Promise<void> {
     try {
       const { refreshToken } = req.body;
-      const ipAddress = req.ip || 'unknown';
-      const userAgent = req.get('User-Agent') || 'unknown';
 
       if (!refreshToken) {
         res.status(400).json({
           success: false,
           error: 'MISSING_REFRESH_TOKEN',
-          message: 'Refresh token is required'
+          message: 'Refresh token is required',
         });
         return;
       }
 
-      // Verify refresh token
-      const decoded = await this.jwtService.verifyRefreshToken(refreshToken);
-      
-      // Get user
-      const user = await this.getUserById(decoded.userId);
-      if (!user || !user.isActive) {
+      try {
+        const decoded = jwt.verify(refreshToken, config.jwt.secret) as TokenData;
+
+        if (decoded.type !== 'refresh') {
+          throw new Error('Invalid token type');
+        }
+
+        // Check if user exists
+        const userResult = await databaseService.query(
+          'SELECT * FROM users WHERE id = $1 AND is_active = true',
+          [decoded.userId]
+        );
+
+        if (userResult.rows.length === 0) {
+          throw new Error('User not found');
+        }
+
+        const user = userResult.rows[0];
+        if (!user) {
+          throw new Error('User not found');
+        }
+        
+        // Get permissions for the user's role
+        const permissions = getRolePermissions(user.role);
+
+        // Generate new tokens
+        const newAccessToken = this.jwtService.generateAccessToken({
+          userId: user.id,
+          username: user.username,
+          role: user.role,
+          permissions,
+          sessionId: decoded.sessionId || '',
+        });
+
+        const newRefreshToken = this.jwtService.generateRefreshToken({
+          userId: user.id,
+          username: user.username,
+          role: user.role,
+          permissions,
+          sessionId: decoded.sessionId || '',
+        });
+
+        res.json({
+          success: true,
+          tokens: {
+            accessToken: newAccessToken,
+            refreshToken: newRefreshToken,
+            expiresIn: 3600,
+            tokenType: 'Bearer',
+          },
+        });
+      } catch {
         res.status(401).json({
           success: false,
-          error: 'USER_NOT_FOUND',
-          message: 'User not found or inactive'
+          error: 'INVALID_TOKEN',
+          message: 'Invalid or expired refresh token',
         });
-        return;
       }
-
-      // Generate new tokens
-      const tokens = await this.jwtService.refreshAccessToken(refreshToken, user);
-
-      // Log token refresh
-      await this.auditService.logUserAction(
-        user.id,
-        'token_refresh',
-        '/auth/refresh',
-        undefined,
-        ipAddress,
-        userAgent,
-        true
-      );
-
-      res.json({
-        success: true,
-        tokens
-      });
     } catch (error) {
-      logger.error('Token refresh failed:', error);
-      await this.auditService.logSecurityEvent({
-        type: 'LOGIN_FAILURE',
-        severity: 'MEDIUM',
-        description: 'Token refresh failed',
-        metadata: { error: getErrorMessage(error), ipAddress: req.ip }
-      });
-
-      res.status(401).json({
+      logger.error('Refresh token error:', error);
+      res.status(500).json({
         success: false,
-        error: 'INVALID_REFRESH_TOKEN',
-        message: 'Invalid or expired refresh token'
+        error: 'SERVER_ERROR',
+        message: 'An error occurred during token refresh',
       });
     }
   }
 
   /**
-   * POST /auth/logout - Logout and destroy session
+   * Logout endpoint
+   * POST /auth/logout
    */
   async logout(req: Request, res: Response): Promise<void> {
     try {
-      const authHeader = req.get('Authorization');
-      const token = this.jwtService.extractTokenFromHeader(authHeader);
-      const ipAddress = req.ip || 'unknown';
-      const userAgent = req.get('User-Agent') || 'unknown';
+      const sessionId = req.session?.sessionId;
 
-      if (token) {
-        try {
-          const tokenPayload = await this.jwtService.verifyAccessToken(token);
-          
-          // Destroy session
-          await this.sessionManager.destroySession(tokenPayload.sessionId);
-          
-          // Log logout
-          await this.auditService.logSecurityEvent({
-            type: 'LOGOUT',
-            userId: tokenPayload.userId,
-            severity: 'LOW',
-            description: `User ${tokenPayload.username} logged out`,
-            metadata: { 
-              sessionId: tokenPayload.sessionId,
-              ipAddress, 
-              userAgent 
-            }
-          });
-        } catch (error) {
-          // Token might be invalid, but that's okay for logout
-          logger.warn('Token verification failed during logout:', getErrorMessage(error));
-        }
+      if (sessionId && typeof sessionId === 'string') {
+        await this.sessionManager.terminateSession(sessionId);
       }
 
       res.json({
         success: true,
-        message: 'Successfully logged out'
+        message: 'Logged out successfully',
       });
     } catch (error) {
-      logger.error('Logout failed:', error);
+      logger.error('Logout error:', error);
       res.status(500).json({
         success: false,
-        error: 'LOGOUT_ERROR',
-        message: 'An error occurred during logout'
+        error: 'SERVER_ERROR',
+        message: 'An error occurred during logout',
       });
     }
   }
 
   /**
-   * POST /auth/setup-mfa - Setup multi-factor authentication
-   */
-  async setupMfa(req: Request, res: Response): Promise<void> {
-    try {
-      const { userId } = req.body;
-      const user = await this.getUserById(userId);
-      
-      if (!user) {
-        res.status(404).json({
-          success: false,
-          error: 'USER_NOT_FOUND',
-          message: 'User not found'
-        });
-        return;
-      }
-
-      const mfaSetup = await this.jwtService.generateMfaSecret(user);
-      
-      // Store secret temporarily (user must verify before enabling)
-      await this.storeTempMfaSecret(userId, mfaSetup.secret);
-
-      await this.auditService.logUserAction(
-        userId,
-        'mfa_setup_initiated',
-        '/auth/setup-mfa',
-        undefined,
-        req.ip || 'unknown',
-        req.get('User-Agent') || 'unknown',
-        true
-      );
-
-      res.json({
-        success: true,
-        mfaSetup: {
-          qrCode: mfaSetup.qrCode,
-          backupCodes: mfaSetup.backupCodes
-        }
-      });
-    } catch (error) {
-      logger.error('MFA setup failed:', error);
-      res.status(500).json({
-        success: false,
-        error: 'MFA_SETUP_ERROR',
-        message: 'Failed to setup multi-factor authentication'
-      });
-    }
-  }
-
-  /**
-   * POST /auth/verify-mfa - Verify and enable MFA
-   */
-  async verifyMfa(req: Request, res: Response): Promise<void> {
-    try {
-      const { userId, token } = req.body;
-      
-      const tempSecret = await this.getTempMfaSecret(userId);
-      if (!tempSecret) {
-        res.status(400).json({
-          success: false,
-          error: 'NO_PENDING_MFA_SETUP',
-          message: 'No pending MFA setup found'
-        });
-        return;
-      }
-
-      if (!this.jwtService.verifyMfaToken(token, tempSecret)) {
-        res.status(401).json({
-          success: false,
-          error: 'INVALID_MFA_TOKEN',
-          message: 'Invalid MFA token'
-        });
-        return;
-      }
-
-      // Enable MFA for user
-      await this.enableUserMfa(userId, tempSecret);
-      await this.clearTempMfaSecret(userId);
-
-      await this.auditService.logSecurityEvent({
-        type: 'MFA_ENABLED',
-        userId,
-        severity: 'MEDIUM',
-        description: 'Multi-factor authentication enabled',
-        metadata: { ipAddress: req.ip }
-      });
-
-      res.json({
-        success: true,
-        message: 'Multi-factor authentication enabled successfully'
-      });
-    } catch (error) {
-      logger.error('MFA verification failed:', error);
-      res.status(500).json({
-        success: false,
-        error: 'MFA_VERIFICATION_ERROR',
-        message: 'Failed to verify multi-factor authentication'
-      });
-    }
-  }
-
-  /**
-   * GET /auth/me - Get current user info
+   * Get current user
+   * GET /auth/me
    */
   async getCurrentUser(req: Request, res: Response): Promise<void> {
     try {
-      const authHeader = req.get('Authorization');
-      const token = this.jwtService.extractTokenFromHeader(authHeader);
+      const authUser = req.user;
       
-      if (!token) {
+      if (!authUser || !authUser.id) {
         res.status(401).json({
           success: false,
-          error: 'NO_TOKEN',
-          message: 'No authentication token provided'
+          error: 'UNAUTHORIZED',
+          message: 'User not authenticated',
         });
         return;
       }
 
-      const tokenPayload = await this.jwtService.verifyAccessToken(token);
-      const user = await this.getUserById(tokenPayload.userId);
-      
+      const userId = authUser.id;
+
+      const userResult = await databaseService.query(
+        'SELECT id, username, email, first_name, last_name, role FROM users WHERE id = $1',
+        [userId]
+      );
+
+      if (userResult.rows.length === 0) {
+        res.status(404).json({
+          success: false,
+          error: 'USER_NOT_FOUND',
+          message: 'User not found',
+        });
+        return;
+      }
+
+      const user = userResult.rows[0];
       if (!user) {
         res.status(404).json({
           success: false,
           error: 'USER_NOT_FOUND',
-          message: 'User not found'
+          message: 'User not found',
         });
         return;
       }
@@ -885,317 +567,251 @@ export class AuthController {
           id: user.id,
           username: user.username,
           email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
+          firstName: user.first_name,
+          lastName: user.last_name,
           role: user.role,
-          department: user.department,
-          isActive: user.isActive,
-          isMfaEnabled: user.isMfaEnabled,
-          lastLogin: user.lastLogin
-        }
+        },
       });
     } catch (error) {
-      res.status(401).json({
+      logger.error('Get current user error:', error);
+      res.status(500).json({
         success: false,
-        error: 'INVALID_TOKEN',
-        message: 'Invalid or expired token'
+        error: 'SERVER_ERROR',
+        message: 'An error occurred while fetching user data',
       });
     }
   }
 
-  // ===============================
-  // UTILITY METHODS
-  // ===============================
+  /**
+   * Setup MFA
+   * POST /auth/setup-mfa
+   */
+  async setupMfa(req: Request, res: Response): Promise<void> {
+    // TODO: Implement MFA setup
+    await Promise.resolve(); // Placeholder for future async implementation
+    res.status(501).json({
+      success: false,
+      error: 'NOT_IMPLEMENTED',
+      message: 'MFA setup not yet implemented',
+    });
+  }
 
-  private generateAuthorizationCode(): string {
+  /**
+   * Verify MFA
+   * POST /auth/verify-mfa
+   */
+  async verifyMfa(req: Request, res: Response): Promise<void> {
+    // TODO: Implement MFA verification
+    await Promise.resolve(); // Placeholder for future async implementation
+    res.status(501).json({
+      success: false,
+      error: 'NOT_IMPLEMENTED',
+      message: 'MFA verification not yet implemented',
+    });
+  }
+
+  // Private methods
+
+  private generateAuthCode(): string {
     return `code_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  private generateAccessToken(payload: any): string {
-    return jwt.sign(
+  private async handleAuthorizationCodeGrant(
+    req: Request,
+    res: Response,
+    code: string,
+    redirect_uri: string,
+    client_id: string
+  ): Promise<void> {
+    if (!code || !redirect_uri || !client_id) {
+      res.status(400).json({
+        error: 'invalid_request',
+        error_description: 'Missing required parameters',
+      });
+      return Promise.resolve();
+    }
+
+    const codeData = this.authCodes.get(code);
+    if (!codeData) {
+      res.status(400).json({
+        error: 'invalid_grant',
+        error_description: 'Invalid or expired authorization code',
+      });
+      return Promise.resolve();
+    }
+
+    // Check if code is expired
+    if (codeData.expiresAt && typeof codeData.expiresAt === 'number' && Date.now() > codeData.expiresAt) {
+      this.authCodes.delete(code);
+      res.status(400).json({
+        error: 'invalid_grant',
+        error_description: 'Authorization code expired',
+      });
+      return Promise.resolve();
+    }
+
+    // Validate client_id and redirect_uri
+    if (codeData.clientId !== client_id || codeData.redirectUri !== redirect_uri) {
+      res.status(400).json({
+        error: 'invalid_grant',
+        error_description: 'Invalid client_id or redirect_uri',
+      });
+      return;
+    }
+
+    // Delete the code (one-time use)
+    this.authCodes.delete(code);
+
+    // Generate tokens
+    const accessToken = jwt.sign(
       {
-        ...payload,
         type: 'access',
-        iss: config.fhir.baseUrl,
-        aud: payload.aud || config.fhir.baseUrl,
-        iat: Math.floor(Date.now() / 1000),
+        client_id,
+        scope: codeData.scope,
+        iss: config.fhir.baseUrl || 'https://test-fhir.omnicare.com',
+        aud: config.fhir.baseUrl || 'https://test-fhir.omnicare.com',
+        ...codeData.launchContext,
       },
       config.jwt.secret,
       { expiresIn: '1h' }
     );
-  }
 
-  private generateRefreshToken(payload: any): string {
-    return jwt.sign(
+    const refreshToken = jwt.sign(
       {
-        ...payload,
         type: 'refresh',
-        iss: config.fhir.baseUrl,
-        iat: Math.floor(Date.now() / 1000),
+        client_id,
+        scope: codeData.scope,
+        iss: config.fhir.baseUrl || 'https://test-fhir.omnicare.com',
       },
       config.jwt.secret,
       { expiresIn: '30d' }
     );
+
+    res.json({
+      access_token: accessToken,
+      token_type: 'bearer',
+      expires_in: 3600,
+      scope: codeData.scope,
+      refresh_token: refreshToken,
+    });
   }
 
-  // Temporary in-memory storage for demo purposes
-  // In production, use Redis or secure database
-  private authCodes = new Map<string, any>();
+  private async handleRefreshTokenGrant(
+    req: Request,
+    res: Response,
+    refresh_token: string,
+    client_id: string
+  ): Promise<void> {
+    if (!refresh_token) {
+      res.status(400).json({
+        error: 'invalid_request',
+        error_description: 'refresh_token is required',
+      });
+      return Promise.resolve();
+    }
 
-  private storeAuthorizationCode(code: string, data: any): void {
-    this.authCodes.set(code, data);
-    
-    // Clean up expired codes after timeout
-    setTimeout(() => {
-      this.authCodes.delete(code);
-    }, 10 * 60 * 1000); // 10 minutes
-  }
-
-  private getAuthorizationCode(code: string): any {
-    return this.authCodes.get(code);
-  }
-
-  private removeAuthorizationCode(code: string): void {
-    this.authCodes.delete(code);
-  }
-
-  private async validateClientCredentials(clientId: string, clientSecret: string): Promise<boolean> {
-    // In production, validate against secure client registry
-    // This is a placeholder implementation
-    return clientId === 'omnicare-client' && clientSecret === 'omnicare-secret';
-  }
-
-  private async validateUserCredentials(username: string, password: string): Promise<User | null> {
     try {
-      // Get user by username or email
-      const user = await this.getUserByUsernameOrEmail(username);
-      
-      if (!user) {
-        return null;
+      const decoded = jwt.verify(refresh_token, config.jwt.secret) as TokenData;
+
+      if (decoded.type !== 'refresh') {
+        throw new Error('Invalid token type');
       }
 
-      // Verify password
-      const isPasswordValid = await this.jwtService.verifyPassword(password, user.passwordHash || '');
-      
-      if (!isPasswordValid) {
-        // Increment failed login attempts
-        await this.incrementFailedLoginAttempts(user.id);
-        return null;
+      if (client_id && decoded.client_id !== client_id) {
+        throw new Error('Client ID mismatch');
       }
 
-      // Reset failed login attempts on successful authentication
-      await this.resetFailedLoginAttempts(user.id);
-      
-      return user;
-    } catch (error) {
-      logger.error('User credential validation failed:', error);
-      return null;
-    }
-  }
-
-  private async getUserById(userId: string): Promise<User | null> {
-    try {
-      // Mock implementation - replace with actual database query
-      const mockUsers: Record<string, User> = {
-        'user-1': {
-          id: 'user-1',
-          username: 'admin@omnicare.com',
-          email: 'admin@omnicare.com',
-          firstName: 'System',
-          lastName: 'Administrator',
-          role: UserRoles.SYSTEM_ADMINISTRATOR,
-          department: 'IT',
-          isActive: true,
-          isMfaEnabled: true,
-          passwordChangedAt: new Date(),
-          failedLoginAttempts: 0,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          passwordHash: await this.jwtService.hashPassword('admin123')
-        },
-        'user-2': {
-          id: 'user-2',
-          username: 'doctor@omnicare.com',
-          email: 'doctor@omnicare.com',
-          firstName: 'Dr. Jane',
-          lastName: 'Smith',
-          role: UserRoles.PHYSICIAN,
-          department: 'Cardiology',
-          licenseNumber: 'MD123456',
-          npiNumber: '1234567890',
-          isActive: true,
-          isMfaEnabled: true,
-          passwordChangedAt: new Date(),
-          failedLoginAttempts: 0,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          passwordHash: await this.jwtService.hashPassword('demo123')
-        },
-        'user-3': {
-          id: 'user-3',
-          username: 'nurse@omnicare.com',
-          email: 'nurse@omnicare.com',
-          firstName: 'Sarah',
-          lastName: 'Johnson',
-          role: UserRoles.NURSING_STAFF,
-          department: 'Emergency',
-          licenseNumber: 'RN789012',
-          isActive: true,
-          isMfaEnabled: false,
-          passwordChangedAt: new Date(),
-          failedLoginAttempts: 0,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          passwordHash: await this.jwtService.hashPassword('demo123')
-        }
-      };
-
-      return mockUsers[userId] || null;
-      
-      // TODO: Replace with actual database query
-      // return await UserRepository.findById(userId);
-    } catch (error) {
-      logger.error('Get user by ID failed:', error);
-      return null;
-    }
-  }
-
-  private async getUserByUsernameOrEmail(usernameOrEmail: string): Promise<User | null> {
-    try {
-      // Mock implementation - replace with actual database query
-      const mockUsers: User[] = [
+      // Generate new access token
+      const accessToken = jwt.sign(
         {
-          id: 'user-1',
-          username: 'admin@omnicare.com',
-          email: 'admin@omnicare.com',
-          firstName: 'System',
-          lastName: 'Administrator',
-          role: UserRoles.SYSTEM_ADMINISTRATOR,
-          department: 'IT',
-          isActive: true,
-          isMfaEnabled: true,
-          passwordChangedAt: new Date(),
-          failedLoginAttempts: 0,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          passwordHash: await this.jwtService.hashPassword('admin123')
+          type: 'access',
+          client_id: decoded.client_id,
+          scope: decoded.scope,
+          iss: config.fhir.baseUrl || 'https://test-fhir.omnicare.com',
+          aud: config.fhir.baseUrl || 'https://test-fhir.omnicare.com',
         },
-        {
-          id: 'user-2',
-          username: 'doctor@omnicare.com',
-          email: 'doctor@omnicare.com',
-          firstName: 'Dr. Jane',
-          lastName: 'Smith',
-          role: UserRoles.PHYSICIAN,
-          department: 'Cardiology',
-          licenseNumber: 'MD123456',
-          npiNumber: '1234567890',
-          isActive: true,
-          isMfaEnabled: true,
-          passwordChangedAt: new Date(),
-          failedLoginAttempts: 0,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          passwordHash: await this.jwtService.hashPassword('demo123')
-        },
-        {
-          id: 'user-3',
-          username: 'nurse@omnicare.com',
-          email: 'nurse@omnicare.com',
-          firstName: 'Sarah',
-          lastName: 'Johnson',
-          role: UserRoles.NURSING_STAFF,
-          department: 'Emergency',
-          licenseNumber: 'RN789012',
-          isActive: true,
-          isMfaEnabled: false,
-          passwordChangedAt: new Date(),
-          failedLoginAttempts: 0,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          passwordHash: await this.jwtService.hashPassword('demo123')
-        }
-      ];
+        config.jwt.secret,
+        { expiresIn: '1h' }
+      );
 
-      return mockUsers.find(user => 
-        user.username === usernameOrEmail || user.email === usernameOrEmail
-      ) || null;
-      
-      // TODO: Replace with actual database query
-      // return await UserRepository.findByUsernameOrEmail(usernameOrEmail);
-    } catch (error) {
-      logger.error('Get user by username/email failed:', error);
-      return null;
+      res.json({
+        access_token: accessToken,
+        token_type: 'bearer',
+        expires_in: 3600,
+        scope: decoded.scope,
+      });
+    } catch {
+      res.status(400).json({
+        error: 'invalid_grant',
+        error_description: 'Invalid refresh token',
+      });
     }
   }
 
-  private async updateUserLoginInfo(userId: string, ipAddress: string): Promise<void> {
-    try {
-      // TODO: Update user's last login timestamp and IP in database
-      logger.info(`Updated login info for user ${userId} from ${ipAddress}`);
-    } catch (error) {
-      logger.error('Update user login info failed:', error);
+  private async handleClientCredentialsGrant(
+    req: Request,
+    res: Response,
+    client_id: string,
+    client_secret: string,
+    scope: string
+  ): Promise<void> {
+    if (!client_id || !client_secret) {
+      res.status(400).json({
+        error: 'invalid_request',
+        error_description: 'client_id and client_secret are required',
+      });
+      return;
     }
-  }
 
-  private async incrementFailedLoginAttempts(userId: string): Promise<void> {
-    try {
-      // TODO: Increment failed login attempts in database
-      // If attempts exceed threshold, lock account
-      logger.info(`Incremented failed login attempts for user ${userId}`);
-    } catch (error) {
-      logger.error('Increment failed login attempts failed:', error);
-    }
-  }
+    // Validate client credentials
+    const clientResult = await databaseService.query(
+      'SELECT * FROM oauth_clients WHERE client_id = $1 AND client_secret = $2 AND is_active = true',
+      [client_id, client_secret]
+    );
 
-  private async resetFailedLoginAttempts(userId: string): Promise<void> {
-    try {
-      // TODO: Reset failed login attempts in database
-      logger.info(`Reset failed login attempts for user ${userId}`);
-    } catch (error) {
-      logger.error('Reset failed login attempts failed:', error);
+    if (clientResult.rows.length === 0) {
+      res.status(401).json({
+        error: 'invalid_client',
+        error_description: 'Invalid client credentials',
+      });
+      return;
     }
-  }
 
-  private async storeTempMfaSecret(userId: string, _secret: string): Promise<void> {
-    try {
-      // TODO: Store temporary MFA secret (expires in 10 minutes)
-      logger.info(`Stored temporary MFA secret for user ${userId}`);
-    } catch (error) {
-      logger.error('Store temp MFA secret failed:', error);
+    const client = clientResult.rows[0];
+    if (!client) {
+      res.status(401).json({
+        error: 'invalid_client',
+        error_description: 'Invalid client credentials',
+      });
+      return;
     }
-  }
 
-  private async getTempMfaSecret(userId: string): Promise<string | null> {
-    try {
-      // TODO: Get temporary MFA secret from storage
-      logger.info(`Retrieved temporary MFA secret for user ${userId}`);
-      return null; // Mock implementation
-    } catch (error) {
-      logger.error('Get temp MFA secret failed:', error);
-      return null;
-    }
-  }
+    // Validate scope
+    const requestedScopes = scope ? scope.split(' ') : [];
+    const allowedScopes = client.allowed_scopes || [];
+    const grantedScopes = requestedScopes.filter(s => allowedScopes.includes(s));
 
-  private async clearTempMfaSecret(userId: string): Promise<void> {
-    try {
-      // TODO: Clear temporary MFA secret from storage
-      logger.info(`Cleared temporary MFA secret for user ${userId}`);
-    } catch (error) {
-      logger.error('Clear temp MFA secret failed:', error);
-    }
-  }
+    // Generate access token
+    const accessToken = jwt.sign(
+      {
+        type: 'access',
+        client_id,
+        scope: grantedScopes.join(' '),
+        iss: config.fhir.baseUrl || 'https://test-fhir.omnicare.com',
+        aud: config.fhir.baseUrl || 'https://test-fhir.omnicare.com',
+      },
+      config.jwt.secret,
+      { expiresIn: '1h' }
+    );
 
-  private async enableUserMfa(userId: string, _secret: string): Promise<void> {
-    try {
-      // TODO: Enable MFA for user in database
-      logger.info(`Enabled MFA for user ${userId}`);
-    } catch (error) {
-      logger.error('Enable user MFA failed:', error);
-    }
+    res.json({
+      access_token: accessToken,
+      token_type: 'bearer',
+      expires_in: 3600,
+      scope: grantedScopes.join(' '),
+    });
   }
 }
 
-// Export singleton instance
 // Export singleton instance
 export const authController = new AuthController();

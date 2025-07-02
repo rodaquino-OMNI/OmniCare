@@ -80,7 +80,7 @@ export interface OfflineAuditEntry {
   action: string;
   description: string;
   userId?: string;
-  severity: 'INFO' | 'WARNING' | 'ERROR';
+  severity: 'INFO' | 'WARNING' | 'ERROR' | 'CRITICAL';
   deviceId: string;
   metadata?: Record<string, any>;
 }

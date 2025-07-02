@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { notifications } from '@mantine/notifications';
 import { LoginForm } from '../LoginForm';
 import { useAuth } from '@/stores/auth';
-import { renderWithProviders } from '../../../../jest.setup.js';
+import { renderWithProviders } from '@/test-utils/test-providers';
 
 // Mock dependencies
 jest.mock('next/navigation', () => ({
@@ -206,7 +206,7 @@ describe('LoginForm', () => {
         const emailInput = screen.getByLabelText(/email address/i);
         const passwordInput = screen.getByLabelText(/password/i);
         
-        // Check that inputs don't have error states for valid input
+        // Check that inputs don\'t have error states for valid input
         expect(emailInput).not.toHaveAttribute('aria-invalid', 'true');
         expect(passwordInput).not.toHaveAttribute('aria-invalid', 'true');
       });
@@ -224,13 +224,17 @@ describe('LoginForm', () => {
       const passwordInput = screen.getByLabelText(/password/i);
       const submitButton = screen.getByRole('button', { name: /sign in/i });
 
-      await user.type(emailInput, 'doctor@omnicare.com');
-      await user.type(passwordInput, 'password123');
-      await user.click(submitButton);
+      await act(async () => {
+        await user.type(emailInput, 'doctor@omnicare.com');
+        await user.type(passwordInput, 'password123');
+        await user.click(submitButton);
+      });
 
-      expect(mockLogin).toHaveBeenCalledWith({
-        email: 'doctor@omnicare.com',
-        password: 'password123',
+      await waitFor(() => {
+        expect(mockLogin).toHaveBeenCalledWith({
+          email: 'doctor@omnicare.com',
+          password: 'password123',
+        });
       });
     });
 
@@ -244,9 +248,11 @@ describe('LoginForm', () => {
       const passwordInput = screen.getByLabelText(/password/i);
       const submitButton = screen.getByRole('button', { name: /sign in/i });
 
-      await user.type(emailInput, 'doctor@omnicare.com');
-      await user.type(passwordInput, 'password123');
-      await user.click(submitButton);
+      await act(async () => {
+        await user.type(emailInput, 'doctor@omnicare.com');
+        await user.type(passwordInput, 'password123');
+        await user.click(submitButton);
+      });
 
       await waitFor(() => {
         expect(mockPush).toHaveBeenCalledWith('/dashboard');
@@ -263,9 +269,11 @@ describe('LoginForm', () => {
       const passwordInput = screen.getByLabelText(/password/i);
       const submitButton = screen.getByRole('button', { name: /sign in/i });
 
-      await user.type(emailInput, 'doctor@omnicare.com');
-      await user.type(passwordInput, 'password123');
-      await user.click(submitButton);
+      await act(async () => {
+        await user.type(emailInput, 'doctor@omnicare.com');
+        await user.type(passwordInput, 'password123');
+        await user.click(submitButton);
+      });
 
       await waitFor(() => {
         expect(mockNotifications).toHaveBeenCalledWith({
@@ -288,19 +296,23 @@ describe('LoginForm', () => {
       const passwordInput = screen.getByLabelText(/password/i);
       const submitButton = screen.getByRole('button', { name: /sign in/i });
 
-      await user.type(emailInput, 'doctor@omnicare.com');
-      await user.type(passwordInput, 'wrongpassword');
-      await user.click(submitButton);
+      await act(async () => {
+        await user.type(emailInput, 'doctor@omnicare.com');
+        await user.type(passwordInput, 'wrongpassword');
+        await user.click(submitButton);
+      });
 
       await waitFor(() => {
         expect(screen.getByText(errorMessage)).toBeInTheDocument();
       });
 
-      expect(mockNotifications).toHaveBeenCalledWith({
-        title: 'Login Failed',
-        message: errorMessage,
-        color: 'red',
-        icon: expect.any(Object),
+      await waitFor(() => {
+        expect(mockNotifications).toHaveBeenCalledWith({
+          title: 'Login Failed',
+          message: errorMessage,
+          color: 'red',
+          icon: expect.any(Object),
+        });
       });
     });
 
@@ -314,9 +326,11 @@ describe('LoginForm', () => {
       const passwordInput = screen.getByLabelText(/password/i);
       const submitButton = screen.getByRole('button', { name: /sign in/i });
 
-      await user.type(emailInput, 'doctor@omnicare.com');
-      await user.type(passwordInput, 'password123');
-      await user.click(submitButton);
+      await act(async () => {
+        await user.type(emailInput, 'doctor@omnicare.com');
+        await user.type(passwordInput, 'password123');
+        await user.click(submitButton);
+      });
 
       await waitFor(() => {
         expect(screen.getByText('String error')).toBeInTheDocument();
@@ -335,18 +349,22 @@ describe('LoginForm', () => {
       const submitButton = screen.getByRole('button', { name: /sign in/i });
 
       // First submission - error
-      await user.type(emailInput, 'doctor@omnicare.com');
-      await user.type(passwordInput, 'wrongpassword');
-      await user.click(submitButton);
+      await act(async () => {
+        await user.type(emailInput, 'doctor@omnicare.com');
+        await user.type(passwordInput, 'wrongpassword');
+        await user.click(submitButton);
+      });
 
       await waitFor(() => {
         expect(screen.getByText('First error')).toBeInTheDocument();
       });
 
       // Second submission - success
-      await user.clear(passwordInput);
-      await user.type(passwordInput, 'correctpassword');
-      await user.click(submitButton);
+      await act(async () => {
+        await user.clear(passwordInput);
+        await user.type(passwordInput, 'correctpassword');
+        await user.click(submitButton);
+      });
 
       await waitFor(() => {
         expect(screen.queryByText('First error')).not.toBeInTheDocument();
@@ -360,7 +378,10 @@ describe('LoginForm', () => {
       renderWithProviders(<LoginForm />);
 
       const doctorButton = screen.getByRole('button', { name: /doctor/i });
-      await user.click(doctorButton);
+      
+      await act(async () => {
+        await user.click(doctorButton);
+      });
 
       const emailInput = screen.getByLabelText(/email address/i) as HTMLInputElement;
       const passwordInput = screen.getByLabelText(/password/i) as HTMLInputElement;
@@ -374,7 +395,10 @@ describe('LoginForm', () => {
       renderWithProviders(<LoginForm />);
 
       const nurseButton = screen.getByRole('button', { name: /nurse/i });
-      await user.click(nurseButton);
+      
+      await act(async () => {
+        await user.click(nurseButton);
+      });
 
       const emailInput = screen.getByLabelText(/email address/i) as HTMLInputElement;
       const passwordInput = screen.getByLabelText(/password/i) as HTMLInputElement;
@@ -388,7 +412,10 @@ describe('LoginForm', () => {
       renderWithProviders(<LoginForm />);
 
       const adminButton = screen.getByRole('button', { name: /admin/i });
-      await user.click(adminButton);
+      
+      await act(async () => {
+        await user.click(adminButton);
+      });
 
       const emailInput = screen.getByLabelText(/email address/i) as HTMLInputElement;
       const passwordInput = screen.getByLabelText(/password/i) as HTMLInputElement;
@@ -423,10 +450,14 @@ describe('LoginForm', () => {
       const rememberMeCheckbox = screen.getByLabelText(/remember me/i);
       expect(rememberMeCheckbox).not.toBeChecked();
 
-      await user.click(rememberMeCheckbox);
+      await act(async () => {
+        await user.click(rememberMeCheckbox);
+      });
       expect(rememberMeCheckbox).toBeChecked();
 
-      await user.click(rememberMeCheckbox);
+      await act(async () => {
+        await user.click(rememberMeCheckbox);
+      });
       expect(rememberMeCheckbox).not.toBeChecked();
     });
 
@@ -458,13 +489,17 @@ describe('LoginForm', () => {
       const emailInput = screen.getByLabelText(/email address/i);
       const passwordInput = screen.getByLabelText(/password/i);
 
-      await user.type(emailInput, 'doctor@omnicare.com');
-      await user.type(passwordInput, 'password123');
-      await user.keyboard('{Enter}');
+      await act(async () => {
+        await user.type(emailInput, 'doctor@omnicare.com');
+        await user.type(passwordInput, 'password123');
+        await user.keyboard('{Enter}');
+      });
 
-      expect(mockLogin).toHaveBeenCalledWith({
-        email: 'doctor@omnicare.com',
-        password: 'password123',
+      await waitFor(() => {
+        expect(mockLogin).toHaveBeenCalledWith({
+          email: 'doctor@omnicare.com',
+          password: 'password123',
+        });
       });
     });
   });
@@ -512,19 +547,23 @@ describe('LoginForm', () => {
       const passwordInput = screen.getByLabelText(/password/i);
       const submitButton = screen.getByRole('button', { name: /sign in/i });
 
-      await user.type(emailInput, 'doctor@omnicare.com');
-      await user.type(passwordInput, 'password123');
-      await user.click(submitButton);
+      await act(async () => {
+        await user.type(emailInput, 'doctor@omnicare.com');
+        await user.type(passwordInput, 'password123');
+        await user.click(submitButton);
+      });
 
       await waitFor(() => {
         expect(screen.getByText('Network error')).toBeInTheDocument();
       });
 
-      expect(mockNotifications).toHaveBeenCalledWith({
-        title: 'Login Failed',
-        message: 'Network error',
-        color: 'red',
-        icon: expect.any(Object),
+      await waitFor(() => {
+        expect(mockNotifications).toHaveBeenCalledWith({
+          title: 'Login Failed',
+          message: 'Network error',
+          color: 'red',
+          icon: expect.any(Object),
+        });
       });
     });
 
@@ -539,9 +578,11 @@ describe('LoginForm', () => {
       const submitButton = screen.getByRole('button', { name: /sign in/i });
 
       // Trigger error
-      await user.type(emailInput, 'doctor@omnicare.com');
-      await user.type(passwordInput, 'wrongpassword');
-      await user.click(submitButton);
+      await act(async () => {
+        await user.type(emailInput, 'doctor@omnicare.com');
+        await user.type(passwordInput, 'wrongpassword');
+        await user.click(submitButton);
+      });
 
       await waitFor(() => {
         expect(screen.getByText('Login error')).toBeInTheDocument();
@@ -549,7 +590,10 @@ describe('LoginForm', () => {
 
       // Clear error by submitting again (which calls setError(null))
       mockLogin.mockResolvedValue(undefined);
-      await user.click(submitButton);
+      
+      await act(async () => {
+        await user.click(submitButton);
+      });
 
       await waitFor(() => {
         expect(screen.queryByText('Login error')).not.toBeInTheDocument();

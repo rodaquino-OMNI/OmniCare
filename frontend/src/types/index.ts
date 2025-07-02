@@ -1,15 +1,10 @@
 // Core healthcare types for OmniCare EMR
-export interface User {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: UserRoleShort; // Using the short form for frontend
-  permissions: Permission[];
-  department?: string;
-  title?: string;
-  avatar?: string;
-}
+
+// Import shared types
+import type { FrontendUser, Permission as SharedPermission } from '../../../../shared/types';
+
+// Re-export User type using FrontendUser from shared types
+export type User = FrontendUser;
 
 // Re-export unified role types for frontend use
 export type { 
@@ -34,17 +29,8 @@ export {
   UserRoles
 } from '@/types/unified-user-roles';
 
-// For backward compatibility, alias UserRoleShort as UserRoleType
-import type { UserRoleShort } from '@/types/unified-user-roles';
-
-export interface Permission {
-  id: string;
-  name: string;
-  description: string;
-  resource: string;
-  action: string;
-  conditions?: Record<string, any>;
-}
+// Re-export Permission interface from shared types
+export type Permission = SharedPermission;
 
 export interface Patient {
   id: string;
@@ -60,6 +46,7 @@ export interface Patient {
   allergies: Allergy[];
   insurance: Insurance[];
   status: 'active' | 'inactive' | 'deceased';
+  lastVisit?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -233,7 +220,7 @@ export interface VitalSigns {
     unit: 'cm' | 'in';
   };
   bmi?: number;
-  painScore?: number; // ResourceHistoryTable-10 scale
+  painScore?: number; // 0-10 scale
 }
 
 export interface ClinicalNote {
@@ -345,3 +332,6 @@ export interface NotificationConfig {
 
 // Export all administrative types
 export * from './administrative';
+
+// Export all sync types
+export * from './sync';

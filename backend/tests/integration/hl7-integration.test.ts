@@ -1,8 +1,9 @@
-import { hl7v2ParserService } from '../../src/services/integration/hl7v2/hl7v2-parser.service';
-import { fhirResourcesService } from '../../src/services/fhir-resources.service';
-import { medplumService } from '../../src/services/medplum.service';
-import { HL7v2Message, HL7v2AckCode } from '../../src/services/integration/types/hl7v2.types';
 import { Patient, Observation } from '@medplum/fhirtypes';
+
+import { fhirResourcesService } from '../../src/services/fhir-resources.service';
+import { hl7v2ParserService } from '../../src/services/integration/hl7v2/hl7v2-parser.service';
+import { HL7v2Message, HL7v2AckCode } from '../../src/services/integration/types/hl7v2.types';
+import { medplumService } from '../../src/services/medplum.service';
 import logger from '../../src/utils/logger';
 
 /**
@@ -14,7 +15,7 @@ describe('HL7 Message Processing Integration', () => {
 
   beforeAll(async () => {
     await medplumService.initialize();
-  });
+  }, 30000);
 
   describe('HL7 v2 Message Parsing', () => {
     test('should parse ADT^A01 (Patient Admission) message', () => {
@@ -362,5 +363,5 @@ PID|1||${i.toString().padStart(9, '0')}|||DOE^PATIENT${i}|||M|`
         logger.warn('Failed to cleanup test patient:', errorMessage);
       }
     }
-  });
+  }, 30000);
 });

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Badge, Tooltip, Progress, Text, Group, Stack, Paper } from '@mantine/core';
-import { WifiOff, Wifi, CloudOff, Cloud, AlertCircle } from 'lucide-react';
+import { IconWifiOff, IconWifi, IconCloudOff, IconCloud, IconAlertCircle } from '@tabler/icons-react';
 import { useServiceWorker } from '@/lib/service-worker';
 import { useOfflineFHIR } from '@/services/offline-fhir.service';
 
@@ -65,9 +65,9 @@ export function OfflineIndicator() {
         radius="md"
         leftSection={
           isOnline ? (
-            <Cloud size={16} />
+            <IconCloud size={16} />
           ) : (
-            <CloudOff size={16} />
+            <IconCloudOff size={16} />
           )
         }
         style={{ cursor: 'pointer' }}
@@ -95,9 +95,9 @@ export function OfflineIndicator() {
             <Group justify="space-between">
               <Group gap="xs">
                 {isOnline ? (
-                  <Wifi size={20} color="var(--mantine-color-green-6)" />
+                  <IconWifi size={20} color="var(--mantine-color-green-6)" />
                 ) : (
-                  <WifiOff size={20} color="var(--mantine-color-orange-6)" />
+                  <IconWifiOff size={20} color="var(--mantine-color-orange-6)" />
                 )}
                 <Text fw={600} size="sm">
                   {isOnline ? 'Connected' : 'Offline Mode'}
@@ -111,7 +111,7 @@ export function OfflineIndicator() {
             {!isOnline && (
               <Paper bg="orange." p="xs" radius="sm">
                 <Group gap="xs">
-                  <AlertCircle size={16} color="var(--mantine-color-orange-6)" />
+                  <IconAlertCircle size={16} color="var(--mantine-color-orange-6)" />
                   <Text size="xs" c="orange.8">
                     Changes will sync when reconnected
                   </Text>

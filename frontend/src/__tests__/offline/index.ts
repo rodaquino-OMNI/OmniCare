@@ -2,51 +2,30 @@
 // This file provides a centralized export for all offline testing utilities
 
 // Import everything we need first
-import { setupOfflineTests, offlineTestConfig } from './offline-test.config';
-import { 
-  ServiceWorkerTestUtils, 
-  setupServiceWorkerTests as setupSW,
-  mockServiceWorkerLifecycle,
-  createMockFetchEvent 
+import { setupOfflineTests } from './offline-test.config';
+import ServiceWorkerTestUtils, { 
+  setupServiceWorkerTests as setupSW
 } from './service-worker-test-utils';
 import { 
   NetworkSimulator,
   setupNetworkSimulation,
-  createOfflineAwareFetch,
-  RetryTester,
-  IndexedDBMock,
-  waitForOnline,
-  waitForOffline
+  simulateSlowNetwork,
+  simulateUnstableNetwork
 } from './network-simulation-utils';
 import {
   SyncConflictSimulator,
-  createSyncTestScenario,
-  defaultMergeStrategies,
-  mockConflictResolutionUI,
-  type SyncConflict,
-  type SyncOperation,
-  type MergeStrategy
+  defaultMergeStrategies
 } from './sync-conflict-test-utils';
 
 // Re-export everything (excluding conflicting names)
-export {
-  ServiceWorkerTestUtils,
-  mockServiceWorkerLifecycle,
-  createMockFetchEvent,
-  type MockServiceWorkerRegistration,
-  type MockServiceWorker,
-  type ExtendableEvent,
-  type FetchEvent,
-  type ExtendableMessageEvent,
-  type SyncManager
-} from './service-worker-test-utils';
+export { default as ServiceWorkerTestUtils } from './service-worker-test-utils';
 
 export * from './network-simulation-utils';
 export * from './sync-conflict-test-utils';
 export * from './offline-test.config';
 
 // Export setupServiceWorkerTests with explicit name to avoid conflicts
-export { setupServiceWorkerTests as setupServiceWorkerTests } from './service-worker-test-utils';
+export { setupServiceWorkerTests } from './service-worker-test-utils';
 
 // Combined setup function for comprehensive offline testing
 export function setupComprehensiveOfflineTests() {
@@ -72,8 +51,8 @@ export function createOfflineTestEnvironment() {
     // Convenience methods
     goOffline: () => NetworkSimulator.goOffline(),
     goOnline: () => NetworkSimulator.goOnline(),
-    simulateSlowNetwork: () => NetworkSimulator.simulateSlowConnection(),
-    simulateFastNetwork: () => NetworkSimulator.simulateFastConnection(),
+    simulateSlowNetwork: () => simulateSlowNetwork(),
+    simulateUnstableNetwork: () => simulateUnstableNetwork(),
     
     // Cleanup
     cleanup: () => {
@@ -91,7 +70,7 @@ export const testDataFactories = {
     mrn: `MRN${Date.now()}`,
     firstName: 'Test',
     lastName: 'Patient',
-    dateOfBirth: '199-1-1',
+    dateOfBirth: '1990-01-01',
     gender: 'other' as const,
     status: 'active' as const,
     createdAt: new Date().toISOString(),
@@ -130,7 +109,7 @@ export const testDataFactories = {
     type,
     resource,
     timestamp: new Date().toISOString(),
-    retries: ResourceHistoryTable,
+    retries: 0,
     status: 'pending' as const
   })
 };

@@ -3,7 +3,6 @@
 import { useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { serviceWorkerManager } from '@/lib/service-worker';
-import { showNotification } from '@mantine/notifications';
 
 interface ServiceWorkerProviderProps {
   children: ReactNode;
@@ -20,24 +19,24 @@ export function ServiceWorkerProvider({ children }: ServiceWorkerProviderProps) 
     // Register service worker
     serviceWorkerManager.register({
       onUpdate: () => {
-        console.log('[ServiceWorker] Update available');
+        // Service worker update available
       },
       onOffline: () => {
-        console.log('[ServiceWorker] App is offline');
+        // App is offline
       },
       onOnline: () => {
-        console.log('[ServiceWorker] App is back online');
+        // App is back online
         // Refresh data when coming back online
         router.refresh();
       },
       onBackgroundSync: () => {
-        console.log('[ServiceWorker] Background sync completed');
+        // Background sync completed
         // Refresh current page data
         router.refresh();
       },
     }).then((success) => {
       if (success) {
-        console.log('[ServiceWorker] Successfully registered');
+        // Service worker successfully registered
       }
     });
 

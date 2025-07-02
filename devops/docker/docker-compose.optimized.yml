@@ -1,0 +1,399 @@
+# Optimized Docker Compose Configuration for OmniCare
+# Focused on performance, fast startup times, and efficient resource usage
+
+version: '3.8'
+
+x-common-variables: &common-variables
+  NODE_ENV: production
+  TZ: UTC
+
+x-health-check: &default-healthcheck
+  interval: 15s
+  timeout: 5s
+  retries: 3
+  start_period: 30s
+
+x-restart-policy: &restart-policy
+  restart_policy:
+    condition: on-failure
+    delay: 5s
+    max_attempts: 3
+    window: 120s
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # PostgreSQL with performance tuning
+  database:
+    image: postgres:15-alpine
+    container_name: omnicare-db-optimized
+    restart: unless-stopped
+    environment:
+      <<: *common-variables
+      POSTGRES_DB: omnicare_emr
+      POSTGRES_USER: omnicare_user
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+      # Performance tuning
+      POSTGRES_INITDB_ARGS: "--data-checksums --wal-segsize=32"
+    secrets:
+      - db_password
+    command: |
+      postgres
+      -c shared_buffers=256MB
+      -c effective_cache_size=1GB
+      -c maintenance_work_mem=64MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c work_mem=4MB
+      -c min_wal_size=1GB
+      -c max_wal_size=4GB
+      -c max_connections=200
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - postgres_logs:/var/log/postgresql
+    networks:
+      - backend-tier
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U omnicare_user -d omnicare_emr"]
+      <<: *default-healthcheck
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+
+  # Redis with optimized configuration
+  redis:
+    image: redis:7-alpine
+    container_name: omnicare-redis-optimized
+    restart: unless-stopped
+    environment:
+      <<: *common-variables
+    command: |
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --rdbcompression yes
+      --rdbchecksum yes
+      --tcp-keepalive 300
+      --timeout 300
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend-tier
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      <<: *default-healthcheck
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.25'
+
+  # Backend service - optimized for fast startup
+  backend:
+    build:
+      context: ../../
+      dockerfile: devops/docker/backend/Dockerfile
+      target: production
+      cache_from:
+        - omnicare-backend:latest
+      args:
+        NODE_OPTIONS: "--max-old-space-size=2048"
+    image: omnicare-backend:optimized
+    container_name: omnicare-backend-optimized
+    restart: unless-stopped
+    environment:
+      <<: *common-variables
+      PORT: 3001
+      DATABASE_URL_FILE: /run/secrets/database_url
+      REDIS_URL_FILE: /run/secrets/redis_url
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      # Performance optimizations
+      NODE_OPTIONS: "--max-old-space-size=1024 --optimize-for-size"
+      UV_THREADPOOL_SIZE: 4
+      # Fast startup
+      DISABLE_MONGOOSE_AUTOINDEX: true
+      SKIP_MIGRATIONS_ON_STARTUP: false
+    secrets:
+      - database_url
+      - redis_url
+      - jwt_secret
+    volumes:
+      - backend_logs:/app/logs
+    networks:
+      - backend-tier
+      - frontend-tier
+    ports:
+      - "3001:3001"
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/health"]
+      <<: *default-healthcheck
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+      <<: *restart-policy
+
+  # Frontend service - optimized for performance
+  frontend:
+    build:
+      context: ../../
+      dockerfile: devops/docker/frontend/Dockerfile
+      target: production
+      cache_from:
+        - omnicare-frontend:latest
+      args:
+        NODE_OPTIONS: "--max-old-space-size=2048"
+        NEXT_TELEMETRY_DISABLED: 1
+    image: omnicare-frontend:optimized
+    container_name: omnicare-frontend-optimized
+    restart: unless-stopped
+    environment:
+      <<: *common-variables
+      NEXT_PUBLIC_API_URL: http://backend:3001
+      NEXT_TELEMETRY_DISABLED: 1
+      # Performance optimizations
+      NODE_OPTIONS: "--max-old-space-size=512"
+      HOSTNAME: "0.0.0.0"
+      PORT: 3000
+    networks:
+      - frontend-tier
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      <<: *default-healthcheck
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+      <<: *restart-policy
+
+  # Nginx reverse proxy with caching
+  nginx:
+    image: nginx:alpine
+    container_name: omnicare-nginx-optimized
+    restart: unless-stopped
+    environment:
+      <<: *common-variables
+    volumes:
+      - ./nginx/nginx.optimized.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/cache:/var/cache/nginx
+      - ./ssl-certs:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    networks:
+      - frontend-tier
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - frontend
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      <<: *default-healthcheck
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
+        reservations:
+          memory: 64M
+          cpus: '0.1'
+
+  # Monitoring - Lightweight metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: omnicare-prometheus-optimized
+    restart: unless-stopped
+    environment:
+      <<: *common-variables
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'  # Reduced retention for optimization
+      - '--storage.tsdb.retention.size=1GB'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--storage.tsdb.min-block-duration=2h'
+      - '--storage.tsdb.max-block-duration=2h'
+    volumes:
+      - ./monitoring/prometheus.optimized.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - monitoring-tier
+    ports:
+      - "9090:9090"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      <<: *default-healthcheck
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  # Grafana for dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: omnicare-grafana-optimized
+    restart: unless-stopped
+    environment:
+      <<: *common-variables
+      GF_SECURITY_ADMIN_PASSWORD_FILE: /run/secrets/grafana_password
+      GF_INSTALL_PLUGINS: ""  # No plugins for faster startup
+      GF_ANALYTICS_REPORTING_ENABLED: false
+      GF_ANALYTICS_CHECK_FOR_UPDATES: false
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_LOG_LEVEL: warn
+    secrets:
+      - grafana_password
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - monitoring-tier
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      <<: *default-healthcheck
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+
+# Optimized Docker secrets
+secrets:
+  db_password:
+    external: true
+    name: omnicare_db_password
+  database_url:
+    external: true 
+    name: omnicare_database_url
+  redis_url:
+    external: true
+    name: omnicare_redis_url
+  jwt_secret:
+    external: true
+    name: omnicare_jwt_secret
+  grafana_password:
+    external: true
+    name: omnicare_grafana_password
+
+# Optimized volumes with performance settings
+volumes:
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/omnicare/data/postgres
+  postgres_logs:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=100m,uid=999,gid=999
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/omnicare/data/redis
+  backend_logs:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=200m,uid=1001,gid=1001
+  nginx_logs:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=100m,uid=101,gid=101
+  prometheus_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/omnicare/data/prometheus
+  grafana_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/omnicare/data/grafana
+
+# Optimized networks
+networks:
+  backend-tier:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.1.0/24
+  frontend-tier:
+    driver: bridge  
+    ipam:
+      config:
+        - subnet: 172.20.2.0/24
+  monitoring-tier:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.3.0/24

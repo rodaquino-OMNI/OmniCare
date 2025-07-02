@@ -5,7 +5,10 @@
 
 /// <reference lib="webworker" />
 import '@/types/service-worker';
-import { offlineSyncService, SyncOptions, SyncProgress, SyncError } from '@/services/offline-sync.service';
+import OfflineSyncService, { SyncOptions, SyncProgress, SyncError } from '@/services/offline-sync.service';
+
+// Create instance for worker context
+const offlineSyncService = OfflineSyncService.getInstance();
 
 // Error type utilities
 interface ErrorLike {
@@ -22,7 +25,7 @@ function isErrorLike(error: unknown): error is ErrorLike {
     typeof error === 'object' &&
     error !== null &&
     'message' in error &&
-    typeof (error as any).message === 'string'
+    typeof (error as { message: unknown }).message === 'string'
   );
 }
 
@@ -54,13 +57,13 @@ interface WorkerMessage {
     | 'cleanup'
     | 'queue-operation'
     | 'stop';
-  payload?: any;
+  payload?: unknown;
 }
 
 interface WorkerResponse {
   type: string;
   success: boolean;
-  data?: any;
+  data?: unknown;
   error?: string;
 }
 
@@ -188,7 +191,7 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
         break;
 
       case 'get-conflicts':
-        const { resolved = false } = payload || {};
+        const { resolved = false } = (payload as { resolved?: boolean }) || {};
         const conflicts = await offlineSyncService.getConflicts(resolved);
         response = {
           type: 'get-conflicts',
@@ -198,7 +201,7 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
         break;
 
       case 'resolve-conflict':
-        const { conflictId, resolution, resolvedBy } = payload;
+        const { conflictId, resolution, resolvedBy } = payload as any;
         await offlineSyncService.resolveConflict(conflictId, resolution, resolvedBy);
         response = {
           type: 'resolve-conflict',
@@ -224,7 +227,7 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
         break;
 
       case 'import-data':
-        await offlineSyncService.importSyncData(payload);
+        await offlineSyncService.importSyncData(payload as any);
         response = {
           type: 'import-data',
           success: true
@@ -232,7 +235,7 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
         break;
 
       case 'cleanup':
-        const { daysToKeep = 30 } = payload || {};
+        const { daysToKeep = 30 } = (payload as any) || {};
         await offlineSyncService.cleanup(daysToKeep);
         response = {
           type: 'cleanup',
@@ -241,7 +244,7 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
         break;
 
       case 'queue-operation':
-        const { operation, resource, options } = payload;
+        const { operation, resource, options } = payload as any;
         await offlineSyncService.queueOperation(operation, resource, options);
         response = {
           type: 'queue-operation',
@@ -279,11 +282,16 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
 /**
  * Handle sync events from service worker sync API
  */
-self.addEventListener('sync', async (event: any) => {
-  console.log('Background sync event received:', event.tag);
+interface SyncEvent extends ExtendableEvent {
+  tag: string;
+}
 
-  if (event.tag === 'omnicare-sync') {
-    event.waitUntil(
+self.addEventListener('sync', async (event: Event) => {
+  const syncEvent = event as SyncEvent;
+  console.log('Background sync event received:', syncEvent.tag);
+
+  if (syncEvent.tag === 'omnicare-sync') {
+    syncEvent.waitUntil(
       (async () => {
         try {
           if (!isInitialized) {
@@ -319,11 +327,16 @@ self.addEventListener('sync', async (event: any) => {
 /**
  * Handle periodic background sync
  */
-self.addEventListener('periodicsync', async (event: any) => {
-  console.log('Periodic sync event received:', event.tag);
+interface PeriodicSyncEvent extends ExtendableEvent {
+  tag: string;
+}
 
-  if (event.tag === 'omnicare-periodic-sync') {
-    event.waitUntil(
+self.addEventListener('periodicsync', async (event: Event) => {
+  const periodicSyncEvent = event as PeriodicSyncEvent;
+  console.log('Periodic sync event received:', periodicSyncEvent.tag);
+
+  if (periodicSyncEvent.tag === 'omnicare-periodic-sync') {
+    periodicSyncEvent.waitUntil(
       (async () => {
         try {
           if (!isInitialized) {

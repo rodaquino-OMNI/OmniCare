@@ -1,14 +1,14 @@
 import { EventEmitter } from 'events';
 
-import { Subscription, Bundle } from '@medplum/fhirtypes';
+import { Subscription, Bundle, Resource } from '@medplum/fhirtypes';
 import WebSocket from 'ws';
 
 import { medplumService } from './medplum.service';
 
 import config from '@/config';
 import { SubscriptionConfig } from '@/types/fhir';
-import logger from '@/utils/logger';
 import { getErrorMessage } from '@/utils/error.utils';
+import logger from '@/utils/logger';
 
 interface ActiveSubscription {
   id: string;
@@ -17,7 +17,7 @@ interface ActiveSubscription {
     type: string;
     endpoint?: string;
     payload?: string;
-    headers?: Record<string, string>;
+    header?: string[];
   };
   status: 'active' | 'off' | 'error';
   clientInfo?: {
@@ -28,6 +28,30 @@ interface ActiveSubscription {
   lastNotification?: Date;
   errorCount: number;
   createdAt: Date;
+}
+
+interface WebSocketMessage {
+  type: string;
+  [key: string]: unknown;
+}
+
+interface SubscribeMessage extends WebSocketMessage {
+  type: 'subscribe';
+  criteria: string;
+  payload?: string;
+  reason?: string;
+  userId?: string;
+}
+
+interface UnsubscribeMessage extends WebSocketMessage {
+  type: 'unsubscribe';
+  subscriptionId: string;
+}
+
+interface ClientInfo {
+  userId?: string;
+  clientId?: string;
+  connection?: WebSocket;
 }
 
 /**
@@ -136,10 +160,10 @@ export class SubscriptionsService extends EventEmitter {
 
       switch (message.type) {
         case 'subscribe':
-          this.handleWebSocketSubscribe(clientId, message);
+          this.handleWebSocketSubscribe(clientId, message as SubscribeMessage);
           break;
         case 'unsubscribe':
-          this.handleWebSocketUnsubscribe(clientId, message);
+          this.handleWebSocketUnsubscribe(clientId, message as UnsubscribeMessage);
           break;
         case 'ping':
           this.sendWebSocketMessage(clientId, { type: 'pong', timestamp: new Date().toISOString() });
@@ -160,7 +184,7 @@ export class SubscriptionsService extends EventEmitter {
   /**
    * Handle WebSocket subscription request
    */
-  private async handleWebSocketSubscribe(clientId: string, message: any): Promise<void> {
+  private async handleWebSocketSubscribe(clientId: string, message: SubscribeMessage): Promise<void> {
     try {
       const subscriptionConfig: SubscriptionConfig = {
         criteria: message.criteria,
@@ -169,7 +193,7 @@ export class SubscriptionsService extends EventEmitter {
           payload: message.payload || 'application/fhir+json',
         },
         reason: message.reason || 'WebSocket subscription',
-        status: 'active',
+        status: 'active' as 'requested' | 'active' | 'error' | 'off',
       };
 
       const subscriptionId = await this.createSubscription(subscriptionConfig, {
@@ -199,7 +223,7 @@ export class SubscriptionsService extends EventEmitter {
   /**
    * Handle WebSocket unsubscribe request
    */
-  private async handleWebSocketUnsubscribe(clientId: string, message: any): Promise<void> {
+  private async handleWebSocketUnsubscribe(clientId: string, message: UnsubscribeMessage): Promise<void> {
     try {
       await this.removeSubscription(message.subscriptionId);
       
@@ -223,7 +247,7 @@ export class SubscriptionsService extends EventEmitter {
   /**
    * Send WebSocket message to client
    */
-  private sendWebSocketMessage(clientId: string, message: any): void {
+  private sendWebSocketMessage(clientId: string, message: WebSocketMessage): void {
     const ws = this.connectedClients.get(clientId);
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(message));
@@ -239,7 +263,7 @@ export class SubscriptionsService extends EventEmitter {
    */
   async createSubscription(
     subscriptionConfig: SubscriptionConfig,
-    clientInfo?: any
+    clientInfo?: ClientInfo
   ): Promise<string> {
     try {
       // Create FHIR Subscription resource
@@ -249,7 +273,7 @@ export class SubscriptionsService extends EventEmitter {
         reason: subscriptionConfig.reason,
         criteria: subscriptionConfig.criteria,
         channel: {
-          type: subscriptionConfig.channel.type as any,
+          type: subscriptionConfig.channel.type as 'rest-hook' | 'websocket' | 'message' | 'email',
           endpoint: subscriptionConfig.channel.endpoint,
           payload: subscriptionConfig.channel.payload,
           header: subscriptionConfig.channel.header,
@@ -349,7 +373,7 @@ export class SubscriptionsService extends EventEmitter {
     resourceType: string,
     resourceId: string,
     operation: 'create' | 'update' | 'delete',
-    resource?: any
+    resource?: Resource
   ): Promise<void> {
     try {
       const resourcePath = `${resourceType}/${resourceId}`;
@@ -425,7 +449,7 @@ export class SubscriptionsService extends EventEmitter {
     resourceType: string,
     resourceId: string,
     operation: string,
-    resource: any,
+    resource: Resource | undefined,
     subscriptions: ActiveSubscription[]
   ): Promise<Bundle> {
     const bundle: Bundle = {
@@ -561,8 +585,13 @@ export class SubscriptionsService extends EventEmitter {
     };
 
     // Add custom headers if configured
-    if (subscription.channel.headers) {
-      Object.assign(headers, subscription.channel.headers);
+    if (subscription.channel.header) {
+      subscription.channel.header.forEach(header => {
+        const [key, value] = header.split(': ');
+        if (key && value) {
+          headers[key] = value;
+        }
+      });
     }
 
     await axios.post(subscription.channel.endpoint, bundle, {
@@ -690,7 +719,7 @@ export class SubscriptionsService extends EventEmitter {
   /**
    * Get health status
    */
-  async getHealthStatus(): Promise<{ status: string; details: any }> {
+  async getHealthStatus(): Promise<{ status: string; details: Record<string, unknown> }> {
     try {
       const details = {
         websocketServer: {

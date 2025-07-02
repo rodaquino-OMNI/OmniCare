@@ -21,40 +21,20 @@ import { getErrorMessage, hasMessage, isAPIError, isError } from '@/utils/error.
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 const FHIR_BASE_URL = `${API_BASE_URL}/fhir/R4`;
 
-// Request/Response interfaces
-interface FHIRSearchParams {
-  [key: string]: string | number | boolean | undefined;
-  _count?: number;
-  _offset?: number;
-  _sort?: string;
-  _include?: string;
-  _revinclude?: string;
-  _elements?: string;
-  _summary?: string;
-  _total?: string;
-}
+// Import shared FHIR types from backend for consistency
+import type { 
+  FHIRSearchParams as BackendFHIRSearchParams,
+  FHIRResponse as BackendFHIRResponse,
+  ValidationResult as BackendValidationResult
+} from '../types/fhir-shared';
 
-interface FHIRResponse<T = any> {
-  data: T;
-  status: number;
-  headers: Record<string, string>;
-}
+// Use backend types for consistency
+type FHIRSearchParams = BackendFHIRSearchParams;
+type FHIRResponse<T = any> = BackendFHIRResponse<T>;
+type ValidationResult = BackendValidationResult;
 
-interface ValidationResult {
-  valid: boolean;
-  errors: Array<{
-    path: string;
-    message: string;
-    code: string;
-    severity: string;
-  }>;
-  warnings: Array<{
-    path: string;
-    message: string;
-    code: string;
-    severity: string;
-  }>;
-}
+// Re-export for backward compatibility
+export type { FHIRSearchParams, FHIRResponse, ValidationResult };
 
 interface HealthStatus {
   status: 'UP' | 'DOWN';

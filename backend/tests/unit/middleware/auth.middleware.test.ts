@@ -1,8 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { authMiddleware, requirePermissions, requireRole } from '../../../src/middleware/auth.middleware';
+
 import config from '../../../src/config';
+import { authMiddleware, requirePermissions, requireRole } from '../../../src/middleware/auth.middleware';
+import { Permission } from '../../../src/types/auth.types';
 import logger from '../../../src/utils/logger';
+import { createMockUser } from '../../test-helpers';
 
 // Mock dependencies
 jest.mock('jsonwebtoken');
@@ -82,7 +85,7 @@ describe('Auth Middleware', () => {
       const decodedPayload = {
         sub: 'user-123',
         username: 'testuser',
-        role: 'nurse',
+        role: 'nursing_staff',
         permissions: ['patient:read'],
         type: 'access'
       };
@@ -298,16 +301,16 @@ describe('Auth Middleware', () => {
 
   describe('requirePermissions middleware', () => {
     beforeEach(() => {
-      mockRequest.user = {
+      mockRequest.user = createMockUser({
         id: 'user-123',
         username: 'testuser',
         role: 'physician',
-        permissions: ['patient:read', 'patient:write', 'encounter:read']
-      };
+        permissions: [Permission.VIEW_PATIENT_RECORDS, Permission.EDIT_PATIENT_RECORDS, Permission.VIEW_CLINICAL_NOTES]
+      });
     });
 
     it('should allow access with required permissions', async () => {
-      const middleware = requirePermissions(['patient:read']);
+      const middleware = requirePermissions(Permission.VIEW_PATIENT_RECORDS);
 
       await middleware(
         mockRequest as Request,
@@ -319,7 +322,7 @@ describe('Auth Middleware', () => {
     });
 
     it('should allow access with multiple required permissions', async () => {
-      const middleware = requirePermissions(['patient:read', 'encounter:read']);
+      const middleware = requirePermissions(Permission.VIEW_PATIENT_RECORDS, Permission.VIEW_CLINICAL_NOTES);
 
       await middleware(
         mockRequest as Request,
@@ -331,7 +334,7 @@ describe('Auth Middleware', () => {
     });
 
     it('should deny access without required permissions', async () => {
-      const middleware = requirePermissions(['admin:write']);
+      const middleware = requirePermissions(Permission.MANAGE_USERS);
 
       await middleware(
         mockRequest as Request,
@@ -343,14 +346,14 @@ describe('Auth Middleware', () => {
       expect(mockResponse.json).toHaveBeenCalledWith({
         error: 'forbidden',
         message: 'Insufficient permissions',
-        required: ['admin:write'],
-        missing: ['admin:write']
+        required: [Permission.MANAGE_USERS],
+        missing: [Permission.MANAGE_USERS]
       });
       expect(mockNext).not.toHaveBeenCalled();
     });
 
     it('should deny access with partial permissions', async () => {
-      const middleware = requirePermissions(['patient:read', 'admin:write']);
+      const middleware = requirePermissions(Permission.VIEW_PATIENT_RECORDS, Permission.MANAGE_USERS);
 
       await middleware(
         mockRequest as Request,
@@ -362,20 +365,20 @@ describe('Auth Middleware', () => {
       expect(mockResponse.json).toHaveBeenCalledWith({
         error: 'forbidden',
         message: 'Insufficient permissions',
-        required: ['patient:read', 'admin:write'],
-        missing: ['admin:write']
+        required: [Permission.VIEW_PATIENT_RECORDS, Permission.MANAGE_USERS],
+        missing: [Permission.MANAGE_USERS]
       });
     });
 
     it('should handle user without permissions array', async () => {
-      mockRequest.user = {
+      mockRequest.user = createMockUser({
         id: 'user-123',
         username: 'testuser',
-        role: 'guest'
-        // No permissions array
-      };
+        role: 'guest',
+        permissions: undefined
+      }) as any;
 
-      const middleware = requirePermissions(['patient:read']);
+      const middleware = requirePermissions(Permission.VIEW_PATIENT_RECORDS);
 
       await middleware(
         mockRequest as Request,
@@ -387,15 +390,15 @@ describe('Auth Middleware', () => {
       expect(mockResponse.json).toHaveBeenCalledWith({
         error: 'forbidden',
         message: 'Insufficient permissions',
-        required: ['patient:read'],
-        missing: ['patient:read']
+        required: [Permission.VIEW_PATIENT_RECORDS],
+        missing: [Permission.VIEW_PATIENT_RECORDS]
       });
     });
 
     it('should handle unauthenticated user', async () => {
       mockRequest.user = undefined;
 
-      const middleware = requirePermissions(['patient:read']);
+      const middleware = requirePermissions(Permission.VIEW_PATIENT_RECORDS);
 
       await middleware(
         mockRequest as Request,
@@ -411,7 +414,7 @@ describe('Auth Middleware', () => {
     });
 
     it('should log permission denied events', async () => {
-      const middleware = requirePermissions(['admin:delete']);
+      const middleware = requirePermissions(Permission.MANAGE_USERS);
 
       await middleware(
         mockRequest as Request,
@@ -425,8 +428,7 @@ describe('Auth Middleware', () => {
           userId: 'user-123',
           username: 'testuser',
           role: 'physician',
-          requiredPermissions: ['admin:delete'],
-          userPermissions: ['patient:read', 'patient:write', 'encounter:read']
+          requiredPermissions: [Permission.MANAGE_USERS]
         })
       );
     });
@@ -434,12 +436,12 @@ describe('Auth Middleware', () => {
 
   describe('requireRole middleware', () => {
     beforeEach(() => {
-      mockRequest.user = {
+      mockRequest.user = createMockUser({
         id: 'user-123',
         username: 'testuser',
         role: 'physician',
         permissions: ['patient:read', 'patient:write']
-      };
+      });
     });
 
     it('should allow access with required role', async () => {
@@ -479,7 +481,7 @@ describe('Auth Middleware', () => {
       expect(mockResponse.json).toHaveBeenCalledWith({
         error: 'forbidden',
         message: 'Insufficient role privileges',
-        required: ['admin'],
+        required: ['administrative_staff'],
         current: 'physician'
       });
     });
@@ -503,11 +505,11 @@ describe('Auth Middleware', () => {
     });
 
     it('should handle user without role', async () => {
-      mockRequest.user = {
+      mockRequest.user = createMockUser({
         id: 'user-123',
-        username: 'testuser'
-        // No role property
-      };
+        username: 'testuser',
+        role: undefined
+      }) as any;
 
       const middleware = requireRole('physician');
 
@@ -592,7 +594,7 @@ describe('Auth Middleware', () => {
       const maliciousPayload = {
         sub: 'user-123',
         username: 'testuser',
-        role: 'admin', // Attempting to escalate to admin
+        role: 'administrative_staff', // Attempting to escalate to admin
         permissions: ['admin:write', 'system:delete'], // Malicious permissions
         type: 'access'
       };

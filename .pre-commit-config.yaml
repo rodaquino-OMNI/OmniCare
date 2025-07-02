@@ -1,0 +1,47 @@
+# Pre-commit hooks for OmniCare EMR
+# Run: pre-commit install to activate
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      
+  - repo: local
+    hooks:
+      - id: eslint-backend
+        name: ESLint Backend
+        entry: bash -c 'cd backend && npm run lint:fix'
+        language: system
+        files: ^backend/.*\.(ts|js)$
+        
+      - id: eslint-frontend  
+        name: ESLint Frontend
+        entry: bash -c 'cd frontend && npm run lint -- --fix'
+        language: system
+        files: ^frontend/.*\.(ts|tsx|js|jsx)$
+        
+      - id: typescript-backend
+        name: TypeScript Check Backend
+        entry: bash -c 'cd backend && npm run typecheck'
+        language: system
+        files: ^backend/.*\.ts$
+        pass_filenames: false
+        
+      - id: typescript-frontend
+        name: TypeScript Check Frontend  
+        entry: bash -c 'cd frontend && npm run typecheck'
+        language: system
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: false
+        
+      - id: tests-backend
+        name: Backend Tests
+        entry: bash -c 'cd backend && npm run test:lint'
+        language: system
+        files: ^backend/
+        pass_filenames: false
+        stages: [pre-push]

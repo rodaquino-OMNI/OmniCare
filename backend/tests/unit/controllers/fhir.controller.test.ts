@@ -1,10 +1,12 @@
+import { Patient, Encounter, Observation, Bundle } from '@medplum/fhirtypes';
 import { Request, Response } from 'express';
+
 import { fhirController } from '../../../src/controllers/fhir.controller';
 import { fhirResourcesService } from '../../../src/services/fhir-resources.service';
-import { fhirValidationService } from '../../../src/services/integration/fhir/fhir-validation.service';
 import { fhirTransformationService } from '../../../src/services/fhir-transformation.service';
-import { Patient, Encounter, Observation, Bundle } from '@medplum/fhirtypes';
+import { fhirValidationService } from '../../../src/services/integration/fhir/fhir-validation.service';
 import logger from '../../../src/utils/logger';
+import { createMockUser } from '../../test-helpers';
 
 // Mock services
 jest.mock('../../../src/services/fhir-resources.service');
@@ -30,11 +32,11 @@ describe('FHIR Controller', () => {
         'content-type': 'application/fhir+json',
         'accept': 'application/fhir+json'
       },
-      user: {
+      user: createMockUser({
         id: 'test-user-1',
         role: 'physician',
         permissions: ['fhir:read', 'fhir:write']
-      }
+      })
     };
 
     mockResponse = {
@@ -533,8 +535,7 @@ describe('FHIR Controller', () => {
 
         await fhirController.validateResource(
           mockRequest as Request,
-          mockResponse as Response,
-          mockNext
+          mockResponse as Response
         );
 
         expect(mockFhirValidationService.validateResource).toHaveBeenCalledWith(resourceToValidate);
@@ -576,8 +577,7 @@ describe('FHIR Controller', () => {
 
         await fhirController.validateResource(
           mockRequest as Request,
-          mockResponse as Response,
-          mockNext
+          mockResponse as Response
         );
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
@@ -665,11 +665,11 @@ describe('FHIR Controller', () => {
 
   describe('Authorization', () => {
     it('should check user permissions for resource access', async () => {
-      mockRequest.user = {
+      mockRequest.user = createMockUser({
         id: 'test-user-1',
         role: 'nursing_staff',
         permissions: ['patient:read'] // No write permission
-      };
+      });
 
       const patientData: Patient = {
         resourceType: 'Patient',
@@ -698,11 +698,11 @@ describe('FHIR Controller', () => {
     });
 
     it('should allow authorized operations', async () => {
-      mockRequest.user = {
+      mockRequest.user = createMockUser({
         id: 'test-user-1',
         role: 'physician',
         permissions: ['fhir:read', 'fhir:write', 'patient:write']
-      };
+      });
 
       const patient: Patient = {
         resourceType: 'Patient',

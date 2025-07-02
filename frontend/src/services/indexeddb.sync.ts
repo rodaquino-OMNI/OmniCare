@@ -73,7 +73,10 @@ export class FHIRSyncService {
   private lastSyncTime?: number;
 
   private constructor() {
-    this.setupNetworkListeners();
+    // Only setup listeners on client side
+    if (typeof window !== 'undefined') {
+      this.setupNetworkListeners();
+    }
   }
 
   static getInstance(): FHIRSyncService {
@@ -87,17 +90,26 @@ export class FHIRSyncService {
    * Setup network status listeners
    */
   private setupNetworkListeners(): void {
-    window.addEventListener('online', () => {
-      this.isOnline = true;
-      this.emit(SyncEvent.ONLINE);
-      // Auto-sync when coming online
-      this.syncAll().catch(console.error);
-    });
+    // Guard against SSR
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+      return;
+    }
 
-    window.addEventListener('offline', () => {
-      this.isOnline = false;
-      this.emit(SyncEvent.OFFLINE);
-    });
+    try {
+      window.addEventListener('online', () => {
+        this.isOnline = true;
+        this.emit(SyncEvent.ONLINE);
+        // Auto-sync when coming online
+        this.syncAll().catch(console.error);
+      });
+
+      window.addEventListener('offline', () => {
+        this.isOnline = false;
+        this.emit(SyncEvent.OFFLINE);
+      });
+    } catch (error) {
+      console.warn('Failed to setup network listeners:', error);
+    }
   }
 
   /**
@@ -108,7 +120,7 @@ export class FHIRSyncService {
       isOnline: this.isOnline,
       isSyncing: this.isSyncing,
       lastSyncTime: this.lastSyncTime,
-      pendingChanges: ResourceHistoryTable, // Will be calculated
+      pendingChanges: 0, // Will be calculated
       syncErrors: Array.from(this.syncErrors.values())
     };
   }
@@ -122,12 +134,14 @@ export class FHIRSyncService {
     // Initial sync
     this.syncAll().catch(console.error);
     
-    // Set interval
-    this.syncInterval = window.setInterval(() => {
-      if (this.isOnline && !this.isSyncing) {
-        this.syncAll().catch(console.error);
-      }
-    }, intervalMinutes * 6 * 1000);
+    // Set interval - only on client side
+    if (typeof window !== 'undefined') {
+      this.syncInterval = window.setInterval(() => {
+        if (this.isOnline && !this.isSyncing) {
+          this.syncAll().catch(console.error);
+        }
+      }, intervalMinutes * 6 * 1000);
+    }
   }
 
   /**
@@ -161,14 +175,14 @@ export class FHIRSyncService {
       
       const progress: SyncProgress = {
         total: pendingItems.length,
-        completed: ResourceHistoryTable,
-        failed: ResourceHistoryTable,
-        conflicts: ResourceHistoryTable
+        completed: 0,
+        failed: 0,
+        conflicts: 0
       };
 
       // Process in batches
       const batchSize = options.batchSize || 10;
-      for (let i = ResourceHistoryTable; i < pendingItems.length; i += batchSize) {
+      for (let i = 0; i < pendingItems.length; i += batchSize) {
         const batch = pendingItems.slice(i, i + batchSize);
         
         await Promise.all(batch.map(async (item) => {
@@ -586,7 +600,24 @@ export class FHIRSyncService {
 }
 
 // Export singleton instance
-export const fhirSyncService = FHIRSyncService.getInstance();
+// Create a lazy getter to avoid SSR issues
+export const fhirSyncService = typeof window !== 'undefined' 
+  ? FHIRSyncService.getInstance()
+  : ({
+      startAutoSync: () => {},
+      stopAutoSync: () => {},
+      syncAll: () => Promise.resolve(),
+      syncResource: () => Promise.resolve(),
+      getSyncStatus: () => ({
+        isOnline: true,
+        isSyncing: false,
+        totalPending: 0,
+        syncErrors: []
+      }),
+      clearSyncQueue: () => Promise.resolve(),
+      on: () => {},
+      off: () => {}
+    } as any);
 
 // Export types
-export type { SyncStatus, SyncError, SyncProgress, SyncOptions };
+// Types exported from other modules - removed to prevent conflicts

@@ -234,6 +234,22 @@ export const UNIFIED_ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
       'Limited to scheduling and demographics',
       'Cannot access clinical or billing data'
     ]
+  },
+
+  [UserRoles.GUEST]: {
+    role: UserRoles.GUEST,
+    permissions: [
+      // Minimal read-only permissions
+      Permission.VIEW_PATIENT_DEMOGRAPHICS
+    ],
+    description: 'Guest user with minimal read-only access',
+    restrictions: [
+      'Read-only access to basic demographics',
+      'Cannot modify any data',
+      'Cannot access clinical data',
+      'Cannot access billing data',
+      'Cannot access administrative functions'
+    ]
   }
 };
 

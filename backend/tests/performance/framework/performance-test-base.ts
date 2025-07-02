@@ -4,6 +4,7 @@
  */
 
 import { performance } from 'perf_hooks';
+
 import pidusage from 'pidusage';
 
 export interface PerformanceMetrics {

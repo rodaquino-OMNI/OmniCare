@@ -3,68 +3,82 @@
  * Configures test environment variables and global settings
  */
 
-import { config } from 'dotenv';
 import { join } from 'path';
 
-// Load test environment variables
-config({ path: join(__dirname, '..', '.env.test') });
+import { config } from 'dotenv';
 
-// Set required test environment variables
+// Declare global types
+declare global {
+  var testConfig: {
+    timeouts: {
+      unit: number;
+      integration: number;
+      e2e: number;
+    };
+    retries: {
+      unit: number;
+      integration: number;
+      e2e: number;
+    };
+    cleanup: {
+      database: boolean;
+      cache: boolean;
+      temp?: boolean;
+      files?: boolean;
+    };
+    mocking?: {
+      externalServices: boolean;
+      database: boolean;
+      cache: boolean;
+    };
+  };
+}
+
+// Load test environment variables from both root and backend .env.test files
+config({ path: join(__dirname, '..', '..', '.env.test') }); // Root .env.test
+config({ path: join(__dirname, '..', '.env.test') }); // Backend .env.test (overrides)
+
+// Set required test environment variables if not already set
 process.env.NODE_ENV = 'test';
-process.env.LOG_LEVEL = 'silent';
+process.env.LOG_LEVEL = process.env.LOG_LEVEL || 'error';
 process.env.TZ = 'UTC';
 
-// Database configuration for tests
-process.env.DB_HOST = process.env.TEST_DB_HOST || 'localhost';
-process.env.DB_PORT = process.env.TEST_DB_PORT || '5432';
-process.env.DB_NAME = process.env.TEST_DB_NAME || 'omnicare_test';
-process.env.DB_USER = process.env.TEST_DB_USER || 'test_user';
-process.env.DB_PASSWORD = process.env.TEST_DB_PASSWORD || 'test_password';
+// Determine test type and set mocking accordingly
+const isIntegrationTest = process.env.TEST_CATEGORY === 'integration' || 
+  process.argv.some(arg => arg.includes('integration'));
 
-// Redis configuration for tests
-process.env.REDIS_URL = process.env.TEST_REDIS_URL || 'redis://localhost:6379/1';
-process.env.REDIS_TTL = '300';
+// Set database mocking based on test type
+if (!isIntegrationTest) {
+  process.env.MOCK_DATABASE = 'true';
+  process.env.MOCK_EXTERNAL_SERVICES = 'true';
+} else {
+  // For integration tests, check if Docker is available
+  process.env.MOCK_DATABASE = process.env.SKIP_DOCKER_TESTS === 'true' ? 'true' : 'false';
+}
 
-// JWT configuration for tests
-process.env.JWT_SECRET = process.env.TEST_JWT_SECRET || 'test_jwt_secret_key_for_testing_only_do_not_use_in_production';
-process.env.JWT_EXPIRATION = '24h';
-process.env.JWT_REFRESH_EXPIRATION = '7d';
+// Database configuration - no need to reconstruct, use from .env.test
+if (!process.env.DATABASE_URL && process.env.TEST_DATABASE_URL) {
+  process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
+}
 
-// FHIR/Medplum configuration for tests
-process.env.MEDPLUM_BASE_URL = process.env.TEST_MEDPLUM_BASE_URL || 'https://api.medplum.com/';
-process.env.MEDPLUM_CLIENT_ID = process.env.TEST_MEDPLUM_CLIENT_ID || 'test_client_id';
-process.env.MEDPLUM_CLIENT_SECRET = process.env.TEST_MEDPLUM_CLIENT_SECRET || 'test_client_secret';
-process.env.MEDPLUM_PROJECT_ID = process.env.TEST_MEDPLUM_PROJECT_ID || 'test_project_id';
+// Ensure all required environment variables are set from .env.test
+const requiredEnvVars = [
+  'DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD',
+  'REDIS_URL', 'JWT_SECRET', 'JWT_EXPIRATION', 'JWT_REFRESH_EXPIRATION',
+  'MEDPLUM_BASE_URL', 'MEDPLUM_CLIENT_ID', 'MEDPLUM_CLIENT_SECRET',
+  'ENCRYPTION_KEY', 'SESSION_SECRET', 'BCRYPT_ROUNDS'
+];
 
-// External service configuration for tests
-process.env.EPIC_FHIR_BASE_URL = 'https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4/';
-process.env.CERNER_FHIR_BASE_URL = 'https://fhir-open.cerner.com/r4/';
-
-// Security configuration for tests
-process.env.ENCRYPTION_KEY = 'test_encryption_key_32_characters_';
-process.env.SESSION_SECRET = 'test_session_secret_for_testing_only';
-process.env.BCRYPT_ROUNDS = '1'; // Use minimal rounds for faster tests
-
-// Feature flags for tests
-process.env.ENABLE_AUDIT_LOGGING = 'true';
-process.env.ENABLE_RATE_LIMITING = 'false';
-process.env.ENABLE_CACHING = 'true';
-process.env.ENABLE_OFFLINE_MODE = 'true';
-
-// Test-specific settings
-process.env.TEST_TIMEOUT = '15000';
-process.env.TEST_PARALLEL_WORKERS = '2';
+// Log missing env vars in debug mode
+if (process.env.DEBUG_ENV === 'true') {
+  const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+  if (missingVars.length > 0) {
+    console.warn('Missing environment variables:', missingVars);
+  }
+}
 
 // Suppress specific warnings in test environment
 process.env.SUPPRESS_NO_CONFIG_WARNING = 'true';
-
-// Mock external service endpoints
-process.env.MOCK_EXTERNAL_SERVICES = 'true';
-
-// Performance settings for tests
-process.env.MAX_POOL_SIZE = '5';
-process.env.CONNECTION_TIMEOUT = '5000';
-process.env.IDLE_TIMEOUT = '10000';
 
 // Set locale for consistent test results
 process.env.LANG = 'en_US.UTF-8';
@@ -105,9 +119,9 @@ global.testConfig = {
     files: true,
   },
   mocking: {
-    externalServices: true,
-    database: false, // Use real test database
-    cache: false, // Use real test cache
+    externalServices: process.env.MOCK_EXTERNAL_SERVICES === 'true',
+    database: process.env.MOCK_DATABASE === 'true',
+    cache: process.env.MOCK_CACHE !== 'false',
   },
 };
 

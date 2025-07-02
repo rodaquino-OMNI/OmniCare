@@ -23,11 +23,13 @@ if (process.env.NODE_ENV !== 'test') {
   };
   addFormats = () => {};
 }
-import { IntegrationValidationResult, IntegrationValidationError, ValidationWarning } from '../types/integration.types';
-import logger from '@/utils/logger';
-import config from '@/config';
 import axios from 'axios';
+
+import { IntegrationValidationResult, IntegrationValidationError, ValidationWarning } from '../types/integration.types';
+
+import config from '@/config';
 import { getErrorMessage } from '@/utils/error.utils';
+import logger from '@/utils/logger';
 
 interface ValidationResult {
   valid: boolean;

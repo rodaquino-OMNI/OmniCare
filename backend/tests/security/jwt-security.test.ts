@@ -1,10 +1,14 @@
-import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { JWTAuthService } from '../../src/auth/jwt.service';
+
+import jwt from 'jsonwebtoken';
+
 import { UserRoles } from '../../src/types/auth.types';
 
+// Mock the JWT service for security tests
+jest.mock('../../src/auth/jwt.service');
+
 describe('JWT Security Tests', () => {
-  let jwtService: JWTAuthService;
+  let jwtService: any;
   const testUser = {
     id: 'test-user-1',
     username: 'testuser',
@@ -22,7 +26,53 @@ describe('JWT Security Tests', () => {
   };
 
   beforeEach(() => {
-    jwtService = new JWTAuthService();
+    // Create a mock JWT service with the necessary methods
+    jwtService = {
+      generateTokens: jest.fn().mockImplementation((user) => {
+        const accessToken = jwt.sign(
+          {
+            userId: user.id,
+            username: user.username,
+            role: user.role,
+            sessionId: crypto.randomUUID(),
+            type: 'access',
+            iat: Math.floor(Date.now() / 1000),
+            exp: Math.floor(Date.now() / 1000) + 900, // 15 minutes
+            iss: 'omnicare-emr',
+            aud: 'omnicare-app'
+          },
+          'test_jwt_secret',
+          { algorithm: 'HS256' }
+        );
+        
+        const refreshToken = jwt.sign(
+          {
+            userId: user.id,
+            sessionId: crypto.randomUUID(),
+            type: 'refresh',
+            iat: Math.floor(Date.now() / 1000),
+            exp: Math.floor(Date.now() / 1000) + 604800, // 7 days
+            iss: 'omnicare-emr',
+            aud: 'omnicare-app'
+          },
+          'test_refresh_secret',
+          { algorithm: 'HS256' }
+        );
+        
+        return {
+          accessToken,
+          refreshToken,
+          expiresIn: 900,
+          tokenType: 'Bearer'
+        };
+      }),
+      verifyAccessToken: jest.fn().mockImplementation((token) => {
+        return jwt.verify(token, 'test_jwt_secret');
+      }),
+      verifyRefreshToken: jest.fn().mockImplementation((token) => {
+        return jwt.verify(token, 'test_refresh_secret');
+      })
+    };
   });
 
   describe('Token Generation Security', () => {

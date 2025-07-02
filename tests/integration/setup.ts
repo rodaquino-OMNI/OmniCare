@@ -55,14 +55,14 @@ global.createMockPatient = () => ({
   }],
   active: true,
   name: [{
-    use: 'official',
+    use: 'official' as const,
     family: 'TestPatient',
     given: ['Integration', 'Test'],
   }],
   gender: 'male',
   birthDate: '1990-01-01',
   address: [{
-    use: 'home',
+    use: 'home' as const,
     line: ['123 Test Street'],
     city: 'Test City',
     state: 'TS',
@@ -73,12 +73,12 @@ global.createMockPatient = () => ({
     {
       system: 'phone',
       value: '555-0100',
-      use: 'mobile',
+      use: 'mobile' as const,
     },
     {
       system: 'email',
       value: 'test@example.com',
-      use: 'home',
+      use: 'home' as const,
     },
   ],
 });
@@ -96,7 +96,7 @@ global.createMockPractitioner = () => ({
   }],
   active: true,
   name: [{
-    use: 'official',
+    use: 'official' as const,
     family: 'TestDoctor',
     given: ['Integration', 'Test'],
     prefix: ['Dr.'],
@@ -104,7 +104,7 @@ global.createMockPractitioner = () => ({
   telecom: [{
     system: 'phone',
     value: '555-0200',
-    use: 'work',
+    use: 'work' as const,
   }],
   qualification: [{
     identifier: [{

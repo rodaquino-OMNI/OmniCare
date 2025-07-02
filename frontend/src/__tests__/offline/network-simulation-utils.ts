@@ -1,222 +1,169 @@
-// Network Simulation Testing Utilities
-// Using Jest - vi is not needed, jest.fn() is available globally
+// Network Simulation Utilities for Offline Testing
+import type { 
+  NetworkConditions, 
+  MockFetchOptions,
+  NetworkSimulator as INetworkSimulator 
+} from './offline-test.types';
 
-export interface NetworkConditions {
-  isOnline: boolean;
-  latency: number; // in milliseconds
-  bandwidth: number; // in Mbps
-  packetLoss: number; // percentage (0-100)
-  errorRate: number; // percentage (0-100)
+// Store original fetch
+const originalFetch = global.fetch;
+const originalNavigatorOnLine = Object.getOwnPropertyDescriptor(Navigator.prototype, 'onLine');
+
+// Network interceptor registry
+interface InterceptorRule {
+  pattern: string | RegExp;
+  options: MockFetchOptions;
 }
 
-export interface MockFetchOptions {
-  delay?: number;
-  shouldFail?: boolean;
-  failureRate?: number;
-  response?: any;
-  status?: number;
-  headers?: HeadersInit;
-}
-
-export class NetworkSimulator {
-  private static originalFetch = global.fetch;
-  private static originalNavigatorOnLine = Object.getOwnPropertyDescriptor(navigator, 'onLine');
-  private static conditions: NetworkConditions = {
+class NetworkSimulatorImpl implements INetworkSimulator {
+  private isOnline: boolean = true;
+  private conditions: NetworkConditions = {
     isOnline: true,
     latency: 0,
     bandwidth: Infinity,
     packetLoss: 0,
     errorRate: 0
   };
-  private static fetchInterceptors: Map<string | RegExp, MockFetchOptions> = new Map();
-  private static requestLog: Array<{ url: string; method: string; timestamp: number }> = [];
-  private static connectionChangeListeners: Array<(online: boolean) => void> = [];
+  private interceptors: InterceptorRule[] = [];
+  private fetchMocked: boolean = false;
 
-  // Set network conditions
-  static setConditions(conditions: Partial<NetworkConditions>) {
-    this.conditions = { ...this.conditions, ...conditions };
+  constructor() {
+    // Ensure cleanup on process exit
+    if (typeof process !== 'undefined') {
+      process.on('exit', () => this.restore());
+    }
+  }
+
+  mockFetch(): void {
+    if (this.fetchMocked) return;
     
-    // Update navigator.onLine
-    Object.defineProperty(navigator, 'onLine', {
-      value: this.conditions.isOnline,
-      configurable: true,
-      writable: true
-    });
-  }
-
-  // Simulate going offline
-  static goOffline() {
-    this.setConditions({ isOnline: false });
-    window.dispatchEvent(new Event('offline'));
-    this.connectionChangeListeners.forEach(listener => listener(false));
-  }
-
-  // Simulate going online
-  static goOnline() {
-    this.setConditions({ isOnline: true });
-    window.dispatchEvent(new Event('online'));
-    this.connectionChangeListeners.forEach(listener => listener(true));
-  }
-
-  // Mock fetch with network simulation
-  static mockFetch() {
+    this.fetchMocked = true;
+    
+    // Mock fetch
     global.fetch = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-      const method = init?.method || 'GET';
-
-      // Log request
-      this.requestLog.push({ url, method, timestamp: Date.now() });
-
+      const url = input instanceof Request ? input.url : input.toString();
+      
       // Check if offline
-      if (!this.conditions.isOnline) {
+      if (!this.isOnline) {
         throw new Error('Network request failed: No internet connection');
       }
-
-      // Simulate packet loss
-      if (Math.random() * 100 < this.conditions.packetLoss) {
-        throw new Error('Network request failed: Packet loss');
+      
+      // Apply network conditions
+      if (this.conditions.errorRate > 0 && Math.random() < this.conditions.errorRate) {
+        throw new Error('Network request failed: Random network error');
       }
-
-      // Find matching interceptor
-      let mockOptions: MockFetchOptions | undefined;
-      for (const [pattern, options] of this.fetchInterceptors) {
-        if (typeof pattern === 'string' && url.includes(pattern)) {
-          mockOptions = options;
-          break;
-        } else if (pattern instanceof RegExp && pattern.test(url)) {
-          mockOptions = options;
-          break;
+      
+      // Check interceptors
+      for (const interceptor of this.interceptors) {
+        const matches = typeof interceptor.pattern === 'string' 
+          ? url.includes(interceptor.pattern)
+          : interceptor.pattern.test(url);
+          
+        if (matches) {
+          // Apply latency
+          const delay = interceptor.options.delay || this.conditions.latency;
+          if (delay > 0) {
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+          
+          // Check if should fail
+          if (interceptor.options.shouldFail) {
+            throw new Error('Network request failed: Interceptor configured to fail');
+          }
+          
+          // Check failure rate
+          if (interceptor.options.failureRate && Math.random() < interceptor.options.failureRate) {
+            throw new Error('Network request failed: Random interceptor failure');
+          }
+          
+          // Return mocked response
+          return new Response(
+            JSON.stringify(interceptor.options.response || {}),
+            {
+              status: interceptor.options.status || 200,
+              headers: {
+                'Content-Type': 'application/json',
+                ...(interceptor.options.headers || {})
+              }
+            }
+          );
         }
       }
-
-      // Apply latency
-      const delay = mockOptions?.delay || this.calculateLatency();
-      if (delay > 0) {
-        await new Promise(resolve => setTimeout(resolve, delay));
+      
+      // Default to original fetch with latency
+      if (this.conditions.latency > 0) {
+        await new Promise(resolve => setTimeout(resolve, this.conditions.latency));
       }
-
-      // Simulate error rate
-      if (mockOptions?.shouldFail || Math.random() * 100 < this.conditions.errorRate) {
-        throw new Error('Network request failed: Random error');
-      }
-
-      // Simulate failure rate for specific endpoint
-      if (mockOptions?.failureRate && Math.random() * 100 < mockOptions.failureRate) {
-        return new Response(null, { status: 500, statusText: 'Internal Server Error' });
-      }
-
-      // Return mocked response
-      if (mockOptions?.response !== undefined) {
-        const body = typeof mockOptions.response === 'string' 
-          ? mockOptions.response 
-          : JSON.stringify(mockOptions.response);
-        
-        return new Response(body, {
-          status: mockOptions.status || 200,
-          headers: mockOptions.headers || { 'Content-Type': 'application/json' }
-        });
-      }
-
-      // Default response
-      return new Response(JSON.stringify({ success: true }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }) as typeof fetch;
+      
+      return originalFetch(input, init);
+    }) as any;
   }
 
-  // Calculate latency based on bandwidth
-  private static calculateLatency(): number {
-    const baseLatency = this.conditions.latency;
-    const bandwidthFactor = 100 / this.conditions.bandwidth; // Lower bandwidth = higher latency
-    return baseLatency + (bandwidthFactor * 10);
+  goOffline(): void {
+    this.isOnline = false;
+    this.conditions.isOnline = false;
+    
+    // Mock navigator.onLine
+    Object.defineProperty(navigator, 'onLine', {
+      configurable: true,
+      get: () => false
+    });
+    
+    // Dispatch offline event
+    window.dispatchEvent(new Event('offline'));
   }
 
-  // Add fetch interceptor
-  static intercept(pattern: string | RegExp, options: MockFetchOptions) {
-    this.fetchInterceptors.set(pattern, options);
+  goOnline(): void {
+    this.isOnline = true;
+    this.conditions.isOnline = true;
+    
+    // Mock navigator.onLine
+    Object.defineProperty(navigator, 'onLine', {
+      configurable: true,
+      get: () => true
+    });
+    
+    // Dispatch online event
+    window.dispatchEvent(new Event('online'));
   }
 
-  // Remove fetch interceptor
-  static removeInterceptor(pattern: string | RegExp) {
-    this.fetchInterceptors.delete(pattern);
-  }
-
-  // Clear all interceptors
-  static clearInterceptors() {
-    this.fetchInterceptors.clear();
-  }
-
-  // Get request log
-  static getRequestLog() {
-    return [...this.requestLog];
-  }
-
-  // Clear request log
-  static clearRequestLog() {
-    this.requestLog = [];
-  }
-
-  // Simulate connection change
-  static simulateConnectionChange(online: boolean) {
-    this.setConditions({ isOnline: online });
-    window.dispatchEvent(new Event(online ? 'online' : 'offline'));
-    this.connectionChangeListeners.forEach(listener => listener(online));
-  }
-
-  // Add connection change listener
-  static onConnectionChange(listener: (online: boolean) => void) {
-    this.connectionChangeListeners.push(listener);
-    return () => {
-      const index = this.connectionChangeListeners.indexOf(listener);
-      if (index > -1) {
-        this.connectionChangeListeners.splice(index, 1);
-      }
+  setConditions(conditions: Partial<NetworkConditions>): void {
+    this.conditions = {
+      ...this.conditions,
+      ...conditions
     };
-  }
-
-  // Simulate flaky connection
-  static simulateFlakyConnection(
-    intervalMs: number = 5000,
-    offlineDurationMs: number = 2000
-  ): () => void {
-    const interval = setInterval(() => {
-      this.goOffline();
-      setTimeout(() => this.goOnline(), offlineDurationMs);
-    }, intervalMs);
-
-    return () => clearInterval(interval);
-  }
-
-  // Simulate slow connection
-  static simulateSlowConnection() {
-    this.setConditions({
-      latency: 500,
-      bandwidth: 0.5, // 0.5 Mbps
-      packetLoss: 5,
-      errorRate: 2
-    });
-  }
-
-  // Simulate fast connection
-  static simulateFastConnection() {
-    this.setConditions({
-      latency: 10,
-      bandwidth: 100, // 100 Mbps
-      packetLoss: 0,
-      errorRate: 0
-    });
-  }
-
-  // Restore original fetch and navigator.onLine
-  static restore() {
-    global.fetch = this.originalFetch;
-    if (this.originalNavigatorOnLine) {
-      Object.defineProperty(navigator, 'onLine', this.originalNavigatorOnLine);
+    
+    if (conditions.isOnline !== undefined) {
+      this.isOnline = conditions.isOnline;
+      
+      if (conditions.isOnline) {
+        this.goOnline();
+      } else {
+        this.goOffline();
+      }
     }
-    this.clearInterceptors();
-    this.clearRequestLog();
-    this.connectionChangeListeners = [];
+  }
+
+  intercept(pattern: string | RegExp, options: MockFetchOptions): void {
+    this.interceptors.push({ pattern, options });
+  }
+
+  restore(): void {
+    // Restore fetch
+    if (this.fetchMocked) {
+      global.fetch = originalFetch;
+      this.fetchMocked = false;
+    }
+    
+    // Restore navigator.onLine
+    if (originalNavigatorOnLine) {
+      Object.defineProperty(navigator, 'onLine', originalNavigatorOnLine);
+    }
+    
+    // Clear interceptors
+    this.interceptors = [];
+    
+    // Reset conditions
     this.conditions = {
       isOnline: true,
       latency: 0,
@@ -224,78 +171,112 @@ export class NetworkSimulator {
       packetLoss: 0,
       errorRate: 0
     };
+    this.isOnline = true;
   }
 }
 
-// Helper to create offline-aware fetch wrapper
-export function createOfflineAwareFetch(
-  cache?: Map<string, { data: any; timestamp: number }>
-): typeof fetch {
-  const cacheStore = cache || new Map();
-  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+// Export singleton instance
+export const NetworkSimulator = new NetworkSimulatorImpl();
 
+// Helper functions for common scenarios
+export const simulateSlowNetwork = () => {
+  NetworkSimulator.setConditions({
+    latency: 2000,
+    bandwidth: 50000 // 50KB/s
+  });
+};
+
+export const simulateUnstableNetwork = () => {
+  NetworkSimulator.setConditions({
+    errorRate: 0.2,
+    packetLoss: 0.1,
+    latency: 500
+  });
+};
+
+export const simulateOffline = () => {
+  NetworkSimulator.goOffline();
+};
+
+export const simulateOnline = () => {
+  NetworkSimulator.goOnline();
+};
+
+// Mock response builders
+export const createMockResponse = (data: any, options: Partial<MockFetchOptions> = {}) => ({
+  response: data,
+  status: 200,
+  ...options
+});
+
+export const createErrorResponse = (message: string, status: number = 500) => ({
+  response: { error: message },
+  status,
+  shouldFail: false
+});
+
+export const createDelayedResponse = (data: any, delay: number) => ({
+  response: data,
+  delay,
+  status: 200
+});
+
+// Pattern helpers
+export const API_PATTERNS = {
+  patients: /\/api\/patients/,
+  encounters: /\/api\/encounters/,
+  vitals: /\/api\/vitals/,
+  appointments: /\/api\/appointments/,
+  billing: /\/api\/billing/,
+  auth: /\/api\/auth/
+};
+
+// Setup function for network simulation tests
+export function setupNetworkSimulation() {
+  beforeEach(() => {
+    NetworkSimulator.mockFetch();
+  });
+
+  afterEach(() => {
+    NetworkSimulator.restore();
+  });
+}
+
+// Create offline-aware fetch wrapper
+export function createOfflineAwareFetch(onOffline?: () => void) {
   return async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-    const method = init?.method || 'GET';
-    const cacheKey = `${method}:${url}`;
-
-    // Check if offline
     if (!navigator.onLine) {
-      // Try to get from cache
-      const cached = cacheStore.get(cacheKey);
-      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-        return new Response(JSON.stringify(cached.data), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json', 'X-From-Cache': 'true' }
-        });
-      }
-      throw new Error('Network request failed: Offline and no cached data');
+      if (onOffline) onOffline();
+      throw new Error('Network request failed: No internet connection');
     }
-
-    try {
-      // Make actual request
-      const response = await fetch(input, init);
-      
-      // Cache successful GET requests
-      if (method === 'GET' && response.ok) {
-        const data = await response.clone().json();
-        cacheStore.set(cacheKey, { data, timestamp: Date.now() });
-      }
-      
-      return response;
-    } catch (error) {
-      // Try cache on error
-      const cached = cacheStore.get(cacheKey);
-      if (cached) {
-        return new Response(JSON.stringify(cached.data), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json', 'X-From-Cache': 'true' }
-        });
-      }
-      throw error;
-    }
+    return fetch(input, init);
   };
 }
 
-// Helper to test retry logic
+// Retry tester for network operations
 export class RetryTester {
-  private attempts = 0;
+  private attempts: number = 0;
   private maxAttempts: number;
-  private successAfter: number;
+  private delay: number;
 
-  constructor(maxAttempts: number = 3, successAfter: number = 2) {
+  constructor(maxAttempts: number = 3, delay: number = 1000) {
     this.maxAttempts = maxAttempts;
-    this.successAfter = successAfter;
+    this.delay = delay;
   }
 
-  async execute<T>(fn: () => Promise<T>): Promise<T> {
-    this.attempts++;
-    
-    if (this.attempts < this.successAfter) {
-      throw new Error(`Attempt ${this.attempts} failed`);
+  async retry<T>(operation: () => Promise<T>): Promise<T> {
+    while (this.attempts < this.maxAttempts) {
+      try {
+        this.attempts++;
+        return await operation();
+      } catch (error) {
+        if (this.attempts >= this.maxAttempts) {
+          throw error;
+        }
+        await new Promise(resolve => setTimeout(resolve, this.delay));
+      }
     }
-    
-    return fn();
+    throw new Error('Max retry attempts reached');
   }
 
   getAttempts(): number {
@@ -307,112 +288,269 @@ export class RetryTester {
   }
 }
 
-// Helper to simulate IndexedDB for offline storage
+// Mock IndexedDB implementation with proper event handling
 export class IndexedDBMock {
-  private databases: Map<string, Map<string, any>> = new Map();
+  private databases: Map<string, Map<string, Map<string, any>>> = new Map();
+  private version: number = 1;
 
-  open(name: string, version?: number): IDBOpenDBRequest {
+  open(name: string, version?: number) {
     if (!this.databases.has(name)) {
       this.databases.set(name, new Map());
     }
-
-    const db = {
-      name,
-      version: version || 1,
-      objectStoreNames: ['offline-queue', 'sync-data'],
-      createObjectStore: jest.fn((storeName: string) => ({
-        name: storeName,
-        put: jest.fn(),
-        get: jest.fn(),
-        delete: jest.fn(),
-        clear: jest.fn()
-      })),
-      transaction: jest.fn((storeNames: string[], mode?: string) => ({
-        objectStore: jest.fn((storeName: string) => {
-          const store = this.databases.get(name)!;
-          return {
-            put: jest.fn((value: any, key?: any) => {
-              store.set(key || value.id, value);
-              return { onsuccess: jest.fn(), onerror: jest.fn() };
-            }),
-            get: jest.fn((key: any) => {
-              const result = { result: store.get(key) };
-              return { ...result, onsuccess: jest.fn(), onerror: jest.fn() };
-            }),
-            delete: jest.fn((key: any) => {
-              store.delete(key);
-              return { onsuccess: jest.fn(), onerror: jest.fn() };
-            }),
-            clear: jest.fn(() => {
-              store.clear();
-              return { onsuccess: jest.fn(), onerror: jest.fn() };
-            }),
-            getAll: jest.fn(() => {
-              const result = { result: Array.from(store.values()) };
-              return { ...result, onsuccess: jest.fn(), onerror: jest.fn() };
-            })
-          };
-        })
-      })),
-      close: jest.fn()
+    
+    const db = this.databases.get(name)!;
+    const request: any = {
+      result: null,
+      error: null,
+      onsuccess: null,
+      onerror: null,
+      onupgradeneeded: null,
+      readyState: 'pending'
     };
 
-    const request = {
-      result: db,
-      onsuccess: null as any,
-      onerror: null as any,
-      onupgradeneeded: null as any
-    };
-
+    // Simulate async database opening
     setTimeout(() => {
-      if (request.onsuccess) request.onsuccess({ target: request } as any);
+      request.result = {
+        name,
+        version: version || this.version,
+        objectStoreNames: Array.from(db.keys()),
+        
+        transaction: (storeNames: string | string[], mode: 'readonly' | 'readwrite' = 'readonly') => {
+          const stores = Array.isArray(storeNames) ? storeNames : [storeNames];
+          
+          return {
+            objectStore: (storeName: string) => {
+              if (!db.has(storeName)) {
+                db.set(storeName, new Map());
+              }
+              const store = db.get(storeName)!;
+              
+              return {
+                name: storeName,
+                keyPath: null,
+                indexNames: [],
+                
+                put: (value: any, key?: string) => {
+                  const putRequest: any = {
+                    result: key || Date.now().toString(),
+                    onsuccess: null,
+                    onerror: null
+                  };
+                  
+                  setTimeout(() => {
+                    store.set(putRequest.result, value);
+                    if (putRequest.onsuccess) {
+                      putRequest.onsuccess({ target: putRequest });
+                    }
+                  }, 0);
+                  
+                  return putRequest;
+                },
+                
+                get: (key: string) => {
+                  const getRequest: any = {
+                    result: store.get(key),
+                    onsuccess: null,
+                    onerror: null
+                  };
+                  
+                  setTimeout(() => {
+                    if (getRequest.onsuccess) {
+                      getRequest.onsuccess({ target: getRequest });
+                    }
+                  }, 0);
+                  
+                  return getRequest;
+                },
+                
+                delete: (key: string) => {
+                  const deleteRequest: any = {
+                    result: undefined,
+                    onsuccess: null,
+                    onerror: null
+                  };
+                  
+                  setTimeout(() => {
+                    store.delete(key);
+                    if (deleteRequest.onsuccess) {
+                      deleteRequest.onsuccess({ target: deleteRequest });
+                    }
+                  }, 0);
+                  
+                  return deleteRequest;
+                },
+                
+                getAll: (query?: any, count?: number) => {
+                  const getAllRequest: any = {
+                    result: Array.from(store.values()).slice(0, count),
+                    onsuccess: null,
+                    onerror: null
+                  };
+                  
+                  setTimeout(() => {
+                    if (getAllRequest.onsuccess) {
+                      getAllRequest.onsuccess({ target: getAllRequest });
+                    }
+                  }, 0);
+                  
+                  return getAllRequest;
+                },
+                
+                getAllKeys: (query?: any, count?: number) => {
+                  const getAllKeysRequest: any = {
+                    result: Array.from(store.keys()).slice(0, count),
+                    onsuccess: null,
+                    onerror: null
+                  };
+                  
+                  setTimeout(() => {
+                    if (getAllKeysRequest.onsuccess) {
+                      getAllKeysRequest.onsuccess({ target: getAllKeysRequest });
+                    }
+                  }, 0);
+                  
+                  return getAllKeysRequest;
+                },
+                
+                clear: () => {
+                  const clearRequest: any = {
+                    result: undefined,
+                    onsuccess: null,
+                    onerror: null
+                  };
+                  
+                  setTimeout(() => {
+                    store.clear();
+                    if (clearRequest.onsuccess) {
+                      clearRequest.onsuccess({ target: clearRequest });
+                    }
+                  }, 0);
+                  
+                  return clearRequest;
+                },
+                
+                count: (query?: any) => {
+                  const countRequest: any = {
+                    result: store.size,
+                    onsuccess: null,
+                    onerror: null
+                  };
+                  
+                  setTimeout(() => {
+                    if (countRequest.onsuccess) {
+                      countRequest.onsuccess({ target: countRequest });
+                    }
+                  }, 0);
+                  
+                  return countRequest;
+                }
+              };
+            },
+            
+            oncomplete: null,
+            onerror: null,
+            onabort: null,
+            mode
+          };
+        },
+        
+        createObjectStore: (name: string, options?: any) => {
+          if (!db.has(name)) {
+            db.set(name, new Map());
+          }
+          return {
+            name,
+            keyPath: options?.keyPath || null,
+            autoIncrement: options?.autoIncrement || false,
+            createIndex: jest.fn()
+          };
+        },
+        
+        deleteObjectStore: (name: string) => {
+          db.delete(name);
+        },
+        
+        close: jest.fn()
+      };
+      
+      request.readyState = 'done';
+      if (request.onsuccess) {
+        request.onsuccess({ target: request });
+      }
     }, 0);
-
-    return request as any;
+    
+    return request;
   }
 
-  deleteDatabase(name: string): void {
-    this.databases.delete(name);
+  deleteDatabase(name: string) {
+    const request: any = {
+      result: undefined,
+      onsuccess: null,
+      onerror: null
+    };
+    
+    setTimeout(() => {
+      this.databases.delete(name);
+      if (request.onsuccess) {
+        request.onsuccess({ target: request });
+      }
+    }, 0);
+    
+    return request;
   }
 
-  clear(): void {
+  clear() {
     this.databases.clear();
   }
+
+  // Helper method to get all data from a store
+  getStoreData(dbName: string, storeName: string) {
+    const db = this.databases.get(dbName);
+    if (!db) return [];
+    
+    const store = db.get(storeName);
+    if (!store) return [];
+    
+    return Array.from(store.entries()).map(([key, value]) => ({ key, value }));
+  }
 }
 
-// Setup network simulation for tests
-export function setupNetworkSimulation() {
-  beforeEach(() => {
-    NetworkSimulator.mockFetch();
-  });
-
-  afterEach(() => {
-    NetworkSimulator.restore();
-  });
-}
-
-// Helper to wait for online status
-export function waitForOnline(): Promise<void> {
-  if (navigator.onLine) return Promise.resolve();
+// Wait for online status
+export async function waitForOnline(timeout: number = 5000): Promise<void> {
+  if (navigator.onLine) return;
   
-  return new Promise((resolve) => {
-    const handler = () => {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
       window.removeEventListener('online', handler);
+      reject(new Error('Timeout waiting for online status'));
+    }, timeout);
+
+    const handler = () => {
+      clearTimeout(timeoutId);
       resolve();
     };
-    window.addEventListener('online', handler);
+
+    window.addEventListener('online', handler, { once: true });
   });
 }
 
-// Helper to wait for offline status
-export function waitForOffline(): Promise<void> {
-  if (!navigator.onLine) return Promise.resolve();
+// Wait for offline status
+export async function waitForOffline(timeout: number = 5000): Promise<void> {
+  if (!navigator.onLine) return;
   
-  return new Promise((resolve) => {
-    const handler = () => {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
       window.removeEventListener('offline', handler);
+      reject(new Error('Timeout waiting for offline status'));
+    }, timeout);
+
+    const handler = () => {
+      clearTimeout(timeoutId);
       resolve();
     };
-    window.addEventListener('offline', handler);
+
+    window.addEventListener('offline', handler, { once: true });
   });
 }
+
+export default NetworkSimulator;

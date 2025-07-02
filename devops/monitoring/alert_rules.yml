@@ -1,0 +1,252 @@
+# OmniCare EMR Alert Rules for Prometheus
+# Healthcare-specific monitoring and alerting rules
+
+groups:
+  # Application Health and Availability
+  - name: omnicare.application.health
+    rules:
+      - alert: OmniCareAPIDown
+        expr: up{job="backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: backend
+          category: availability
+        annotations:
+          summary: "OmniCare Backend API is down"
+          description: "The OmniCare Backend API has been down for more than 1 minute. Patient data access may be impaired."
+          runbook_url: "https://docs.omnicare.com/runbooks/api-down"
+
+      - alert: OmniCareFrontendDown
+        expr: up{job="frontend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: frontend
+          category: availability
+        annotations:
+          summary: "OmniCare Frontend is down"
+          description: "The OmniCare Frontend application has been down for more than 2 minutes. Users cannot access the system."
+
+      - alert: HealthCheckFailure
+        expr: omnicare_health_check_status != 1
+        for: 30s
+        labels:
+          severity: warning
+          category: health
+        annotations:
+          summary: "Health check failure detected"
+          description: "Health check for {{ $labels.component }} is failing. Response: {{ $value }}"
+
+  # Performance and Response Time
+  - name: omnicare.performance
+    rules:
+      - alert: HighResponseTime
+        expr: omnicare_http_request_duration_seconds{quantile="0.95"} > 2
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "High response time detected"
+          description: "95th percentile response time is {{ $value }}s for {{ $labels.method }} {{ $labels.endpoint }}"
+
+      - alert: HighErrorRate
+        expr: rate(omnicare_http_requests_total{status=~"5.."}[5m]) / rate(omnicare_http_requests_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          category: errors
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} for {{ $labels.endpoint }}"
+
+      - alert: DatabaseConnectionPoolExhaustion
+        expr: omnicare_database_connections_active / omnicare_database_connections_max > 0.9
+        for: 1m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "Database connection pool near exhaustion"
+          description: "Database connection pool utilization is {{ $value | humanizePercentage }}"
+
+  # Infrastructure Monitoring
+  - name: omnicare.infrastructure
+    rules:
+      - alert: HighCPUUsage
+        expr: (100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)) > 80
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value }}% on {{ $labels.instance }}"
+
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.9
+        for: 3m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}"
+
+      - alert: LowDiskSpace
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+        for: 1m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "Low disk space"
+          description: "Disk space is {{ $value | humanizePercentage }} available on {{ $labels.instance }}:{{ $labels.mountpoint }}"
+
+  # Database Monitoring
+  - name: omnicare.database
+    rules:
+      - alert: PostgreSQLDown
+        expr: up{job="postgres"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          service: database
+          category: availability
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL database is unreachable. Patient data access is compromised."
+
+      - alert: DatabaseSlowQueries
+        expr: rate(pg_stat_activity_max_tx_duration[5m]) > 60
+        for: 2m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "Slow database queries detected"
+          description: "Long running transactions detected, max duration: {{ $value }}s"
+
+      - alert: DatabaseHighConnections
+        expr: pg_stat_activity_count > 80
+        for: 2m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "High database connection count"
+          description: "Database connection count is {{ $value }}, approaching limits"
+
+  # Redis Monitoring
+  - name: omnicare.redis
+    rules:
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: redis
+          category: availability
+        annotations:
+          summary: "Redis is down"
+          description: "Redis cache is unreachable. Session management and caching are impaired."
+
+      - alert: RedisHighMemoryUsage
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 2m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "Redis high memory usage"
+          description: "Redis memory usage is {{ $value | humanizePercentage }}"
+
+  # Security Monitoring
+  - name: omnicare.security
+    rules:
+      - alert: HighFailedLoginAttempts
+        expr: rate(omnicare_failed_login_attempts_total[5m]) > 10
+        for: 1m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "High failed login attempts"
+          description: "Failed login rate is {{ $value }} attempts/second from {{ $labels.source_ip }}"
+
+      - alert: UnauthorizedAPIAccess
+        expr: rate(omnicare_http_requests_total{status="401"}[5m]) > 5
+        for: 2m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "High unauthorized API access attempts"
+          description: "Unauthorized access rate is {{ $value }} requests/second to {{ $labels.endpoint }}"
+
+      - alert: SuspiciousDataAccess
+        expr: rate(omnicare_patient_data_access_total[5m]) > 100
+        for: 1m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "Unusual patient data access pattern"
+          description: "High rate of patient data access: {{ $value }} requests/second by user {{ $labels.user_id }}"
+
+  # FHIR Specific Monitoring
+  - name: omnicare.fhir
+    rules:
+      - alert: FHIRResourceValidationErrors
+        expr: rate(omnicare_fhir_validation_errors_total[5m]) > 1
+        for: 2m
+        labels:
+          severity: warning
+          category: fhir
+        annotations:
+          summary: "FHIR resource validation errors"
+          description: "FHIR validation error rate is {{ $value }} errors/second for resource type {{ $labels.resource_type }}"
+
+      - alert: FHIRSubscriptionFailures
+        expr: rate(omnicare_fhir_subscription_failures_total[5m]) > 0.1
+        for: 1m
+        labels:
+          severity: critical
+          category: fhir
+        annotations:
+          summary: "FHIR subscription delivery failures"
+          description: "FHIR subscription failures detected: {{ $value }} failures/second for {{ $labels.subscription_id }}"
+
+  # Business Logic Monitoring
+  - name: omnicare.business
+    rules:
+      - alert: PatientRegistrationFailures
+        expr: rate(omnicare_patient_registration_failures_total[5m]) > 0.5
+        for: 2m
+        labels:
+          severity: warning
+          category: business
+        annotations:
+          summary: "High patient registration failure rate"
+          description: "Patient registration failure rate is {{ $value }} failures/second"
+
+      - alert: AppointmentSchedulingErrors
+        expr: rate(omnicare_appointment_scheduling_errors_total[5m]) > 1
+        for: 1m
+        labels:
+          severity: warning
+          category: business
+        annotations:
+          summary: "Appointment scheduling errors"
+          description: "Appointment scheduling error rate is {{ $value }} errors/second"
+
+      - alert: ClinicalDocumentProcessingDelay
+        expr: omnicare_document_processing_queue_size > 100
+        for: 5m
+        labels:
+          severity: warning
+          category: business
+        annotations:
+          summary: "Clinical document processing backlog"
+          description: "Document processing queue size is {{ $value }}, indicating processing delays"

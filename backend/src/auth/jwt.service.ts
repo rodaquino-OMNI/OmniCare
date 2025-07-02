@@ -4,18 +4,19 @@
  */
 
 import * as crypto from 'crypto';
+
 import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import { authenticator } from 'otplib';
 import { v4 as uuidv4 } from 'uuid';
 
 import { 
+  AuthToken,
+  MfaSetup,
+  Permission,
   User, 
   UserRole, 
-  UserRoles,
-  AuthToken, 
-  MfaSetup,
-  Permission
+  UserRoles
 } from '../types/auth.types';
 
 export interface TokenPayload {
@@ -32,11 +33,28 @@ export interface TokenPayload {
 
 const AUTH_CONFIG = {
   jwt: {
-    accessTokenSecret: process.env.JWT_ACCESS_SECRET || (() => {
-      throw new Error('JWT_ACCESS_SECRET environment variable is required');
+    accessTokenSecret: (() => {
+      const secret = process.env.JWT_ACCESS_SECRET;
+      if (!secret) {
+        throw new Error('JWT_ACCESS_SECRET environment variable is required');
+      }
+      if (secret.length < 32) {
+        throw new Error('JWT_ACCESS_SECRET must be at least 32 characters long');
+      }
+      return secret;
     })(),
-    refreshTokenSecret: process.env.JWT_REFRESH_SECRET || (() => {
-      throw new Error('JWT_REFRESH_SECRET environment variable is required');
+    refreshTokenSecret: (() => {
+      const secret = process.env.JWT_REFRESH_SECRET;
+      if (!secret) {
+        throw new Error('JWT_REFRESH_SECRET environment variable is required');
+      }
+      if (secret.length < 32) {
+        throw new Error('JWT_REFRESH_SECRET must be at least 32 characters long');
+      }
+      if (secret === process.env.JWT_ACCESS_SECRET) {
+        throw new Error('JWT_REFRESH_SECRET must be different from JWT_ACCESS_SECRET');
+      }
+      return secret;
     })(),
     accessTokenExpiry: '15m',
     refreshTokenExpiry: '7d',
@@ -179,6 +197,44 @@ export class JWTAuthService {
   }
 
   /**
+   * Generate access token separately
+   */
+  generateAccessToken(payload: TokenPayload): string {
+    return jwt.sign(
+      {
+        ...payload,
+        type: 'access',
+        iss: AUTH_CONFIG.jwt.issuer,
+        aud: AUTH_CONFIG.jwt.audience
+      },
+      this.accessTokenSecret,
+      {
+        expiresIn: AUTH_CONFIG.jwt.accessTokenExpiry,
+        algorithm: AUTH_CONFIG.jwt.algorithm
+      } as jwt.SignOptions
+    );
+  }
+
+  /**
+   * Generate refresh token separately
+   */
+  generateRefreshToken(payload: TokenPayload): string {
+    return jwt.sign(
+      {
+        ...payload,
+        type: 'refresh',
+        iss: AUTH_CONFIG.jwt.issuer,
+        aud: AUTH_CONFIG.jwt.audience
+      },
+      this.refreshTokenSecret,
+      {
+        expiresIn: AUTH_CONFIG.jwt.refreshTokenExpiry,
+        algorithm: AUTH_CONFIG.jwt.algorithm
+      } as jwt.SignOptions
+    );
+  }
+
+  /**
    * Hash password using bcrypt
    */
   async hashPassword(password: string): Promise<string> {
@@ -227,7 +283,7 @@ export class JWTAuthService {
   /**
    * Generate MFA secret for user
    */
-  async generateMfaSecret(user: User): Promise<MfaSetup> {
+  generateMfaSecret(user: User): MfaSetup {
     const secret = authenticator.generateSecret();
     const keyuri = authenticator.keyuri(
       user.username,
@@ -277,7 +333,7 @@ export class JWTAuthService {
   /**
    * Get role permissions (simplified)
    */
-  private getRolePermissions(role: UserRole): Permission[] {
+  public getRolePermissions(role: UserRole): Permission[] {
     // Simplified permission mapping using role strings
     const rolePermissions: Record<string, Permission[]> = {
       [UserRoles.PHYSICIAN]: [Permission.CREATE_CLINICAL_NOTES, Permission.VIEW_PATIENT_RECORDS, Permission.CREATE_PRESCRIPTIONS],

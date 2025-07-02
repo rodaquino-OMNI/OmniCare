@@ -242,6 +242,7 @@ export interface Dosage {
 export interface ValidationResult {
   valid: boolean;
   errors: string[];
+  warnings?: string[];
 }
 
 /**
@@ -249,6 +250,11 @@ export interface ValidationResult {
  */
 export function validateHumanName(name: HumanName): ValidationResult {
   const errors: string[] = [];
+  
+  if (!name || typeof name !== 'object') {
+    errors.push('HumanName must be a valid object');
+    return { valid: false, errors };
+  }
   
   if (!name.family && (!name.given || name.given.length === 0)) {
     errors.push('At least family name or given name is required');
@@ -262,6 +268,25 @@ export function validateHumanName(name: HumanName): ValidationResult {
     errors.push('Invalid name use. Must be one of: usual, official, temp, nickname, anonymous, old, maiden');
   }
   
+  // Validate string lengths (reasonable limits)
+  const maxNameLength = 255;
+  if (name.family && name.family.length > maxNameLength) {
+    errors.push('Family name exceeds maximum length');
+  }
+  
+  if (name.text && name.text.length > maxNameLength) {
+    errors.push('Name text exceeds maximum length');
+  }
+  
+  // Validate given names array
+  if (name.given) {
+    name.given.forEach(givenName => {
+      if (givenName && givenName.length > maxNameLength) {
+        errors.push('Given name exceeds maximum length');
+      }
+    });
+  }
+  
   return {
     valid: errors.length === 0,
     errors
@@ -271,16 +296,31 @@ export function validateHumanName(name: HumanName): ValidationResult {
 export function validateAddress(address: Address): ValidationResult {
   const errors: string[] = [];
   
-  if (!address.line || address.line.length === 0) {
-    errors.push('Address line is required');
+  if (!address || typeof address !== 'object') {
+    errors.push('Address must be a valid object');
+    return { valid: false, errors };
   }
   
-  if (!address.city) {
-    errors.push('City is required');
+  // Check if address has at least one location field
+  const hasLocationData = address.text || 
+    (address.line && address.line.length > 0) || 
+    address.city || 
+    address.state || 
+    address.postalCode || 
+    address.country;
+    
+  if (!hasLocationData) {
+    errors.push('Address must have at least one of: text, line, city, state, postalCode, or country');
   }
   
-  if (!address.country) {
-    errors.push('Country is required');
+  // Validate use field
+  if (address.use && !['home', 'work', 'temp', 'old', 'billing'].includes(address.use)) {
+    errors.push('Invalid address use. Must be one of: home, work, temp, old, billing');
+  }
+  
+  // Validate type field
+  if (address.type && !['postal', 'physical', 'both'].includes(address.type)) {
+    errors.push('Invalid address type. Must be one of: postal, physical, both');
   }
   
   return {
@@ -292,12 +332,32 @@ export function validateAddress(address: Address): ValidationResult {
 export function validateContactPoint(contact: ContactPoint): ValidationResult {
   const errors: string[] = [];
   
-  if (!contact.system) {
-    errors.push('Contact system is required');
+  if (!contact || typeof contact !== 'object') {
+    errors.push('Contact point must be a valid object');
+    return { valid: false, errors };
   }
   
+  // Validate system field
+  if (contact.system && !['phone', 'fax', 'email', 'pager', 'url', 'sms', 'other'].includes(contact.system)) {
+    errors.push('Invalid contact system. Must be one of: phone, fax, email, pager, url, sms, other');
+  }
+  
+  // Validate value is present
   if (!contact.value) {
-    errors.push('Contact value is required');
+    errors.push('Contact point value is required');
+  }
+  
+  // Validate email format if system is email
+  if (contact.system === 'email' && contact.value) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(contact.value)) {
+      errors.push('Invalid email format');
+    }
+  }
+  
+  // Validate use field
+  if (contact.use && !['home', 'work', 'temp', 'old', 'mobile'].includes(contact.use)) {
+    errors.push('Invalid contact use. Must be one of: home, work, temp, old, mobile');
   }
   
   return {
@@ -309,8 +369,24 @@ export function validateContactPoint(contact: ContactPoint): ValidationResult {
 export function validateCodeableConcept(concept: CodeableConcept): ValidationResult {
   const errors: string[] = [];
   
+  if (!concept || typeof concept !== 'object') {
+    errors.push('CodeableConcept must be a valid object');
+    return { valid: false, errors };
+  }
+  
   if (!concept.text && (!concept.coding || concept.coding.length === 0)) {
-    errors.push('Either text or coding is required');
+    errors.push('CodeableConcept must have either coding or text');
+  }
+  
+  // Validate coding if present
+  if (concept.coding && concept.coding.length > 0) {
+    concept.coding.forEach((coding, _index) => {
+      // A coding must have either both system and code, or just display is not sufficient
+      // Based on FHIR specs, display alone without system+code is not a valid coding
+      if (!coding.system && !coding.code) {
+        errors.push('Coding must have either system+code or display');
+      }
+    });
   }
   
   return {
@@ -322,12 +398,19 @@ export function validateCodeableConcept(concept: CodeableConcept): ValidationRes
 export function validateIdentifier(identifier: Identifier): ValidationResult {
   const errors: string[] = [];
   
+  if (!identifier || typeof identifier !== 'object') {
+    errors.push('Identifier must be a valid object');
+    return { valid: false, errors };
+  }
+  
   if (!identifier.value) {
     errors.push('Identifier value is required');
   }
   
-  if (!identifier.system) {
-    errors.push('Identifier system is required');
+  // System is optional according to FHIR spec, but useful for validation
+  // Only validate use if present
+  if (identifier.use && !['usual', 'official', 'temp', 'secondary', 'old'].includes(identifier.use)) {
+    errors.push('Invalid identifier use. Must be one of: usual, official, temp, secondary, old');
   }
   
   return {
@@ -339,15 +422,36 @@ export function validateIdentifier(identifier: Identifier): ValidationResult {
 export function validatePeriod(period: Period): ValidationResult {
   const errors: string[] = [];
   
-  if (!period.start && !period.end) {
-    errors.push('Either start or end date is required');
+  if (!period || typeof period !== 'object') {
+    errors.push('Period must be a valid object');
+    return { valid: false, errors };
   }
   
+  if (!period.start && !period.end) {
+    errors.push('Period must have start and/or end');
+  }
+  
+  // Validate date formats
+  if (period.start) {
+    const startDate = new Date(period.start);
+    if (isNaN(startDate.getTime())) {
+      errors.push('Invalid start date format');
+    }
+  }
+  
+  if (period.end) {
+    const endDate = new Date(period.end);
+    if (isNaN(endDate.getTime())) {
+      errors.push('Invalid end date format');
+    }
+  }
+  
+  // Validate that end is after start
   if (period.start && period.end) {
     const startDate = new Date(period.start);
     const endDate = new Date(period.end);
-    if (startDate > endDate) {
-      errors.push('Start date cannot be after end date');
+    if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && endDate < startDate) {
+      errors.push('Period end must be after start');
     }
   }
   
@@ -360,8 +464,24 @@ export function validatePeriod(period: Period): ValidationResult {
 export function validateReference(reference: Reference): ValidationResult {
   const errors: string[] = [];
   
+  if (!reference || typeof reference !== 'object') {
+    errors.push('Reference must be a valid object');
+    return { valid: false, errors };
+  }
+  
   if (!reference.reference && !reference.identifier) {
-    errors.push('Either reference or identifier is required');
+    errors.push('Reference must have either reference or identifier');
+  }
+  
+  // Validate reference format if present
+  if (reference.reference) {
+    // Basic FHIR reference format validation
+    const referencePattern = /^(https?:\/\/.*\/)?([A-Za-z]+)\/([A-Za-z0-9\-.]+)$/;
+    const simplePattern = /^[A-Za-z]+\/[A-Za-z0-9\-.]+$/;
+    
+    if (!referencePattern.test(reference.reference) && !simplePattern.test(reference.reference)) {
+      errors.push('Invalid reference format. Expected format: ResourceType/id or full URL');
+    }
   }
   
   return {
@@ -373,8 +493,20 @@ export function validateReference(reference: Reference): ValidationResult {
 export function validateQuantity(quantity: Quantity): ValidationResult {
   const errors: string[] = [];
   
-  if (typeof quantity.value !== 'number' || isNaN(quantity.value)) {
+  if (!quantity || typeof quantity !== 'object') {
+    errors.push('Quantity must be a valid object');
+    return { valid: false, errors };
+  }
+  
+  if (quantity.value === undefined || quantity.value === null) {
+    errors.push('Quantity value is required');
+  } else if (typeof quantity.value !== 'number' || isNaN(quantity.value)) {
     errors.push('Quantity value must be a valid number');
+  }
+  
+  // Validate comparator if present
+  if (quantity.comparator && !['<', '<=', '>=', '>'].includes(quantity.comparator)) {
+    errors.push('Invalid comparator. Must be one of: <, <=, >=, >');
   }
   
   return {

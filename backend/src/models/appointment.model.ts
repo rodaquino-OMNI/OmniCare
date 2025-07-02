@@ -1,13 +1,12 @@
 // import { Appointment as FHIRAppointment } from '@medplum/fhirtypes';
 
 import { 
+  CodeableConcept,
   FHIRResource, 
   Identifier, 
-  Reference, 
-  CodeableConcept,
-  Period
+  Period,
+  Reference
 } from './base.model';
-
 import { TelemedicineInfo } from './encounter.model';
 
 /**

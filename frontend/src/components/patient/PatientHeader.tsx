@@ -24,7 +24,7 @@ import {
   IconMapPin, 
   IconCalendar, 
   IconEdit,
-  IconPrint,
+  IconPrinter,
   IconShare,
   IconMoreHorizontal,
   IconHeart,
@@ -179,7 +179,7 @@ export function PatientHeader({
                   </Menu.Item>
                 )}
                 {onPrint && (
-                  <Menu.Item leftSection={<IconPrint size={14} />} onClick={onPrint}>
+                  <Menu.Item leftSection={<IconPrinter size={14} />} onClick={onPrint}>
                     Print Summary
                   </Menu.Item>
                 )}
@@ -251,7 +251,7 @@ export function PatientHeader({
               )}
               {onPrint && (
                 <Button
-                  leftSection={<IconPrint size={16} />}
+                  leftSection={<IconPrinter size={16} />}
                   variant="light"
                   size="sm"
                   onClick={onPrint}

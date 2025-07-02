@@ -14,6 +14,8 @@ global.console = {
   log: jest.fn(),
   warn: jest.fn(),
   error: jest.fn(),
+  debug: jest.fn(),
+  info: jest.fn(),
 };
 
 // Mock external dependencies
@@ -150,34 +152,120 @@ jest.mock('../src/auth/jwt.service', () => ({
 }));
 
 // Mock Session Service
-jest.mock('../src/services/session.service', () => ({
-  SessionManager: jest.fn().mockImplementation(() => ({
-    createSession: jest.fn(() => ({
+jest.mock('../src/services/session.service', () => {
+  // Mock InMemorySessionStore
+  const MockInMemorySessionStore = jest.fn().mockImplementation(() => {
+    const mockInstance = {
+      sessions: new Map(),
+      userSessions: new Map(),
+      get: jest.fn((sessionId: string) => {
+        const session = mockInstance.sessions.get(sessionId) || null;
+        return Promise.resolve(session);
+      }),
+      set: jest.fn((sessionId: string, session: any) => {
+        mockInstance.sessions.set(sessionId, session);
+        // Update user sessions index
+        if (!mockInstance.userSessions.has(session.userId)) {
+          mockInstance.userSessions.set(session.userId, new Set());
+        }
+        mockInstance.userSessions.get(session.userId)?.add(sessionId);
+        return Promise.resolve();
+      }),
+      delete: jest.fn((sessionId: string) => {
+        const session = mockInstance.sessions.get(sessionId);
+        if (session) {
+          mockInstance.sessions.delete(sessionId);
+          // Clean up user sessions index
+          const userSessions = mockInstance.userSessions.get(session.userId);
+          if (userSessions) {
+            userSessions.delete(sessionId);
+            if (userSessions.size === 0) {
+              mockInstance.userSessions.delete(session.userId);
+            }
+          }
+        }
+        return Promise.resolve();
+      }),
+      exists: jest.fn((sessionId: string) => {
+        const exists = mockInstance.sessions.has(sessionId);
+        return Promise.resolve(exists);
+      }),
+      getAllUserSessions: jest.fn((userId: string) => {
+        const sessionIds = mockInstance.userSessions.get(userId) || new Set();
+        const sessions = Array.from(sessionIds).map(id => mockInstance.sessions.get(id)).filter(Boolean);
+        return Promise.resolve(sessions);
+      }),
+      deleteUserSessions: jest.fn((userId: string) => {
+        const sessionIds = mockInstance.userSessions.get(userId) || new Set();
+        sessionIds.forEach((id: string) => mockInstance.sessions.delete(id));
+        mockInstance.userSessions.delete(userId);
+        return Promise.resolve();
+      }),
+      cleanup: jest.fn(() => {
+        // Mock cleanup of expired sessions
+        let cleanedCount = 0;
+        const now = new Date();
+        for (const [sessionId, session] of mockInstance.sessions.entries()) {
+          if (session && session.expiresAt && session.expiresAt < now) {
+            mockInstance.sessions.delete(sessionId);
+            cleanedCount++;
+          }
+        }
+        return Promise.resolve(cleanedCount);
+      }),
+    };
+    return mockInstance;
+  });
+
+  // Mock SessionManager
+  const MockSessionManager = jest.fn().mockImplementation(() => ({
+    createSession: jest.fn(() => Promise.resolve({
       sessionId: 'session-123',
       userId: 'user-1',
-      createdAt: new Date(),
+      role: 'physician',
+      permissions: [],
+      ipAddress: '192.168.1.1',
+      userAgent: 'Mozilla/5.0',
+      lastActivity: new Date(),
       expiresAt: new Date(Date.now() + 3600000),
-      isActive: true,
     })),
-    getSession: jest.fn(() => ({
+    getSession: jest.fn(() => Promise.resolve({
       sessionId: 'session-123',
       userId: 'user-1',
-      createdAt: new Date(),
+      role: 'physician',
+      permissions: [],
+      ipAddress: '192.168.1.1',
+      userAgent: 'Mozilla/5.0',
+      lastActivity: new Date(),
       expiresAt: new Date(Date.now() + 3600000),
-      isActive: true,
     })),
-    validateSessionSecurity: jest.fn(() => ({
+    validateSessionSecurity: jest.fn(() => Promise.resolve({
       isValid: true,
       securityIssues: [],
     })),
-    updateSessionActivity: jest.fn(() => ({
+    updateSessionActivity: jest.fn(() => Promise.resolve({
       sessionId: 'session-123',
       userId: 'user-1',
       lastActivity: new Date(),
+      expiresAt: new Date(Date.now() + 3600000),
     })),
-    destroySession: jest.fn(),
-  })),
-}));
+    destroySession: jest.fn(() => Promise.resolve()),
+    destroyUserSessions: jest.fn(() => Promise.resolve()),
+    forceLogout: jest.fn(() => Promise.resolve()),
+    getUserSessions: jest.fn(() => Promise.resolve([])),
+    isSessionValid: jest.fn(() => true),
+    shutdown: jest.fn(),
+    removeAllListeners: jest.fn(),
+    on: jest.fn(),
+    emit: jest.fn(),
+  }));
+
+  return {
+    InMemorySessionStore: MockInMemorySessionStore,
+    SessionManager: MockSessionManager,
+    sessionManager: new MockSessionManager(),
+  };
+});
 
 // Mock Audit Service
 jest.mock('../src/services/audit.service', () => ({
@@ -257,6 +345,8 @@ process.env.DB_PASSWORD = 'test_password';
 process.env.DATABASE_URL = 'postgresql://test_user:test_password@localhost:5432/omnicare_test';
 process.env.REDIS_URL = 'redis://localhost:6379/1';
 process.env.JWT_SECRET = 'test_jwt_secret_key_for_testing_only';
+process.env.JWT_ACCESS_SECRET = 'test_jwt_access_secret_key_for_testing_only';
+process.env.JWT_REFRESH_SECRET = 'test_jwt_refresh_secret_key_for_testing_only';
 process.env.MEDPLUM_CLIENT_ID = 'test_client_id';
 process.env.MEDPLUM_CLIENT_SECRET = 'test_client_secret';
 
@@ -382,6 +472,91 @@ process.env.MEDPLUM_CLIENT_SECRET = 'test_client_secret';
 // Clean up after each test
 afterEach(() => {
   jest.clearAllMocks();
+});
+
+// Mock Database Service
+jest.mock('../src/services/database.service', () => {
+  const mockPool = {
+    connect: jest.fn(() => Promise.resolve({
+      query: jest.fn(() => Promise.resolve({ rows: [], rowCount: 0 })),
+      release: jest.fn(),
+    })),
+    query: jest.fn(() => Promise.resolve({ rows: [], rowCount: 0 })),
+    end: jest.fn(() => Promise.resolve()),
+    on: jest.fn(),
+    removeAllListeners: jest.fn(),
+    totalCount: 0,
+    idleCount: 0,
+    waitingCount: 0,
+  };
+
+  const mockDatabaseService = {
+    initialize: jest.fn(() => Promise.resolve()),
+    query: jest.fn(() => Promise.resolve({ rows: [], rowCount: 0 })),
+    getPool: jest.fn(() => mockPool),
+    getClient: jest.fn(() => Promise.resolve({
+      query: jest.fn(() => Promise.resolve({ rows: [], rowCount: 0 })),
+      release: jest.fn(),
+    })),
+    transaction: jest.fn((callback: any) => {
+      const mockClient = {
+        query: jest.fn(() => Promise.resolve({ rows: [], rowCount: 0 })),
+        release: jest.fn(),
+      };
+      return callback(mockClient);
+    }),
+    transactionWithCheckpoints: jest.fn((transactionId: string, callback: any) => {
+      const mockClient = {
+        query: jest.fn(() => Promise.resolve({ rows: [], rowCount: 0 })),
+        release: jest.fn(),
+      };
+      const createCheckpoint = jest.fn(() => Promise.resolve());
+      return callback(mockClient, createCheckpoint);
+    }),
+    getTransactionCheckpoints: jest.fn(() => Promise.resolve([])),
+    cleanupOldCheckpoints: jest.fn(() => Promise.resolve(0)),
+    checkHealth: jest.fn(() => Promise.resolve({
+      status: 'healthy',
+      latency: 0,
+      activeConnections: 0,
+      idleConnections: 0,
+      totalConnections: 0,
+    })),
+    getPoolStats: jest.fn(() => ({
+      total: 0,
+      idle: 0,
+      waiting: 0,
+    })),
+    shutdown: jest.fn(() => Promise.resolve()),
+    ensureAuditSchema: jest.fn(() => Promise.resolve()),
+    // Additional methods that might be used
+    connect: jest.fn(() => Promise.resolve()),
+    disconnect: jest.fn(() => Promise.resolve()),
+    cleanup: jest.fn(() => Promise.resolve()),
+    getRepository: jest.fn((entityClass: any) => ({
+      find: jest.fn(() => Promise.resolve([])),
+      findOne: jest.fn(() => Promise.resolve(null)),
+      save: jest.fn((entity: any) => Promise.resolve(entity)),
+      delete: jest.fn(() => Promise.resolve({ affected: 1 })),
+      update: jest.fn(() => Promise.resolve({ affected: 1 })),
+      count: jest.fn(() => Promise.resolve(0)),
+      createQueryBuilder: jest.fn(() => ({
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        offset: jest.fn().mockReturnThis(),
+        getMany: jest.fn(() => Promise.resolve([])),
+        getOne: jest.fn(() => Promise.resolve(null)),
+        getCount: jest.fn(() => Promise.resolve(0)),
+      })),
+    })),
+  };
+
+  return {
+    DatabaseService: jest.fn(() => mockDatabaseService),
+    databaseService: mockDatabaseService,
+  };
 });
 
 // Clean up after all tests

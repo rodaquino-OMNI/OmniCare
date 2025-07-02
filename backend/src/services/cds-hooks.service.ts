@@ -1,24 +1,16 @@
-import axios from 'axios';
 
 import { fhirResourcesService } from './fhir-resources.service';
-import { medplumService } from './medplum.service';
 
-import config from '@/config';
 import {
   CDSHookRequest,
   CDSHookResponse,
   CDSCard,
-  CDSSuggestion,
-  CDSAction,
-  CDSHookContext,
   Patient,
-  Encounter,
   MedicationRequest,
-  ServiceRequest,
-  Observation,
+  ServiceRequest
 } from '@/types/fhir';
-import logger from '@/utils/logger';
 import { getErrorMessage } from '@/utils/error.utils';
+import logger from '@/utils/logger';
 
 interface CDSService {
   hook: string;
@@ -144,7 +136,7 @@ export class CDSHooksService {
       const prefetchData = request.prefetch || {};
 
       // Get patient data
-      const patient = prefetchData.patient || 
+      const patient: Patient | null = (prefetchData.patient as Patient | undefined) || 
         (request.context.patientId ? await fhirResourcesService.getPatient(request.context.patientId) : null);
 
       // Risk assessment card
@@ -186,7 +178,7 @@ export class CDSHooksService {
       const prefetchData = request.prefetch || {};
 
       // Get patient data
-      const patient = prefetchData.patient || 
+      const patient: Patient | null = (prefetchData.patient as Patient | undefined) || 
         (request.context.patientId ? await fhirResourcesService.getPatient(request.context.patientId) : null);
 
       // Check each draft medication order
@@ -237,7 +229,7 @@ export class CDSHooksService {
       const prefetchData = request.prefetch || {};
 
       // Get patient data
-      const patient = prefetchData.patient || 
+      const patient: Patient | null = (prefetchData.patient as Patient | undefined) || 
         (request.context.patientId ? await fhirResourcesService.getPatient(request.context.patientId) : null);
 
       // Check each draft order
@@ -276,8 +268,11 @@ export class CDSHooksService {
   /**
    * Assess patient risk factors
    */
-  private async assessPatientRisk(patient: Patient, prefetchData: any): Promise<CDSCard | null> {
+  private async assessPatientRisk(patient: Patient | null, prefetchData: any): Promise<CDSCard | null> {
     try {
+      if (!patient) {
+        return null;
+      }
       const conditions = prefetchData.conditions?.entry?.map((e: any) => e.resource) || [];
       const observations = prefetchData.observations?.entry?.map((e: any) => e.resource) || [];
 
@@ -355,9 +350,9 @@ export class CDSHooksService {
   /**
    * Check preventive care recommendations
    */
-  private async checkPreventiveCare(patient: Patient, prefetchData: any): Promise<CDSCard | null> {
+  private async checkPreventiveCare(patient: Patient | null, _prefetchData: any): Promise<CDSCard | null> {
     try {
-      if (!patient.birthDate) return null;
+      if (!patient || !patient.birthDate) return null;
 
       const age = new Date().getFullYear() - new Date(patient.birthDate).getFullYear();
       const recommendations: string[] = [];
@@ -402,10 +397,12 @@ export class CDSHooksService {
   /**
    * Identify care gaps
    */
-  private async identifyCareGaps(patient: Patient, prefetchData: any): Promise<CDSCard | null> {
+  private async identifyCareGaps(patient: Patient | null, prefetchData: any): Promise<CDSCard | null> {
     try {
+      if (!patient) {
+        return null;
+      }
       const conditions = prefetchData.conditions?.entry?.map((e: any) => e.resource) || [];
-      const medications = prefetchData.medications?.entry?.map((e: any) => e.resource) || [];
       const observations = prefetchData.observations?.entry?.map((e: any) => e.resource) || [];
 
       const careGaps: string[] = [];
@@ -492,7 +489,7 @@ export class CDSHooksService {
    */
   private async checkDrugAllergies(
     medicationRequest: MedicationRequest,
-    patient: Patient,
+    patient: Patient | null,
     prefetchData: any
   ): Promise<CDSCard | null> {
     try {
@@ -574,9 +571,9 @@ export class CDSHooksService {
    * Simplified dosing check
    */
   private async checkDosing(
-    medicationRequest: MedicationRequest,
-    patient: Patient,
-    prefetchData: any
+    _medicationRequest: MedicationRequest,
+    _patient: Patient | null,
+    _prefetchData: any
   ): Promise<CDSCard | null> {
     // This would implement dosing algorithms based on patient characteristics
     // For now, return null (no dosing recommendations)
@@ -587,8 +584,8 @@ export class CDSHooksService {
    * Check contraindications
    */
   private async checkContraindications(
-    medicationRequest: MedicationRequest,
-    prefetchData: any
+    _medicationRequest: MedicationRequest,
+    _prefetchData: any
   ): Promise<CDSCard | null> {
     // This would check for contraindications based on patient conditions
     // For now, return null (no contraindications found)
@@ -599,9 +596,9 @@ export class CDSHooksService {
    * Check order appropriateness
    */
   private async checkOrderAppropriateness(
-    serviceRequest: ServiceRequest,
-    patient: Patient,
-    prefetchData: any
+    _serviceRequest: ServiceRequest,
+    _patient: Patient | null,
+    _prefetchData: any
   ): Promise<CDSCard | null> {
     // This would implement clinical guidelines for order appropriateness
     // For now, return null (order is appropriate)
@@ -612,8 +609,8 @@ export class CDSHooksService {
    * Check for duplicate orders
    */
   private async checkDuplicateOrders(
-    serviceRequest: ServiceRequest,
-    prefetchData: any
+    _serviceRequest: ServiceRequest,
+    _prefetchData: any
   ): Promise<CDSCard | null> {
     // This would check for recent similar orders
     // For now, return null (no duplicates found)
@@ -624,8 +621,8 @@ export class CDSHooksService {
    * Check cost-effectiveness
    */
   private async checkCostEffectiveness(
-    serviceRequest: ServiceRequest,
-    patient: Patient
+    _serviceRequest: ServiceRequest,
+    _patient: Patient | null
   ): Promise<CDSCard | null> {
     // This would implement cost-effectiveness analysis
     // For now, return null (order is cost-effective)

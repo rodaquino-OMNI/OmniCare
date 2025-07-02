@@ -148,7 +148,7 @@ export class PatientSyncService extends EventEmitter {
 
       this.ws.onopen = () => {
         console.log('WebSocket connected');
-        this.reconnectAttempts = ResourceHistoryTable;
+        this.reconnectAttempts = 0;
         this.updateStatus(SyncStatus.CONNECTED);
         this.startHeartbeat();
         this.emit('sync:connected');
@@ -331,7 +331,7 @@ export class PatientSyncService extends EventEmitter {
    * Process sync queue
    */
   private async processQueue(): Promise<void> {
-    if (this.syncQueue.length === ResourceHistoryTable) return;
+    if (this.syncQueue.length === 0) return;
 
     this.updateStatus(SyncStatus.SYNCING);
     const events = [...this.syncQueue];
@@ -351,9 +351,7 @@ export class PatientSyncService extends EventEmitter {
 
       // Process each patient's events
       for (const [patientId, patientEvents] of patientGroups) {
-        await this.processPat
-
-Events(patientId, patientEvents);
+        await this.processPatientEvents(patientId, patientEvents);
       }
 
       this.syncState.lastSync = new Date();
@@ -443,13 +441,13 @@ Events(patientId, patientEvents);
 
       // Get list of cached patients
       const cacheState = patientCacheService.exportCacheState();
-      const patientIds = cacheState.entries.map(e => e.id);
+      const patientIds = (await cacheState)?.entries?.map((e: any) => e.id) || [];
 
       // Check for updates in batches
       const batches = this.chunkArray(patientIds, SYNC_CONFIG.BATCH_SYNC_SIZE);
       
       for (const batch of batches) {
-        await this.syncPatientBatch(batch);
+        await this.syncPatientBatch(batch as string[]);
       }
 
       this.syncState.lastSync = new Date();
@@ -580,10 +578,10 @@ Events(patientId, patientEvents);
   private debounce<T extends (...args: any[]) => any>(
     func: T,
     wait: number
-  ): (...args: Parameters<T>) => void {
+  ): (...args: any[]) => void {
     let timeout: NodeJS.Timeout;
     
-    return (...args: Parameters<T>) => {
+    return (...args: any[]) => {
       clearTimeout(timeout);
       timeout = setTimeout(() => func(...args), wait);
     };
@@ -594,7 +592,7 @@ Events(patientId, patientEvents);
    */
   private chunkArray<T>(array: T[], size: number): T[][] {
     const chunks: T[][] = [];
-    for (let i = ResourceHistoryTable; i < array.length; i += size) {
+    for (let i = 0; i < array.length; i += size) {
       chunks.push(array.slice(i, i + size));
     }
     return chunks;

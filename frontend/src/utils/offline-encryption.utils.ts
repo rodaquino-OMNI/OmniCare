@@ -72,7 +72,7 @@ export function generateIV(length: number = 12): Uint8Array {
  * Calculate SHA-256 hash of data
  */
 export async function calculateHash(data: string | ArrayBuffer): Promise<string> {
-  let buffer: ArrayBuffer;
+  let buffer: ArrayBuffer | Uint8Array;
   
   if (typeof data === 'string') {
     const encoder = new TextEncoder();
@@ -92,7 +92,7 @@ export async function generateHMAC(
   data: string | ArrayBuffer,
   key: CryptoKey
 ): Promise<string> {
-  let buffer: ArrayBuffer;
+  let buffer: ArrayBuffer | Uint8Array;
   
   if (typeof data === 'string') {
     const encoder = new TextEncoder();
@@ -147,11 +147,11 @@ export async function compressData(data: string): Promise<ArrayBuffer> {
       offset += chunk.length;
     }
     
-    return result.buffer;
+    return result.buffer as ArrayBuffer;
   } else {
     // Fallback: No compression
     const encoder = new TextEncoder();
-    return encoder.encode(data).buffer;
+    return encoder.encode(data).buffer as ArrayBuffer;
   }
 }
 
@@ -392,7 +392,10 @@ export function splitDataIntoChunks(
   
   for (let i = 0; i < bytes.length; i += chunkSize) {
     const chunk = bytes.slice(i, Math.min(i + chunkSize, bytes.length));
-    chunks.push(chunk.buffer);
+    // Create a new ArrayBuffer from the sliced chunk
+    const chunkBuffer = new ArrayBuffer(chunk.length);
+    new Uint8Array(chunkBuffer).set(chunk);
+    chunks.push(chunkBuffer);
   }
   
   return chunks;

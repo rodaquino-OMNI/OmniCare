@@ -30,12 +30,12 @@ describe('OmniCare EMR Full System Integration Tests', () => {
     gender: 'male',
     birthDate: '1990-01-01',
     telecom: [
-      { system: 'phone', value: '555-0123', use: 'mobile' },
-      { system: 'email', value: 'integration.test@example.com', use: 'home' },
+      { system: 'phone', value: '555-0123', use: 'mobile' as const },
+      { system: 'email', value: 'integration.test@example.com', use: 'home' as const },
     ],
     address: [
       {
-        use: 'home',
+        use: 'home' as const,
         line: ['123 Test St'],
         city: 'Test City',
         state: 'TS',
@@ -256,7 +256,7 @@ describe('OmniCare EMR Full System Integration Tests', () => {
           ...testPatient,
           id: patientId,
           telecom: [
-            { system: 'phone', value: '555-9999', use: 'mobile' },
+            { system: 'phone', value: '555-9999', use: 'mobile' as const },
           ],
         });
       
@@ -268,7 +268,7 @@ describe('OmniCare EMR Full System Integration Tests', () => {
           id: patientId,
           address: [
             {
-              use: 'home',
+              use: 'home' as const,
               line: ['456 New St'],
               city: 'New City',
               state: 'NC',

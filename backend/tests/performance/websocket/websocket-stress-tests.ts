@@ -3,8 +3,10 @@
  * Tests for subscription and real-time update performance
  */
 
-import WebSocket from 'ws';
 import { performance } from 'perf_hooks';
+
+import WebSocket from 'ws';
+
 import { PerformanceTestBase, TestConfiguration } from '../framework/performance-test-base';
 
 export interface WebSocketMetrics {

@@ -3,17 +3,19 @@
  * Configures test environment variables and global settings for React/Next.js
  */
 
-// Load environment variables
-require('dotenv').config({ path: '.env.test' });
+// Load environment variables from both root and frontend .env.test
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env.test') }); // Root .env.test
+require('dotenv').config({ path: path.join(__dirname, '..', '.env.test') }); // Frontend .env.test (overrides)
 
 // Set required test environment variables
 process.env.NODE_ENV = 'test';
 process.env.NEXT_PUBLIC_APP_ENV = 'test';
 process.env.TZ = 'UTC';
 
-// API Configuration for tests
-process.env.NEXT_PUBLIC_API_BASE_URL = process.env.TEST_API_BASE_URL || 'http://localhost:3001/api';
-process.env.NEXT_PUBLIC_FHIR_BASE_URL = process.env.TEST_FHIR_BASE_URL || 'http://localhost:8080/fhir/R4';
+// API Configuration for tests - use values from .env.test
+process.env.NEXT_PUBLIC_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.TEST_API_BASE_URL || 'http://localhost:3001/api';
+process.env.NEXT_PUBLIC_FHIR_BASE_URL = process.env.NEXT_PUBLIC_FHIR_BASE_URL || process.env.TEST_FHIR_BASE_URL || 'http://localhost:8080/fhir/R4';
 
 // Authentication configuration for tests
 process.env.NEXT_PUBLIC_AUTH_DOMAIN = 'test.omnicare.com';
@@ -48,6 +50,27 @@ process.env.LC_ALL = 'en_US.UTF-8';
 global.TextEncoder = require('util').TextEncoder;
 global.TextDecoder = require('util').TextDecoder;
 global.crypto = require('crypto').webcrypto;
+
+// Add structuredClone polyfill
+if (typeof structuredClone === 'undefined') {
+  global.structuredClone = (obj) => {
+    // Simple deep clone implementation for test environment
+    return JSON.parse(JSON.stringify(obj));
+  };
+}
+
+// setImmediate polyfill for tests
+if (typeof setImmediate === 'undefined') {
+  global.setImmediate = (callback, ...args) => {
+    return setTimeout(() => callback(...args), 0);
+  };
+}
+
+if (typeof clearImmediate === 'undefined') {
+  global.clearImmediate = (id) => {
+    clearTimeout(id);
+  };
+}
 
 // Web API polyfills - MUST be before any module that uses them
 // MessagePort and MessageChannel
@@ -126,6 +149,193 @@ if (typeof ReadableStream === 'undefined') {
       }
     };
   }
+}
+
+// Request and Response polyfills - MUST be before any module that uses them
+if (typeof Request === 'undefined') {
+  global.Request = class Request {
+    constructor(input, init = {}) {
+      this.url = input instanceof Request ? input.url : input;
+      this.method = init.method || (input instanceof Request ? input.method : 'GET');
+      this.headers = new Headers(init.headers || (input instanceof Request ? input.headers : {}));
+      this.body = init.body || (input instanceof Request ? input.body : null);
+      this.mode = init.mode || (input instanceof Request ? input.mode : 'cors');
+      this.credentials = init.credentials || (input instanceof Request ? input.credentials : 'same-origin');
+      this.cache = init.cache || (input instanceof Request ? input.cache : 'default');
+      this.redirect = init.redirect || (input instanceof Request ? input.redirect : 'follow');
+      this.referrer = init.referrer || (input instanceof Request ? input.referrer : 'about:client');
+      this.integrity = init.integrity || (input instanceof Request ? input.integrity : '');
+    }
+    
+    clone() {
+      return new Request(this.url, {
+        method: this.method,
+        headers: this.headers,
+        body: this.body,
+        mode: this.mode,
+        credentials: this.credentials,
+        cache: this.cache,
+        redirect: this.redirect,
+        referrer: this.referrer,
+        integrity: this.integrity
+      });
+    }
+    
+    async text() {
+      return this.body || '';
+    }
+    
+    async json() {
+      return this.body ? JSON.parse(this.body) : {};
+    }
+  };
+}
+
+if (typeof Response === 'undefined') {
+  global.Response = class Response {
+    constructor(body, init = {}) {
+      this.body = body;
+      this.status = init.status || 200;
+      this.statusText = init.statusText || 'OK';
+      this.headers = new Headers(init.headers || {});
+      this.ok = this.status >= 200 && this.status < 300;
+      this.redirected = false;
+      this.type = 'default';
+      this.url = init.url || '';
+    }
+    
+    clone() {
+      return new Response(this.body, {
+        status: this.status,
+        statusText: this.statusText,
+        headers: this.headers
+      });
+    }
+    
+    async text() {
+      return typeof this.body === 'string' ? this.body : JSON.stringify(this.body);
+    }
+    
+    async json() {
+      return typeof this.body === 'string' ? JSON.parse(this.body) : this.body;
+    }
+    
+    async blob() {
+      return new Blob([this.body || '']);
+    }
+    
+    async arrayBuffer() {
+      const encoder = new TextEncoder();
+      const text = await this.text();
+      return encoder.encode(text).buffer;
+    }
+  };
+}
+
+if (typeof Headers === 'undefined') {
+  global.Headers = class Headers {
+    constructor(init) {
+      this._headers = {};
+      
+      if (init instanceof Headers) {
+        init.forEach((value, key) => {
+          this.append(key, value);
+        });
+      } else if (Array.isArray(init)) {
+        init.forEach(([key, value]) => {
+          this.append(key, value);
+        });
+      } else if (init && typeof init === 'object') {
+        Object.entries(init).forEach(([key, value]) => {
+          this.append(key, value);
+        });
+      }
+    }
+    
+    append(name, value) {
+      name = name.toLowerCase();
+      if (!this._headers[name]) {
+        this._headers[name] = [];
+      }
+      this._headers[name].push(value);
+    }
+    
+    delete(name) {
+      delete this._headers[name.toLowerCase()];
+    }
+    
+    get(name) {
+      const values = this._headers[name.toLowerCase()];
+      return values ? values.join(', ') : null;
+    }
+    
+    has(name) {
+      return name.toLowerCase() in this._headers;
+    }
+    
+    set(name, value) {
+      this._headers[name.toLowerCase()] = [value];
+    }
+    
+    forEach(callback, thisArg) {
+      Object.entries(this._headers).forEach(([name, values]) => {
+        values.forEach(value => {
+          callback.call(thisArg, value, name, this);
+        });
+      });
+    }
+    
+    entries() {
+      const entries = [];
+      this.forEach((value, name) => {
+        entries.push([name, value]);
+      });
+      return entries[Symbol.iterator]();
+    }
+    
+    keys() {
+      return Object.keys(this._headers)[Symbol.iterator]();
+    }
+    
+    values() {
+      const values = [];
+      this.forEach(value => values.push(value));
+      return values[Symbol.iterator]();
+    }
+    
+    [Symbol.iterator]() {
+      return this.entries();
+    }
+  };
+}
+
+if (typeof Blob === 'undefined') {
+  global.Blob = class Blob {
+    constructor(parts = [], options = {}) {
+      this.parts = parts;
+      this.type = options.type || '';
+      this.size = parts.reduce((acc, part) => {
+        if (typeof part === 'string') return acc + part.length;
+        if (part instanceof ArrayBuffer) return acc + part.byteLength;
+        if (part instanceof Blob) return acc + part.size;
+        return acc;
+      }, 0);
+    }
+    
+    async text() {
+      return this.parts.join('');
+    }
+    
+    async arrayBuffer() {
+      const text = await this.text();
+      const encoder = new TextEncoder();
+      return encoder.encode(text).buffer;
+    }
+    
+    slice(start = 0, end = this.size, contentType = '') {
+      return new Blob(this.parts.slice(start, end), { type: contentType });
+    }
+  };
 }
 
 // Mock window.location for Next.js
@@ -281,6 +491,42 @@ global.navigator.clipboard = {
 
 // Mock Web Share API
 global.navigator.share = jest.fn(() => Promise.resolve());
+global.navigator.canShare = jest.fn(() => true);
+
+// Mock Web Speech API
+global.SpeechSynthesis = class SpeechSynthesis {
+  constructor() {
+    this.pending = false;
+    this.speaking = false;
+    this.paused = false;
+    this.onvoiceschanged = null;
+  }
+  cancel() {}
+  pause() {}
+  resume() {}
+  speak() {}
+  getVoices() { return []; }
+};
+
+global.speechSynthesis = new global.SpeechSynthesis();
+
+global.SpeechSynthesisUtterance = class SpeechSynthesisUtterance {
+  constructor(text) {
+    this.text = text || '';
+    this.lang = 'en-US';
+    this.voice = null;
+    this.volume = 1;
+    this.rate = 1;
+    this.pitch = 1;
+    this.onstart = null;
+    this.onend = null;
+    this.onerror = null;
+    this.onpause = null;
+    this.onresume = null;
+    this.onmark = null;
+    this.onboundary = null;
+  }
+};
 
 // Mock performance API for timing tests
 global.performance = {
@@ -292,6 +538,16 @@ global.performance = {
   clearMarks: jest.fn(),
   clearMeasures: jest.fn(),
   now: () => Date.now(),
+  timing: {
+    navigationStart: Date.now() - 5000,
+    loadEventEnd: Date.now() - 1000,
+    domComplete: Date.now() - 2000,
+    domContentLoadedEventEnd: Date.now() - 3000,
+  },
+  navigation: {
+    type: 0,
+    redirectCount: 0,
+  },
 };
 
 // Mock requestIdleCallback
@@ -321,6 +577,170 @@ if (process.env.SILENT_TESTS !== 'false') {
   };
 }
 
+// Mock Battery API
+global.navigator.getBattery = jest.fn(() => Promise.resolve({
+  charging: true,
+  chargingTime: Infinity,
+  dischargingTime: Infinity,
+  level: 1,
+  addEventListener: jest.fn(),
+  removeEventListener: jest.fn(),
+  onchargingchange: null,
+  onchargingtimechange: null,
+  ondischargingtimechange: null,
+  onlevelchange: null,
+}));
+
+// Mock Connection API (Network Information)
+global.navigator.connection = {
+  effectiveType: '4g',
+  type: 'wifi',
+  downlink: 10,
+  rtt: 50,
+  saveData: false,
+  addEventListener: jest.fn(),
+  removeEventListener: jest.fn(),
+  onchange: null,
+};
+
+// Mock Permissions API
+global.navigator.permissions = {
+  query: jest.fn((descriptor) => Promise.resolve({
+    name: descriptor.name,
+    state: 'granted',
+    onchange: null,
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+  })),
+};
+
+// Mock Gamepad API
+global.navigator.getGamepads = jest.fn(() => []);
+
+// Mock WebRTC APIs
+global.RTCPeerConnection = class RTCPeerConnection {
+  constructor(config) {
+    this.localDescription = null;
+    this.remoteDescription = null;
+    this.signalingState = 'stable';
+    this.iceConnectionState = 'new';
+    this.iceGatheringState = 'new';
+    this.connectionState = 'new';
+    this.canTrickleIceCandidates = null;
+    this.onconnectionstatechange = null;
+    this.ondatachannel = null;
+    this.onicecandidate = null;
+    this.oniceconnectionstatechange = null;
+    this.onicegatheringstatechange = null;
+    this.onnegotiationneeded = null;
+    this.onsignalingstatechange = null;
+    this.ontrack = null;
+  }
+  
+  createOffer() { return Promise.resolve({}); }
+  createAnswer() { return Promise.resolve({}); }
+  setLocalDescription() { return Promise.resolve(); }
+  setRemoteDescription() { return Promise.resolve(); }
+  addIceCandidate() { return Promise.resolve(); }
+  getStats() { return Promise.resolve(new Map()); }
+  addTrack() { return {}; }
+  removeTrack() {}
+  createDataChannel() { return {}; }
+  close() {}
+};
+
+global.RTCSessionDescription = class RTCSessionDescription {
+  constructor(init) {
+    this.type = init?.type || 'offer';
+    this.sdp = init?.sdp || '';
+  }
+};
+
+global.RTCIceCandidate = class RTCIceCandidate {
+  constructor(init) {
+    this.candidate = init?.candidate || '';
+    this.sdpMLineIndex = init?.sdpMLineIndex || 0;
+    this.sdpMid = init?.sdpMid || null;
+    this.usernameFragment = null;
+  }
+};
+
+// Mock MediaDevices and getUserMedia
+global.navigator.mediaDevices = {
+  getUserMedia: jest.fn(() => Promise.resolve({
+    getTracks: () => [],
+    getVideoTracks: () => [],
+    getAudioTracks: () => [],
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+  })),
+  getDisplayMedia: jest.fn(() => Promise.resolve({
+    getTracks: () => [],
+    getVideoTracks: () => [],
+    getAudioTracks: () => [],
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+  })),
+  enumerateDevices: jest.fn(() => Promise.resolve([])),
+  getSupportedConstraints: jest.fn(() => ({})),
+  addEventListener: jest.fn(),
+  removeEventListener: jest.fn(),
+};
+
+// Legacy getUserMedia
+global.navigator.getUserMedia = jest.fn((constraints, success, error) => {
+  global.navigator.mediaDevices.getUserMedia(constraints)
+    .then(success)
+    .catch(error);
+});
+
+// Mock Crypto.subtle API with more realistic implementations
+if (!global.crypto.subtle) {
+  global.crypto.subtle = {
+    decrypt: jest.fn(() => Promise.resolve(new ArrayBuffer(16))),
+    deriveBits: jest.fn(() => Promise.resolve(new ArrayBuffer(32))),
+    deriveKey: jest.fn((algorithm, baseKey, derivedKeyAlgorithm, extractable, keyUsages) => 
+      Promise.resolve({
+        type: 'secret',
+        extractable,
+        algorithm: derivedKeyAlgorithm,
+        usages: keyUsages
+      })
+    ),
+    digest: jest.fn((algorithm, data) => {
+      // Simple mock hash
+      const hash = new ArrayBuffer(32);
+      const view = new Uint8Array(hash);
+      for (let i = 0; i < 32; i++) {
+        view[i] = i;
+      }
+      return Promise.resolve(hash);
+    }),
+    encrypt: jest.fn(() => Promise.resolve(new ArrayBuffer(32))),
+    exportKey: jest.fn(() => Promise.resolve(new ArrayBuffer(32))),
+    generateKey: jest.fn((algorithm, extractable, keyUsages) => 
+      Promise.resolve({
+        type: 'secret',
+        extractable,
+        algorithm,
+        usages: keyUsages
+      })
+    ),
+    importKey: jest.fn((format, keyData, algorithm, extractable, keyUsages) => 
+      Promise.resolve({
+        type: 'secret',
+        extractable,
+        algorithm,
+        usages: keyUsages
+      })
+    ),
+    sign: jest.fn(() => Promise.resolve(new ArrayBuffer(64))),
+    unwrapKey: jest.fn(() => Promise.resolve({})),
+    verify: jest.fn(() => Promise.resolve(true)),
+    wrapKey: jest.fn(() => Promise.resolve(new ArrayBuffer(48))),
+  };
+}
+
 // Global test configuration
 global.testConfig = {
   timeouts: {
@@ -342,13 +762,69 @@ global.testConfig = {
     externalServices: true,
     serviceWorker: true,
     notifications: true,
+    webapis: true,
   },
   rendering: {
     defaultProviders: true,
     mockQueries: true,
     mockStores: true,
   },
+  features: {
+    webrtc: true,
+    crypto: true,
+    media: true,
+    speech: true,
+    battery: true,
+    network: true,
+    permissions: true,
+  },
+};
+
+// Test utilities for environment
+global.testEnv = {
+  // Helper to check if a feature is enabled
+  isFeatureEnabled: (feature) => global.testConfig.features[feature] || false,
+  
+  // Helper to get mock storage
+  getMockStorage: () => ({
+    localStorage: global.localStorage,
+    sessionStorage: global.sessionStorage,
+    indexedDB: global.indexedDB,
+  }),
+  
+  // Helper to reset all mocked APIs
+  resetMocks: () => {
+    // Reset navigator mocks
+    Object.getOwnPropertyNames(global.navigator).forEach(prop => {
+      if (typeof global.navigator[prop] === 'function' && global.navigator[prop].mockReset) {
+        global.navigator[prop].mockReset();
+      }
+    });
+    
+    // Reset window mocks
+    if (global.window) {
+      Object.getOwnPropertyNames(global.window).forEach(prop => {
+        if (typeof global.window[prop] === 'function' && global.window[prop].mockReset) {
+          global.window[prop].mockReset();
+        }
+      });
+    }
+  },
+  
+  // Helper to configure mock responses
+  configureMock: (apiName, method, response) => {
+    if (global.navigator[apiName] && global.navigator[apiName][method]) {
+      if (typeof response === 'function') {
+        global.navigator[apiName][method].mockImplementation(response);
+      } else {
+        global.navigator[apiName][method].mockResolvedValue(response);
+      }
+    }
+  },
 };
 
 // Export for CommonJS compatibility
-module.exports = {};
+module.exports = {
+  testConfig: global.testConfig,
+  testEnv: global.testEnv,
+};

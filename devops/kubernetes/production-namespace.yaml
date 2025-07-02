@@ -1,0 +1,228 @@
+# Production-hardened Kubernetes Namespace for OmniCare EMR
+# HIPAA-compliant with enhanced security and monitoring
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: omnicare-prod
+  labels:
+    name: omnicare-prod
+    app.kubernetes.io/name: omnicare-emr
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: namespace
+    app.kubernetes.io/part-of: omnicare-emr
+    environment: production
+    compliance: hipaa
+    security.kubernetes.io/enforce: true
+  annotations:
+    scheduler.alpha.kubernetes.io/node-selector: "node-type=production"
+    # Enable audit logging for HIPAA compliance
+    audit.alpha.kubernetes.io/level: "Request"
+---
+# Enhanced Resource Quota for production
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: omnicare-prod-quota
+  namespace: omnicare-prod
+spec:
+  hard:
+    # CPU and Memory
+    requests.cpu: "20"
+    requests.memory: 40Gi
+    limits.cpu: "40"
+    limits.memory: 80Gi
+    
+    # Storage
+    persistentvolumeclaims: "50"
+    requests.storage: "2Ti"
+    
+    # Networking
+    services: "50"
+    services.loadbalancers: "10"
+    services.nodeports: "5"
+    
+    # Security
+    secrets: "100"
+    configmaps: "100"
+    
+    # Scaling
+    pods: "200"
+    replicationcontrollers: "50"
+    
+    # Jobs
+    jobs.batch: "20"
+    cronjobs.batch: "10"
+---
+# Production Limit Range
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: omnicare-prod-limits
+  namespace: omnicare-prod
+spec:
+  limits:
+  - default:
+      cpu: "1000m"
+      memory: 2Gi
+      ephemeral-storage: 10Gi
+    defaultRequest:
+      cpu: "250m"
+      memory: 512Mi
+      ephemeral-storage: 1Gi
+    max:
+      cpu: "8000m"
+      memory: 16Gi
+      ephemeral-storage: 50Gi
+    min:
+      cpu: "100m"
+      memory: 128Mi
+      ephemeral-storage: 100Mi
+    type: Container
+  - max:
+      storage: 1Ti
+    min:
+      storage: 1Gi
+    type: PersistentVolumeClaim
+---
+# Network Policy for production isolation
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: omnicare-prod-network-policy
+  namespace: omnicare-prod
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  
+  # Ingress rules - only allow specific traffic
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8080
+    - protocol: TCP
+      port: 3000
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 8080
+    - protocol: TCP
+      port: 9090
+  - from:
+    - podSelector:
+        matchLabels:
+          app: backend
+    - podSelector:
+        matchLabels:
+          app: frontend
+    ports:
+    - protocol: TCP
+      port: 8080
+    - protocol: TCP
+      port: 5432
+    - protocol: TCP
+      port: 6379
+  
+  # Egress rules - control outbound traffic
+  egress:
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443  # HTTPS
+    - protocol: TCP
+      port: 53   # DNS
+    - protocol: UDP
+      port: 53   # DNS
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgres
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:
+    - podSelector:
+        matchLabels:
+          app: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+---
+# Pod Security Policy
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: omnicare-prod-psp
+  namespace: omnicare-prod
+spec:
+  privileged: false
+  allowPrivilegeEscalation: false
+  requiredDropCapabilities:
+    - ALL
+  volumes:
+    - 'configMap'
+    - 'emptyDir'
+    - 'projected'
+    - 'secret'
+    - 'downwardAPI'
+    - 'persistentVolumeClaim'
+  hostNetwork: false
+  hostIPC: false
+  hostPID: false
+  runAsUser:
+    rule: 'MustRunAsNonRoot'
+  supplementalGroups:
+    rule: 'MustRunAs'
+    ranges:
+      - min: 1
+        max: 65535
+  fsGroup:
+    rule: 'MustRunAs'
+    ranges:
+      - min: 1
+        max: 65535
+  readOnlyRootFilesystem: false
+  seLinux:
+    rule: 'RunAsAny'
+---
+# Role for Pod Security Policy
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: omnicare-prod-psp-role
+  namespace: omnicare-prod
+rules:
+- apiGroups: ['policy']
+  resources: ['podsecuritypolicies']
+  verbs: ['use']
+  resourceNames:
+  - omnicare-prod-psp
+---
+# RoleBinding for Pod Security Policy
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: omnicare-prod-psp-binding
+  namespace: omnicare-prod
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: omnicare-prod-psp-role
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: omnicare-prod
+- kind: ServiceAccount
+  name: backend-service-account
+  namespace: omnicare-prod
+- kind: ServiceAccount
+  name: frontend-service-account
+  namespace: omnicare-prod

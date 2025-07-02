@@ -5,11 +5,61 @@ import jwt from 'jsonwebtoken';
 
 import config from '@/config';
 import { 
-  SMARTTokenResponse, 
-  SMARTLaunchContext,
+  SMARTTokenResponse
 } from '@/types/fhir';
-import logger from '@/utils/logger';
 import { getErrorMessage } from '@/utils/error.utils';
+import logger from '@/utils/logger';
+
+interface StateStoreData {
+  clientId: string;
+  redirectUri: string;
+  scope: string[];
+  codeVerifier: string;
+  aud?: string;
+  launch?: string;
+  timestamp: number;
+  expiresAt: number;
+  fhirBaseUrl?: string;
+  authorizationEndpoint?: string;
+  tokenEndpoint?: string;
+  iss?: string;
+}
+
+interface AuthCodeStoreData {
+  refreshToken: string;
+  clientId: string;
+  scope: string;
+  patient?: string;
+  encounter?: string;
+  timestamp: number;
+}
+
+interface TokenIntrospectionResult {
+  active: boolean;
+  scope?: string;
+  client_id?: string;
+  username?: string;
+  exp?: number;
+  iat?: number;
+  sub?: string;
+  aud?: string;
+  iss?: string;
+  jti?: string;
+  patient?: string;
+  encounter?: string;
+  fhirUser?: string;
+}
+
+interface SMARTConfiguration {
+  authorization_endpoint: string;
+  token_endpoint: string;
+  introspection_endpoint?: string;
+  revocation_endpoint?: string;
+  capabilities: string[];
+  response_types_supported?: string[];
+  scopes_supported?: string[];
+  code_challenge_methods_supported?: string[];
+}
 
 /**
  * SMART on FHIR Integration Service
@@ -27,8 +77,8 @@ export class SMARTFHIRService {
     'user/*.write',
     'launch'
   ];
-  private readonly stateStore = new Map<string, any>(); // In production, use Redis
-  private readonly authCodeStore = new Map<string, any>(); // In production, use Redis
+  private readonly stateStore = new Map<string, StateStoreData>();
+  private readonly authCodeStore = new Map<string, AuthCodeStoreData>(); // In production, use Redis
 
   // ===============================
   // SMART AUTHORIZATION FLOW
@@ -150,7 +200,6 @@ export class SMARTFHIRService {
           scope: tokenResponse.scope,
           patient: tokenResponse.patient,
           encounter: tokenResponse.encounter,
-          fhirUser: tokenResponse.fhirUser,
           timestamp: Date.now(),
         });
       }
@@ -220,7 +269,7 @@ export class SMARTFHIRService {
   /**
    * Introspect access token
    */
-  async introspectToken(accessToken: string): Promise<any> {
+  async introspectToken(accessToken: string): Promise<TokenIntrospectionResult> {
     try {
       const response = await axios.post(
         config.smart.introspectionUrl,
@@ -256,7 +305,7 @@ export class SMARTFHIRService {
   /**
    * Get SMART configuration from EHR
    */
-  async getSMARTConfiguration(fhirBaseUrl: string): Promise<any> {
+  async getSMARTConfiguration(fhirBaseUrl: string): Promise<SMARTConfiguration> {
     try {
       const configUrl = `${fhirBaseUrl.replace(/\/$/, '')}/.well-known/smart_configuration`;
       
@@ -526,7 +575,7 @@ export class SMARTFHIRService {
   /**
    * Validate JWT token (for SMART apps)
    */
-  validateJWT(token: string, publicKey?: string): any {
+  validateJWT(token: string, publicKey?: string): jwt.JwtPayload | string {
     try {
       const decoded = jwt.verify(token, publicKey || config.jwt.secret);
       
@@ -569,7 +618,7 @@ export class SMARTFHIRService {
   /**
    * Get health status
    */
-  async getHealthStatus(): Promise<{ status: string; details: any }> {
+  async getHealthStatus(): Promise<{ status: string; details: Record<string, unknown> }> {
     try {
       const details = {
         stateStoreSize: this.stateStore.size,

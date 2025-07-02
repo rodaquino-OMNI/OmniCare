@@ -84,9 +84,9 @@ export function usePatientCache(
   const [fromCache, setFromCache] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [cacheStats, setCacheStats] = useState({
-    hitRate: ResourceHistoryTable,
-    totalSize: ResourceHistoryTable,
-    patientCount: ResourceHistoryTable
+    hitRate: 0,
+    totalSize: 0,
+    patientCount: 0
   });
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(SyncStatus.DISCONNECTED);
 

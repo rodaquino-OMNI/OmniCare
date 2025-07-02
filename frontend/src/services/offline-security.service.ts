@@ -262,7 +262,7 @@ export class OfflineSecurityService {
       const encryptedData: EncryptedData = {
         id,
         data: this.arrayBufferToBase64(encryptedBuffer),
-        iv: this.arrayBufferToBase64(iv),
+        iv: this.arrayBufferToBase64(iv.buffer),
         classification,
         userId,
         created: new Date().toISOString(),

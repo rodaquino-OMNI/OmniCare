@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, memo, useMemo, useEffect } from 'react';
 import { Patient, SearchParameter } from '@medplum/fhirtypes';
 import { ResourceTable, SearchControl, useMedplum } from '@medplum/react';
-import { Card, Title, Box, Group, Button, Text, Badge, Stack } from '@mantine/core';
+import { Card, Title, Box, Group, Button, Text, Badge, Stack, Avatar, Skeleton } from '@mantine/core';
 import { IconPlus, IconSearch, IconUser } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 import { patientHelpers } from '@/lib/medplum';
@@ -50,7 +50,7 @@ const patientColumns = [
   },
 ];
 
-export function PatientList() {
+export const PatientList = memo(() => {
   const medplum = useMedplum();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,8 +68,8 @@ export function PatientList() {
     router.push('/dashboard/patients/new');
   }, [router]);
 
-  // Define search parameters for patient search
-  const searchParams: SearchParameter[] = [
+  // Memoized search parameters for patient search
+  const searchParams = useMemo<SearchParameter[]>(() => [
     {
       resourceType: 'SearchParameter',
       name: 'name',
@@ -110,7 +110,7 @@ export function PatientList() {
       type: 'token',
       description: 'Search by email address',
     },
-  ];
+  ], []);
 
   return (
     <Stack gap="md">
@@ -162,11 +162,17 @@ export function PatientList() {
       </Card>
     </Stack>
   );
-}
+});
 
-// Export a variant for dashboard use with limited rows
-export function PatientListDashboard() {
+PatientList.displayName = 'PatientList';
+
+// Optimized dashboard variant with memoization and performance tracking
+export const PatientListDashboard = memo(() => {
   const router = useRouter();
+  const medplum = useMedplum();
+  const [recentPatients, setRecentPatients] = useState<Patient[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadTime, setLoadTime] = useState(0);
 
   const handlePatientClick = useCallback(
     (patient: Patient) => {
@@ -177,30 +183,130 @@ export function PatientListDashboard() {
     [router]
   );
 
+  const handleViewAll = useCallback(() => {
+    router.push('/dashboard/patients');
+  }, [router]);
+
+  // Load recent patients with performance tracking
+  useEffect(() => {
+    let isMounted = true;
+    
+    const loadRecentPatients = async () => {
+      const startTime = Date.now();
+      try {
+        const patients = await medplum.searchResources('Patient', {
+          _sort: '-_lastUpdated',
+          _count: '5',
+        });
+        
+        if (isMounted) {
+          setRecentPatients(patients);
+          setLoadTime(Date.now() - startTime);
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error('Error loading recent patients:', error);
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadRecentPatients();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [medplum]);
+
+  // Memoized patient rows for optimal performance
+  const memoizedPatientRows = useMemo(() => {
+    return recentPatients.map((patient) => {
+      const name = patientHelpers.getFullName(patient);
+      const mrn = patientHelpers.getMRN(patient);
+      const age = patientHelpers.getAge(patient);
+      
+      return (
+        <Group
+          key={patient.id}
+          justify="space-between"
+          p="sm"
+          style={{ 
+            cursor: 'pointer',
+            borderRadius: '8px',
+            transition: 'background-color 0.1s ease'
+          }}
+          className="hover:bg-gray-50"
+          onClick={() => handlePatientClick(patient)}
+        >
+          <Group gap="sm">
+            <Avatar size="sm" color="blue">
+              <IconUser size={16} />
+            </Avatar>
+            <div>
+              <Text size="sm" fw={500}>{name}</Text>
+              <Text size="xs" c="dimmed">
+                MRN: {mrn} • {age} years
+              </Text>
+            </div>
+          </Group>
+          <Badge
+            color={patient.active ? 'green' : 'gray'}
+            variant="light"
+            size="xs"
+          >
+            {patient.active ? 'Active' : 'Inactive'}
+          </Badge>
+        </Group>
+      );
+    });
+  }, [recentPatients, handlePatientClick]);
+
   return (
     <Card>
       <Group justify="space-between" mb="md">
         <Title order={3}>Recent Patients</Title>
-        <Button
-          variant="subtle"
-          size="xs"
-          onClick={() => router.push('/dashboard/patients')}
-        >
-          View All
-        </Button>
+        <Group gap="xs">
+          {loadTime > 0 && (
+            <Text size="xs" c="dimmed">
+              {loadTime}ms
+            </Text>
+          )}
+          <Button
+            variant="subtle"
+            size="xs"
+            onClick={handleViewAll}
+          >
+            View All
+          </Button>
+        </Group>
       </Group>
 
-      <ResourceTable
-        resourceType="Patient"
-        columns={patientColumns.slice(ResourceHistoryTable, 5)} // Show fewer columns for dashboard
-        onRowClick={handlePatientClick}
-        searchParams={{
-          _sort: '-_lastUpdated',
-          _count: 5,
-        }}
-        hideSearch
-        hidePagination
-      />
+      {isLoading ? (
+        <Stack gap="xs">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <Group key={index} gap="sm">
+              <Skeleton height={32} circle />
+              <Box style={{ flex: 1 }}>
+                <Skeleton height={14} width="60%" mb={4} />
+                <Skeleton height={12} width="40%" />
+              </Box>
+            </Group>
+          ))}
+        </Stack>
+      ) : recentPatients.length === 0 ? (
+        <Text size="sm" c="dimmed" ta="center" py="md">
+          No recent patients
+        </Text>
+      ) : (
+        <Stack gap={4}>
+          {memoizedPatientRows}
+        </Stack>
+      )}
     </Card>
   );
-}
+});
+
+PatientListDashboard.displayName = 'PatientListDashboard';
+
+export default PatientList;

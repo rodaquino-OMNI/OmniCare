@@ -56,12 +56,43 @@ export class NoteSyncQueueService {
   private retryTimer: NodeJS.Timeout | null = null;
   private onlineListener: (() => void) | null = null;
   private syncStatusCallbacks: Set<(status: SyncStatistics) => void> = new Set();
+  private isInitialized: boolean = false;
 
   constructor() {
-    if (typeof window !== 'undefined') {
-      this.initializeDB();
+    // Don't initialize in constructor - wait for explicit initialization
+    // This prevents module-level initialization in test environments
+  }
+
+  /**
+   * Initialize the note sync queue service
+   * Must be called explicitly to avoid module-level initialization
+   */
+  async initialize(): Promise<void> {
+    if (this.isInitialized) return;
+
+    // Extra check for server/test environments
+    if (typeof window === 'undefined' || (typeof process !== 'undefined' && process.env.NODE_ENV === 'test')) {
+      return;
+    }
+
+    try {
+      await this.initializeDB();
       this.setupEventListeners();
       this.startAutoSync();
+      this.isInitialized = true;
+      console.log('Note sync queue service initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize note sync queue service:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Ensure the service is initialized before use
+   */
+  public async ensureInitialized(): Promise<void> {
+    if (!this.isInitialized && typeof window !== 'undefined') {
+      await this.initialize();
     }
   }
 
@@ -147,7 +178,7 @@ export class NoteSyncQueueService {
     action: 'create' | 'update' | 'delete',
     options: SyncOptions = {}
   ): Promise<SyncQueueItem> {
-    if (!this.db) await this.initializeDB();
+    await this.ensureInitialized();
 
     const item: SyncQueueItem = {
       id: generateId(),
@@ -156,7 +187,7 @@ export class NoteSyncQueueService {
       priority: options.priority || 'normal',
       timestamp: new Date().toISOString(),
       status: 'pending',
-      attempts: ResourceHistoryTable,
+      attempts: 0,
       maxAttempts: options.maxRetries || 3,
       metadata: {}
     };
@@ -180,7 +211,7 @@ export class NoteSyncQueueService {
   }
 
   public async removeFromQueue(itemId: string): Promise<void> {
-    if (!this.db) await this.initializeDB();
+    await this.ensureInitialized();
 
     const transaction = this.db!.transaction([SYNC_QUEUE_STORE], 'readwrite');
     const store = transaction.objectStore(SYNC_QUEUE_STORE);
@@ -195,17 +226,17 @@ export class NoteSyncQueueService {
   }
 
   public async getQueueStatus(): Promise<SyncStatistics> {
-    if (!this.db) await this.initializeDB();
+    await this.ensureInitialized();
 
     const transaction = this.db!.transaction([SYNC_QUEUE_STORE], 'readonly');
     const store = transaction.objectStore(SYNC_QUEUE_STORE);
     const index = store.index('status');
     
     const counts = {
-      pending: ResourceHistoryTable,
-      processing: ResourceHistoryTable,
-      completed: ResourceHistoryTable,
-      failed: ResourceHistoryTable
+      pending: 0,
+      processing: 0,
+      completed: 0,
+      failed: 0
     };
 
     const statuses: Array<keyof typeof counts> = ['pending', 'processing', 'completed', 'failed'];
@@ -267,8 +298,8 @@ export class NoteSyncQueueService {
       // Get pending items sorted by priority and timestamp
       const pendingItems = await this.getPendingItems(batchSize);
       
-      let successCount = ResourceHistoryTable;
-      let failureCount = ResourceHistoryTable;
+      let successCount = 0;
+      let failureCount = 0;
 
       for (const item of pendingItems) {
         try {
@@ -294,8 +325,8 @@ export class NoteSyncQueueService {
         notifications.update({
           id: 'sync-progress',
           title: 'Sync Complete',
-          message: `${successCount} items synced successfully${failureCount > ResourceHistoryTable ? `, ${failureCount} failed` : ''}`,
-          color: failureCount > ResourceHistoryTable ? 'yellow' : 'green',
+          message: `${successCount} items synced successfully${failureCount > 0 ? `, ${failureCount} failed` : ''}`,
+          color: failureCount > 0 ? 'yellow' : 'green',
           loading: false,
           autoClose: 300
         });
@@ -319,7 +350,7 @@ export class NoteSyncQueueService {
   }
 
   private async processItem(item: SyncQueueItem): Promise<void> {
-    if (!this.db) await this.initializeDB();
+    await this.ensureInitialized();
 
     // Update status to processing
     item.status = 'processing';
@@ -359,14 +390,14 @@ export class NoteSyncQueueService {
   }
 
   private async syncCreateNote(note: OfflineNote): Promise<void> {
-    const docRef = await offlineNotesService['syncCreateNote'](note);
+    const docRef = await offlineNotesService.syncCreateNote(note);
     if (!docRef.success) {
       throw new Error(docRef.error || 'Failed to create note on server');
     }
   }
 
   private async syncUpdateNote(note: OfflineNote): Promise<void> {
-    const result = await offlineNotesService['syncUpdateNote'](note);
+    const result = await offlineNotesService.syncUpdateNote(note);
     if (!result.success) {
       if (result.conflict) {
         // Handle conflict - don't throw error, let offline service handle it
@@ -382,7 +413,7 @@ export class NoteSyncQueueService {
   }
 
   private async syncDeleteNote(noteId: string): Promise<void> {
-    const result = await offlineNotesService['syncDeleteNote']({ id: noteId } as OfflineNote);
+    const result = await offlineNotesService.syncDeleteNote({ id: noteId } as OfflineNote);
     if (!result.success) {
       throw new Error(result.error || 'Failed to delete note on server');
     }
@@ -406,8 +437,8 @@ export class NoteSyncQueueService {
   // RETRY MECHANISM
   // ===============================
 
-  private async retryFailedItems(): Promise<void> {
-    if (!this.db) await this.initializeDB();
+  public async retryFailedItems(): Promise<void> {
+    await this.ensureInitialized();
 
     const transaction = this.db!.transaction([SYNC_QUEUE_STORE], 'readwrite');
     const store = transaction.objectStore(SYNC_QUEUE_STORE);
@@ -423,12 +454,12 @@ export class NoteSyncQueueService {
     for (const item of failedItems) {
       if (item.attempts < item.maxAttempts) {
         item.status = 'pending';
-        item.attempts = ResourceHistoryTable; // Reset attempts
+        item.attempts = 0; // Reset attempts
         await this.updateQueueItem(item);
       }
     }
 
-    if (failedItems.length > ResourceHistoryTable) {
+    if (failedItems.length > 0) {
       this.processSyncQueue({ silent: true });
     }
   }
@@ -438,7 +469,7 @@ export class NoteSyncQueueService {
   // ===============================
 
   private async getPendingItems(limit: number): Promise<SyncQueueItem[]> {
-    if (!this.db) await this.initializeDB();
+    await this.ensureInitialized();
 
     const transaction = this.db!.transaction([SYNC_QUEUE_STORE], 'readonly');
     const store = transaction.objectStore(SYNC_QUEUE_STORE);
@@ -451,18 +482,18 @@ export class NoteSyncQueueService {
     });
 
     // Sort by priority (high -> normal -> low) and timestamp
-    const priorityOrder = { high: ResourceHistoryTable, normal: 1, low: 2 };
+    const priorityOrder = { high: 0, normal: 1, low: 2 };
     items.sort((a, b) => {
       const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
-      if (priorityDiff !== ResourceHistoryTable) return priorityDiff;
+      if (priorityDiff !== 0) return priorityDiff;
       return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
     });
 
-    return items.slice(ResourceHistoryTable, limit);
+    return items.slice(0, limit);
   }
 
   private async updateQueueItem(item: SyncQueueItem): Promise<void> {
-    if (!this.db) await this.initializeDB();
+    await this.ensureInitialized();
 
     const transaction = this.db!.transaction([SYNC_QUEUE_STORE], 'readwrite');
     const store = transaction.objectStore(SYNC_QUEUE_STORE);
@@ -475,7 +506,7 @@ export class NoteSyncQueueService {
   }
 
   private async logSyncOperation(log: any): Promise<void> {
-    if (!this.db) await this.initializeDB();
+    await this.ensureInitialized();
 
     const transaction = this.db!.transaction([SYNC_LOG_STORE], 'readwrite');
     const store = transaction.objectStore(SYNC_LOG_STORE);
@@ -515,7 +546,7 @@ export class NoteSyncQueueService {
   }
 
   public async clearCompletedItems(): Promise<void> {
-    if (!this.db) await this.initializeDB();
+    await this.ensureInitialized();
 
     const transaction = this.db!.transaction([SYNC_QUEUE_STORE], 'readwrite');
     const store = transaction.objectStore(SYNC_QUEUE_STORE);
@@ -565,5 +596,57 @@ export class NoteSyncQueueService {
   }
 }
 
-// Export singleton instance
-export const noteSyncQueueService = new NoteSyncQueueService();
+// Create singleton instance with lazy initialization
+let instance: NoteSyncQueueService | null = null;
+
+export const getNoteSyncQueueService = (): NoteSyncQueueService => {
+  if (!instance) {
+    instance = new NoteSyncQueueService();
+  }
+  return instance;
+};
+
+// Export a wrapper to maintain backward compatibility
+export const noteSyncQueueService = {
+  async initialize() {
+    return getNoteSyncQueueService().initialize();
+  },
+  async addToQueue(noteId: string, action: SyncQueueItem['action'], options?: SyncOptions) {
+    const service = getNoteSyncQueueService();
+    await service.ensureInitialized();
+    return service.addToQueue(noteId, action, options);
+  },
+  async processQueue(options?: SyncOptions) {
+    const service = getNoteSyncQueueService();
+    await service.ensureInitialized();
+    return service.processSyncQueue(options);
+  },
+  async getQueueStatus() {
+    const service = getNoteSyncQueueService();
+    await service.ensureInitialized();
+    return service.getQueueStatus();
+  },
+  async clearQueue() {
+    const service = getNoteSyncQueueService();
+    await service.ensureInitialized();
+    return service.clearCompletedItems();
+  },
+  async retryFailed() {
+    const service = getNoteSyncQueueService();
+    await service.ensureInitialized();
+    return service.retryFailedItems();
+  },
+  subscribeToStatus(callback: (status: SyncStatistics) => void) {
+    const service = getNoteSyncQueueService();
+    return service.onStatusChange(callback);
+  },
+  unsubscribeFromStatus(callback: (status: SyncStatistics) => void) {
+    const service = getNoteSyncQueueService();
+    // Return a no-op function since onStatusChange returns an unsubscribe function
+    return () => {};
+  },
+  async cleanup() {
+    const service = getNoteSyncQueueService();
+    return service.cleanup();
+  }
+};

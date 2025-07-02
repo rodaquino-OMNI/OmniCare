@@ -1,0 +1,300 @@
+/* WCAG 2.1 AA Accessibility Utilities for OmniCare EMR */
+
+/* Screen Reader Only Text */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.sr-only:focus,
+.sr-only:active,
+.not-sr-only {
+  position: static !important;
+  width: auto !important;
+  height: auto !important;
+  padding: inherit !important;
+  margin: inherit !important;
+  overflow: visible !important;
+  clip: auto !important;
+  white-space: normal !important;
+}
+
+/* Focus Indicators - WCAG 2.1 AA Compliant */
+.focus-visible:focus-visible {
+  outline: 2px solid var(--mantine-color-primary-6) !important;
+  outline-offset: 2px !important;
+  border-radius: 4px !important;
+}
+
+.focus-ring:focus {
+  box-shadow: 0 0 0 2px var(--mantine-color-primary-6) !important;
+  outline: 2px solid transparent !important;
+  border-radius: 4px !important;
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  .high-contrast-border {
+    border: 2px solid currentColor !important;
+  }
+  
+  .high-contrast-bg {
+    background-color: ButtonFace !important;
+    color: ButtonText !important;
+  }
+  
+  .high-contrast-text {
+    color: WindowText !important;
+  }
+}
+
+/* Skip Links */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background: var(--mantine-color-primary-6);
+  color: white;
+  padding: 8px;
+  text-decoration: none;
+  border-radius: 4px;
+  z-index: 9999;
+  font-weight: 600;
+  transition: top 0.3s;
+}
+
+.skip-link:focus {
+  top: 6px;
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Touch Target Size - WCAG 2.1 AA */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Interactive Elements States */
+.interactive:hover {
+  cursor: pointer;
+}
+
+.interactive:focus-visible {
+  outline: 2px solid var(--mantine-color-primary-6);
+  outline-offset: 2px;
+}
+
+.interactive:disabled,
+.interactive[aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Live Regions */
+.live-region {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.live-region[aria-live="assertive"] {
+  font-weight: bold;
+}
+
+/* High Contrast Theme Variables */
+.high-contrast-theme {
+  --primary-color: #000000;
+  --secondary-color: #ffffff;
+  --background-color: #ffffff;
+  --text-color: #000000;
+  --border-color: #000000;
+  --link-color: #0000ff;
+  --visited-link-color: #800080;
+  --error-color: #ff0000;
+  --success-color: #008000;
+  --warning-color: #ff8c00;
+}
+
+/* Emergency Alert Styles - Healthcare Specific */
+.emergency-alert {
+  background-color: #dc3545 !important;
+  color: white !important;
+  border: 3px solid #721c24 !important;
+  font-weight: bold !important;
+  font-size: 1.125rem !important;
+  animation: emergency-pulse 1s infinite alternate;
+}
+
+@keyframes emergency-pulse {
+  0% { opacity: 1; }
+  100% { opacity: 0.8; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emergency-alert {
+    animation: none !important;
+  }
+}
+
+/* Clinical Data Tables */
+.clinical-table th {
+  background-color: var(--mantine-color-gray-1);
+  font-weight: 600;
+  text-align: left;
+  padding: 12px;
+  border-bottom: 2px solid var(--mantine-color-gray-3);
+}
+
+.clinical-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--mantine-color-gray-2);
+}
+
+.clinical-table tr:hover {
+  background-color: var(--mantine-color-gray-0);
+}
+
+/* Error States */
+.field-error {
+  border-color: var(--mantine-color-red-6) !important;
+  box-shadow: 0 0 0 1px var(--mantine-color-red-6) !important;
+}
+
+.error-message {
+  color: var(--mantine-color-red-7);
+  font-size: 0.875rem;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Success States */
+.field-success {
+  border-color: var(--mantine-color-green-6) !important;
+  box-shadow: 0 0 0 1px var(--mantine-color-green-6) !important;
+}
+
+.success-message {
+  color: var(--mantine-color-green-7);
+  font-size: 0.875rem;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Progress Indicators */
+.progress-accessible {
+  position: relative;
+}
+
+.progress-accessible::after {
+  content: attr(aria-valuenow) '% complete';
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* Loading States */
+.loading-shimmer {
+  background: linear-gradient(90deg, 
+    var(--mantine-color-gray-2) 25%, 
+    var(--mantine-color-gray-1) 50%, 
+    var(--mantine-color-gray-2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-shimmer {
+    animation: none;
+    background: var(--mantine-color-gray-2);
+  }
+}
+
+/* Voice Control Support */
+.voice-command {
+  position: relative;
+}
+
+.voice-command::before {
+  content: attr(data-voice-command);
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* Print Styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
+  
+  /* Ensure good contrast for printing */
+  * {
+    color: #000 !important;
+    background: transparent !important;
+  }
+  
+  a,
+  a:visited {
+    text-decoration: underline;
+  }
+  
+  /* Print URLs for links */
+  a[href]:after {
+    content: " (" attr(href) ")";
+  }
+}
+
+/* Color Blindness Support */
+.colorblind-friendly {
+  --success-color: #2563eb; /* Blue instead of green */
+  --warning-color: #f59e0b; /* Amber */
+  --error-color: #dc2626; /* Red with good contrast */
+}
+
+/* Dense Mode for Small Screens */
+@media (max-width: 768px) {
+  .dense-mode .touch-target {
+    min-height: 48px;
+    min-width: 48px;
+  }
+  
+  .dense-mode .interactive {
+    padding: 12px;
+  }
+}

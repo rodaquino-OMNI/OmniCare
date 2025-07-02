@@ -5,12 +5,13 @@
  * @deprecated Use @/auth/unified-role-permissions instead for full role support
  */
 
-import { UserRole, Permission, RolePermissions } from '../types/auth.types';
+import { Permission, RolePermissions, UserRole } from '../types/auth.types';
+
 import { 
-  UNIFIED_ROLE_PERMISSIONS, 
+  getRoleInfo as getUnifiedRoleInfo,
   getRolePermissions as getUnifiedRolePermissions,
   hasPermission as hasUnifiedPermission,
-  getRoleInfo as getUnifiedRoleInfo
+  UNIFIED_ROLE_PERMISSIONS
 } from './unified-role-permissions';
 
 /**

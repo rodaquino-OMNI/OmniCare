@@ -20,15 +20,17 @@ interface GroupProps extends React.HTMLAttributes<HTMLDivElement> {
   justify?: 'flex-start' | 'flex-end' | 'center' | 'space-between' | 'space-around' | 'space-evenly';
   align?: 'flex-start' | 'flex-end' | 'center' | 'baseline' | 'stretch';
   gap?: string | number;
+  grow?: boolean;
 }
 
 // Mock components used in PatientHeader - return actual components, not mock functions
-export const Group: React.FC<GroupProps> = ({ children, justify, align, gap, ...props }) => (
+export const Group: React.FC<GroupProps> = ({ children, justify, align, gap, grow, ...props }) => (
   <div 
     data-testid="mantine-group"
     data-justify={justify}
     data-align={align} 
     data-gap={gap}
+    data-grow={grow}
     {...props}
   >
     {children}
@@ -42,15 +44,17 @@ interface TextProps extends React.HTMLAttributes<HTMLSpanElement> {
   c?: string;
   truncate?: boolean | 'start' | 'end';
   className?: string;
+  ta?: 'left' | 'center' | 'right' | 'justify' | 'start' | 'end';
 }
 
-export const Text: React.FC<TextProps> = ({ children, size, fw, c, truncate, className, ...props }) => (
+export const Text: React.FC<TextProps> = ({ children, size, fw, c, truncate, className, ta, ...props }) => (
   <span 
     data-testid="mantine-text" 
     data-size={size}
     data-fw={fw}
     data-color={c}
     data-truncate={truncate}
+    data-ta={ta}
     className={className}
     {...props}
   >
@@ -120,14 +124,16 @@ interface StackProps extends React.HTMLAttributes<HTMLDivElement> {
   gap?: string | number;
   align?: 'flex-start' | 'flex-end' | 'center' | 'baseline' | 'stretch';
   justify?: 'flex-start' | 'flex-end' | 'center' | 'space-between' | 'space-around' | 'space-evenly';
+  grow?: boolean;
 }
 
-export const Stack: React.FC<StackProps> = ({ children, gap, align, justify, ...props }) => (
+export const Stack: React.FC<StackProps> = ({ children, gap, align, justify, grow, ...props }) => (
   <div
     data-testid="mantine-stack"
     data-gap={gap}
     data-align={align}
     data-justify={justify}
+    data-grow={grow}
     {...props}
   >
     {children}
@@ -156,9 +162,11 @@ interface ActionIconProps extends React.ButtonHTMLAttributes<HTMLButtonElement> 
   variant?: 'filled' | 'light' | 'outline' | 'default' | 'transparent' | 'subtle' | 'gradient';
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | number;
   onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
+  visibleFrom?: string;
+  hiddenFrom?: string;
 }
 
-export const ActionIcon: React.FC<ActionIconProps> = ({ children, variant, size, onClick, ...props }) => (
+export const ActionIcon: React.FC<ActionIconProps> = ({ children, variant, size, onClick, visibleFrom, hiddenFrom, ...props }) => (
   <button 
     data-testid="mantine-action-icon"
     data-variant={variant}
@@ -178,18 +186,31 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
   fullWidth?: boolean;
   loading?: boolean;
+  visibleFrom?: string;
+  hiddenFrom?: string;
 }
 
-export const Button: React.FC<ButtonProps> = ({ children, leftSection, variant, size, onClick, fullWidth, loading, ...props }) => {
+export const Button: React.FC<ButtonProps> = ({ children, leftSection, variant, size, onClick, fullWidth, loading, visibleFrom, hiddenFrom, ...props }) => {
   const { style, className, disabled, ...domProps } = props;
+  
+  const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
+    if (onClick) {
+      onClick(event);
+    }
+  };
+  
   return (
     <button 
       data-testid="mantine-button"
       data-variant={variant}
       data-size={size}
       data-loading={loading ? 'true' : 'false'}
-      onClick={onClick}
-      style={style}
+      data-full-width={fullWidth}
+      onClick={handleClick}
+      style={{
+        ...style,
+        width: fullWidth ? '100%' : undefined
+      }}
       className={className}
       disabled={disabled || loading}
       {...domProps}
@@ -255,7 +276,7 @@ export const Divider: React.FC<DividerProps> = ({ labelPosition, ...props }) => 
   );
 };
 
-interface TextInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+interface TextInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'size'> {
   label?: ReactNode;
   placeholder?: string;
   value?: string | number;
@@ -265,25 +286,79 @@ interface TextInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement
   id?: string;
   leftSection?: ReactNode;
   rightSection?: ReactNode;
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 }
 
-export const TextInput: React.FC<TextInputProps> = ({ label, placeholder, value, onChange, required, error, id, leftSection, rightSection, ...props }) => {
+export const TextInput: React.FC<TextInputProps> = ({ 
+  label, 
+  placeholder, 
+  value, 
+  onChange, 
+  required, 
+  error, 
+  id, 
+  leftSection, 
+  rightSection, 
+  size,
+  ...props 
+}) => {
   const inputId = id || `text-input-${Math.random().toString(36).substr(2, 9)}`;
   const { style, className, disabled, ...domProps } = props;
+  
+  // Handle controlled component behavior properly
+  const [internalValue, setInternalValue] = React.useState(value || '');
+  
+  React.useEffect(() => {
+    if (value !== undefined) {
+      setInternalValue(value);
+    }
+  }, [value]);
+  
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const newValue = event.target.value;
+    
+    // Update internal state for uncontrolled components
+    if (value === undefined) {
+      setInternalValue(newValue);
+    }
+    
+    // Call external onChange handler
+    if (onChange) {
+      onChange(event);
+    }
+  };
+  
+  const currentValue = value !== undefined ? value : internalValue;
+  
   return (
     <div data-testid="mantine-text-input" style={style} className={className} {...domProps}>
       {label && <label htmlFor={inputId}>{label}</label>}
-      <input
-        id={inputId}
-        type="text"
-        placeholder={placeholder}
-        value={value}
-        onChange={onChange}
-        required={required}
-        disabled={disabled}
-        aria-invalid={!!error}
-      />
-      {error && <div data-testid="input-error">{error}</div>}
+      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+        {leftSection && <div style={{ position: 'absolute', left: '8px', zIndex: 1 }}>{leftSection}</div>}
+        <input
+          id={inputId}
+          type="text"
+          placeholder={placeholder}
+          value={currentValue}
+          onChange={handleChange}
+          required={required}
+          disabled={disabled}
+          aria-invalid={!!error}
+          data-size={size}
+          style={{
+            width: '100%',
+            padding: '8px 12px',
+            paddingLeft: leftSection ? '32px' : '12px',
+            paddingRight: rightSection ? '32px' : '12px',
+            border: '1px solid #ced4da',
+            borderRadius: '4px',
+            fontFamily: 'inherit',
+            fontSize: 'inherit'
+          }}
+        />
+        {rightSection && <div style={{ position: 'absolute', right: '8px', zIndex: 1 }}>{rightSection}</div>}
+      </div>
+      {error && <div data-testid="input-error" style={{ color: 'red', fontSize: '0.875rem', marginTop: '4px' }}>{error}</div>}
     </div>
   );
 };
@@ -333,20 +408,20 @@ interface TitleProps {
 }
 
 export const Title: React.FC<TitleProps> = ({ children, order = 1, size, fw, c, style, className, id }) => {
-  const Tag = `h${order}` as keyof JSX.IntrinsicElements;
-  return (
-    <Tag
-      data-testid="mantine-title"
-      data-order={order}
-      data-size={size}
-      data-fw={fw}
-      data-color={c}
-      style={style}
-      className={className}
-      id={id}
-    >
-      {children}
-    </Tag>
+  const tagName = `h${order}`;
+  return React.createElement(
+    tagName,
+    {
+      'data-testid': 'mantine-title',
+      'data-order': order,
+      'data-size': size,
+      'data-fw': fw,
+      'data-color': c,
+      style,
+      className,
+      id
+    },
+    children
   );
 };
 
@@ -357,11 +432,13 @@ interface LoadingOverlayProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ visible, loaderProps, ...props }) => {
   if (!visible) return null;
+  // Filter out non-standard HTML props
+  const { overlayProps, ...htmlProps } = props as any;
   return (
     <div
       data-testid="mantine-loading-overlay"
       style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-      {...props}
+      {...htmlProps}
     >
       <div>Loading...</div>
     </div>
@@ -415,15 +492,17 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   padding?: string | number;
   radius?: string | number;
   withBorder?: boolean;
+  grow?: boolean;
 }
 
-export const Card: React.FC<CardProps> = ({ children, shadow, padding, radius, withBorder, ...props }) => (
+export const Card: React.FC<CardProps> = ({ children, shadow, padding, radius, withBorder, grow, ...props }) => (
   <div
     data-testid="mantine-card"
     data-shadow={shadow}
     data-padding={padding}
     data-radius={radius}
     data-with-border={withBorder}
+    data-grow={grow}
     {...props}
   >
     {children}
@@ -466,12 +545,15 @@ interface MenuTargetProps {
 Menu.Target = ({ children }: MenuTargetProps) => {
   const { setOpened } = React.useContext(MenuContext);
   
-  return React.cloneElement(children, {
-    onClick: (e: MouseEvent) => {
-      children.props.onClick?.(e);
+  const additionalProps: any = {};
+  if (React.isValidElement(children)) {
+    additionalProps.onClick = (e: React.MouseEvent) => {
+      (children as any).props?.onClick?.(e);
       setOpened((prev: boolean) => !prev);
-    }
-  });
+    };
+  }
+  
+  return React.cloneElement(children as React.ReactElement, additionalProps);
 };
 
 interface MenuDropdownProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -643,7 +725,7 @@ Tabs.List = ({ children, onChange, ...props }: TabsListProps) => (
     {React.Children.map(children, (child, index) => {
       if (React.isValidElement(child) && child.type === Tabs.Tab) {
         return React.cloneElement(child as ReactElement<TabsTabProps>, {
-          onClick: () => onChange?.(child.props.value),
+          onClick: () => onChange?.((child.props as any).value),
           key: index
         });
       }
@@ -704,31 +786,89 @@ interface SelectProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChan
   label?: ReactNode;
   data?: SelectOption[];
   value?: string;
-  onChange?: (value: string) => void;
+  onChange?: (value: string | null) => void;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   style?: CSSProperties;
   disabled?: boolean;
   className?: string;
+  placeholder?: string;
+  clearable?: boolean;
+  searchable?: boolean;
+  error?: ReactNode;
 }
 
-export const Select: React.FC<SelectProps> = ({ label, data, value, onChange, size, style, disabled, className, ...props }) => {
+export const Select: React.FC<SelectProps> = ({ 
+  label, 
+  data = [], 
+  value, 
+  onChange, 
+  size, 
+  style, 
+  disabled, 
+  className, 
+  placeholder,
+  clearable,
+  searchable,
+  error,
+  ...props 
+}) => {
   const inputId = `select-${Math.random().toString(36).substr(2, 9)}`;
+  
+  // Handle controlled component behavior properly
+  const [internalValue, setInternalValue] = React.useState(value || '');
+  
+  React.useEffect(() => {
+    if (value !== undefined) {
+      setInternalValue(value || '');
+    }
+  }, [value]);
+  
+  const handleChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const newValue = event.target.value;
+    
+    // Update internal state for uncontrolled components
+    if (value === undefined) {
+      setInternalValue(newValue);
+    }
+    
+    // Call external onChange handler
+    if (onChange) {
+      onChange(newValue || null);
+    }
+  };
+  
+  const currentValue = value !== undefined ? (value || '') : internalValue;
+  
   return (
     <div data-testid="mantine-select" style={style} className={className} {...props}>
       {label && <label htmlFor={inputId}>{label}</label>}
       <select
         id={inputId}
-        value={value}
-        onChange={(e) => onChange?.(e.target.value)}
+        value={currentValue}
+        onChange={handleChange}
         data-size={size}
         disabled={disabled}
+        aria-invalid={!!error}
+        data-placeholder={placeholder}
+        data-clearable={clearable}
+        data-searchable={searchable}
+        style={{
+          width: '100%',
+          padding: '8px 12px',
+          border: '1px solid #ced4da',
+          borderRadius: '4px',
+          fontFamily: 'inherit',
+          fontSize: 'inherit'
+        }}
       >
-        {data?.map((option, index) => (
+        {placeholder && <option value="" disabled>{placeholder}</option>}
+        {data.map((option, index) => (
           <option key={index} value={option.value}>
             {option.label}
           </option>
         ))}
       </select>
+      {error && <div data-testid="select-error" style={{ color: 'red', fontSize: '0.875rem', marginTop: '4px' }}>{error}</div>}
     </div>
   );
 };
@@ -743,27 +883,78 @@ interface TextareaProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onCh
   maxRows?: number;
   disabled?: boolean;
   autosize?: boolean;
+  error?: ReactNode;
+  id?: string;
+  required?: boolean;
 }
 
-export const Textarea: React.FC<TextareaProps> = ({ label, placeholder, value, onChange, minRows, maxRows, disabled, autosize, ...props }) => {
-  const inputId = `textarea-${Math.random().toString(36).substr(2, 9)}`;
+export const Textarea: React.FC<TextareaProps> = ({ 
+  label, 
+  placeholder, 
+  value, 
+  onChange, 
+  minRows = 4, 
+  maxRows, 
+  disabled, 
+  autosize, 
+  error,
+  id,
+  required,
+  ...props 
+}) => {
+  const inputId = id || `textarea-${Math.random().toString(36).substr(2, 9)}`;
   const { style, className, ...restProps } = props;
+  
+  // Handle controlled component behavior properly
+  const [internalValue, setInternalValue] = React.useState(value || '');
+  
+  React.useEffect(() => {
+    if (value !== undefined) {
+      setInternalValue(value);
+    }
+  }, [value]);
+  
+  const handleChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = event.target.value;
+    
+    // Update internal state for uncontrolled components
+    if (value === undefined) {
+      setInternalValue(newValue);
+    }
+    
+    // Call external onChange handler
+    if (onChange) {
+      onChange(event);
+    }
+  };
+  
+  const currentValue = value !== undefined ? value : internalValue;
+  
   return (
     <div data-testid="mantine-textarea" data-autosize={autosize} style={style} className={className} {...restProps}>
       {label && <label htmlFor={inputId}>{label}</label>}
       <textarea
         id={inputId}
         placeholder={placeholder}
-        value={value}
-        onChange={onChange}
+        value={currentValue}
+        onChange={handleChange}
         rows={minRows}
         disabled={disabled}
+        required={required}
+        aria-invalid={!!error}
         style={{ 
           minHeight: minRows ? `${minRows * 1.5}em` : undefined,
           maxHeight: maxRows ? `${maxRows * 1.5}em` : undefined,
-          resize: autosize ? 'vertical' : 'both'
+          resize: autosize ? 'vertical' : 'both',
+          width: '100%',
+          fontFamily: 'inherit',
+          fontSize: 'inherit',
+          border: '1px solid #ced4da',
+          borderRadius: '4px',
+          padding: '8px 12px'
         }}
       />
+      {error && <div data-testid="textarea-error" style={{ color: 'red', fontSize: '0.875rem', marginTop: '4px' }}>{error}</div>}
     </div>
   );
 };
@@ -1043,8 +1234,51 @@ interface LoaderProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export const Loader: React.FC<LoaderProps> = ({ size, color, ...props }) => (
-  <div data-testid="mantine-loader" data-size={size} data-color={color} {...props}>
+  <div data-testid="mantine-loader" data-size={size} data-color={color} role="presentation" {...props}>
     Loading...
+  </div>
+);
+
+interface CenterProps extends React.HTMLAttributes<HTMLDivElement> {
+  children?: ReactNode;
+  h?: string | number;
+  w?: string | number;
+  mah?: string | number;
+}
+
+export const Center: React.FC<CenterProps> = ({ children, h, w, mah, ...props }) => (
+  <div 
+    data-testid="mantine-center" 
+    style={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      height: h,
+      width: w,
+      maxHeight: mah
+    }} 
+    {...props}
+  >
+    {children}
+  </div>
+);
+
+interface RingProgressProps extends React.HTMLAttributes<HTMLDivElement> {
+  sections?: Array<{ value: number; color: string }>;
+  size?: string | number;
+  thickness?: number;
+  label?: ReactNode;
+}
+
+export const RingProgress: React.FC<RingProgressProps> = ({ sections, size, thickness, label, ...props }) => (
+  <div 
+    data-testid="mantine-ring-progress" 
+    data-size={size} 
+    data-thickness={thickness}
+    data-sections={JSON.stringify(sections)}
+    {...props}
+  >
+    {label && <div data-testid="ring-progress-label">{label}</div>}
   </div>
 );
 
@@ -1073,14 +1307,16 @@ interface ThemeIconProps extends React.HTMLAttributes<HTMLDivElement> {
   size?: string | number;
   color?: string;
   variant?: string;
+  radius?: string | number;
 }
 
-export const ThemeIcon: React.FC<ThemeIconProps> = ({ children, size, color, variant, ...props }) => (
+export const ThemeIcon: React.FC<ThemeIconProps> = ({ children, size, color, variant, radius, ...props }) => (
   <div 
     data-testid="mantine-theme-icon" 
     data-size={size} 
     data-color={color} 
     data-variant={variant} 
+    data-radius={radius}
     {...props}
   >
     {children}
@@ -1103,6 +1339,197 @@ export const Notification: React.FC<NotificationProps> = ({ children, title, col
     {onClose && <button onClick={onClose} data-testid="notification-close">×</button>}
   </div>
 );
+
+// Stepper component
+interface StepperProps extends React.HTMLAttributes<HTMLDivElement> {
+  children?: ReactNode;
+  active?: number;
+  onStepClick?: (step: number) => void;
+  completedIcon?: ReactNode;
+  progressIcon?: ReactNode;
+}
+
+export const Stepper: React.FC<StepperProps> & {
+  Step: React.FC<StepperStepProps>;
+  Completed: React.FC<{ children?: ReactNode }>;
+} = ({ children, active = 0, onStepClick, completedIcon, progressIcon, ...props }) => (
+  <div data-testid="mantine-stepper" data-active={active} {...props}>
+    {React.Children.map(children, (child, index) => {
+      if (React.isValidElement(child) && child.type === Stepper.Step) {
+        return React.cloneElement(child as ReactElement<StepperStepProps>, {
+          stepIndex: index,
+          isActive: index === active,
+          isCompleted: index < active,
+          onClick: () => onStepClick?.(index)
+        });
+      }
+      return child;
+    })}
+  </div>
+);
+
+interface StepperStepProps extends React.HTMLAttributes<HTMLDivElement> {
+  children?: ReactNode;
+  label?: ReactNode;
+  description?: ReactNode;
+  icon?: ReactNode;
+  completedIcon?: ReactNode;
+  progressIcon?: ReactNode;
+  loading?: boolean;
+  allowStepSelect?: boolean;
+  stepIndex?: number;
+  isActive?: boolean;
+  isCompleted?: boolean;
+  onClick?: () => void;
+}
+
+Stepper.Step = ({ 
+  children, 
+  label, 
+  description, 
+  icon, 
+  completedIcon, 
+  progressIcon, 
+  loading, 
+  allowStepSelect,
+  stepIndex,
+  isActive,
+  isCompleted,
+  onClick,
+  ...props 
+}) => (
+  <div 
+    data-testid="mantine-stepper-step" 
+    data-index={stepIndex}
+    data-active={isActive}
+    data-completed={isCompleted}
+    data-loading={loading}
+    onClick={allowStepSelect ? onClick : undefined}
+    style={{ cursor: allowStepSelect ? 'pointer' : 'default' }}
+    {...props}
+  >
+    <div data-testid="stepper-step-icon">
+      {isCompleted ? completedIcon : isActive && loading ? progressIcon : icon}
+    </div>
+    <div data-testid="stepper-step-body">
+      {label && <div data-testid="stepper-step-label">{label}</div>}
+      {description && <div data-testid="stepper-step-description">{description}</div>}
+      {isActive && children}
+    </div>
+  </div>
+);
+
+Stepper.Completed = ({ children }) => (
+  <div data-testid="mantine-stepper-completed">
+    {children}
+  </div>
+);
+
+// Grid component
+interface GridProps extends React.HTMLAttributes<HTMLDivElement> {
+  children?: ReactNode;
+  gutter?: string | number;
+  justify?: 'flex-start' | 'flex-end' | 'center' | 'space-between' | 'space-around' | 'space-evenly';
+  align?: 'stretch' | 'center' | 'flex-start' | 'flex-end' | 'baseline';
+}
+
+export const Grid: React.FC<GridProps> & {
+  Col: React.FC<GridColProps>;
+} = ({ children, gutter, justify, align, ...props }) => (
+  <div 
+    data-testid="mantine-grid" 
+    data-gutter={gutter}
+    data-justify={justify}
+    data-align={align}
+    style={{ display: 'flex', flexWrap: 'wrap', gap: gutter }}
+    {...props}
+  >
+    {children}
+  </div>
+);
+
+interface GridColProps extends React.HTMLAttributes<HTMLDivElement> {
+  children?: ReactNode;
+  span?: number | 'auto' | 'content';
+  offset?: number;
+  order?: number;
+  xs?: number;
+  sm?: number;
+  md?: number;
+  lg?: number;
+  xl?: number;
+}
+
+Grid.Col = ({ children, span, offset, order, xs, sm, md, lg, xl, ...props }) => (
+  <div 
+    data-testid="mantine-grid-col" 
+    data-span={span}
+    data-offset={offset}
+    data-order={order}
+    data-xs={xs}
+    data-sm={sm}
+    data-md={md}
+    data-lg={lg}
+    data-xl={xl}
+    style={{ order }}
+    {...props}
+  >
+    {children}
+  </div>
+);
+
+interface BoxProps extends React.HTMLAttributes<HTMLDivElement> {
+  children?: ReactNode;
+  component?: string | React.ComponentType<any>;
+  style?: CSSProperties;
+  className?: string;
+}
+
+export const Box: React.FC<BoxProps> = ({ children, component: Component = 'div', style, className, ...props }) => {
+  const ElementType = Component as any;
+  // Filter out non-standard HTML props that could cause React warnings
+  const { grow, overlayProps, ...htmlProps } = props as any;
+  return (
+    <ElementType 
+      data-testid="mantine-box" 
+      style={style}
+      className={className}
+      data-grow={grow}
+      {...htmlProps}
+    >
+      {children}
+    </ElementType>
+  );
+};
+
+interface CollapseProps {
+  children: ReactNode;
+  in: boolean;
+  transitionDuration?: number;
+  transitionTimingFunction?: string;
+  onTransitionEnd?: () => void;
+}
+
+export const Collapse: React.FC<CollapseProps> = ({ 
+  children, 
+  in: isOpen,
+  transitionDuration = 200,
+  transitionTimingFunction = 'ease',
+  onTransitionEnd
+}) => {
+  return (
+    <div 
+      data-testid="mantine-collapse" 
+      style={{ 
+        display: isOpen ? 'block' : 'none',
+        transition: `all ${transitionDuration}ms ${transitionTimingFunction}`
+      }}
+      onTransitionEnd={onTransitionEnd}
+    >
+      {children}
+    </div>
+  );
+};
 
 export default {
   Group,
@@ -1141,7 +1568,11 @@ export default {
   FileButton,
   UnstyledButton,
   Loader,
+  Center,
+  RingProgress,
   List,
   ThemeIcon,
-  Notification
+  Notification,
+  Collapse,
+  Box
 };

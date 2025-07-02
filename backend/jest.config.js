@@ -1,7 +1,16 @@
 /** @type {import('jest').Config} */
 module.exports = {
+  displayName: 'Backend',
   preset: 'ts-jest',
   testEnvironment: 'node',
+  
+  // Performance optimizations
+  cache: true,
+  cacheDirectory: '<rootDir>/node_modules/.cache/jest',
+  maxWorkers: process.env.CI ? '75%' : '50%',
+  workerIdleMemoryLimit: '512MB',
+  
+  // Test matching and paths
   roots: ['<rootDir>/src', '<rootDir>/tests'],
   testMatch: [
     '**/__tests__/**/*.(test|spec).+(ts|tsx|js)',
@@ -23,6 +32,8 @@ module.exports = {
     'tests/performance/framework',
     'tests/performance/.*/.*-tests\\.ts'
   ],
+  
+  // Coverage configuration
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
     '!src/**/*.d.ts',
@@ -36,7 +47,6 @@ module.exports = {
     '!src/**/*-generator.ts'
   ],
   coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'lcov', 'html', 'json', 'json-summary'],
   coverageThreshold: {
     global: {
       branches: 80,
@@ -44,7 +54,6 @@ module.exports = {
       lines: 80,
       statements: 80,
     },
-    // Individual file thresholds for critical modules
     './src/services/**/*.ts': {
       branches: 85,
       functions: 85,
@@ -58,74 +67,65 @@ module.exports = {
       statements: 75,
     },
   },
+  
+  // Setup files
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   setupFiles: ['<rootDir>/tests/env.setup.ts'],
-  testTimeout: 15000,
-  clearMocks: true,
-  resetMocks: true,
-  restoreMocks: true,
-  verbose: true,
-  silent: false,
-  bail: false,
-  detectOpenHandles: true,
-  forceExit: true,
-  maxWorkers: process.env.CI ? 2 : '50%',
-  workerIdleMemoryLimit: '512MB',
-  cache: true,
-  cacheDirectory: '<rootDir>/.jest-cache',
+  globalSetup: '<rootDir>/tests/global-setup.ts',
+  globalTeardown: '<rootDir>/tests/global-teardown.ts',
+  
+  // Transform configuration - optimized
   transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', { 
-      useESM: false,
-      isolatedModules: true,
+    '^.+\\.(ts|tsx)$': ['ts-jest', {
       tsconfig: {
-        baseUrl: './src',
-        paths: {
-          '@/*': ['*'],
-        },
-        esModuleInterop: true,
-        allowSyntheticDefaultImports: true,
-        skipLibCheck: true
-      }
+        skipLibCheck: true,
+        incremental: true,
+        isolatedModules: true,
+      },
     }],
   },
+  
+  // Compiler optimizations
+  extensionsToTreatAsEsm: [],
+  transformIgnorePatterns: [
+    'node_modules/(?!(.*\\.mjs$))',
+  ],
+  
+  // Module configuration
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@tests/(.*)$': '<rootDir>/tests/$1',
     '^@fixtures/(.*)$': '<rootDir>/tests/fixtures/$1',
     '^@mocks/(.*)$': '<rootDir>/tests/mocks/$1',
   },
-  globalSetup: '<rootDir>/tests/global-setup.ts',
-  globalTeardown: '<rootDir>/tests/global-teardown.ts',
-  // Enhanced error reporting
-  errorOnDeprecated: true,
+  
+  // Test execution configuration
+  clearMocks: true,
+  resetMocks: true,
+  restoreMocks: true,
+  
+  // Performance improvements
+  detectOpenHandles: false,
+  // forceExit: false,
+  // bail: process.env.CI ? 3 : 0,
+  
+  // Parallel execution optimization
+  // runInBand: process.env.TEST_SERIAL === 'true',
+  
+  // Test environment options
+  testTimeout: process.env.TEST_CATEGORY === 'integration' ? 30000 : 15000,
+  
+  // Reporters for CI optimization
+  // reporters: process.env.CI 
+  //   ? [['github-actions', { silent: false }], 'summary']
+  //   : ['default'],
+  
+  // Watch mode optimizations
+  // watchPlugins: [
+  //   'jest-watch-typeahead/filename',
+  //   'jest-watch-typeahead/testname',
+  // ],
+  
   // Memory management
-  logHeapUsage: true,
-  // Test execution optimization
-  passWithNoTests: true,
-  // Watch mode optimization
-  watchPathIgnorePatterns: [
-    '/node_modules/',
-    '/coverage/',
-    '/dist/',
-    '\\\\.git'
-  ],
-  // Reporter configuration
-  reporters: [
-    'default',
-    ['jest-junit', {
-      outputDirectory: './test-results',
-      outputName: 'backend-junit.xml',
-      classNameTemplate: '{classname}',
-      titleTemplate: '{title}',
-      ancestorSeparator: ' › ',
-      usePathForSuiteName: 'true'
-    }],
-    ['jest-html-reporter', {
-      pageTitle: 'Backend Test Report',
-      outputPath: './test-results/backend-report.html',
-      includeFailureMsg: true,
-      includeConsoleLog: true,
-      theme: 'darkTheme'
-    }]
-  ],
+  // logHeapUsage: process.env.CI,
 };

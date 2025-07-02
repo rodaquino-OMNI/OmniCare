@@ -22,6 +22,11 @@ export function useNetworkStatus(): NetworkStatus {
   const { triggerSync } = useSyncStore();
 
   const updateNetworkStatus = useCallback(() => {
+    // Skip if not in browser environment
+    if (typeof navigator === 'undefined') {
+      return;
+    }
+
     const isOnline = navigator.onLine;
     const wasOffline = !status.isOnline && isOnline;
 
@@ -72,28 +77,31 @@ export function useNetworkStatus(): NetworkStatus {
     // Update status on mount
     updateNetworkStatus();
 
-    // Listen for online/offline events
-    window.addEventListener('online', updateNetworkStatus);
-    window.addEventListener('offline', updateNetworkStatus);
+    // Only set up listeners in the browser
+    if (typeof window !== 'undefined') {
+      // Listen for online/offline events
+      window.addEventListener('online', updateNetworkStatus);
+      window.addEventListener('offline', updateNetworkStatus);
 
-    // Listen for connection changes if available
-    // @ts-ignore
-    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-    if (connection) {
-      connection.addEventListener('change', updateNetworkStatus);
-    }
-
-    // Check network status periodically
-    const interval = setInterval(updateNetworkStatus, 30000); // Every 30 seconds
-
-    return () => {
-      window.removeEventListener('online', updateNetworkStatus);
-      window.removeEventListener('offline', updateNetworkStatus);
+      // Listen for connection changes if available
+      // @ts-ignore
+      const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
       if (connection) {
-        connection.removeEventListener('change', updateNetworkStatus);
+        connection.addEventListener('change', updateNetworkStatus);
       }
-      clearInterval(interval);
-    };
+
+      // Check network status periodically
+      const interval = setInterval(updateNetworkStatus, 30000); // Every 30 seconds
+
+      return () => {
+        window.removeEventListener('online', updateNetworkStatus);
+        window.removeEventListener('offline', updateNetworkStatus);
+        if (connection) {
+          connection.removeEventListener('change', updateNetworkStatus);
+        }
+        clearInterval(interval);
+      };
+    }
   }, [updateNetworkStatus]);
 
   return status;

@@ -15,9 +15,23 @@ export interface NetworkMetrics {
 export function getNetworkMetrics(): NetworkMetrics | null {
   if (typeof window === 'undefined') return null;
   
-  const connection = (navigator as any).connection || 
-                    (navigator as any).mozConnection || 
-                    (navigator as any).webkitConnection;
+  interface NavigatorWithConnection extends Navigator {
+    connection?: NetworkInformation;
+    mozConnection?: NetworkInformation;
+    webkitConnection?: NetworkInformation;
+  }
+  
+  interface NetworkInformation {
+    rtt?: number;
+    downlink?: number;
+    effectiveType?: string;
+    saveData?: boolean;
+  }
+  
+  const navWithConnection = navigator as NavigatorWithConnection;
+  const connection = navWithConnection.connection || 
+                    navWithConnection.mozConnection || 
+                    navWithConnection.webkitConnection;
   
   if (!connection) return null;
   
@@ -54,7 +68,7 @@ export async function estimateBandwidth(url: string, sizeBytes: number): Promise
     const bandwidth = (sizeBytes * 8) / duration / 1024 / 1024; // Mbps
     
     return Math.round(bandwidth * 100) / 100;
-  } catch (error) {
+  } catch {
     throw new Error('Failed to estimate bandwidth');
   }
 }
@@ -78,9 +92,9 @@ export function calculateNetworkQualityScore(metrics: {
   
   // Normalize metrics to ResourceHistoryTable-10 scale (10 being best)
   const scores = {
-    latency: Math.max(0, 100 - (metrics.latency / 3)), // 300ms = ResourceHistoryTable score
+    latency: Math.max(0, 100 - (metrics.latency / 3)), // 300ms = 0 score
     bandwidth: Math.min(100, (metrics.bandwidth / 50) * 100), // 50Mbps = 10 score
-    jitter: Math.max(0, 100 - (metrics.jitter / 0.5)), // 50ms = ResourceHistoryTable score
+    jitter: Math.max(0, 100 - (metrics.jitter / 0.5)), // 50ms = 0 score
     packetLoss: Math.max(0, 100 - metrics.packetLoss), // Direct percentage
   };
   

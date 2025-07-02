@@ -50,10 +50,10 @@ class HealthChecker {
       };
 
       const req = http.request(options, (res) => {
-        let data = '';
+        let _data = '';
         
         res.on('data', (chunk) => {
-          data += chunk;
+          _data += chunk;
         });
 
         res.on('end', () => {

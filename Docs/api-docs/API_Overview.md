@@ -21,7 +21,8 @@ The OmniCare EMR API provides comprehensive access to clinical and administrativ
 ```
 Production: https://api.omnicare.health/fhir/R4
 Staging: https://staging-api.omnicare.health/fhir/R4
-Development: https://dev-api.omnicare.health/fhir/R4
+Development: http://localhost:8080/fhir/R4
+Local Backend: http://localhost:8080/api
 ```
 
 ### Prerequisites
@@ -31,23 +32,66 @@ Development: https://dev-api.omnicare.health/fhir/R4
 - Understanding of FHIR R4 specification
 
 ### Quick Start
-```javascript
+
+#### Using Medplum Client (Recommended)
+```typescript
 import { MedplumClient } from '@medplum/core';
+import { Patient, Bundle } from '@medplum/fhirtypes';
 
 const medplum = new MedplumClient({
-  baseUrl: 'https://api.omnicare.health/fhir/R4',
-  clientId: 'your-client-id',
-  clientSecret: 'your-client-secret'
+  baseUrl: process.env.NEXT_PUBLIC_MEDPLUM_BASE_URL,
+  clientId: process.env.NEXT_PUBLIC_MEDPLUM_CLIENT_ID,
+  clientSecret: process.env.MEDPLUM_CLIENT_SECRET
 });
 
-// Authenticate
-await medplum.authenticate();
+// Authenticate with OAuth 2.0
+await medplum.signInWithClientCredentials();
 
-// Search for patients
-const patients = await medplum.search('Patient', {
+// Search for patients with TypeScript support
+const searchResults: Bundle<Patient> = await medplum.search('Patient', {
   name: 'Smith',
-  _count: 10
+  _count: 10,
+  _sort: '-_lastUpdated'
 });
+
+// Create a new patient
+const newPatient: Patient = await medplum.createResource({
+  resourceType: 'Patient',
+  name: [{
+    use: 'official',
+    family: 'Doe',
+    given: ['John']
+  }],
+  gender: 'male',
+  birthDate: '1990-01-01'
+});
+```
+
+#### Using REST API Directly
+```typescript
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+// Get access token
+const authResponse = await fetch(`${API_BASE}/auth/login`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    username: 'your-username',
+    password: 'your-password'
+  })
+});
+
+const { accessToken } = await authResponse.json();
+
+// Use token for API calls
+const patientsResponse = await fetch(`${API_BASE}/fhir/Patient?name=Smith`, {
+  headers: {
+    'Authorization': `Bearer ${accessToken}`,
+    'Content-Type': 'application/fhir+json'
+  }
+});
+
+const patients = await patientsResponse.json();
 ```
 
 ## Authentication
@@ -568,16 +612,20 @@ GET /Patient/$export?_type=Observation,Condition&patient=Patient/123
 ## Rate Limiting
 
 ### Default Limits
-- **Standard API calls**: 1000 requests per hour
-- **Search operations**: 500 requests per hour
-- **Batch operations**: 100 requests per hour
-- **Bulk operations**: 10 requests per hour
+- **Authenticated Users**: 1000 requests per 15 minutes
+- **Search Operations**: 500 requests per 15 minutes  
+- **Batch Operations**: 100 requests per 15 minutes
+- **Bulk Operations**: 10 requests per hour
+- **Unauthenticated**: 100 requests per 15 minutes
+- **Clinical Workflows API**: 100 requests per 15 minutes
 
 ### Rate Limit Headers
 ```http
 X-RateLimit-Limit: 1000
 X-RateLimit-Remaining: 999
 X-RateLimit-Reset: 1643723400
+X-RateLimit-Window: 900
+Retry-After: 300
 ```
 
 ### Handling Rate Limits

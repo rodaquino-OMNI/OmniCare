@@ -79,7 +79,7 @@ export class TestDataFactory {
       active: true,
       identifier: [
         {
-          use: 'usual',
+          use: 'usual' as const,
           type: {
             coding: [{
               system: 'http://terminology.hl7.org/CodeSystem/v2-0203',
@@ -91,7 +91,7 @@ export class TestDataFactory {
           value: `MRN${faker.string.alphanumeric(8).toUpperCase()}`
         },
         {
-          use: 'secondary',
+          use: 'secondary' as const,
           type: {
             coding: [{
               system: 'http://terminology.hl7.org/CodeSystem/v2-0203',
@@ -104,7 +104,7 @@ export class TestDataFactory {
         }
       ],
       name: [{
-        use: 'official',
+        use: 'official' as const,
         family: lastName,
         given: [firstName],
         ...(Math.random() > 0.7 && { suffix: ['Jr.', 'Sr.', 'III'][Math.floor(Math.random() * 3)] })
@@ -113,26 +113,26 @@ export class TestDataFactory {
         {
           system: 'phone',
           value: faker.phone.number(),
-          use: 'mobile',
+          use: 'mobile' as const as const,
           rank: 1
         },
         {
           system: 'email',
           value: faker.internet.email(firstName, lastName),
-          use: 'home',
+          use: 'home' as const,
           rank: 2
         },
         ...(Math.random() > 0.6 ? [{
           system: 'phone',
           value: faker.phone.number(),
-          use: 'work',
+          use: 'work' as const as const,
           rank: 3
         }] : [])
       ],
       gender: patientGender,
       birthDate: birthDate.toISOString().split('T')[0],
       address: [{
-        use: 'home',
+        use: 'home' as const,
         type: 'both',
         line: [faker.location.streetAddress()],
         city: faker.location.city(),
@@ -216,7 +216,7 @@ export class TestDataFactory {
       active: isActive,
       identifier: [
         {
-          use: 'official',
+          use: 'official' as const,
           type: {
             coding: [{
               system: 'http://terminology.hl7.org/CodeSystem/v2-0203',
@@ -228,13 +228,13 @@ export class TestDataFactory {
           value: faker.string.numeric(10)
         },
         {
-          use: 'usual',
+          use: 'usual' as const,
           system: 'http://omnicare.com/practitioner-id',
           value: `PR${faker.string.alphanumeric(6).toUpperCase()}`
         }
       ],
       name: [{
-        use: 'official',
+        use: 'official' as const,
         family: faker.person.lastName(),
         given: [faker.person.firstName()],
         prefix: ['Dr.'],
@@ -244,16 +244,16 @@ export class TestDataFactory {
         {
           system: 'phone',
           value: faker.phone.number(),
-          use: 'work'
+          use: 'work' as const
         },
         {
           system: 'email',
           value: faker.internet.email(),
-          use: 'work'
+          use: 'work' as const
         }
       ],
       address: [{
-        use: 'work',
+        use: 'work' as const,
         line: [faker.location.streetAddress()],
         city: faker.location.city(),
         state: faker.location.state({ abbreviated: true }),
@@ -607,7 +607,7 @@ export class TestDataFactory {
       telecom: [{
         system: 'phone',
         value: faker.phone.number(),
-        use: 'mobile'
+        use: 'mobile' as const
       }]
     }];
   }
@@ -662,7 +662,7 @@ export class TestDataFactory {
 
     // Create encounters with observations
     for (let i = 0; i < includeEncounters; i++) {
-      const encounter = this.createEncounter(patient.id!, practitioner.id!, options);
+      const encounter = this.createEncounter(patient.id!, practitioner.id, options);
       encounters.push(encounter);
 
       // Add vital signs for each encounter

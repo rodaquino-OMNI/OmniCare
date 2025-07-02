@@ -26,7 +26,7 @@ import {
 } from '@medplum/fhirtypes';
 
 // Re-export all FHIR types from Medplum
-export {
+export type {
   Patient,
   Practitioner,
   Organization,
@@ -52,6 +52,33 @@ export {
   Device,
   Specimen,
 };
+
+// Type alias for all FHIR resource types
+export type FHIRResource = 
+  | Patient 
+  | Practitioner 
+  | Organization 
+  | Location 
+  | Encounter 
+  | Observation 
+  | Medication 
+  | MedicationRequest 
+  | ServiceRequest 
+  | DiagnosticReport 
+  | CarePlan 
+  | Communication 
+  | Task 
+  | DocumentReference 
+  | Bundle 
+  | Subscription 
+  | OperationOutcome 
+  | Parameters 
+  | Condition 
+  | Procedure 
+  | AllergyIntolerance 
+  | Immunization 
+  | Device 
+  | Specimen;
 
 // Extended types for OmniCare-specific functionality
 export interface OmniCarePatient extends Patient {
@@ -95,7 +122,7 @@ export interface OmniCareObservation extends Observation {
   criticalAlerts?: boolean;
 }
 
-// Search parameters interface
+// Unified FHIR search parameters interface (shared with frontend)
 export interface FHIRSearchParams {
   _id?: string;
   _lastUpdated?: string;
@@ -108,19 +135,20 @@ export interface FHIRSearchParams {
   _has?: string;
   _type?: string;
   _count?: number;
+  _offset?: number;
   _sort?: string;
   _elements?: string;
   _summary?: string;
   _total?: string;
   _include?: string;
   _revinclude?: string;
-  [key: string]: any;
+  [key: string]: string | number | boolean | undefined;
 }
 
 // Bundle creation interface
 export interface BundleRequest {
   resourceType: string;
-  resources: any[];
+  resources: (Patient | Practitioner | Organization | Location | Encounter | Observation | Medication | MedicationRequest | ServiceRequest | DiagnosticReport | CarePlan | Communication | Task | DocumentReference | Condition | Procedure | AllergyIntolerance | Immunization | Device | Specimen)[];
   type: 'transaction' | 'batch' | 'collection' | 'searchset' | 'history';
   timestamp?: string;
 }
@@ -143,9 +171,9 @@ export interface CDSHookContext {
   patientId?: string;
   encounterId?: string;
   userId?: string;
-  draftOrders?: any[];
+  draftOrders?: (MedicationRequest | ServiceRequest)[];
   selections?: string[];
-  [key: string]: any;
+  [key: string]: string | string[] | (MedicationRequest | ServiceRequest)[] | undefined;
 }
 
 export interface CDSCard {
@@ -174,7 +202,7 @@ export interface CDSSuggestion {
 export interface CDSAction {
   type: 'create' | 'update' | 'delete';
   description?: string;
-  resource?: any;
+  resource?: Patient | Practitioner | Organization | Location | Encounter | Observation | Medication | MedicationRequest | ServiceRequest | DiagnosticReport | CarePlan | Communication | Task | DocumentReference | Condition | Procedure | AllergyIntolerance | Immunization | Device | Specimen;
   resourceId?: string;
 }
 
@@ -196,7 +224,7 @@ export interface CDSHookRequest {
   fhirServer: string;
   hook: string;
   context: CDSHookContext;
-  prefetch?: { [key: string]: any };
+  prefetch?: { [key: string]: Bundle | OperationOutcome | Patient | Practitioner | Organization | Location | Encounter | Observation | Medication | MedicationRequest | ServiceRequest | DiagnosticReport | CarePlan | Communication | Task | DocumentReference | Condition | Procedure | AllergyIntolerance | Immunization | Device | Specimen };
   fhirAuthorization?: {
     access_token: string;
     token_type: string;
@@ -369,18 +397,18 @@ export interface FHIRError {
   }[];
 }
 
-// Validation result types
+// Unified validation result types (shared with frontend)
 export interface ValidationResult {
   valid: boolean;
   errors: ValidationError[];
-  warnings: ValidationWarning[];
+  warnings?: ValidationWarning[];
 }
 
 export interface ValidationError {
   path: string;
   message: string;
   code: string;
-  severity: 'error' | 'fatal';
+  severity: 'error' | 'fatal' | 'warning' | 'information';
 }
 
 export interface ValidationWarning {
@@ -388,6 +416,13 @@ export interface ValidationWarning {
   message: string;
   code: string;
   severity: 'warning' | 'information';
+}
+
+// Response interface for unified API responses
+export interface FHIRResponse<T = any> {
+  data: T;
+  status: number;
+  headers: Record<string, string>;
 }
 
 // Performance monitoring types
@@ -413,7 +448,7 @@ export interface CacheConfig {
 }
 
 export interface CachedResource {
-  resource: any;
+  resource: Patient | Practitioner | Organization | Location | Encounter | Observation | Medication | MedicationRequest | ServiceRequest | DiagnosticReport | CarePlan | Communication | Task | DocumentReference | Condition | Procedure | AllergyIntolerance | Immunization | Device | Specimen | Bundle | OperationOutcome;
   timestamp: number;
   ttl: number;
   accessCount: number;

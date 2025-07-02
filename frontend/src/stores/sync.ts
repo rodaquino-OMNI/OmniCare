@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-interface SyncItem {
+export interface SyncItem {
   id: string;
   type: string;
   description: string;
@@ -11,7 +11,7 @@ interface SyncItem {
   retryCount?: number;
 }
 
-interface SyncState {
+export interface SyncState {
   // Sync status
   isSyncing: boolean;
   syncProgress: number;
@@ -29,6 +29,12 @@ interface SyncState {
   currentOperation: string | null;
   estimatedTimeRemaining: number | null;
   
+  // Session resume
+  sessionId: string | null;
+  isResuming: boolean;
+  resumePoint: number;
+  interruptedAt: string | null;
+  
   // Actions
   addToSyncQueue: (item: Omit<SyncItem, 'id' | 'timestamp' | 'status'>) => void;
   startSync: () => void;
@@ -44,6 +50,13 @@ interface SyncState {
   setSyncError: (error: string | null) => void;
   setCurrentOperation: (operation: string | null) => void;
   setEstimatedTime: (seconds: number | null) => void;
+  completeSync: () => void;
+  
+  // Session resume
+  resumeSession: () => Promise<void>;
+  pauseSync: () => void;
+  initializeSession: () => void;
+  restoreFromSession: () => void;
 }
 
 export const useSyncStore = create<SyncState>()(
@@ -51,16 +64,22 @@ export const useSyncStore = create<SyncState>()(
     (set, get) => ({
       // Initial state
       isSyncing: false,
-      syncProgress: ResourceHistoryTable,
+      syncProgress: 0,
       lastSyncTime: null,
       syncError: null,
       syncQueue: [],
       syncedItems: [],
       failedItems: [],
-      totalItems: ResourceHistoryTable,
-      pendingChanges: ResourceHistoryTable,
+      totalItems: 0,
+      pendingChanges: 0,
       currentOperation: null,
       estimatedTimeRemaining: null,
+      
+      // Session resume state
+      sessionId: null,
+      isResuming: false,
+      resumePoint: 0,
+      interruptedAt: null,
 
       // Add item to sync queue
       addToSyncQueue: (item) => {
@@ -82,7 +101,7 @@ export const useSyncStore = create<SyncState>()(
       startSync: () => {
         set({
           isSyncing: true,
-          syncProgress: ResourceHistoryTable,
+          syncProgress: 0,
           syncError: null,
           currentOperation: 'Initializing sync...'
         });
@@ -90,7 +109,7 @@ export const useSyncStore = create<SyncState>()(
 
       // Update sync progress
       updateSyncProgress: (progress) => {
-        set({ syncProgress: Math.min(10, Math.max(ResourceHistoryTable, progress)) });
+        set({ syncProgress: Math.min(100, Math.max(0, progress)) });
       },
 
       // Mark item as synced
@@ -107,7 +126,7 @@ export const useSyncStore = create<SyncState>()(
           return {
             syncQueue: newQueue,
             syncedItems: [...state.syncedItems, updatedItem],
-            pendingChanges: Math.max(ResourceHistoryTable, state.pendingChanges - 1),
+            pendingChanges: Math.max(0, state.pendingChanges - 1),
             syncProgress: progress
           };
         });
@@ -123,7 +142,7 @@ export const useSyncStore = create<SyncState>()(
             ...item, 
             status: 'failed' as const, 
             error,
-            retryCount: (item.retryCount || ResourceHistoryTable) + 1
+            retryCount: (item.retryCount || 0) + 1
           };
           
           const newQueue = state.syncQueue.filter(i => i.id !== itemId);
@@ -170,16 +189,16 @@ export const useSyncStore = create<SyncState>()(
           syncQueue: [],
           syncedItems: [],
           failedItems: [],
-          pendingChanges: ResourceHistoryTable,
-          totalItems: ResourceHistoryTable,
-          syncProgress: ResourceHistoryTable
+          pendingChanges: 0,
+          totalItems: 0,
+          syncProgress: 0
         });
       },
 
       // Trigger sync (called when coming online)
       triggerSync: () => {
         const { syncQueue, isSyncing } = get();
-        if (syncQueue.length > ResourceHistoryTable && !isSyncing) {
+        if (syncQueue.length > 0 && !isSyncing) {
           get().startSync();
         }
       },
@@ -206,8 +225,73 @@ export const useSyncStore = create<SyncState>()(
           lastSyncTime: new Date().toISOString(),
           currentOperation: null,
           estimatedTimeRemaining: null,
-          syncProgress: 10
+          syncProgress: 100,
+          sessionId: null,
+          isResuming: false,
+          resumePoint: 0,
+          interruptedAt: null
         });
+      },
+      
+      // Initialize session for resume capability
+      initializeSession: () => {
+        const sessionId = `sync_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        set({ sessionId });
+      },
+      
+      // Pause sync and save state for resume
+      pauseSync: () => {
+        const state = get();
+        if (state.isSyncing) {
+          set({
+            isSyncing: false,
+            interruptedAt: new Date().toISOString(),
+            resumePoint: state.syncProgress
+          });
+        }
+      },
+      
+      // Resume interrupted sync session
+      resumeSession: async () => {
+        const state = get();
+        if (state.interruptedAt && state.syncQueue.length > 0) {
+          set({
+            isResuming: true,
+            isSyncing: true,
+            syncProgress: state.resumePoint,
+            currentOperation: 'Resuming sync...',
+            syncError: null
+          });
+          
+          // Continue sync from where it left off
+          setTimeout(() => {
+            set({ isResuming: false });
+            get().triggerSync();
+          }, 1000);
+        }
+      },
+      
+      // Restore state from previous session
+      restoreFromSession: () => {
+        const state = get();
+        if (state.interruptedAt) {
+          const timeSinceInterrupt = Date.now() - new Date(state.interruptedAt).getTime();
+          const maxResumeTime = 30 * 60 * 1000; // 30 minutes
+          
+          if (timeSinceInterrupt < maxResumeTime && state.syncQueue.length > 0) {
+            // Auto-resume if interrupted recently
+            setTimeout(() => {
+              get().resumeSession();
+            }, 2000);
+          } else {
+            // Clear stale session data
+            set({
+              interruptedAt: null,
+              resumePoint: 0,
+              sessionId: null
+            });
+          }
+        }
       }
     }),
     {
@@ -216,8 +300,21 @@ export const useSyncStore = create<SyncState>()(
         syncQueue: state.syncQueue,
         failedItems: state.failedItems,
         lastSyncTime: state.lastSyncTime,
-        pendingChanges: state.pendingChanges
-      })
+        pendingChanges: state.pendingChanges,
+        sessionId: state.sessionId,
+        resumePoint: state.resumePoint,
+        interruptedAt: state.interruptedAt,
+        totalItems: state.totalItems,
+        syncedItems: state.syncedItems
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          // Auto-restore session on rehydration
+          setTimeout(() => {
+            state.restoreFromSession();
+          }, 1000);
+        }
+      }
     }
   )
 );

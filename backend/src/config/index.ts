@@ -134,7 +134,24 @@ const config: Config = {
   },
 
   jwt: {
-    secret: process.env.JWT_SECRET || 'fallback-secret-change-in-production',
+    secret: (() => {
+      const secret = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET;
+      if (!secret) {
+        throw new Error('JWT_ACCESS_SECRET or JWT_SECRET environment variable is required');
+      }
+      // Validate secret strength
+      if (secret.length < 32) {
+        throw new Error('JWT secret must be at least 32 characters long');
+      }
+      // Check for common weak secrets (skip in test mode)
+      if (process.env.NODE_ENV !== 'test') {
+        const weakSecrets = ['secret', 'password', '12345', 'default', 'changeme', 'test'];
+        if (weakSecrets.some(weak => secret.toLowerCase().includes(weak))) {
+          throw new Error('JWT secret appears to be weak. Please use a strong, randomly generated secret');
+        }
+      }
+      return secret;
+    })(),
     expiresIn: process.env.JWT_EXPIRES_IN || '24h',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   },
@@ -208,9 +225,13 @@ const validateConfig = (): void => {
 
   const missingFields = requiredFields.filter(field => {
     const keys = field.split('.');
-    let value: any = config;
+    let value: unknown = config;
     for (const key of keys) {
-      value = value[key];
+      if (value && typeof value === 'object' && key in value) {
+        value = (value as Record<string, unknown>)[key];
+      } else {
+        return true;
+      }
       if (value === undefined || value === '') {
         return true;
       }

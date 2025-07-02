@@ -33,7 +33,7 @@ import {
   IconFilter,
   IconMoreHorizontal,
   IconDownload,
-  IconPrint,
+  IconPrinter,
   IconRefresh
 } from '@tabler/icons-react';
 import { 
@@ -376,7 +376,7 @@ export function PatientTimeline({
                   <Menu.Item leftSection={<IconDownload size={14} />}>
                     Export Timeline
                   </Menu.Item>
-                  <Menu.Item leftSection={<IconPrint size={14} />}>
+                  <Menu.Item leftSection={<IconPrinter size={14} />}>
                     Print Timeline
                   </Menu.Item>
                 </Menu.Dropdown>
@@ -479,7 +479,7 @@ export function PatientTimeline({
                             <Menu.Item leftSection={<IconNotes size={12} />}>
                               Add Note
                             </Menu.Item>
-                            <Menu.Item leftSection={<IconPrint size={12} />}>
+                            <Menu.Item leftSection={<IconPrinter size={12} />}>
                               Print
                             </Menu.Item>
                           </Menu.Dropdown>

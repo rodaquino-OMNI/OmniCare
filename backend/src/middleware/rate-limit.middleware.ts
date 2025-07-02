@@ -1,10 +1,15 @@
 /**
  * Rate limiting middleware for OmniCare EMR Backend
  * Implements various rate limiting strategies for API protection
+ * This is a legacy middleware - use enhanced-rate-limit.middleware.ts for production
  */
 
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response } from 'express';
+
+import { redisRateLimiterService } from '../services/redis-rate-limiter.service';
+import { RequestUser } from '../types/auth.types';
 import { AppError } from '../utils/error.utils';
+import logger from '../utils/logger';
 
 interface RateLimitStore {
   [key: string]: {
@@ -68,18 +73,19 @@ interface RateLimitOptions {
   keyGenerator?: (req: Request) => string; // Custom key generator
   skip?: (req: Request) => boolean; // Skip rate limiting for certain requests
   onLimitReached?: (req: Request, res: Response) => void; // Callback when limit is reached
-  store?: any; // Custom store (defaults to memory store)
+  store?: MemoryRateLimitStore; // Custom store (defaults to memory store)
 }
 
 /**
  * Default key generator using IP address
  */
 const defaultKeyGenerator = (req: Request): string => {
-  return req.ip || req.connection.remoteAddress || 'unknown';
+  return req.ip || req.socket.remoteAddress || 'unknown';
 };
 
 /**
  * Create a rate limiting middleware
+ * Note: This uses Redis for distributed rate limiting instead of in-memory storage
  */
 export function createRateLimit(options: RateLimitOptions) {
   const {
@@ -92,10 +98,10 @@ export function createRateLimit(options: RateLimitOptions) {
     keyGenerator = defaultKeyGenerator,
     skip = () => false,
     onLimitReached,
-    store = new MemoryRateLimitStore(),
+    store = new MemoryRateLimitStore(), // Keep for backward compatibility
   } = options;
 
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     // Skip if the skip function returns true
     if (skip(req)) {
       return next();
@@ -103,11 +109,64 @@ export function createRateLimit(options: RateLimitOptions) {
 
     const key = keyGenerator(req);
     const now = Date.now();
-    const entry = store.get(key);
+    
+    try {
+      // Use Redis rate limiter for distributed rate limiting
+      const result = await redisRateLimiterService.checkRateLimit(key, {
+        windowMs,
+        maxRequests: max,
+        skipSuccessfulRequests,
+        skipFailedRequests,
+      });
+      
+      // Set rate limit headers
+      const resetTime = new Date(result.resetTime);
+      res.set({
+        'X-RateLimit-Limit': max.toString(),
+        'X-RateLimit-Remaining': result.remainingRequests.toString(),
+        'X-RateLimit-Reset': resetTime.toISOString(),
+      });
+      
+      if (!result.allowed) {
+        if (result.retryAfter) {
+          res.set('Retry-After', result.retryAfter.toString());
+        }
+        
+        if (onLimitReached) {
+          onLimitReached(req, res);
+        }
+        
+        return next(new AppError(message, statusCode, true, 'RATE_LIMIT_EXCEEDED'));
+      }
+      
+      // Track request completion for conditional counting
+      if (skipSuccessfulRequests || skipFailedRequests) {
+        res.on('finish', async () => {
+          const success = res.statusCode >= 200 && res.statusCode < 300;
+          await redisRateLimiterService.incrementRateLimit(key, {
+            windowMs,
+            maxRequests: max,
+            skipSuccessfulRequests,
+            skipFailedRequests,
+          }, success);
+        });
+      } else {
+        // Increment immediately if not conditional
+        await redisRateLimiterService.incrementRateLimit(key, {
+          windowMs,
+          maxRequests: max,
+        });
+      }
+      
+      next();
+    } catch (error) {
+      // If Redis fails, fall back to in-memory store
+      logger.error('Redis rate limiter failed, falling back to memory store:', error);
+      const entry = store.get(key);
 
-    // Check if currently blocked
-    if (entry.blocked && entry.blockUntil && now < entry.blockUntil) {
-      const resetTime = new Date(entry.blockUntil);
+      // Check if currently blocked
+      if (entry.blocked && entry.blockUntil && now < entry.blockUntil) {
+        const resetTime = new Date(entry.blockUntil);
       res.set({
         'X-RateLimit-Limit': max.toString(),
         'X-RateLimit-Remaining': '0',
@@ -122,16 +181,16 @@ export function createRateLimit(options: RateLimitOptions) {
       return next(new AppError(message, statusCode, true, 'RATE_LIMIT_EXCEEDED'));
     }
 
-    // Reset window if needed
-    if (now - entry.lastReset >= windowMs) {
-      entry.count = 0;
-      entry.lastReset = now;
-      entry.blocked = false;
-      entry.blockUntil = undefined;
-    }
+      // Reset window if needed
+      if (now - entry.lastReset >= windowMs) {
+        entry.count = 0;
+        entry.lastReset = now;
+        entry.blocked = false;
+        entry.blockUntil = undefined;
+      }
 
-    // Check if limit exceeded
-    if (entry.count >= max) {
+      // Check if limit exceeded
+      if (entry.count >= max) {
       entry.blocked = true;
       entry.blockUntil = now + windowMs;
       store.set(key, entry);
@@ -151,10 +210,9 @@ export function createRateLimit(options: RateLimitOptions) {
       return next(new AppError(message, statusCode, true, 'RATE_LIMIT_EXCEEDED'));
     }
 
-    // Increment counter (conditionally)
-    let shouldCount = true;
+      // Increment counter (conditionally handled in response phase)
 
-    if (skipSuccessfulRequests || skipFailedRequests) {
+      if (skipSuccessfulRequests || skipFailedRequests) {
       // We'll handle this in the response phase
       const originalSend = res.send;
       res.send = function(body) {
@@ -171,22 +229,23 @@ export function createRateLimit(options: RateLimitOptions) {
 
         return originalSend.call(this, body);
       };
-    } else {
-      entry.count++;
-      store.set(key, entry);
+      } else {
+        entry.count++;
+        store.set(key, entry);
+      }
+
+      // Set rate limit headers
+      const remaining = Math.max(0, max - entry.count);
+      const resetTime = new Date(entry.lastReset + windowMs);
+
+      res.set({
+        'X-RateLimit-Limit': max.toString(),
+        'X-RateLimit-Remaining': remaining.toString(),
+        'X-RateLimit-Reset': resetTime.toISOString(),
+      });
+
+      next();
     }
-
-    // Set rate limit headers
-    const remaining = Math.max(0, max - entry.count);
-    const resetTime = new Date(entry.lastReset + windowMs);
-
-    res.set({
-      'X-RateLimit-Limit': max.toString(),
-      'X-RateLimit-Remaining': remaining.toString(),
-      'X-RateLimit-Reset': resetTime.toISOString(),
-    });
-
-    next();
   };
 }
 
@@ -264,7 +323,8 @@ export function createUserRateLimit(options: RateLimitOptions) {
     ...options,
     keyGenerator: (req: Request) => {
       // Use user ID from request (assumes auth middleware has run)
-      const userId = (req as any).user?.id || (req as any).userId;
+      const user = req.user as RequestUser | undefined;
+      const userId = user?.id || (req as any).userId;
       if (userId) {
         return `user:${userId}`;
       }
@@ -298,26 +358,28 @@ export function createSlidingWindowRateLimit(options: RateLimitOptions & { bucke
   const { bucketSize = 10 } = options;
   const bucketDuration = options.windowMs / bucketSize;
 
+  class SlidingWindowStore extends MemoryRateLimitStore {
+    get(key: string) {
+      const entry = super.get(key);
+      const now = Date.now();
+      
+      // Calculate how many full buckets have passed
+      const bucketsElapsed = Math.floor((now - entry.lastReset) / bucketDuration);
+      
+      if (bucketsElapsed > 0) {
+        // Decay the count based on elapsed buckets
+        const decayFactor = Math.max(0, 1 - (bucketsElapsed / bucketSize));
+        entry.count = Math.floor(entry.count * decayFactor);
+        entry.lastReset = now;
+      }
+
+      return entry;
+    }
+  }
+
   return createRateLimit({
     ...options,
-    store: new (class SlidingWindowStore extends MemoryRateLimitStore {
-      get(key: string) {
-        const entry = super.get(key);
-        const now = Date.now();
-        
-        // Calculate how many full buckets have passed
-        const bucketsElapsed = Math.floor((now - entry.lastReset) / bucketDuration);
-        
-        if (bucketsElapsed > 0) {
-          // Decay the count based on elapsed buckets
-          const decayFactor = Math.max(0, 1 - (bucketsElapsed / bucketSize));
-          entry.count = Math.floor(entry.count * decayFactor);
-          entry.lastReset = now;
-        }
-
-        return entry;
-      }
-    })(),
+    store: new SlidingWindowStore(),
   });
 }
 

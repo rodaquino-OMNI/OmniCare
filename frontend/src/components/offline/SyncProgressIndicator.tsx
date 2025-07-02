@@ -59,7 +59,7 @@ export function SyncProgressIndicator({
     return { pending, synced, failed, total };
   }, [syncQueue, syncedItems, failedItems, totalItems]);
 
-  if (!isSyncing && syncStats.total === ResourceHistoryTable) {
+  if (!isSyncing && syncStats.total === 0) {
     return null;
   }
 
@@ -154,14 +154,14 @@ export function SyncProgressIndicator({
             size="md"
             radius="xl"
             animated={isSyncing}
-            color={syncStats.failed > ResourceHistoryTable ? 'orange' : 'blue'}
+            color={syncStats.failed > 0 ? 'orange' : 'blue'}
           />
           <Group justify="space-between" mt="xs">
             <Text size="xs" c="dimmed">
               {currentOperation || 'Processing...'}
             </Text>
             <Text size="xs" c="dimmed">
-              {syncProgress.toFixed(ResourceHistoryTable)}%
+              {syncProgress.toFixed(0)}%
             </Text>
           </Group>
         </div>
@@ -186,7 +186,7 @@ export function SyncProgressIndicator({
               {syncStats.pending}
             </Badge>
           </Tooltip>
-          {syncStats.failed > ResourceHistoryTable && (
+          {syncStats.failed > 0 && (
             <Tooltip label="Items failed to sync">
               <Badge 
                 color="red" 

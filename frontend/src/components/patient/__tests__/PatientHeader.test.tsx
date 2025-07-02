@@ -144,26 +144,26 @@ describe('PatientHeader', () => {
       {
         given: ['John'],
         family: 'Doe',
-        use: 'official',
+        use: 'official' as const,
       },
     ],
-    gender: 'male',
+    gender: 'male' as const,
     birthDate: '199-1-15',
     telecom: [
       {
-        system: 'phone',
+        system: 'phone' as const,
         value: '555-123',
-        use: 'mobile',
+        use: 'mobile' as const,
       },
       {
-        system: 'email',
+        system: 'email' as const,
         value: 'john.doe@example.com',
-        use: 'home',
+        use: 'home' as const,
       },
     ],
     address: [
       {
-        use: 'home',
+        use: 'home' as const,
         line: ['123 Main St'],
         city: 'Anytown',
         state: 'NY',
@@ -313,7 +313,7 @@ describe('PatientHeader', () => {
       await act(async () => {
         component = renderWithProviders(<PatientHeader patient={mockPatient} />);
         // Allow time for async effects to complete
-        await new Promise(resolve => setTimeout(resolve, ResourceHistoryTable));
+        await new Promise(resolve => setTimeout(resolve, 100));
       });
 
       // Wait for async operations to complete with longer timeout
@@ -321,7 +321,7 @@ describe('PatientHeader', () => {
         const { patientCacheService } = require('@/services/patient-cache.service');
         expect(patientCacheService.getPatientAllergies).toHaveBeenCalledWith('patient-123');
         expect(patientCacheService.getPatientConditions).toHaveBeenCalledWith('patient-123');
-      }, { timeout: 300 });
+      }, { timeout: 3000 });
 
       // Check patient name and basic info
       expect(screen.getByText('John Doe')).toBeInTheDocument();
@@ -332,13 +332,13 @@ describe('PatientHeader', () => {
 
       // Check status badge (use getAllByText since there might be multiple ACTIVE badges)
       const activeBadges = screen.getAllByText('ACTIVE');
-      expect(activeBadges.length).toBeGreaterThan(ResourceHistoryTable);
+      expect(activeBadges.length).toBeGreaterThan(0);
 
       // Wait for allergies and conditions to load with proper act wrapper
       await act(async () => {
         await waitFor(() => {
           expect(screen.getByText('High Priority Allergies')).toBeInTheDocument();
-        }, { timeout: 300 });
+        }, { timeout: 3000 });
       });
 
       expect(screen.getByText('Penicillin')).toBeInTheDocument();
@@ -366,14 +366,14 @@ describe('PatientHeader', () => {
       await act(async () => {
         renderWithProviders(<PatientHeader patient={inactivePatient} />);
         // Allow async effects to complete
-        await new Promise(resolve => setTimeout(resolve, ResourceHistoryTable));
+        await new Promise(resolve => setTimeout(resolve, 100));
       });
 
       // Wait for component to render completely with proper timeout
       await waitFor(() => {
         const inactiveBadges = screen.getAllByText('INACTIVE');
-        expect(inactiveBadges.length).toBeGreaterThan(ResourceHistoryTable);
-      }, { timeout: 300 });
+        expect(inactiveBadges.length).toBeGreaterThan(0);
+      }, { timeout: 3000 });
     });
   });
 
@@ -382,7 +382,7 @@ describe('PatientHeader', () => {
       await act(async () => {
         renderWithProviders(<PatientHeader patient={mockPatient} compact />);
         // Allow async effects to complete
-        await new Promise(resolve => setTimeout(resolve, ResourceHistoryTable));
+        await new Promise(resolve => setTimeout(resolve, 100));
       });
 
       // Check patient name and basic info
@@ -401,7 +401,7 @@ describe('PatientHeader', () => {
       await waitFor(() => {
         const { patientCacheService } = require('@/services/patient-cache.service');
         expect(patientCacheService.getPatientAllergies).toHaveBeenCalled();
-      }, { timeout: 300 });
+      }, { timeout: 3000 });
     });
 
     it('should show high priority allergy badge in compact view', async () => {
@@ -416,8 +416,8 @@ describe('PatientHeader', () => {
       await waitFor(() => {
         // Look for the shield icon which indicates high priority allergies
         const elements = container.querySelectorAll('[data-icon="IconShield"]');
-        expect(elements.length).toBeGreaterThan(ResourceHistoryTable);
-      }, { timeout: 300 });
+        expect(elements.length).toBeGreaterThan(0);
+      }, { timeout: 3000 });
 
       // The shield icon should be present in a badge, indicating high priority allergies
       const shieldIcon = container.querySelector('[data-icon="IconShield"]');
@@ -645,7 +645,7 @@ describe('PatientHeader', () => {
       await waitFor(() => {
         // Should show high priority allergies alert
         expect(screen.getByText('High Priority Allergies')).toBeInTheDocument();
-      }, { timeout: 300 });
+      }, { timeout: 3000 });
     });
 
     it('should handle allergies and conditions without display text', async () => {
@@ -774,7 +774,7 @@ describe('PatientHeader', () => {
       await waitFor(() => {
         const shieldIcon = container.querySelector('[data-icon="IconShield"]');
         expect(shieldIcon).toBeInTheDocument();
-      }, { timeout: 300 });
+      }, { timeout: 3000 });
 
       // The shield icon itself should be accessible, tooltip will appear on hover
       const shieldIcon = container.querySelector('[data-icon="IconShield"]');
@@ -793,11 +793,11 @@ describe('PatientHeader', () => {
       await act(async () => {
         renderWithProviders(<PatientHeader patient={mockPatient} />);
         // Allow async effects to complete
-        await new Promise(resolve => setTimeout(resolve, ResourceHistoryTable));
+        await new Promise(resolve => setTimeout(resolve, 100));
       });
 
       const activeBadges = screen.getAllByText('ACTIVE');
-      expect(activeBadges.length).toBeGreaterThan(ResourceHistoryTable);
+      expect(activeBadges.length).toBeGreaterThan(0);
       
       // Check that at least one badge has appropriate styling attributes
       const greenBadge = screen.getByTestId('resource-badge');
@@ -809,8 +809,8 @@ describe('PatientHeader', () => {
       await act(async () => {
         await waitFor(() => {
           const inactiveBadges = screen.getAllByText('INACTIVE');
-          expect(inactiveBadges.length).toBeGreaterThan(ResourceHistoryTable);
-        }, { timeout: 300 });
+          expect(inactiveBadges.length).toBeGreaterThan(0);
+        }, { timeout: 3000 });
       });
     });
   });

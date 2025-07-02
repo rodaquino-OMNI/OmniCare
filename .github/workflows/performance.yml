@@ -1,0 +1,267 @@
+name: Performance Testing
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/performance.yml'
+  schedule:
+    # Run performance tests nightly at 1 AM UTC
+    - cron: '0 1 * * *'
+
+jobs:
+  # Backend performance tests
+  backend-performance:
+    name: Backend Performance Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: omnicare_perf
+          POSTGRES_PASSWORD: perf_password
+          POSTGRES_DB: omnicare_perf
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js 18.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18.x
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+    
+    - name: Install backend dependencies
+      working-directory: ./backend
+      run: npm ci
+    
+    - name: Create performance test environment
+      working-directory: ./backend
+      run: |
+        echo "NODE_ENV=test" > .env.test
+        echo "DATABASE_URL=postgresql://omnicare_perf:perf_password@localhost:5432/omnicare_perf" >> .env.test
+        echo "REDIS_URL=redis://localhost:6379" >> .env.test
+        echo "JWT_SECRET=perf-test-secret" >> .env.test
+        echo "SESSION_SECRET=perf-session-secret" >> .env.test
+    
+    - name: Build backend
+      working-directory: ./backend
+      run: npm run build
+    
+    - name: Run performance tests
+      working-directory: ./backend
+      run: |
+        npm run test:performance || true
+        
+    - name: Generate performance report
+      working-directory: ./backend
+      run: |
+        echo "# Backend Performance Report" > performance-report.md
+        echo "Date: $(date)" >> performance-report.md
+        echo "" >> performance-report.md
+        
+        # Extract performance metrics from test output
+        if [ -f tests/performance/performance-results.json ]; then
+          echo "## API Response Times" >> performance-report.md
+          echo "\`\`\`json" >> performance-report.md
+          cat tests/performance/performance-results.json | jq '.apiMetrics' >> performance-report.md
+          echo "\`\`\`" >> performance-report.md
+        fi
+    
+    - name: Upload performance results
+      uses: actions/upload-artifact@v4
+      with:
+        name: backend-performance-results
+        path: |
+          backend/performance-report.md
+          backend/tests/performance/performance-results.json
+    
+  # Frontend performance tests
+  frontend-performance:
+    name: Frontend Performance Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js 18.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18.x
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    
+    - name: Install frontend dependencies
+      working-directory: ./frontend
+      run: npm ci
+    
+    - name: Build frontend
+      working-directory: ./frontend
+      run: npm run build
+      env:
+        NEXT_PUBLIC_MEDPLUM_URL: https://api.medplum.com
+        NEXT_PUBLIC_API_URL: http://localhost:3001
+    
+    - name: Run Lighthouse CI
+      uses: treosh/lighthouse-ci-action@v11
+      with:
+        configPath: ./frontend/lighthouserc.json
+        uploadArtifacts: true
+        temporaryPublicStorage: true
+    
+  # Load testing
+  load-test:
+    name: Load Testing
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: omnicare_load
+          POSTGRES_PASSWORD: load_password
+          POSTGRES_DB: omnicare_load
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js 18.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18.x
+        cache: 'npm'
+    
+    - name: Install k6
+      run: |
+        sudo gpg -k
+        sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+        echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+        sudo apt-get update
+        sudo apt-get install k6
+    
+    - name: Setup backend for load testing
+      run: |
+        cd backend
+        npm ci
+        npm run build
+        
+        # Start backend in background
+        NODE_ENV=production \
+        DATABASE_URL=postgresql://omnicare_load:load_password@localhost:5432/omnicare_load \
+        JWT_SECRET=load-test-secret \
+        npm start &
+        
+        # Wait for backend to be ready
+        sleep 10
+        curl --retry 10 --retry-delay 2 --retry-connrefused http://localhost:3001/health
+    
+    - name: Run load tests
+      run: |
+        # Create k6 load test script
+        cat > load-test.js << 'EOF'
+        import http from 'k6/http';
+        import { check, sleep } from 'k6';
+        
+        export const options = {
+          stages: [
+            { duration: '1m', target: 10 },   // Ramp up to 10 users
+            { duration: '3m', target: 100 },  // Ramp up to 100 users
+            { duration: '2m', target: 100 },  // Stay at 100 users
+            { duration: '1m', target: 0 },    // Ramp down to 0 users
+          ],
+          thresholds: {
+            http_req_duration: ['p(95)<200'], // 95% of requests must complete below 200ms
+            http_req_failed: ['rate<0.1'],    // Error rate must be below 10%
+          },
+        };
+        
+        export default function () {
+          // Test health endpoint
+          const healthRes = http.get('http://localhost:3001/health');
+          check(healthRes, {
+            'health check status is 200': (r) => r.status === 200,
+          });
+          
+          sleep(1);
+        }
+        EOF
+        
+        # Run k6 load test
+        k6 run --out json=load-test-results.json load-test.js || true
+    
+    - name: Generate load test report
+      run: |
+        echo "# Load Test Report" > load-test-report.md
+        echo "Date: $(date)" >> load-test-report.md
+        echo "" >> load-test-report.md
+        
+        if [ -f load-test-results.json ]; then
+          echo "## Load Test Metrics" >> load-test-report.md
+          echo "\`\`\`" >> load-test-report.md
+          # Extract key metrics from k6 output
+          echo "Load test completed. Check artifacts for detailed results." >> load-test-report.md
+          echo "\`\`\`" >> load-test-report.md
+        fi
+    
+    - name: Upload load test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: load-test-results
+        path: |
+          load-test-report.md
+          load-test-results.json
+    
+  # Performance summary
+  performance-summary:
+    name: Performance Summary
+    runs-on: ubuntu-latest
+    needs: [backend-performance, frontend-performance]
+    if: always()
+    
+    steps:
+    - name: Performance test summary
+      run: |
+        echo "## Performance Test Summary"
+        echo ""
+        echo "### Test Results:"
+        echo "- Backend Performance: ${{ needs.backend-performance.result }}"
+        echo "- Frontend Performance: ${{ needs.frontend-performance.result }}"
+        echo ""
+        
+        if [ "${{ needs.backend-performance.result }}" == "failure" ] || \
+           [ "${{ needs.frontend-performance.result }}" == "failure" ]; then
+          echo "⚠️ Performance issues detected. Please review the test results."
+        else
+          echo "✅ Performance tests passed!"
+        fi

@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ClinicalNoteInput } from '../ClinicalNoteInput';
+import ClinicalNoteInput from '../ClinicalNoteInput';
 import { MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
 import { MedplumProvider } from '@medplum/react';
@@ -9,6 +9,11 @@ import { MockClient } from '@medplum/mock';
 import { Patient } from '@medplum/fhirtypes';
 import { offlineNotesService } from '@/services/offline-notes.service';
 import { offlineSmartTextService } from '@/services/offline-smarttext.service';
+import {
+  createMockPatient,
+  mockOfflineNoteData,
+  mockConflictData
+} from './clinical-test-utils';
 
 // Mock the services
 jest.mock('@/services/offline-notes.service');
@@ -25,16 +30,10 @@ jest.mock('@/stores/auth', () => ({
 }));
 
 describe('ClinicalNoteInput - Offline Functionality', () => {
-  const mockPatient: Patient = {
-    resourceType: 'Patient',
+  const mockPatient = createMockPatient({
     id: 'test-patient-id',
-    name: [{
-      given: ['John'],
-      family: 'Doe'
-    }],
-    birthDate: '198-1-1',
-    gender: 'male'
-  };
+    birthDate: '1980-01-01'
+  });
 
   const mockMedplum = new MockClient();
   const user = userEvent.setup();
@@ -57,24 +56,25 @@ describe('ClinicalNoteInput - Offline Functionality', () => {
     // Reset all mocks
     jest.clearAllMocks();
     
-    // Setup default mock implementations
-    (offlineNotesService.saveDraft as jest.Mock).mockResolvedValue({
-      id: 'offline-note-id',
-      tempId: 'temp-123',
-      title: 'Test Note',
-      content: 'Test content',
-      status: 'draft',
-      patientId: 'test-patient-id',
-      practitionerId: 'test-user-id',
-      practitionerName: 'Test User',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      version: 1
-    });
-
-    (offlineNotesService.recoverDrafts as jest.Mock).mockResolvedValue([]);
-    (offlineSmartTextService.getTemplates as jest.Mock).mockResolvedValue([]);
-    (offlineSmartTextService.getAllMacros as jest.Mock).mockReturnValue([]);
+    // Cast services to mocked types
+    const mockOfflineNotesService = offlineNotesService as jest.Mocked<typeof offlineNotesService>;
+    const mockOfflineSmartTextService = offlineSmartTextService as jest.Mocked<typeof offlineSmartTextService>;
+    
+    // Setup default mock implementations for existing methods
+    // These methods are already implemented in the actual service
+    mockOfflineNotesService.initialize = jest.fn().mockResolvedValue(undefined);
+    mockOfflineNotesService.saveNote = jest.fn().mockResolvedValue(mockOfflineNoteData);
+    mockOfflineNotesService.getNotes = jest.fn().mockResolvedValue([]);
+    mockOfflineNotesService.getNote = jest.fn().mockResolvedValue(mockOfflineNoteData);
+    mockOfflineNotesService.updateNote = jest.fn().mockResolvedValue(mockOfflineNoteData);
+    mockOfflineNotesService.deleteNote = jest.fn().mockResolvedValue(undefined);
+    mockOfflineNotesService.searchNotes = jest.fn().mockResolvedValue([]);
+    mockOfflineNotesService.getConflictedNotes = jest.fn().mockResolvedValue([]);
+    mockOfflineNotesService.resolveConflict = jest.fn().mockResolvedValue(undefined);
+    
+    mockOfflineSmartTextService.getTemplates = jest.fn().mockResolvedValue([]);
+    mockOfflineSmartTextService.getAllMacros = jest.fn().mockReturnValue([]);
+    mockOfflineSmartTextService.getContextualSuggestions = jest.fn().mockResolvedValue([]);
   });
 
   describe('Offline Mode Detection', () => {
@@ -167,7 +167,7 @@ describe('ClinicalNoteInput - Offline Functionality', () => {
           id: 'draft-1',
           title: 'Previous Draft',
           content: 'Previous content',
-          status: 'draft',
+          status: 'draft' as const,
           updatedAt: new Date().toISOString()
         }
       ];
@@ -187,7 +187,7 @@ describe('ClinicalNoteInput - Offline Functionality', () => {
         id: 'draft-1',
         title: 'Previous Draft',
         content: 'Previous content',
-        status: 'draft',
+        status: 'draft' as const,
         updatedAt: new Date().toISOString(),
         tags: ['urgent']
       };
@@ -334,27 +334,7 @@ describe('ClinicalNoteInput - Offline Functionality', () => {
 
   describe('Conflict Resolution', () => {
     it('should display conflict indicator when conflicts exist', async () => {
-      const mockConflicts = [
-        {
-          id: 'conflict-1',
-          title: 'Conflicted Note',
-          content: 'Local content',
-          status: 'conflict',
-          conflictData: {
-            serverNote: {
-              resourceType: 'DocumentReference',
-              description: 'Server version',
-              content: [{
-                attachment: {
-                  data: btoa('Server content')
-                }
-              }]
-            },
-            localChanges: {},
-            conflictedAt: new Date().toISOString()
-          }
-        }
-      ];
+      const mockConflicts = [mockConflictData];
 
       (offlineNotesService.getConflictedNotes as jest.Mock).mockResolvedValue(mockConflicts);
 
@@ -371,29 +351,7 @@ describe('ClinicalNoteInput - Offline Functionality', () => {
     });
 
     it('should show conflict resolution modal', async () => {
-      const mockConflict = {
-        id: 'conflict-1',
-        title: 'Conflicted Note',
-        content: 'Local content version',
-        updatedAt: new Date().toISOString(),
-        status: 'conflict',
-        conflictData: {
-          serverNote: {
-            resourceType: 'DocumentReference',
-            description: 'Server version',
-            meta: {
-              lastUpdated: new Date().toISOString()
-            },
-            content: [{
-              attachment: {
-                data: btoa('Server content version')
-              }
-            }]
-          },
-          localChanges: {},
-          conflictedAt: new Date().toISOString()
-        }
-      };
+      const mockConflict = mockConflictData;
 
       (offlineNotesService.getConflictedNotes as jest.Mock).mockResolvedValue([mockConflict]);
 
@@ -426,19 +384,10 @@ describe('ClinicalNoteInput - Offline Functionality', () => {
 
     it('should resolve conflict by keeping local version', async () => {
       const mockConflict = {
-        id: 'conflict-1',
-        title: 'Conflicted Note',
-        content: 'Local content',
-        updatedAt: new Date().toISOString(),
-        status: 'conflict',
+        ...mockConflictData,
         conflictData: {
-          serverNote: {
-            resourceType: 'DocumentReference',
-            content: [{
-              attachment: { data: btoa('Server content') }
-            }]
-          },
-          conflictedAt: new Date().toISOString()
+          ...mockConflictData.conflictData,
+          localChanges: {}
         }
       };
 

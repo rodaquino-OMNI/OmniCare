@@ -117,9 +117,9 @@ export class SyncConflictSimulator {
       mrn: 'MRN123456',
       firstName: 'John',
       lastName: 'Doe',
-      dateOfBirth: '199-1-1',
-      gender: 'male',
-      phone: '555-10',
+      dateOfBirth: '1990-01-01',
+      gender: 'male' as const,
+      phone: '555-1000',
       email: 'john.doe@example.com',
       address: {
         street: '123 Main St',
@@ -131,18 +131,18 @@ export class SyncConflictSimulator {
       allergies: [],
       insurance: [],
       status: 'active',
-      createdAt: '2024-1-1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
-      updatedAt: '2024-1-1TResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ'
+      createdAt: '2024-01-01T12:00:00Z',
+      updatedAt: '2024-01-01T12:00:00Z'
     };
 
     const localVersion: Patient = {
       ...basePatient,
-      phone: '555-123', // Local change
+      phone: '555-1234', // Local change
       address: {
         ...basePatient.address!,
         street: '456 Oak Ave' // Local change
       },
-      updatedAt: '2024-1-2T10:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ'
+      updatedAt: '2024-01-02T10:00:00Z'
     };
 
     const serverVersion: Patient = {
@@ -153,9 +153,9 @@ export class SyncConflictSimulator {
         substance: 'Penicillin',
         reaction: 'Rash',
         severity: 'moderate',
-        onset: '2024-1-2T8:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ'
+        onset: '2024-01-02T08:00:00Z'
       }],
-      updatedAt: '2024-1-2T9:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ'
+      updatedAt: '2024-01-02T09:00:00Z'
     };
 
     const conflict: SyncConflict<Patient> = {
@@ -179,7 +179,7 @@ export class SyncConflictSimulator {
       patientId: 'patient-123',
       type: 'outpatient',
       status: 'in-progress',
-      startTime: '2024-1-2T14:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
+      startTime: '2024-01-02T14:00:00Z',
       providerId: 'provider-456',
       departmentId: 'dept-789',
       chiefComplaint: 'Annual checkup',
@@ -190,11 +190,11 @@ export class SyncConflictSimulator {
     const localVersion: Encounter = {
       ...baseEncounter,
       status: 'completed',
-      endTime: '2024-1-2T15:ResourceHistoryTableResourceHistoryTable:ResourceHistoryTableResourceHistoryTableZ',
+      endTime: '2024-01-02T15:00:00Z',
       notes: 'Patient doing well, follow up in 6 months',
       diagnosis: [{
         id: 'diag-1',
-        code: 'ZResourceHistoryTableResourceHistoryTable.ResourceHistoryTableResourceHistoryTable',
+        code: 'Z00.00',
         description: 'Encounter for general adult medical examination',
         type: 'primary',
         status: 'active'
@@ -207,7 +207,7 @@ export class SyncConflictSimulator {
         id: 'proc-1',
         code: '99213',
         description: 'Office visit, established patient',
-        performedDate: '2024-1-2T14:3:ResourceHistoryTableResourceHistoryTableZ',
+        performedDate: '2024-01-02T14:30:00Z',
         performerId: 'provider-456',
         status: 'completed'
       }]
@@ -286,7 +286,7 @@ export class SyncConflictSimulator {
       ...operation,
       id: `sync-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       status: 'pending',
-      retryCount: ResourceHistoryTable
+      retryCount: 0
     };
 
     this.syncQueue.push(syncOp);

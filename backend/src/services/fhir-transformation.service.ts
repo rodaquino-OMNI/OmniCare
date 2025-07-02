@@ -1,29 +1,18 @@
 import {
   Patient,
-  Practitioner,
   Encounter,
-  Observation,
-  MedicationRequest,
-  DiagnosticReport,
-  Condition,
-  AllergyIntolerance,
-  CarePlan,
-  Organization,
-  Location,
-  Device,
   Bundle,
-  Resource,
   HumanName,
   ContactPoint,
   Address,
   Identifier,
   CodeableConcept,
-  Coding,
   Quantity,
   Period,
   Reference,
   Extension,
-  Annotation
+  Annotation,
+  Observation
 } from '@medplum/fhirtypes';
 
 import { 
@@ -32,6 +21,144 @@ import {
   OmniCareObservation 
 } from '@/types/fhir';
 import logger from '@/utils/logger';
+
+// Input types for transformation
+interface PatientInput {
+  id?: string;
+  active?: boolean;
+  names?: any[];
+  name?: any[];
+  identifiers?: any[];
+  identifier?: any[];
+  mrn?: string;
+  gender?: string;
+  birthDate?: string;
+  dateOfBirth?: string;
+  deceased?: boolean;
+  dateOfDeath?: string;
+  contacts?: any[];
+  telecom?: any[];
+  addresses?: any[];
+  address?: any[];
+  maritalStatus?: any;
+  photo?: any;
+  language?: any[];
+  languages?: any[];
+  emergencyContact?: any;
+  emergencyContacts?: any[];
+  insuranceInformation?: any;
+  insurance?: any;
+  insuranceStatus?: any;
+  registrationDate?: string;
+  preferredLanguage?: string;
+  omnicarePatientId?: string;
+  omnicareId?: string;
+  multipleBirth?: any;
+  birthOrder?: number;
+  primaryCareProviders?: any[];
+  managingOrganization?: any;
+  linkedPatients?: any[];
+  portalAccess?: any;
+}
+
+interface EncounterInput {
+  id?: string;
+  status?: string;
+  class?: any;
+  type?: any[];
+  subject?: any;
+  participant?: any[];
+  participants?: any[];
+  period?: any;
+  reasonCode?: any[];
+  reasonCodes?: any[];
+  diagnosis?: any[];
+  diagnoses?: any[];
+  hospitalization?: any;
+  location?: any[];
+  locations?: any[];
+  serviceProvider?: any;
+  serviceProviderId?: string;
+  identifiers?: any[];
+  encounterId?: string;
+  encounterTypes?: any[];
+  serviceType?: any;
+  priority?: any;
+  patientId?: string;
+  episodeOfCare?: any[];
+  referrals?: any[];
+  appointmentId?: string;
+  startTime?: string;
+  endTime?: string;
+  duration?: any;
+  reasonReferences?: any[];
+  accountId?: string;
+  parentEncounterId?: string;
+  appointmentType?: string;
+  chiefComplaint?: string;
+  visitSummary?: string;
+  followUpInstructions?: string;
+  omnicareId?: string;
+  billingNotes?: string;
+}
+
+interface ObservationInput {
+  id?: string;
+  status?: string;
+  category?: any[];
+  categories?: any[];
+  code?: any;
+  subject?: any;
+  encounter?: any;
+  encounterId?: string;
+  effectiveDateTime?: string;
+  effectiveTime?: string;
+  effectivePeriod?: any;
+  observationTime?: string;
+  issued?: string;
+  issuedTime?: string;
+  performer?: any[];
+  performers?: any[];
+  value?: any;
+  valueQuantity?: any;
+  valueCodeableConcept?: any;
+  valueString?: string;
+  valueBoolean?: boolean;
+  valueInteger?: number;
+  valueRange?: any;
+  valueRatio?: any;
+  valueSampledData?: any;
+  valueTime?: string;
+  valueDateTime?: string;
+  valuePeriod?: any;
+  interpretation?: any[];
+  note?: any[];
+  notes?: any[];
+  method?: any;
+  specimen?: any;
+  specimenId?: string;
+  device?: any;
+  deviceId?: string;
+  referenceRange?: any[];
+  referenceRanges?: any[];
+  component?: any[];
+  components?: any[];
+  identifiers?: any[];
+  observationId?: string;
+  orderIds?: string[];
+  partOfIds?: string[];
+  patientId?: string;
+  focusIds?: string[];
+  dataAbsentReason?: any;
+  bodySite?: any;
+  memberIds?: string[];
+  derivedFromIds?: string[];
+  deviceUsed?: string;
+  qualityFlags?: string[];
+  abnormalFlags?: string[];
+  criticalAlerts?: boolean;
+  omnicareId?: string;
+}
 
 /**
  * FHIR Data Transformation Service
@@ -47,7 +174,7 @@ export class FHIRTransformationService {
   /**
    * Transform OmniCare patient data to FHIR Patient resource
    */
-  transformToFHIRPatient(omnicarePatient: any): OmniCarePatient {
+  transformToFHIRPatient(omnicarePatient: PatientInput): OmniCarePatient {
     try {
       const patient: OmniCarePatient = {
         resourceType: 'Patient',
@@ -67,8 +194,8 @@ export class FHIRTransformationService {
         identifier: this.transformIdentifiers(omnicarePatient.identifiers || omnicarePatient.identifier || [], omnicarePatient.mrn),
         
         // Basic demographics
-        gender: this.transformGender(omnicarePatient.gender),
-        birthDate: this.transformDate(omnicarePatient.birthDate || omnicarePatient.dateOfBirth),
+        gender: omnicarePatient.gender ? this.transformGender(omnicarePatient.gender) : undefined,
+        birthDate: (omnicarePatient.birthDate || omnicarePatient.dateOfBirth) ? this.transformDate((omnicarePatient.birthDate || omnicarePatient.dateOfBirth)!) : undefined,
         deceasedBoolean: omnicarePatient.deceased || false,
         deceasedDateTime: omnicarePatient.dateOfDeath ? this.transformDateTime(omnicarePatient.dateOfDeath) : undefined,
         
@@ -194,7 +321,7 @@ export class FHIRTransformationService {
   /**
    * Transform OmniCare encounter data to FHIR Encounter resource
    */
-  transformToFHIREncounter(omnicareEncounter: any): OmniCareEncounter {
+  transformToFHIREncounter(omnicareEncounter: EncounterInput): OmniCareEncounter {
     try {
       const encounter: OmniCareEncounter = {
         resourceType: 'Encounter',
@@ -309,7 +436,7 @@ export class FHIRTransformationService {
   /**
    * Transform OmniCare observation data to FHIR Observation resource
    */
-  transformToFHIRObservation(omnicareObservation: any): OmniCareObservation {
+  transformToFHIRObservation(omnicareObservation: ObservationInput): OmniCareObservation {
     try {
       const observation: OmniCareObservation = {
         resourceType: 'Observation',
@@ -349,7 +476,7 @@ export class FHIRTransformationService {
         encounter: omnicareObservation.encounterId ? { reference: `Encounter/${omnicareObservation.encounterId}` } : undefined,
         
         // Effective time
-        effectiveDateTime: this.transformDateTime(omnicareObservation.effectiveTime || omnicareObservation.observationTime),
+        effectiveDateTime: (omnicareObservation.effectiveTime || omnicareObservation.observationTime) ? this.transformDateTime((omnicareObservation.effectiveTime || omnicareObservation.observationTime)!) : undefined,
         effectivePeriod: omnicareObservation.effectivePeriod ? this.transformPeriod(omnicareObservation.effectivePeriod.start, omnicareObservation.effectivePeriod.end) : undefined,
         
         // Issued
@@ -540,7 +667,7 @@ export class FHIRTransformationService {
     }));
   }
 
-  private transformCodeableConcept(concept: any): CodeableConcept {
+  private transformCodeableConcept(concept: Record<string, any>): CodeableConcept {
     if (!concept) return { text: 'Unknown' };
     
     return {
@@ -559,7 +686,7 @@ export class FHIRTransformationService {
     };
   }
 
-  private transformQuantity(quantity: any): Quantity {
+  private transformQuantity(quantity: Record<string, any>): Quantity {
     return {
       value: quantity.value,
       comparator: quantity.comparator,
@@ -577,7 +704,7 @@ export class FHIRTransformationService {
     };
   }
 
-  private transformAnnotation(note: any): Annotation {
+  private transformAnnotation(note: Record<string, any>): Annotation {
     return {
       authorReference: note.authorId ? { reference: `Practitioner/${note.authorId}` } : undefined,
       authorString: note.authorName,

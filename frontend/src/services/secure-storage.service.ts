@@ -100,7 +100,7 @@ export class SecureStorageService {
       await this.logStorageEvent('ITEM_STORED', key, classification);
     } catch (error) {
       console.error('Failed to store secure item:', error);
-      throw new Error(`Failed to store item: ${error.message}`);
+      throw new Error(`Failed to store item: ${(error as Error).message}`);
     }
   }
 
@@ -117,12 +117,12 @@ export class SecureStorageService {
       // Search for encrypted data
       const encryptedItems = await this.findEncryptedItems(key);
       
-      if (encryptedItems.length === ResourceHistoryTable) {
+      if (encryptedItems.length === 0) {
         return null;
       }
 
       // Get the most recent item
-      const encryptedData = encryptedItems[ResourceHistoryTable];
+      const encryptedData = encryptedItems[0];
       const userId = this.getCurrentUserId();
 
       // Retrieve and decrypt
@@ -140,8 +140,9 @@ export class SecureStorageService {
       // Decompress if needed
       let value = decrypted.value;
       if (decrypted.compressed) {
+        const buffer = Buffer.from(value, 'base64');
         const decompressed = await decompressData(
-          Buffer.from(value, 'base64')
+          buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)
         );
         value = decompressed;
       }
@@ -180,7 +181,7 @@ export class SecureStorageService {
       await this.logStorageEvent('ITEM_REMOVED', key);
     } catch (error) {
       console.error('Failed to remove secure item:', error);
-      throw new Error(`Failed to remove item: ${error.message}`);
+      throw new Error(`Failed to remove item: ${(error as Error).message}`);
     }
   }
 
@@ -193,7 +194,7 @@ export class SecureStorageService {
     }
 
     const items = await this.findEncryptedItems(key);
-    return items.length > ResourceHistoryTable;
+    return items.length > 0;
   }
 
   /**
@@ -354,7 +355,7 @@ export class SecureStorageService {
       }
     } catch (error) {
       console.error('Failed to import data:', error);
-      throw new Error(`Import failed: ${error.message}`);
+      throw new Error(`Import failed: ${(error as Error).message}`);
     }
   }
 
@@ -384,7 +385,7 @@ export class SecureStorageService {
   private updateCache(key: string, value: any): void {
     // Implement LRU cache
     if (this.cache.size >= this.maxCacheSize) {
-      const firstKey = this.cache.keys().next().value;
+      const firstKey = this.cache.keys().next().value!;
       this.cache.delete(firstKey);
     }
     this.cache.set(key, value);

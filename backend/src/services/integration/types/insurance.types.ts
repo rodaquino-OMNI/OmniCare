@@ -3,7 +3,6 @@
  * Type definitions for insurance verification, claims processing, and EDI transactions
  */
 
-import { IntegrationResult, IntegrationMessage, IntegrationConfig, ComplianceStatus } from './integration.types';
 import { 
   Period, 
   CodeableConcept, 
@@ -13,6 +12,8 @@ import {
   Attachment, 
   Reference 
 } from '../../../models/base.model';
+
+import { IntegrationResult, IntegrationMessage, IntegrationConfig, ComplianceStatus } from './integration.types';
 
 /**
  * X12 EDI Transaction Types

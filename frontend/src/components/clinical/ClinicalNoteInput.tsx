@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useId } from 'react';
 import { 
   Stack, 
   Group, 
@@ -24,8 +24,8 @@ import {
   List,
   ThemeIcon,
   UnstyledButton,
-  Notification,
-  LoadingOverlay
+  LoadingOverlay,
+  Title
 } from '@mantine/core';
 import { 
   IconNotes,
@@ -144,6 +144,12 @@ export function ClinicalNoteInput({
   const medplum = useMedplum();
   const [activeTab, setActiveTab] = useState('compose');
   const autoSaveTimer = useRef<NodeJS.Timeout | null>(null);
+  
+  // Accessibility IDs
+  const formId = useId();
+  const noteContentId = useId();
+  const errorId = useId();
+  const statusId = useId();
   
   // Note composition state
   const [selectedNoteType, setSelectedNoteType] = useState(noteType);
@@ -681,22 +687,23 @@ export function ClinicalNoteInput({
   };
 
   return (
-    <Stack gap="md">
+    <Stack gap="md" role="main" aria-labelledby="clinical-note-title">
       {/* Header */}
-      <Card shadow="sm" padding="md" withBorder>
+      <Card shadow="sm" padding="md" withBorder role="region" aria-labelledby="note-header">
         <Group justify="space-between" align="flex-start">
           <div className="flex-1">
             <Group gap="md" mb="sm">
               <IconNotes size={24} className="text-blue-600" />
               <div>
-                <Text fw={600} size="lg">Clinical Documentation</Text>
-                <Text size="sm" c="dimmed">
+                <Text fw={600} size="lg" id="clinical-note-title">Clinical Documentation</Text>
+                <Text size="sm" c="dimmed" id="patient-context">
                   Patient: {patient.name?.[0]?.given?.[0]} {patient.name?.[0]?.family}
                 </Text>
               </div>
             </Group>
             
-            <Group gap="lg">
+            <Group gap="lg" role="group" aria-labelledby="note-metadata">
+              <Text id="note-metadata" className="sr-only">Note metadata fields</Text>
               <Select
                 label="Note Type"
                 data={NOTE_TYPES}
@@ -704,7 +711,12 @@ export function ClinicalNoteInput({
                 onChange={(value) => value && setSelectedNoteType(value)}
                 size="sm"
                 style={{ minWidth: 150 }}
+                aria-describedby="note-type-help"
+                required
               />
+              <div id="note-type-help" className="sr-only">
+                Select the type of clinical note you are creating
+              </div>
               
               <TextInput
                 label="Note Title"
@@ -712,7 +724,12 @@ export function ClinicalNoteInput({
                 onChange={(e) => setNoteTitle(e.currentTarget.value)}
                 size="sm"
                 style={{ flex: 1, minWidth: 200 }}
+                aria-describedby="note-title-help"
+                required
               />
+              <div id="note-title-help" className="sr-only">
+                Enter a descriptive title for this clinical note
+              </div>
             </Group>
           </div>
           
@@ -771,28 +788,64 @@ export function ClinicalNoteInput({
       </Card>
 
       {error && (
-        <Alert icon={<IconAlertCircle size={16} />} color="red" onClose={() => setError(null)}>
+        <Alert 
+          icon={<IconAlertCircle size={16} aria-hidden="true" />} 
+          color="red" 
+          onClose={() => setError(null)}
+          role="alert"
+          aria-live="assertive"
+          id={errorId}
+        >
           {error}
         </Alert>
       )}
 
       {/* Main Content */}
-      <Tabs value={activeTab} onChange={(value) => value && setActiveTab(value)}>
-        <Tabs.List>
-          <Tabs.Tab value="compose" leftSection={<IconEdit size={16} />}>
+      <Tabs 
+        value={activeTab} 
+        onChange={(value) => value && setActiveTab(value)}
+        role="region"
+        aria-labelledby="note-tabs"
+      >
+        <Tabs.List role="tablist" aria-label="Clinical note sections">
+          <Tabs.Tab 
+            value="compose" 
+            leftSection={<IconEdit size={16} aria-hidden="true" />}
+            role="tab"
+            aria-controls="compose-panel"
+            aria-selected={activeTab === 'compose'}
+          >
             Compose
           </Tabs.Tab>
-          <Tabs.Tab value="preview" leftSection={<IconEye size={16} />}>
+          <Tabs.Tab 
+            value="preview" 
+            leftSection={<IconEye size={16} aria-hidden="true" />}
+            role="tab"
+            aria-controls="preview-panel"
+            aria-selected={activeTab === 'preview'}
+          >
             Preview
           </Tabs.Tab>
           {showHistory && (
-            <Tabs.Tab value="history" leftSection={<IconHistory size={16} />}>
-              History ({existingNotes.length})
+            <Tabs.Tab 
+              value="history" 
+              leftSection={<IconHistory size={16} aria-hidden="true" />}
+              role="tab"
+              aria-controls="history-panel"
+              aria-selected={activeTab === 'history'}
+            >
+              History ({existingNotes?.length || 0})
             </Tabs.Tab>
           )}
         </Tabs.List>
 
-        <Tabs.Panel value="compose" pt="md">
+        <Tabs.Panel 
+          value="compose" 
+          pt="md"
+          role="tabpanel"
+          id="compose-panel"
+          aria-labelledby="compose-tab"
+        >
           <Card shadow="sm" padding="lg" withBorder>
             {documentReference ? (
               <Textarea
@@ -805,6 +858,7 @@ export function ClinicalNoteInput({
             ) : (
               <Stack gap="md">
                 <SmartText
+                  id={noteContentId}
                   value={noteContent}
                   onChange={setNoteContent}
                   placeholder={`Begin your ${NOTE_TYPES.find(nt => nt.value === selectedNoteType)?.label.toLowerCase()}...`}
@@ -821,26 +875,35 @@ export function ClinicalNoteInput({
                       new Date().getFullYear() - new Date(patient.birthDate).getFullYear() : undefined,
                     gender: patient.gender
                   }}
+                  aria-label="Clinical note content"
+                  aria-describedby="note-content-help"
+                  aria-invalid={!!error}
+                  aria-errormessage={error ? errorId : undefined}
                 />
+                <div id="note-content-help" className="sr-only">
+                  Enter the clinical documentation content. Auto-save is enabled.
+                </div>
                 
                 {/* Attachments Section */}
                 {attachments.length > 0 && (
-                  <Paper p="sm" withBorder>
+                  <Paper p="sm" withBorder role="region" aria-labelledby="attachments-heading">
                     <Group gap="xs" mb="xs">
-                      <IconFile size={16} />
-                      <Text size="sm" fw={500}>Attachments</Text>
+                      <IconFile size={16} aria-hidden="true" />
+                      <Text size="sm" fw={500} id="attachments-heading">Attachments</Text>
                     </Group>
-                    <Stack gap="xs">
+                    <Stack gap="xs" role="list" aria-label="Attached files">
                       {attachments.map(attachment => (
-                        <Group key={attachment.id} gap="xs" justify="space-between">
+                        <Group key={attachment.id} gap="xs" justify="space-between" role="listitem">
                           <Text size="sm">{attachment.title}</Text>
                           <ActionIcon 
                             size="sm" 
                             color="red" 
                             variant="light"
                             onClick={() => removeAttachment(attachment.id)}
+                            aria-label={`Remove attachment ${attachment.title}`}
+                            title={`Remove ${attachment.title}`}
                           >
-                            <IconX size={14} />
+                            <IconX size={14} aria-hidden="true" />
                           </ActionIcon>
                         </Group>
                       ))}
@@ -857,19 +920,29 @@ export function ClinicalNoteInput({
                     <Button 
                       {...props} 
                       variant="light" 
-                      leftSection={<IconUpload size={16} />}
+                      leftSection={<IconUpload size={16} aria-hidden="true" />}
                       disabled={noteStatus === 'signed'}
+                      aria-describedby="file-upload-help"
                     >
                       Attach Files
                     </Button>
                   )}
                 </FileButton>
+                <div id="file-upload-help" className="sr-only">
+                  Upload images or PDF files to attach to this clinical note
+                </div>
               </Stack>
             )}
           </Card>
         </Tabs.Panel>
 
-        <Tabs.Panel value="preview" pt="md">
+        <Tabs.Panel 
+          value="preview" 
+          pt="md"
+          role="tabpanel"
+          id="preview-panel"
+          aria-labelledby="preview-tab"
+        >
           <Card shadow="sm" padding="lg" withBorder>
             {documentReference ? (
               <Stack gap="md">
@@ -919,24 +992,39 @@ export function ClinicalNoteInput({
         </Tabs.Panel>
 
         {showHistory && (
-          <Tabs.Panel value="history" pt="md">
-            <Card shadow="sm" padding="lg" withBorder>
+          <Tabs.Panel 
+            value="history" 
+            pt="md"
+            role="tabpanel"
+            id="history-panel"
+            aria-labelledby="history-tab"
+          >
+            <Card shadow="sm" padding="lg" withBorder role="region" aria-labelledby="history-heading">
               <Stack gap="md">
-                <Text fw={600} size="lg">Previous Notes</Text>
+                <Text fw={600} size="lg" id="history-heading">Previous Notes</Text>
                 
-                {existingNotes.length === 0 ? (
-                  <Text c="dimmed" ta="center" py="xl">
+                {(existingNotes?.length || 0) === 0 ? (
+                  <Text c="dimmed" ta="center" py="xl" role="status">
                     No previous notes found
                   </Text>
                 ) : (
-                  <ScrollArea mah={400}>
-                    <Stack gap="sm">
-                      {existingNotes.map(docRef => (
+                  <ScrollArea mah={400} aria-label="Previous clinical notes">
+                    <Stack gap="sm" role="list">
+                      {(existingNotes || []).map(docRef => (
                         <Paper
                           key={docRef.id}
                           p="md"
                           className="border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50"
                           onClick={() => setSelectedHistoryNote(docRef)}
+                          role="listitem button"
+                          tabIndex={0}
+                          aria-label={`View note: ${docRef.description || 'Clinical Note'}`}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setSelectedHistoryNote(docRef);
+                            }
+                          }}
                         >
                           <Group justify="space-between" align="flex-start">
                             <div className="flex-1">
@@ -1274,6 +1362,14 @@ export function ClinicalNoteInput({
           Your notes are being saved locally and will sync when you're back online.
         </Notification>
       )}
+      {/* Live region for note status announcements */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+        id={statusId}
+      />
     </Stack>
   );
 }

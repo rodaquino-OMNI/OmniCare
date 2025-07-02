@@ -204,7 +204,7 @@ export function CacheManager({ minimal = false }: CacheManagerProps) {
                     thickness={8}
                     sections={[
                       { value: stats.hitRate * 100, color: 'green' },
-                      { value: stats.missRate * 100, color: 'red' }
+                      { value: (1 - stats.hitRate) * 100, color: 'red' }
                     ]}
                     label={
                       <Text size="xl" fw={700} ta="center">

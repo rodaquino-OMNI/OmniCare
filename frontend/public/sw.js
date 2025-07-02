@@ -1,99 +1,326 @@
 /**
- * OmniCare Service Worker
- * Handles background sync and offline functionality
+ * OmniCare Service Worker - Performance Optimized
+ * Handles background sync, offline functionality, and performance caching
  */
 
-const CACHE_NAME = 'omnicare-v1';
+const CACHE_VERSION = 'v1.2.0';
+const STATIC_CACHE = `omnicare-static-${CACHE_VERSION}`;
+const DYNAMIC_CACHE = `omnicare-dynamic-${CACHE_VERSION}`;
+const API_CACHE = `omnicare-api-${CACHE_VERSION}`;
+const IMAGE_CACHE = `omnicare-images-${CACHE_VERSION}`;
+
 const SYNC_TAG = 'omnicare-sync';
 const PERIODIC_SYNC_TAG = 'omnicare-periodic-sync';
 
-// URLs to cache for offline functionality
-const urlsToCache = [
+// Performance configuration
+const CACHE_STRATEGIES = {
+  STATIC: 'cache-first',
+  DYNAMIC: 'network-first',
+  API: 'network-first-with-cache',
+  IMAGES: 'cache-first-with-refresh'
+};
+
+const CACHE_DURATIONS = {
+  STATIC: 24 * 60 * 60 * 1000, // 24 hours
+  DYNAMIC: 30 * 60 * 1000,     // 30 minutes
+  API: 5 * 60 * 1000,          // 5 minutes
+  IMAGES: 7 * 24 * 60 * 60 * 1000 // 7 days
+};
+
+// Critical resources to cache immediately
+const CRITICAL_RESOURCES = [
   '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
-  '/manifest.json'
+  '/manifest.json',
+  '/offline.html',
+  '/favicon.ico'
 ];
 
-// Install event - cache resources
+// API endpoints to cache
+const CACHEABLE_API_PATTERNS = [
+  /\/api\/fhir\/Patient\?/,
+  /\/api\/dashboard/,
+  /\/api\/health/
+];
+
+// Performance metrics tracking
+let performanceMetrics = {
+  cacheHits: 0,
+  cacheMisses: 0,
+  networkRequests: 0,
+  avgResponseTime: 0,
+  lastOptimization: Date.now()
+};
+
+// Install event - cache critical resources with performance optimization
 self.addEventListener('install', (event) => {
-  console.log('Service Worker installing');
+  console.log('🚀 Service Worker installing with performance optimizations');
   
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('Opened cache');
-        return cache.addAll(urlsToCache);
-      })
-      .then(() => self.skipWaiting())
+    Promise.all([
+      // Cache critical static resources
+      caches.open(STATIC_CACHE).then((cache) => {
+        console.log('📦 Caching critical static resources');
+        return cache.addAll(CRITICAL_RESOURCES);
+      }),
+      // Initialize other caches
+      caches.open(DYNAMIC_CACHE),
+      caches.open(API_CACHE),
+      caches.open(IMAGE_CACHE)
+    ]).then(() => {
+      console.log('✅ All caches initialized');
+      self.skipWaiting();
+    })
   );
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches and optimize storage
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker activating');
+  console.log('🔄 Service Worker activating and optimizing caches');
   
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    }).then(() => self.clients.claim())
+    Promise.all([
+      // Clean up old cache versions
+      caches.keys().then((cacheNames) => {
+        const currentCaches = [STATIC_CACHE, DYNAMIC_CACHE, API_CACHE, IMAGE_CACHE];
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            if (!currentCaches.includes(cacheName)) {
+              console.log('🗑️ Deleting old cache:', cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      }),
+      // Initialize performance tracking
+      initializePerformanceTracking()
+    ]).then(() => {
+      console.log('✅ Cache optimization complete');
+      self.clients.claim();
+    })
   );
 });
 
-// Fetch event - serve from cache when offline
+// Initialize performance tracking
+async function initializePerformanceTracking() {
+  try {
+    const stored = await getStoredMetrics();
+    if (stored) {
+      performanceMetrics = { ...performanceMetrics, ...stored };
+    }
+  } catch (error) {
+    console.warn('Failed to load stored performance metrics:', error);
+  }
+}
+
+// Optimized fetch event with intelligent caching strategies
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+  const url = new URL(request.url);
   
   // Only handle GET requests
   if (request.method !== 'GET') {
     return;
   }
 
-  // Skip cache for API requests (except health checks)
-  if (request.url.includes('/api/') && !request.url.includes('/health')) {
-    return;
-  }
-
-  event.respondWith(
-    caches.match(request)
-      .then((response) => {
-        // Return cached version or fetch from network
-        if (response) {
-          return response;
-        }
-
-        return fetch(request).then((response) => {
-          // Don't cache if not a valid response
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
-          }
-
-          // Clone the response
-          const responseToCache = response.clone();
-
-          caches.open(CACHE_NAME)
-            .then((cache) => {
-              cache.put(request, responseToCache);
-            });
-
-          return response;
-        });
-      })
-      .catch(() => {
-        // Return a fallback page for navigation requests
-        if (request.mode === 'navigate') {
-          return caches.match('/');
-        }
-      })
-  );
+  // Route to appropriate caching strategy
+  event.respondWith(handleRequest(request, url));
 });
+
+// Intelligent request handling with performance optimization
+async function handleRequest(request, url) {
+  const startTime = Date.now();
+  
+  try {
+    let response;
+    
+    // Determine caching strategy based on request type
+    if (isStaticResource(url)) {
+      response = await handleStaticResource(request);
+    } else if (isAPIRequest(url)) {
+      response = await handleAPIRequest(request);
+    } else if (isImageRequest(url)) {
+      response = await handleImageRequest(request);
+    } else {
+      response = await handleDynamicResource(request);
+    }
+    
+    // Track performance metrics
+    updatePerformanceMetrics(startTime, response);
+    
+    return response;
+  } catch (error) {
+    console.error('Fetch error:', error);
+    return handleFallback(request);
+  }
+}
+
+// Cache-first strategy for static resources
+async function handleStaticResource(request) {
+  const cache = await caches.open(STATIC_CACHE);
+  const cachedResponse = await cache.match(request);
+  
+  if (cachedResponse && !isExpired(cachedResponse, CACHE_DURATIONS.STATIC)) {
+    performanceMetrics.cacheHits++;
+    return cachedResponse;
+  }
+  
+  try {
+    const networkResponse = await fetch(request);
+    if (networkResponse.ok) {
+      const responseToCache = networkResponse.clone();
+      await cache.put(request, responseToCache);
+    }
+    performanceMetrics.networkRequests++;
+    return networkResponse;
+  } catch (error) {
+    performanceMetrics.cacheMisses++;
+    return cachedResponse || createErrorResponse();
+  }
+}
+
+// Network-first strategy for API requests
+async function handleAPIRequest(request) {
+  const cache = await caches.open(API_CACHE);
+  
+  try {
+    const networkResponse = await fetch(request);
+    
+    if (networkResponse.ok && isCacheableAPI(request.url)) {
+      const responseToCache = networkResponse.clone();
+      await cache.put(request, responseToCache);
+    }
+    
+    performanceMetrics.networkRequests++;
+    return networkResponse;
+  } catch (error) {
+    // Fallback to cache if network fails
+    const cachedResponse = await cache.match(request);
+    if (cachedResponse && !isExpired(cachedResponse, CACHE_DURATIONS.API)) {
+      performanceMetrics.cacheHits++;
+      return cachedResponse;
+    }
+    
+    performanceMetrics.cacheMisses++;
+    throw error;
+  }
+}
+
+// Cache-first with background refresh for images
+async function handleImageRequest(request) {
+  const cache = await caches.open(IMAGE_CACHE);
+  const cachedResponse = await cache.match(request);
+  
+  if (cachedResponse) {
+    performanceMetrics.cacheHits++;
+    
+    // Background refresh if expired
+    if (isExpired(cachedResponse, CACHE_DURATIONS.IMAGES)) {
+      fetch(request).then(response => {
+        if (response.ok) {
+          cache.put(request, response);
+        }
+      }).catch(() => {});
+    }
+    
+    return cachedResponse;
+  }
+  
+  try {
+    const networkResponse = await fetch(request);
+    if (networkResponse.ok) {
+      const responseToCache = networkResponse.clone();
+      await cache.put(request, responseToCache);
+    }
+    performanceMetrics.networkRequests++;
+    return networkResponse;
+  } catch (error) {
+    performanceMetrics.cacheMisses++;
+    return createErrorResponse();
+  }
+}
+
+// Network-first for dynamic content
+async function handleDynamicResource(request) {
+  const cache = await caches.open(DYNAMIC_CACHE);
+  
+  try {
+    const networkResponse = await fetch(request);
+    
+    if (networkResponse.ok) {
+      const responseToCache = networkResponse.clone();
+      await cache.put(request, responseToCache);
+    }
+    
+    performanceMetrics.networkRequests++;
+    return networkResponse;
+  } catch (error) {
+    const cachedResponse = await cache.match(request);
+    if (cachedResponse && !isExpired(cachedResponse, CACHE_DURATIONS.DYNAMIC)) {
+      performanceMetrics.cacheHits++;
+      return cachedResponse;
+    }
+    
+    performanceMetrics.cacheMisses++;
+    return handleFallback(request);
+  }
+}
+
+// Helper functions
+function isStaticResource(url) {
+  const staticExtensions = ['.js', '.css', '.woff2', '.woff', '.ttf', '.ico'];
+  return staticExtensions.some(ext => url.pathname.endsWith(ext)) || 
+         url.pathname === '/' || url.pathname === '/manifest.json';
+}
+
+function isAPIRequest(url) {
+  return url.pathname.startsWith('/api/');
+}
+
+function isImageRequest(url) {
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+  return imageExtensions.some(ext => url.pathname.endsWith(ext));
+}
+
+function isCacheableAPI(url) {
+  return CACHEABLE_API_PATTERNS.some(pattern => pattern.test(url));
+}
+
+function isExpired(response, maxAge) {
+  const dateHeader = response.headers.get('date');
+  if (!dateHeader) return true;
+  
+  const responseTime = new Date(dateHeader).getTime();
+  return (Date.now() - responseTime) > maxAge;
+}
+
+function createErrorResponse() {
+  return new Response('Resource not available offline', {
+    status: 503,
+    statusText: 'Service Unavailable'
+  });
+}
+
+function handleFallback(request) {
+  if (request.mode === 'navigate') {
+    return caches.match('/offline.html') || 
+           caches.match('/') || 
+           createErrorResponse();
+  }
+  return createErrorResponse();
+}
+
+function updatePerformanceMetrics(startTime, response) {
+  const responseTime = Date.now() - startTime;
+  const count = performanceMetrics.networkRequests + performanceMetrics.cacheHits;
+  
+  performanceMetrics.avgResponseTime = 
+    (performanceMetrics.avgResponseTime * (count - 1) + responseTime) / count;
+  
+  // Store metrics periodically
+  if (count % 50 === 0) {
+    storeMetrics();
+  }
+}
 
 // Background sync event
 self.addEventListener('sync', (event) => {
@@ -252,6 +479,16 @@ function openSyncDatabase() {
         store.createIndex('priority', 'priority', { unique: false });
         store.createIndex('createdAt', 'createdAt', { unique: false });
       }
+      
+      // Performance metrics store
+      if (!db.objectStoreNames.contains('performance-metrics')) {
+        db.createObjectStore('performance-metrics');
+      }
+      
+      // Auth cache store
+      if (!db.objectStoreNames.contains('auth-cache')) {
+        db.createObjectStore('auth-cache');
+      }
     };
   });
 }
@@ -352,16 +589,81 @@ async function processSyncBatch(operations) {
   }
 }
 
-// Get authentication token
+// Enhanced authentication token handling with performance caching
 async function getAuthToken() {
-  // Try to get token from IndexedDB or localStorage
-  // This is a simplified implementation
   try {
-    const token = localStorage.getItem('authToken');
-    return token ? `Bearer ${token}` : '';
+    // Check cache first
+    if (self.cachedAuthToken && (Date.now() - self.tokenCacheTime) < 300000) { // 5 minutes
+      return self.cachedAuthToken;
+    }
+    
+    // Try to get token from IndexedDB first, then localStorage
+    let token;
+    try {
+      const db = await openSyncDatabase();
+      const transaction = db.transaction(['auth-cache'], 'readonly');
+      const store = transaction.objectStore('auth-cache');
+      const result = await new Promise((resolve) => {
+        const request = store.get('authToken');
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => resolve(null);
+      });
+      token = result?.token;
+    } catch (dbError) {
+      // Fallback to localStorage
+      token = localStorage.getItem('authToken');
+    }
+    
+    // Cache the token
+    if (token) {
+      self.cachedAuthToken = `Bearer ${token}`;
+      self.tokenCacheTime = Date.now();
+      return self.cachedAuthToken;
+    }
+    
+    return '';
   } catch (error) {
     console.error('Failed to get auth token:', error);
     return '';
+  }
+}
+
+// Store performance metrics
+async function storeMetrics() {
+  try {
+    const metricsData = {
+      ...performanceMetrics,
+      timestamp: Date.now()
+    };
+    
+    // Store in IndexedDB for persistence
+    const db = await openSyncDatabase();
+    const transaction = db.transaction(['performance-metrics'], 'readwrite');
+    const store = transaction.objectStore('performance-metrics');
+    await store.put(metricsData, 'current');
+    
+    console.log('📊 Performance metrics stored:', metricsData);
+  } catch (error) {
+    console.error('Failed to store performance metrics:', error);
+  }
+}
+
+// Get stored performance metrics
+async function getStoredMetrics() {
+  try {
+    const db = await openSyncDatabase();
+    const transaction = db.transaction(['performance-metrics'], 'readonly');
+    const store = transaction.objectStore('performance-metrics');
+    const result = await new Promise((resolve) => {
+      const request = store.get('current');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => resolve(null);
+    });
+    
+    return result;
+  } catch (error) {
+    console.error('Failed to get stored metrics:', error);
+    return null;
   }
 }
 

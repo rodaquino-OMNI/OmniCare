@@ -4,8 +4,10 @@
  */
 
 import { faker } from '@faker-js/faker';
-import { OmniCarePractitioner, PractitionerCredentials, BoardCertification, PractitionerSchedule } from '../../../src/models/practitioner.model';
+
 import { HumanName, Address, ContactPoint, CodeableConcept, Identifier } from '../../../src/models/base.model';
+import { OmniCarePractitioner, PractitionerCredentials, BoardCertification, PractitionerSchedule } from '../../../src/models/practitioner.model';
+
 import { HealthcareFaker } from './patient-generator';
 
 export interface PractitionerGeneratorOptions {

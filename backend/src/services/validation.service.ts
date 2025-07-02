@@ -1,8 +1,9 @@
+import { Resource, Patient, Observation, MedicationRequest } from '@medplum/fhirtypes';
 import Joi from 'joi';
 
-import { ValidationResult, ValidationError, ValidationWarning } from '@/types/fhir';
-import logger from '@/utils/logger';
+import { ValidationError, ValidationResult, ValidationWarning } from '@/types/fhir';
 import { getErrorMessage } from '@/utils/error.utils';
+import logger from '@/utils/logger';
 
 /**
  * Data Validation and Sanitization Service
@@ -17,7 +18,7 @@ export class ValidationService {
   private readonly fhirResourceSchemas = {
     Patient: Joi.object({
       resourceType: Joi.string().valid('Patient').required(),
-      id: Joi.string().pattern(/^[A-Za-z0-9\-\.]{1,64}$/),
+      id: Joi.string().pattern(/^[A-Za-z0-9\-.]{1,64}$/),
       meta: Joi.object(),
       implicitRules: Joi.string().uri(),
       language: Joi.string(),
@@ -87,7 +88,7 @@ export class ValidationService {
 
     Observation: Joi.object({
       resourceType: Joi.string().valid('Observation').required(),
-      id: Joi.string().pattern(/^[A-Za-z0-9\-\.]{1,64}$/),
+      id: Joi.string().pattern(/^[A-Za-z0-9\-.]{1,64}$/),
       meta: Joi.object(),
       implicitRules: Joi.string().uri(),
       language: Joi.string(),
@@ -161,7 +162,7 @@ export class ValidationService {
 
     MedicationRequest: Joi.object({
       resourceType: Joi.string().valid('MedicationRequest').required(),
-      id: Joi.string().pattern(/^[A-Za-z0-9\-\.]{1,64}$/),
+      id: Joi.string().pattern(/^[A-Za-z0-9\-.]{1,64}$/),
       meta: Joi.object(),
       implicitRules: Joi.string().uri(),
       language: Joi.string(),
@@ -318,7 +319,7 @@ export class ValidationService {
   /**
    * Validate FHIR resource
    */
-  async validateFHIRResource(resourceType: string, resource: any): Promise<ValidationResult> {
+  async validateFHIRResource(resourceType: string, resource: Resource): Promise<ValidationResult> {
     try {
       const schema = this.fhirResourceSchemas[resourceType as keyof typeof this.fhirResourceSchemas];
       
@@ -335,7 +336,7 @@ export class ValidationService {
         };
       }
 
-      const { error, warning } = schema.validate(resource, {
+      const { error } = schema.validate(resource, {
         abortEarly: false,
         allowUnknown: true, // FHIR allows extensions
         stripUnknown: false,
@@ -372,7 +373,7 @@ export class ValidationService {
 
       return result;
     } catch (error) {
-      logger.error('FHIR resource validation failed:', error);
+      logger.error('FHIR resource validation failed:', getErrorMessage(error));
       return {
         valid: false,
         errors: [{
@@ -389,7 +390,7 @@ export class ValidationService {
   /**
    * Validate API input
    */
-  async validateAPIInput(schemaName: string, data: any): Promise<ValidationResult> {
+  validateAPIInput(schemaName: string, data: unknown): ValidationResult {
     try {
       const schema = this.apiSchemas[schemaName as keyof typeof this.apiSchemas];
       
@@ -435,7 +436,7 @@ export class ValidationService {
 
       return result;
     } catch (error) {
-      logger.error('API input validation failed:', error);
+      logger.error('API input validation failed:', getErrorMessage(error));
       return {
         valid: false,
         errors: [{
@@ -452,7 +453,7 @@ export class ValidationService {
   /**
    * Sanitize user input
    */
-  sanitizeInput(input: any): any {
+  sanitizeInput(input: unknown): unknown {
     if (typeof input === 'string') {
       return input
         .trim()
@@ -465,7 +466,7 @@ export class ValidationService {
     }
 
     if (input && typeof input === 'object') {
-      const sanitized: any = {};
+      const sanitized: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(input)) {
         sanitized[key] = this.sanitizeInput(value);
       }
@@ -487,7 +488,7 @@ export class ValidationService {
    * Validate phone number format
    */
   validatePhoneNumber(phone: string): boolean {
-    const phoneRegex = /^\+?[\d\s\-\(\)\.]+$/;
+    const phoneRegex = /^\+?[\d\s\-().]+$/;
     return phoneRegex.test(phone) && phone.replace(/\D/g, '').length >= 10;
   }
 
@@ -503,7 +504,7 @@ export class ValidationService {
    * Validate FHIR ID format
    */
   validateFHIRId(id: string): boolean {
-    const idRegex = /^[A-Za-z0-9\-\.]{1,64}$/;
+    const idRegex = /^[A-Za-z0-9\-.]{1,64}$/;
     return idRegex.test(id);
   }
 
@@ -526,9 +527,9 @@ export class ValidationService {
   /**
    * Perform additional FHIR-specific validations
    */
-  private async performAdditionalFHIRValidation(
+  private performAdditionalFHIRValidation(
     resourceType: string,
-    resource: any
+    resource: Resource
   ): Promise<{ errors: ValidationError[]; warnings: ValidationWarning[] }> {
     const errors: ValidationError[] = [];
     const warnings: ValidationWarning[] = [];
@@ -569,17 +570,18 @@ export class ValidationService {
     // Common validations for all resources
     this.validateCommonFHIRElements(resource, errors, warnings);
 
-    return { errors, warnings };
+    return Promise.resolve({ errors, warnings });
   }
 
   /**
    * Validate Patient-specific rules
    */
   private validatePatientResource(
-    patient: any,
+    resource: Resource,
     errors: ValidationError[],
     warnings: ValidationWarning[]
   ): void {
+    const patient = resource as Patient;
     // At least one name should be provided
     if (!patient.name || patient.name.length === 0) {
       warnings.push({
@@ -592,8 +594,8 @@ export class ValidationService {
 
     // Validate email in telecom
     if (patient.telecom) {
-      patient.telecom.forEach((telecom: any, index: number) => {
-        if (telecom.system === 'email' && !this.validateEmail(telecom.value)) {
+      patient.telecom.forEach((telecom, index) => {
+        if (telecom.system === 'email' && telecom.value && !this.validateEmail(telecom.value)) {
           errors.push({
             path: `telecom[${index}].value`,
             message: 'Invalid email format',
@@ -602,7 +604,7 @@ export class ValidationService {
           });
         }
         
-        if (telecom.system === 'phone' && !this.validatePhoneNumber(telecom.value)) {
+        if (telecom.system === 'phone' && telecom.value && !this.validatePhoneNumber(telecom.value)) {
           warnings.push({
             path: `telecom[${index}].value`,
             message: 'Invalid phone number format',
@@ -642,13 +644,14 @@ export class ValidationService {
    * Validate Observation-specific rules
    */
   private validateObservationResource(
-    observation: any,
+    resource: Resource,
     errors: ValidationError[],
     warnings: ValidationWarning[]
   ): void {
+    const observation = resource as Observation;
     // Value validations for vital signs
-    if (observation.category?.some((cat: any) => 
-      cat.coding?.some((coding: any) => coding.code === 'vital-signs')
+    if (observation.category?.some((cat) => 
+      cat.coding?.some((coding) => coding.code === 'vital-signs')
     )) {
       if (observation.valueQuantity) {
         this.validateVitalSignValue(observation, errors, warnings);
@@ -671,10 +674,11 @@ export class ValidationService {
    * Validate MedicationRequest-specific rules
    */
   private validateMedicationRequestResource(
-    medicationRequest: any,
+    resource: Resource,
     errors: ValidationError[],
     warnings: ValidationWarning[]
   ): void {
+    const medicationRequest = resource as MedicationRequest;
     // Either medicationCodeableConcept or medicationReference must be present
     if (!medicationRequest.medicationCodeableConcept && !medicationRequest.medicationReference) {
       errors.push({
@@ -700,14 +704,14 @@ export class ValidationService {
    * Validate vital sign values
    */
   private validateVitalSignValue(
-    observation: any,
+    observation: Observation,
     errors: ValidationError[],
     warnings: ValidationWarning[]
   ): void {
     const value = observation.valueQuantity?.value;
     const code = observation.code?.coding?.[0]?.code;
 
-    if (typeof value !== 'number') return;
+    if (typeof value !== 'number' || typeof code !== 'string') return;
 
     const vitalRanges: { [key: string]: { min: number; max: number; unit?: string } } = {
       '8310-5': { min: 95, max: 108, unit: '°F' }, // Body temperature
@@ -735,13 +739,14 @@ export class ValidationService {
    * Validate common FHIR elements
    */
   private validateCommonFHIRElements(
-    resource: any,
+    resource: Resource,
     errors: ValidationError[],
     warnings: ValidationWarning[]
   ): void {
-    // Validate extensions
-    if (resource.extension) {
-      resource.extension.forEach((ext: any, index: number) => {
+    // Validate extensions if present
+    const resourceWithExtensions = resource as any;
+    if (resourceWithExtensions.extension && Array.isArray(resourceWithExtensions.extension)) {
+      resourceWithExtensions.extension.forEach((ext: any, index: number) => {
         if (!ext.url) {
           errors.push({
             path: `extension[${index}].url`,
@@ -760,8 +765,9 @@ export class ValidationService {
       });
     }
 
-    // Validate references
-    if (resource.subject?.reference && !resource.subject.reference.includes('/')) {
+    // Validate references for resources that have subject property
+    const resourceWithSubject = resource as any;
+    if (resourceWithSubject.subject?.reference && !resourceWithSubject.subject.reference.includes('/')) {
       warnings.push({
         path: 'subject.reference',
         message: 'Reference should include resource type (e.g., "Patient/123")',
@@ -774,7 +780,7 @@ export class ValidationService {
   /**
    * Get health status
    */
-  async getHealthStatus(): Promise<{ status: string; details: any }> {
+  getHealthStatus(): { status: string; details: Record<string, unknown> } {
     try {
       return {
         status: 'UP',

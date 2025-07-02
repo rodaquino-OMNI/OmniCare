@@ -1,39 +1,21 @@
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response } from 'express';
 // import jwt from 'jsonwebtoken';
 
 import { JWTAuthService } from '../auth/jwt.service';
-import { hasPermission, hasHigherRole } from '../auth/role-permissions';
+import { hasHigherRole, hasPermission } from '../auth/role-permissions';
 // import config from '../config';
+import { accessControlService, AccessContext } from '../services/access-control.service';
 import { AuditService } from '../services/audit.service';
 import { SessionManager } from '../services/session.service';
 import { smartFHIRService } from '../services/smart-fhir.service';
-import { User, UserRole, UserRoles, Permission, SessionInfo } from '../types/auth.types';
-import logger from '../utils/logger';
+import { userService } from '../services/user.service';
+import { Permission, SessionInfo, User, UserRole, UserRoles, UserRoleLong } from '../types/auth.types';
+import { toCanonicalRole, UserRoleUnified } from '../types/unified-user-roles';
 import { getErrorMessage } from '../utils/error.utils';
+import logger from '../utils/logger';
+import { isRoleAllowed, toUserRoleLong, validateRole } from '../utils/role.utils';
 
-// Extended Request interface to include authentication data
-declare global {
-  namespace Express {
-    interface Request {
-      user?: User;
-      session?: SessionInfo;
-      token?: string;
-      requestId?: string;
-      smartAuth?: {
-        id: string;
-        sub: string;
-        scope: string[];
-        patient?: string;
-        encounter?: string;
-        fhirUser?: string;
-        iss?: string;
-        aud?: string;
-        clientId?: string;
-        tokenType?: string;
-      };
-    }
-  }
-}
+// Standard Express middleware types
 
 /**
  * Authentication middleware for SMART on FHIR and OmniCare JWT authentication
@@ -46,7 +28,7 @@ export class AuthMiddleware {
   /**
    * OmniCare JWT Authentication middleware
    */
-  static async authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
+  static authenticate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const authHeader = req.headers.authorization;
       if (!authHeader) {
@@ -82,7 +64,7 @@ export class AuthMiddleware {
       req.token = token;
 
       // Verify JWT token
-      const tokenPayload = await AuthMiddleware.jwtService.verifyAccessToken(token);
+      const tokenPayload = AuthMiddleware.jwtService.verifyAccessToken(token);
       
       // Get and validate session
       const session = await AuthMiddleware.sessionManager.getSession(tokenPayload.sessionId);
@@ -133,7 +115,7 @@ export class AuthMiddleware {
         req.session = updatedSession;
       }
 
-      // Mock user lookup - replace with actual database query
+      // Get user from database
       const user = await AuthMiddleware.getUserById(tokenPayload.userId);
       if (!user || !user.isActive) {
         res.status(401).json({
@@ -144,7 +126,17 @@ export class AuthMiddleware {
         return;
       }
 
-      req.user = user;
+      // Map User to Express user interface
+      req.user = {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        scope: user.scope || [],
+        patient: user.patient,
+        encounter: undefined,
+        clientId: user.clientId || undefined,
+        permissions: user.permissions || []
+      };
 
       // Log successful authentication
       await AuthMiddleware.auditService.logUserAction(
@@ -177,12 +169,12 @@ export class AuthMiddleware {
         message: 'Invalid or expired authentication token'
       });
     }
-  }
+  };
 
   /**
    * SMART on FHIR Authentication (for external systems)
    */
-  static async smartAuthenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
+  static smartAuthenticate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const authHeader = req.headers.authorization;
       if (!authHeader) {
@@ -238,8 +230,8 @@ export class AuthMiddleware {
       }
 
       req.smartAuth = {
-        id: introspectionResult.sub || introspectionResult.patient,
-        sub: introspectionResult.sub,
+        id: introspectionResult.sub || introspectionResult.patient || '',
+        sub: introspectionResult.sub || '',
         scope: introspectionResult.scope ? introspectionResult.scope.split(' ') : [],
         patient: introspectionResult.patient,
         encounter: introspectionResult.encounter,
@@ -251,8 +243,8 @@ export class AuthMiddleware {
       };
 
       logger.security('SMART token authentication successful', {
-        userId: req.smartAuth.id,
-        clientId: req.smartAuth.clientId,
+        userId: req.smartAuth?.id || 'unknown',
+        clientId: req.smartAuth?.clientId || 'unknown',
         path: req.path,
         method: req.method,
       });
@@ -269,12 +261,12 @@ export class AuthMiddleware {
         }],
       });
     }
-  }
+  };
 
   /**
    * Optional authentication - allows both authenticated and unauthenticated requests
    */
-  static async optionalAuthenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
+  static optionalAuthenticate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const authHeader = req.headers.authorization;
     
     if (!authHeader) {
@@ -285,10 +277,10 @@ export class AuthMiddleware {
 
     // Authentication provided, validate it
     await AuthMiddleware.authenticate(req, res, next);
-  }
+  };
 
   /**
-   * Permission-based authorization middleware
+   * Enhanced permission-based authorization with ABAC
    */
   static requirePermission(...requiredPermissions: Permission[]) {
     return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -303,9 +295,9 @@ export class AuthMiddleware {
 
       const { user } = req;
       
-      // Check if user has all required permissions
+      // Traditional RBAC check first
       const hasAllPermissions = requiredPermissions.every(permission => 
-        hasPermission(user.role, permission)
+        hasPermission(toCanonicalRole(user.role as UserRoleUnified), permission)
       );
 
       if (!hasAllPermissions) {
@@ -328,6 +320,37 @@ export class AuthMiddleware {
         return;
       }
 
+      // Enhanced ABAC evaluation
+      const accessContext: AccessContext = {
+        user: user as any,
+        resource: req.route?.path || req.path,
+        resourceId: req.params.id,
+        patientId: req.params.patientId || req.body?.patientId,
+        action: AuthMiddleware.mapHttpMethodToAction(req.method),
+        purpose: AuthMiddleware.inferPurpose(req.path, req.body),
+        justification: req.body?.justification || req.headers['x-access-justification'] as string,
+        location: req.headers['x-user-location'] as string,
+        deviceInfo: req.get('User-Agent'),
+        timestamp: new Date(),
+        sessionId: req.session?.sessionId
+      };
+
+      const accessDecision = await accessControlService.evaluateAccess(accessContext);
+
+      if (!accessDecision.granted) {
+        res.status(403).json({
+          success: false,
+          error: 'ACCESS_DENIED',
+          message: accessDecision.reason,
+          consentRequired: accessDecision.consentRequired,
+          conditions: accessDecision.conditions
+        });
+        return;
+      }
+
+      // Store access decision for downstream middleware/controllers
+      req.accessDecision = accessDecision;
+
       next();
     };
   }
@@ -348,7 +371,7 @@ export class AuthMiddleware {
 
       const { user } = req;
       
-      if (!allowedRoles.includes(user.role)) {
+      if (!isRoleAllowed(user.role, allowedRoles)) {
         await AuthMiddleware.auditService.logUserAction(
           user.id,
           'unauthorized_role_access',
@@ -388,7 +411,8 @@ export class AuthMiddleware {
 
       const { user } = req;
       
-      if (!hasHigherRole(user.role, minimumRole) && user.role !== minimumRole) {
+      const userRole = toCanonicalRole(user.role as UserRoleUnified);
+      if (!hasHigherRole(userRole, minimumRole) && userRole !== minimumRole) {
         await AuthMiddleware.auditService.logUserAction(
           user.id,
           'insufficient_role_level',
@@ -413,9 +437,9 @@ export class AuthMiddleware {
   }
 
   /**
-   * Patient-specific authorization - ensure user can access specific patient data
+   * Enhanced patient-specific authorization with consent and minimum necessary checks
    */
-  static requirePatientAccess(req: Request, res: Response, next: NextFunction): void {
+  static requirePatientAccess = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     if (!req.user) {
       res.status(401).json({
         resourceType: 'OperationOutcome',
@@ -436,8 +460,48 @@ export class AuthMiddleware {
       scope.includes('system/') || scope === '*'
     );
 
+    // Comprehensive access control evaluation
+    const accessContext: AccessContext = {
+      user: req.user as any,
+      resource: 'patient',
+      resourceId: requestedPatientId,
+      patientId: requestedPatientId,
+      action: AuthMiddleware.mapHttpMethodToAction(req.method),
+      purpose: AuthMiddleware.inferPurpose(req.path, req.body),
+      justification: req.body?.justification || req.headers['x-access-justification'] as string,
+      location: req.headers['x-user-location'] as string,
+      deviceInfo: req.get('User-Agent'),
+      timestamp: new Date(),
+      sessionId: req.session?.sessionId
+    };
+
+    const accessDecision = await accessControlService.evaluateAccess(accessContext);
+
+    if (!accessDecision.granted) {
+      logger.security('Enhanced patient access denied', {
+        userId: req.user.id,
+        requestedPatientId,
+        reason: accessDecision.reason,
+        path: req.path,
+        method: req.method,
+      });
+      
+      res.status(403).json({
+        resourceType: 'OperationOutcome',
+        issue: [{
+          severity: 'error',
+          code: 'forbidden',
+          diagnostics: accessDecision.reason,
+        }],
+        consentRequired: accessDecision.consentRequired,
+        conditions: accessDecision.conditions
+      });
+      return;
+    }
+
+    // Legacy system access check for backward compatibility
     if (hasSystemAccess) {
-      // System-level access allows access to any patient
+      req.accessDecision = accessDecision;
       next();
       return;
     }
@@ -480,8 +544,9 @@ export class AuthMiddleware {
       return;
     }
 
+    req.accessDecision = accessDecision;
     next();
-  }
+  };
 
   /**
    * Resource-specific authorization middleware
@@ -614,7 +679,7 @@ export class AuthMiddleware {
   /**
    * Admin role authorization
    */
-  static requireAdmin(req: Request, res: Response, next: NextFunction): void {
+  static requireAdmin = (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
       res.status(401).json({
         resourceType: 'OperationOutcome',
@@ -650,70 +715,158 @@ export class AuthMiddleware {
     }
 
     next();
-  }
+  };
 
   /**
-   * Mock user lookup - replace with actual database query
+   * Get user by ID from database
    */
   private static async getUserById(userId: string): Promise<User | null> {
     try {
-      // Mock implementation - replace with actual database query
-      const mockUsers: Record<string, User> = {
-        'user-1': {
-          id: 'user-1',
-          username: 'admin@omnicare.com',
-          email: 'admin@omnicare.com',
-          firstName: 'System',
-          lastName: 'Administrator',
-          role: UserRoles.SYSTEM_ADMINISTRATOR,
-          department: 'IT',
-          isActive: true,
-          isMfaEnabled: true,
-          passwordChangedAt: new Date(),
-          failedLoginAttempts: 0,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        'user-2': {
-          id: 'user-2',
-          username: 'doctor@omnicare.com',
-          email: 'doctor@omnicare.com',
-          firstName: 'Dr. Jane',
-          lastName: 'Smith',
-          role: UserRoles.PHYSICIAN,
-          department: 'Cardiology',
-          licenseNumber: 'MD123456',
-          npiNumber: '1234567890',
-          isActive: true,
-          isMfaEnabled: true,
-          passwordChangedAt: new Date(),
-          failedLoginAttempts: 0,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        'user-3': {
-          id: 'user-3',
-          username: 'nurse@omnicare.com',
-          email: 'nurse@omnicare.com',
-          firstName: 'Sarah',
-          lastName: 'Johnson',
-          role: UserRoles.NURSING_STAFF,
-          department: 'Emergency',
-          licenseNumber: 'RN789012',
-          isActive: true,
-          isMfaEnabled: false,
-          passwordChangedAt: new Date(),
-          failedLoginAttempts: 0,
-          createdAt: new Date(),
-          updatedAt: new Date()
+      // Try to get user from database
+      let user = await userService.findById(userId);
+      
+      // Fallback to mock users for development/testing if database is not available
+      if (!user && (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test')) {
+        user = userService.getFallbackUser(userId);
+        if (user) {
+          logger.debug('Using fallback user for development/testing:', userId);
         }
-      };
-
-      return mockUsers[userId] || null;
+      }
+      
+      return user;
     } catch (error) {
       logger.error('Get user by ID failed:', error);
+      
+      // In development/test mode, try fallback
+      if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+        return userService.getFallbackUser(userId);
+      }
+      
       return null;
     }
+  }
+
+  /**
+   * Map HTTP method to access action
+   */
+  private static mapHttpMethodToAction(method: string): AccessContext['action'] {
+    switch (method.toUpperCase()) {
+      case 'GET': return 'read';
+      case 'POST': return 'create';
+      case 'PUT':
+      case 'PATCH': return 'write';
+      case 'DELETE': return 'delete';
+      default: return 'read';
+    }
+  }
+
+  /**
+   * Infer access purpose from request context
+   */
+  private static inferPurpose(path: string, body: any): AccessContext['purpose'] {
+    if (path.includes('/emergency/') || body?.emergency) return 'emergency';
+    if (path.includes('/billing/') || path.includes('/payment/')) return 'payment';
+    if (path.includes('/research/')) return 'research';
+    if (path.includes('/disclosure/')) return 'disclosure';
+    if (body?.purpose) return body.purpose;
+    return 'treatment'; // Default to treatment
+  }
+
+  /**
+   * Minimum necessary access validation middleware
+   */
+  static validateMinimumNecessary(resourceType: string) {
+    return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          error: 'AUTHENTICATION_REQUIRED',
+          message: 'Authentication required'
+        });
+        return;
+      }
+
+      const requestedFields = req.body?.fields || req.query?.fields || [];
+      const purpose = AuthMiddleware.inferPurpose(req.path, req.body);
+      
+      const validation = await accessControlService.validateMinimumNecessaryCompliance(
+        req.user.id,
+        req.user.role,
+        resourceType,
+        Array.isArray(requestedFields) ? requestedFields : requestedFields.split(','),
+        purpose
+      );
+
+      if (!validation.compliant) {
+        res.status(403).json({
+          success: false,
+          error: 'MINIMUM_NECESSARY_VIOLATION',
+          message: 'Request violates minimum necessary standard',
+          allowedFields: validation.allowedFields,
+          deniedFields: validation.deniedFields
+        });
+        return;
+      }
+
+      req.minimumNecessaryValidation = validation;
+      next();
+    };
+  }
+
+  /**
+   * Patient consent verification middleware
+   */
+  static requirePatientConsent(consentType: string) {
+    return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          error: 'AUTHENTICATION_REQUIRED',
+          message: 'Authentication required'
+        });
+        return;
+      }
+
+      const patientId = req.params.patientId || req.body?.patientId;
+      if (!patientId) {
+        res.status(400).json({
+          success: false,
+          error: 'PATIENT_ID_REQUIRED',
+          message: 'Patient ID is required for consent verification'
+        });
+        return;
+      }
+
+      const consents = accessControlService.getPatientConsents(patientId);
+      const relevantConsent = consents.find(c => 
+        c.consentType === consentType || c.consentType === 'all'
+      );
+
+      if (!relevantConsent || !relevantConsent.granted) {
+        res.status(403).json({
+          success: false,
+          error: 'CONSENT_REQUIRED',
+          message: `Patient consent required for ${consentType}`,
+          consentRequired: true,
+          consentType
+        });
+        return;
+      }
+
+      if (relevantConsent.expiryDate && relevantConsent.expiryDate < new Date()) {
+        res.status(403).json({
+          success: false,
+          error: 'CONSENT_EXPIRED',
+          message: 'Patient consent has expired',
+          consentRequired: true,
+          consentType
+        });
+        return;
+      }
+
+      req.patientConsent = relevantConsent;
+      next();
+    };
   }
 
   /**
@@ -779,7 +932,7 @@ export class AuthMiddleware {
   /**
    * Audit logging middleware
    */
-  static auditLog(req: Request, res: Response, next: NextFunction): void {
+  static auditLog = (req: Request, res: Response, next: NextFunction): void => {
     const startTime = Date.now();
     
     // Log request
@@ -796,7 +949,7 @@ export class AuthMiddleware {
 
     // Override res.json to log response
     const originalJson = res.json;
-    res.json = function(body: any) {
+    res.json = function(body: unknown) {
       const duration = Date.now() - startTime;
       
       logger.audit('API request completed', {
@@ -813,21 +966,23 @@ export class AuthMiddleware {
     };
 
     next();
-  }
+  };
 }
 
 // Convenience exports for OmniCare authentication
-export const authenticate = AuthMiddleware.authenticate;
-export const authMiddleware = AuthMiddleware.authenticate; // Alias for test compatibility
-export const authenticateToken = AuthMiddleware.authenticate; // Alias for backward compatibility
-export const smartAuthenticate = AuthMiddleware.smartAuthenticate;
-export const optionalAuthenticate = AuthMiddleware.optionalAuthenticate;
-export const requirePermission = AuthMiddleware.requirePermission;
-export const requirePermissions = AuthMiddleware.requirePermission; // Alias for test compatibility
-export const requireRole = AuthMiddleware.requireRole;
-export const requireMinimumRole = AuthMiddleware.requireMinimumRole;
-export const requirePatientAccess = AuthMiddleware.requirePatientAccess;
-export const requireResourceAccess = AuthMiddleware.requireResourceAccess;
-export const requireAdmin = AuthMiddleware.requireAdmin;
-export const auditLog = AuthMiddleware.auditLog;
-export const requireScope = AuthMiddleware.requireScope;
+export const authenticate = AuthMiddleware.authenticate.bind(AuthMiddleware);
+export const authMiddleware = AuthMiddleware.authenticate.bind(AuthMiddleware); // Alias for test compatibility
+export const authenticateToken = AuthMiddleware.authenticate.bind(AuthMiddleware); // Alias for backward compatibility
+export const smartAuthenticate = AuthMiddleware.smartAuthenticate.bind(AuthMiddleware);
+export const optionalAuthenticate = AuthMiddleware.optionalAuthenticate.bind(AuthMiddleware);
+export const requirePermission = AuthMiddleware.requirePermission.bind(AuthMiddleware);
+export const requirePermissions = AuthMiddleware.requirePermission.bind(AuthMiddleware); // Alias for test compatibility
+export const requireRole = AuthMiddleware.requireRole.bind(AuthMiddleware);
+export const requireMinimumRole = AuthMiddleware.requireMinimumRole.bind(AuthMiddleware);
+export const requirePatientAccess = AuthMiddleware.requirePatientAccess.bind(AuthMiddleware);
+export const requireResourceAccess = AuthMiddleware.requireResourceAccess.bind(AuthMiddleware);
+export const requireAdmin = AuthMiddleware.requireAdmin.bind(AuthMiddleware);
+export const auditLog = AuthMiddleware.auditLog.bind(AuthMiddleware);
+export const requireScope = AuthMiddleware.requireScope.bind(AuthMiddleware);
+export const validateMinimumNecessary = AuthMiddleware.validateMinimumNecessary.bind(AuthMiddleware);
+export const requirePatientConsent = AuthMiddleware.requirePatientConsent.bind(AuthMiddleware);

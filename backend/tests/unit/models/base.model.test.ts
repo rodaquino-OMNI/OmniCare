@@ -25,7 +25,7 @@ describe('Base Model', () => {
     describe('validateHumanName', () => {
       it('should validate a complete human name', () => {
         const validName: HumanName = {
-          use: 'official',
+          use: 'official' as const,
           text: 'Dr. John Q. Doe Jr.',
           family: 'Doe',
           given: ['John', 'Quincy'],
@@ -54,7 +54,7 @@ describe('Base Model', () => {
 
       it('should reject name without family or given name', () => {
         const invalidName: HumanName = {
-          use: 'official'
+          use: 'official' as const
           // Missing both family and given
         };
 
@@ -145,7 +145,7 @@ describe('Base Model', () => {
     describe('validateAddress', () => {
       it('should validate complete address', () => {
         const validAddress: Address = {
-          use: 'home',
+          use: 'home' as const,
           type: 'both',
           text: '123 Main St, Anytown, ST 12345, USA',
           line: ['123 Main St', 'Apt 4B'],
@@ -177,7 +177,7 @@ describe('Base Model', () => {
 
       it('should reject address without any location data', () => {
         const invalidAddress: Address = {
-          use: 'home'
+          use: 'home' as const
           // Missing all address components
         };
 
@@ -265,7 +265,7 @@ describe('Base Model', () => {
         const phoneContact: ContactPoint = {
           system: 'phone',
           value: '+1-555-123-4567',
-          use: 'home',
+          use: 'home' as const,
           rank: 1,
           period: {
             start: '2020-01-01'
@@ -280,7 +280,7 @@ describe('Base Model', () => {
         const emailContact: ContactPoint = {
           system: 'email',
           value: 'john.doe@example.com',
-          use: 'work'
+          use: 'work' as const
         };
 
         const result = validateContactPoint(emailContact);
@@ -419,7 +419,7 @@ describe('Base Model', () => {
     describe('validateIdentifier', () => {
       it('should validate complete identifier', () => {
         const identifier: Identifier = {
-          use: 'official',
+          use: 'official' as const,
           type: {
             coding: [{
               system: 'http://terminology.hl7.org/CodeSystem/v2-0203',

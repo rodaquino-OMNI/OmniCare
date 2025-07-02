@@ -1,7 +1,9 @@
-import request from 'supertest';
 import express from 'express';
-import { authController } from '../../src/controllers/auth.controller';
 import jwt from 'jsonwebtoken';
+import request from 'supertest';
+
+import { authController } from '../../src/controllers/auth.controller';
+
 
 describe('Authentication Security Tests', () => {
   let app: express.Application;

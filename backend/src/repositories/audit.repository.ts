@@ -4,8 +4,11 @@
  */
 
 import { BaseRepository, QueryOptions } from './base.repository';
+
 import { AuditLogEntry, SecurityEvent } from '@/types/auth.types';
+import { QueryParameters } from '@/types/database.types';
 import logger from '@/utils/logger';
+
 
 // Database models that match the audit schema
 export interface ActivityLogRecord {
@@ -26,12 +29,12 @@ export interface ActivityLogRecord {
   user_agent?: string;
   request_method?: string;
   request_url?: string;
-  request_payload?: any;
+  request_payload?: Record<string, unknown>;
   response_status?: number;
   response_time_ms?: number;
-  data_before?: any;
-  data_after?: any;
-  additional_context?: any;
+  data_before?: Record<string, unknown>;
+  data_after?: Record<string, unknown>;
+  additional_context?: Record<string, unknown>;
   hipaa_compliant: boolean;
   security_level: 'low' | 'normal' | 'high' | 'critical';
   requires_review: boolean;
@@ -58,18 +61,32 @@ export interface UserSessionRecord {
   concurrent_sessions: number;
 }
 
+interface AuditStatsRow {
+  total_events: string;
+  successful_events: string;
+  failed_events: string;
+  unique_users: string;
+  security_incidents: string;
+  critical_incidents: string;
+  events_by_type: Record<string, number>;
+}
+
 export interface PatientAccessLogRecord {
   id: string;
   access_time: Date;
   user_id: string;
+  user_role?: string;
   patient_id: string;
   access_type: 'view' | 'create' | 'update' | 'delete' | 'print' | 'export' | 'search' | 'query';
   access_reason?: string;
+  access_purpose?: 'treatment' | 'payment' | 'operations' | 'disclosure' | 'emergency' | 'other';
+  justification?: string;
   legitimate_relationship: boolean;
   session_id?: string;
   ip_address?: string;
-  resources_accessed?: any;
+  resources_accessed?: string[];
   fields_accessed?: string[];
+  data_accessed?: string[];
   session_duration_seconds?: number;
   emergency_access: boolean;
   break_glass_access: boolean;
@@ -78,6 +95,10 @@ export interface PatientAccessLogRecord {
   reviewed_by?: string;
   reviewed_at?: Date;
   review_notes?: string;
+  integrity_hash?: string;
+  block_number?: number;
+  consent_verified?: boolean;
+  minimum_necessary_verified?: boolean;
 }
 
 export interface DataModificationLogRecord {
@@ -89,9 +110,9 @@ export interface DataModificationLogRecord {
   record_id: string;
   patient_id?: string;
   operation_type: 'INSERT' | 'UPDATE' | 'DELETE' | 'RESTORE';
-  field_changes: any;
-  old_values?: any;
-  new_values?: any;
+  field_changes: Record<string, { old: unknown; new: unknown }>;
+  old_values?: Record<string, unknown>;
+  new_values?: Record<string, unknown>;
   reason_for_change?: string;
   business_justification?: string;
   application_name?: string;
@@ -183,7 +204,7 @@ export class AuditRepository extends BaseRepository<ActivityLogRecord> {
       event_outcome: 'success',
       additional_context: event.metadata,
       hipaa_compliant: true,
-      security_level: event.severity.toLowerCase() as any,
+      security_level: event.severity.toLowerCase() as 'low' | 'normal' | 'high' | 'critical',
       requires_review: event.severity === 'CRITICAL' || event.severity === 'HIGH'
     };
 
@@ -199,21 +220,24 @@ export class AuditRepository extends BaseRepository<ActivityLogRecord> {
   }
 
   /**
-   * Log patient access
+   * Log patient access with enhanced HIPAA compliance
    */
   async logPatientAccess(
     userId: string,
     patientId: string,
     accessType: PatientAccessLogRecord['access_type'],
     sessionId?: string,
-    metadata?: Record<string, any>,
+    metadata?: Record<string, unknown>,
     options?: QueryOptions
   ): Promise<string> {
     const query = `
       INSERT INTO audit.patient_access_log (
-        user_id, patient_id, access_type, session_id,
-        ip_address, resources_accessed, legitimate_relationship
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        user_id, user_role, patient_id, access_type, access_purpose,
+        justification, session_id, ip_address, resources_accessed,
+        data_accessed, legitimate_relationship, integrity_hash,
+        block_number, consent_verified, minimum_necessary_verified,
+        access_time
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, CURRENT_TIMESTAMP)
       RETURNING id
     `;
 
@@ -221,12 +245,20 @@ export class AuditRepository extends BaseRepository<ActivityLogRecord> {
       query,
       [
         userId,
+        metadata?.userRole as string || 'unknown',
         patientId,
         accessType,
+        metadata?.accessPurpose as string || 'treatment',
+        metadata?.justification as string | undefined,
         sessionId,
-        metadata?.ipAddress,
-        JSON.stringify(metadata?.resources || {}),
-        true // Default to legitimate relationship
+        metadata?.ipAddress as string | undefined,
+        JSON.stringify(metadata?.resources || []),
+        JSON.stringify(metadata?.dataAccessed || []),
+        true, // Default to legitimate relationship
+        metadata?.integrityHash as string | undefined,
+        metadata?.blockNumber as number | undefined,
+        metadata?.consentVerified as boolean || false,
+        metadata?.minimumNecessaryVerified as boolean || false
       ],
       options
     );
@@ -245,7 +277,7 @@ export class AuditRepository extends BaseRepository<ActivityLogRecord> {
     tableName: string,
     recordId: string,
     operationType: DataModificationLogRecord['operation_type'],
-    changes: any,
+    changes: Record<string, { old: unknown; new: unknown }>,
     sessionId?: string,
     options?: QueryOptions
   ): Promise<string> {
@@ -298,7 +330,7 @@ export class AuditRepository extends BaseRepository<ActivityLogRecord> {
     options?: QueryOptions
   ): Promise<AuditLogEntry[]> {
     let query = 'SELECT * FROM audit.activity_log WHERE 1=1';
-    const params: any[] = [];
+    const params: unknown[] = [];
     let paramCount = 0;
 
     if (filters.userId) {
@@ -369,12 +401,12 @@ export class AuditRepository extends BaseRepository<ActivityLogRecord> {
       params.push(offset);
     }
 
-    const result = await this.query<ActivityLogRecord>(query, params, options);
+    const result = await this.query<ActivityLogRecord>(query, params as QueryParameters, options);
     return result.rows.map(record => this.toAuditLogEntry(record));
   }
 
   /**
-   * Get activity statistics
+   * Get activity statistics with HIPAA compliance metrics
    */
   async getStatistics(
     startDate: Date,
@@ -387,6 +419,8 @@ export class AuditRepository extends BaseRepository<ActivityLogRecord> {
     uniqueUsers: number;
     eventsByType: Record<string, number>;
     securityIncidents: number;
+    phiAccessCount?: number;
+    breachDetections?: number;
   }> {
     const query = `
       WITH stats AS (
@@ -412,17 +446,154 @@ export class AuditRepository extends BaseRepository<ActivityLogRecord> {
       GROUP BY s.total_events, s.successful_events, s.failed_events, s.unique_users, s.security_incidents
     `;
 
-    const result = await this.query<any>(query, [startDate, endDate], options);
+    // Additional query for PHI access statistics
+    const phiQuery = `
+      SELECT 
+        COUNT(*) as phi_access_count,
+        COUNT(CASE WHEN reviewed = false AND legitimate_relationship = false THEN 1 END) as potential_breaches
+      FROM audit.patient_access_log
+      WHERE access_time BETWEEN $1 AND $2
+    `;
+
+    const result = await this.query<AuditStatsRow>(query, [startDate, endDate], options);
+    const phiResult = await this.query<{ phi_access_count: string; potential_breaches: string }>(
+      phiQuery, 
+      [startDate, endDate], 
+      options
+    );
     const row = result.rows[0];
 
+    if (!row) {
+      return {
+        totalEvents: 0,
+        successfulEvents: 0,
+        failedEvents: 0,
+        uniqueUsers: 0,
+        eventsByType: {},
+        securityIncidents: 0
+      };
+    }
+
+    const phiRow = phiResult.rows[0];
+    
     return {
       totalEvents: parseInt(row.total_events, 10),
       successfulEvents: parseInt(row.successful_events, 10),
       failedEvents: parseInt(row.failed_events, 10),
       uniqueUsers: parseInt(row.unique_users, 10),
       eventsByType: row.events_by_type || {},
-      securityIncidents: parseInt(row.security_incidents, 10)
+      securityIncidents: parseInt(row.security_incidents, 10),
+      phiAccessCount: phiRow ? parseInt(phiRow.phi_access_count, 10) : 0,
+      breachDetections: phiRow ? parseInt(phiRow.potential_breaches, 10) : 0
     };
+  }
+
+  /**
+   * Get patient access logs for consent verification
+   */
+  async getPatientAccessLogs(
+    patientId: string,
+    startDate?: Date,
+    endDate?: Date,
+    options?: QueryOptions
+  ): Promise<PatientAccessLogRecord[]> {
+    let query = `
+      SELECT * FROM audit.patient_access_log
+      WHERE patient_id = $1
+    `;
+    const params: unknown[] = [patientId];
+    let paramCount = 1;
+
+    if (startDate) {
+      paramCount++;
+      query += ` AND access_time >= $${paramCount}`;
+      params.push(startDate);
+    }
+
+    if (endDate) {
+      paramCount++;
+      query += ` AND access_time <= $${paramCount}`;
+      params.push(endDate);
+    }
+
+    query += ' ORDER BY access_time DESC';
+
+    const result = await this.query<PatientAccessLogRecord>(query, params as QueryParameters, options);
+    return result.rows;
+  }
+
+  /**
+   * Verify audit log integrity
+   */
+  async verifyAuditIntegrity(
+    startDate: Date,
+    endDate: Date,
+    options?: QueryOptions
+  ): Promise<{ valid: boolean; tamperedEntries: string[] }> {
+    const query = `
+      SELECT id, additional_context->>'integrityHash' as integrity_hash
+      FROM audit.activity_log
+      WHERE event_time BETWEEN $1 AND $2
+        AND additional_context->>'integrityHash' IS NOT NULL
+      ORDER BY event_time ASC
+    `;
+
+    const result = await this.query<{ id: string; integrity_hash: string }>(
+      query,
+      [startDate, endDate],
+      options
+    );
+
+    const tamperedEntries: string[] = [];
+    
+    // In a real implementation, we would recalculate hashes and verify the chain
+    // For now, we'll check for null or empty hashes as a basic check
+    result.rows.forEach(row => {
+      if (!row.integrity_hash || row.integrity_hash.length !== 64) {
+        tamperedEntries.push(row.id);
+      }
+    });
+
+    return {
+      valid: tamperedEntries.length === 0,
+      tamperedEntries
+    };
+  }
+
+  /**
+   * Log consent verification
+   */
+  async logConsentVerification(
+    userId: string,
+    patientId: string,
+    consentType: string,
+    verified: boolean,
+    sessionId?: string,
+    options?: QueryOptions
+  ): Promise<string> {
+    const record: Partial<ActivityLogRecord> = {
+      event_time: new Date(),
+      session_id: sessionId,
+      user_id: userId,
+      event_type: 'CONSENT_VERIFICATION',
+      event_category: 'COMPLIANCE',
+      event_action: 'verify_consent',
+      resource_type: 'consent',
+      patient_id: patientId,
+      event_description: `Consent verification for ${consentType}`,
+      event_outcome: verified ? 'success' : 'failure',
+      additional_context: {
+        consentType,
+        verified,
+        timestamp: new Date().toISOString()
+      },
+      hipaa_compliant: true,
+      security_level: 'normal',
+      requires_review: !verified
+    };
+
+    const result = await this.create(record, options);
+    return result.id;
   }
 
   /**
@@ -490,6 +661,199 @@ export class AuditRepository extends BaseRepository<ActivityLogRecord> {
   }
 
   /**
+   * Log transaction resume event
+   */
+  async logTransactionResume(
+    userId: string,
+    transactionId: string,
+    checkpointName: string,
+    operationType: string,
+    sessionId?: string,
+    options?: QueryOptions
+  ): Promise<string> {
+    const record: Partial<ActivityLogRecord> = {
+      event_time: new Date(),
+      session_id: sessionId,
+      user_id: userId,
+      event_type: 'TRANSACTION_RESUME',
+      event_category: 'DATABASE',
+      event_action: 'transaction_resume',
+      resource_type: 'transaction',
+      resource_id: transactionId,
+      event_description: `Transaction resumed from checkpoint: ${checkpointName}`,
+      event_outcome: 'success',
+      additional_context: {
+        transactionId,
+        checkpointName,
+        operationType,
+        resumeTimestamp: new Date().toISOString()
+      },
+      hipaa_compliant: true,
+      security_level: 'normal',
+      requires_review: false
+    };
+
+    const result = await this.create(record, options);
+    
+    logger.info('Transaction resume logged', {
+      id: result.id,
+      transactionId,
+      checkpointName,
+      userId
+    });
+    
+    return result.id;
+  }
+
+  /**
+   * Log sync operation resume event
+   */
+  async logSyncResume(
+    userId: string,
+    syncOperation: string,
+    resumePoint: string,
+    resourceCount: number,
+    sessionId?: string,
+    options?: QueryOptions
+  ): Promise<string> {
+    const record: Partial<ActivityLogRecord> = {
+      event_time: new Date(),
+      session_id: sessionId,
+      user_id: userId,
+      event_type: 'SYNC_RESUME',
+      event_category: 'SYNCHRONIZATION',
+      event_action: 'sync_resume',
+      resource_type: 'sync_operation',
+      resource_id: syncOperation,
+      event_description: `Sync operation resumed from: ${resumePoint}`,
+      event_outcome: 'success',
+      additional_context: {
+        syncOperation,
+        resumePoint,
+        resourceCount,
+        resumeTimestamp: new Date().toISOString()
+      },
+      hipaa_compliant: true,
+      security_level: 'normal',
+      requires_review: false
+    };
+
+    const result = await this.create(record, options);
+    
+    logger.info('Sync resume logged', {
+      id: result.id,
+      syncOperation,
+      resumePoint,
+      userId
+    });
+    
+    return result.id;
+  }
+
+  /**
+   * Log query resumption event
+   */
+  async logQueryResume(
+    userId: string,
+    queryType: string,
+    resumeToken: string,
+    resourceType: string,
+    sessionId?: string,
+    options?: QueryOptions
+  ): Promise<string> {
+    const record: Partial<ActivityLogRecord> = {
+      event_time: new Date(),
+      session_id: sessionId,
+      user_id: userId,
+      event_type: 'QUERY_RESUME',
+      event_category: 'DATA_ACCESS',
+      event_action: 'query_resume',
+      resource_type: resourceType,
+      event_description: `Query resumed with token: ${resumeToken.substring(0, 20)}...`,
+      event_outcome: 'success',
+      additional_context: {
+        queryType,
+        resumeTokenHash: this.hashToken(resumeToken),
+        resourceType,
+        resumeTimestamp: new Date().toISOString()
+      },
+      hipaa_compliant: true,
+      security_level: 'low',
+      requires_review: false
+    };
+
+    const result = await this.create(record, options);
+    
+    logger.debug('Query resume logged', {
+      id: result.id,
+      queryType,
+      resourceType,
+      userId
+    });
+    
+    return result.id;
+  }
+
+  /**
+   * Log cache operation resume event
+   */
+  async logCacheResume(
+    userId: string,
+    cacheOperation: string,
+    cacheKey: string,
+    resumeProgress: number,
+    sessionId?: string,
+    options?: QueryOptions
+  ): Promise<string> {
+    const record: Partial<ActivityLogRecord> = {
+      event_time: new Date(),
+      session_id: sessionId,
+      user_id: userId,
+      event_type: 'CACHE_RESUME',
+      event_category: 'CACHE_MANAGEMENT',
+      event_action: 'cache_resume',
+      resource_type: 'cache',
+      resource_id: cacheKey,
+      event_description: `Cache operation resumed at ${resumeProgress}% completion`,
+      event_outcome: 'success',
+      additional_context: {
+        cacheOperation,
+        cacheKey,
+        resumeProgress,
+        resumeTimestamp: new Date().toISOString()
+      },
+      hipaa_compliant: true,
+      security_level: 'low',
+      requires_review: false
+    };
+
+    const result = await this.create(record, options);
+    
+    logger.debug('Cache resume logged', {
+      id: result.id,
+      cacheOperation,
+      cacheKey,
+      userId
+    });
+    
+    return result.id;
+  }
+
+  /**
+   * Hash resume token for audit logging (don't store actual token)
+   */
+  private hashToken(token: string): string {
+    // Simple hash for audit trail without exposing token
+    let hash = 0;
+    for (let i = 0; i < token.length; i++) {
+      const char = token.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(36);
+  }
+
+  /**
    * Helper: Categorize action
    */
   private categorizeAction(action: string): string {
@@ -531,7 +895,7 @@ export class AuditRepository extends BaseRepository<ActivityLogRecord> {
   private requiresReview(action: string): boolean {
     const reviewActions = [
       'unauthorized', 'breach', 'violation', 'suspicious',
-      'admin', 'config', 'system', 'critical'
+      'admin', 'config', 'system', 'critical', 'resume'
     ];
     
     const actionLower = action.toLowerCase();

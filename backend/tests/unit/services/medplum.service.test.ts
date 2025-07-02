@@ -11,10 +11,11 @@ jest.mock('../../../src/config', () => ({
   },
 }));
 
+import { Bundle, Resource, Patient } from '@medplum/fhirtypes';
+
+import config from '../../../src/config';
 import { MedplumService } from '../../../src/services/medplum.service';
 import logger from '../../../src/utils/logger';
-import config from '../../../src/config';
-import { Bundle, Resource, Patient } from '@medplum/fhirtypes';
 
 describe('MedplumService', () => {
   let service: MedplumService;

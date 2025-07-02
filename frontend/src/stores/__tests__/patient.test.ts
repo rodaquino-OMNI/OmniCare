@@ -20,7 +20,7 @@ const createTestPatient = (overrides?: Partial<Patient>): Patient => ({
   firstName: 'John',
   lastName: 'Doe',
   dateOfBirth: '199-1-1',
-  gender: 'male',
+  gender: 'male' as const,
   email: 'john.doe@example.com',
   phone: '555-1234',
   address: {
@@ -30,6 +30,8 @@ const createTestPatient = (overrides?: Partial<Patient>): Patient => ({
     zipCode: '12345',
     country: 'USA'
   },
+  allergies: [],
+  insurance: [],
   status: 'active',
   createdAt: '2024-1-1T00:00:00Z',
   updatedAt: '2024-1-1T00:00:00Z',
@@ -197,16 +199,16 @@ describe('Patient Store', () => {
       const encounter: Encounter = {
         id: 'enc-1',
         patientId: '1',
-        date: '2024-1-1',
-        type: 'routine',
+        startTime: '2024-1-1',
+        type: 'outpatient',
         status: 'completed',
         providerId: 'doc-1',
-        providerName: 'Dr. Smith',
+        // Removed providerName as it doesn't exist in Encounter
         chiefComplaint: 'Annual checkup',
         diagnosis: [],
         notes: '',
         vitals: null,
-        createdAt: '2024-1-1T00:00:00Z',
+        // Removed createdAt as it doesn't exist in VitalSigns
         updatedAt: '2024-1-1T00:00:00Z'
       };
 
@@ -227,7 +229,7 @@ describe('Patient Store', () => {
           id: '1', 
           firstName: 'John', 
           lastName: 'Doe',
-          gender: 'male',
+          gender: 'male' as const,
           status: 'active',
           dateOfBirth: '199-1-1'
         }));
@@ -236,7 +238,7 @@ describe('Patient Store', () => {
           firstName: 'Jane', 
           lastName: 'Smith',
           mrn: 'MRN02',
-          gender: 'female',
+          gender: 'female' as const,
           status: 'inactive',
           dateOfBirth: '1985-1-1'
         }));
@@ -245,7 +247,7 @@ describe('Patient Store', () => {
           firstName: 'Bob', 
           lastName: 'Johnson',
           mrn: 'MRN03',
-          gender: 'male',
+          gender: 'male' as const,
           status: 'active',
           email: 'bob@example.com',
           dateOfBirth: '200-1-1'
@@ -582,15 +584,14 @@ describe('Patient Store', () => {
         id: 'v1',
         patientId: '1',
         encounterId: 'e1',
-        dateTime: '2024-1-1T00:00:00Z',
-        temperature: 98.6,
-        bloodPressureSystolic: 120,
-        bloodPressureDiastolic: 8,
-        heartRate: 72,
-        respiratoryRate: 16,
-        oxygenSaturation: 98,
+        recordedDate: '2024-1-1T00:00:00Z',
+        temperature: { value: 98.6, unit: 'fahrenheit' },
+        bloodPressure: { systolic: 120, diastolic: 80, unit: 'mmHg' },
+        heartRate: { value: 72, unit: 'bpm' },
+        respiratoryRate: { value: 16, unit: 'bpm' },
+        oxygenSaturation: { value: 98, unit: '%' },
         recordedBy: 'nurse1',
-        createdAt: '2024-1-1T00:00:00Z',
+        // Removed createdAt as it doesn't exist in VitalSigns
         updatedAt: '2024-1-1T00:00:00Z'
       }];
       
@@ -601,9 +602,9 @@ describe('Patient Store', () => {
         type: 'progress',
         content: 'Patient is doing well',
         authorId: 'doc1',
-        authorName: 'Dr. Smith',
-        createdAt: '2024-1-1T00:00:00Z',
-        updatedAt: '2024-1-1T00:00:00Z'
+        subject: 'Progress Note',
+        createdDate: '2024-1-1T00:00:00Z',
+        status: 'draft'
       }];
 
       (fetch as jest.Mock)
@@ -647,15 +648,14 @@ describe('Patient Store', () => {
         id: 'v1',
         patientId: '1',
         encounterId: 'e1',
-        dateTime: '2024-1-1T00:00:00Z',
-        temperature: 98.6,
-        bloodPressureSystolic: 120,
-        bloodPressureDiastolic: 8,
-        heartRate: 72,
-        respiratoryRate: 16,
-        oxygenSaturation: 98,
+        recordedDate: '2024-1-1T00:00:00Z',
+        temperature: { value: 98.6, unit: 'fahrenheit' },
+        bloodPressure: { systolic: 120, diastolic: 80, unit: 'mmHg' },
+        heartRate: { value: 72, unit: 'bpm' },
+        respiratoryRate: { value: 16, unit: 'bpm' },
+        oxygenSaturation: { value: 98, unit: '%' },
         recordedBy: 'nurse1',
-        createdAt: '2024-1-1T00:00:00Z',
+        // Removed createdAt as it doesn't exist in VitalSigns
         updatedAt: '2024-1-1T00:00:00Z'
       };
 
@@ -676,9 +676,9 @@ describe('Patient Store', () => {
         type: 'progress',
         content: 'Patient is improving',
         authorId: 'doc1',
-        authorName: 'Dr. Smith',
-        createdAt: '2024-1-1T00:00:00Z',
-        updatedAt: '2024-1-1T00:00:00Z'
+        subject: 'Progress Note',
+        createdDate: '2024-1-1T00:00:00Z',
+        status: 'draft'
       };
 
       act(() => {
@@ -698,9 +698,9 @@ describe('Patient Store', () => {
         type: 'progress',
         content: 'Initial note',
         authorId: 'doc1',
-        authorName: 'Dr. Smith',
-        createdAt: '2024-1-1T00:00:00Z',
-        updatedAt: '2024-1-1T00:00:00Z'
+        subject: 'Progress Note',
+        createdDate: '2024-1-1T00:00:00Z',
+        status: 'draft'
       };
 
       act(() => {

@@ -6,15 +6,18 @@
 import { createWriteStream } from 'fs';
 import { mkdir } from 'fs/promises';
 import { join } from 'path';
+
 import express from 'express';
 
-import { FHIRPerformanceTests } from './fhir/fhir-performance-tests';
+import logger from '../../src/utils/logger';
+
 import { DatabasePerformanceTests } from './database/database-performance-tests';
-import { WebSocketStressTests } from './websocket/websocket-stress-tests';
+import { FHIRPerformanceTests } from './fhir/fhir-performance-tests';
 import { FileUploadPerformanceTests } from './file-upload/file-upload-tests';
 import { TestConfiguration } from './framework/performance-test-base';
+import PerformanceMonitor from './monitoring/performance-monitor';
+import { WebSocketStressTests } from './websocket/websocket-stress-tests';
 
-const PerformanceMonitor = require('./monitoring/performance-monitor');
 
 export interface TestSuite {
   name: string;
@@ -76,8 +79,8 @@ export class PerformanceTestRunner {
    * Run all performance test suites
    */
   async runAllTests(): Promise<TestResults> {
-    console.log('🚀 Starting OmniCare Performance Testing Suite');
-    console.log('=' * 60);
+    logger.info('🚀 Starting OmniCare Performance Testing Suite');
+    logger.info('='.repeat(60));
 
     // Ensure report directory exists
     await mkdir(this.reportDir, { recursive: true });
@@ -89,13 +92,13 @@ export class PerformanceTestRunner {
 
     try {
       // Define test suites
-      const testSuites = await this.createTestSuites();
+      const testSuites = this.createTestSuites();
 
       // Execute test suites sequentially
       for (const suite of testSuites) {
-        console.log(`\n🧪 Running ${suite.name} Test Suite`);
-        console.log(`📝 ${suite.description}`);
-        console.log('-' * 40);
+        logger.info(`\n🧪 Running ${suite.name} Test Suite`);
+        logger.info(`📝 ${suite.description}`);
+        logger.info('-'.repeat(40));
 
         const suiteResults = await this.runTestSuite(suite);
         this.results.suiteResults.set(suite.name, suiteResults);
@@ -105,7 +108,7 @@ export class PerformanceTestRunner {
       this.calculateOverallMetrics();
 
       // Generate comprehensive report
-      await this.generateComprehensiveReport();
+      this.generateComprehensiveReport();
 
     } finally {
       // Stop monitoring
@@ -114,7 +117,7 @@ export class PerformanceTestRunner {
       const endTime = Date.now();
       this.results.overallMetrics.totalDuration = (endTime - startTime) / 1000; // seconds
       
-      console.log(`\n✅ Performance testing completed in ${this.results.overallMetrics.totalDuration.toFixed(2)} seconds`);
+      logger.info(`\n✅ Performance testing completed in ${this.results.overallMetrics.totalDuration.toFixed(2)} seconds`);
     }
 
     return this.results;
@@ -123,7 +126,7 @@ export class PerformanceTestRunner {
   /**
    * Create all test suites with configurations
    */
-  private async createTestSuites(): Promise<TestSuite[]> {
+  private createTestSuites(): TestSuite[] {
     return [
       // FHIR API Performance Tests
       {
@@ -518,7 +521,7 @@ export class PerformanceTestRunner {
     const suiteStartTime = Date.now();
 
     for (const test of suite.tests) {
-      console.log(`  🔄 Running: ${test.name}`);
+      logger.info(`  🔄 Running: ${test.name}`);
       
       const testStartTime = Date.now();
       let testResult;
@@ -533,7 +536,7 @@ export class PerformanceTestRunner {
           report: report
         };
         suiteResults.summary.passed++;
-        console.log(`  ✅ ${test.name} - PASSED`);
+        logger.info(`  ✅ ${test.name} - PASSED`);
       } catch (error) {
         testResult = {
           name: test.name,
@@ -544,7 +547,7 @@ export class PerformanceTestRunner {
           report: null
         };
         suiteResults.summary.failed++;
-        console.log(`  ❌ ${test.name} - FAILED: ${error.message}`);
+        logger.error(`  ❌ ${test.name} - FAILED: ${error.message}`);
       }
       
       suiteResults.tests.push(testResult);
@@ -560,7 +563,7 @@ export class PerformanceTestRunner {
     suiteResults.summary.duration = (Date.now() - suiteStartTime) / 1000;
     suiteResults.endTime = new Date().toISOString();
 
-    console.log(`\n📊 ${suite.name} Summary: ${suiteResults.summary.passed}/${suiteResults.summary.total} tests passed`);
+    logger.info(`\n📊 ${suite.name} Summary: ${suiteResults.summary.passed}/${suiteResults.summary.total} tests passed`);
 
     return suiteResults;
   }
@@ -592,7 +595,7 @@ export class PerformanceTestRunner {
     let totalResponseTime = 0;
     let responseTimeCount = 0;
 
-    for (const [suiteName, suiteResults] of this.results.suiteResults) {
+    for (const [_suiteName, suiteResults] of this.results.suiteResults) {
       // This is a simplified calculation - in a real implementation,
       // you'd aggregate metrics from individual test reports
       if (suiteResults.tests) {
@@ -618,7 +621,7 @@ export class PerformanceTestRunner {
   /**
    * Generate comprehensive performance report
    */
-  private async generateComprehensiveReport(): Promise<void> {
+  private generateComprehensiveReport(): void {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const reportFile = join(this.reportDir, `performance-report-${timestamp}.md`);
     
@@ -644,7 +647,7 @@ export class PerformanceTestRunner {
     // Test Suite Results
     reportStream.write(`## Test Suite Results\n\n`);
     
-    for (const [suiteName, suiteResults] of this.results.suiteResults) {
+    for (const [_suiteName, suiteResults] of this.results.suiteResults) {
       reportStream.write(`### ${suiteResults.name}\n\n`);
       reportStream.write(`${suiteResults.description}\n\n`);
       reportStream.write(`**Summary:** ${suiteResults.summary.passed}/${suiteResults.summary.total} tests passed in ${suiteResults.summary.duration.toFixed(2)}s\n\n`);
@@ -670,7 +673,7 @@ export class PerformanceTestRunner {
     
     reportStream.end();
     
-    console.log(`\n📁 Comprehensive report saved to: ${reportFile}`);
+    logger.info(`\n📁 Comprehensive report saved to: ${reportFile}`);
   }
 
   /**

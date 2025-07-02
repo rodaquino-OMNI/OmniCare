@@ -4,12 +4,13 @@
  * Includes PHI protection, audit logging, access controls, and data encryption
  */
 
+import { Patient, Observation, MedicationRequest } from '@medplum/fhirtypes';
+
 import { AuditService } from '../../src/services/audit.service';
 import { ComplianceService } from '../../src/services/compliance.service';
 import { ValidationService } from '../../src/services/validation.service';
-import { User, Permission, UserRole, AuditLogEntry, SecurityEvent, UserRoles } from '../../src/types/auth.types';
-import { Patient, Observation, MedicationRequest } from '@medplum/fhirtypes';
 import { validationService } from '../../src/services/validation.service';
+import { User, Permission, UserRole, AuditLogEntry, SecurityEvent, UserRoles } from '../../src/types/auth.types';
 
 // Mock dependencies
 jest.mock('../../src/utils/logger', () => ({

@@ -1,0 +1,529 @@
+{
+  "info": {
+    "name": "OmniCare Clinical Workflow API",
+    "description": "Complete collection for testing the OmniCare Clinical Workflow API endpoints. Includes authentication, task management, and workflow operations.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://api.omnicare.com",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "patient_id",
+      "value": "patient-123",
+      "type": "string"
+    },
+    {
+      "key": "practitioner_id",
+      "value": "practitioner-456",
+      "type": "string"
+    },
+    {
+      "key": "task_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', response.accessToken);",
+                  "    pm.collectionVariables.set('refresh_token', response.refreshToken);",
+                  "    pm.test('Login successful', () => {",
+                  "        pm.expect(response.success).to.be.true;",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"dr.smith\",\n    \"password\": \"SecurePass123!\",\n    \"mfaToken\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', response.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refreshToken\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "refresh"]
+            }
+          }
+        },
+        {
+          "name": "Get Sessions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/sessions",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "sessions"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Task Management",
+      "item": [
+        {
+          "name": "Create Task",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('task_id', response.task.id);",
+                  "    pm.test('Task created successfully', () => {",
+                  "        pm.expect(response.task).to.have.property('id');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"patientId\": \"{{patient_id}}\",\n    \"practitionerId\": \"{{practitioner_id}}\",\n    \"description\": \"Complete initial patient assessment\",\n    \"priority\": \"urgent\",\n    \"category\": \"assessment\",\n    \"code\": {\n        \"code\": \"initial-assessment\",\n        \"display\": \"Initial Patient Assessment\"\n    },\n    \"dueDate\": \"2024-01-15T14:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/clinical-workflow/tasks",
+              "host": ["{{base_url}}"],
+              "path": ["api", "clinical-workflow", "tasks"]
+            }
+          }
+        },
+        {
+          "name": "Get All Tasks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/clinical-workflow/tasks?status=requested&priority=urgent&_count=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "clinical-workflow", "tasks"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "requested"
+                },
+                {
+                  "key": "priority",
+                  "value": "urgent"
+                },
+                {
+                  "key": "_count",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Single Task",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/clinical-workflow/tasks/{{task_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "clinical-workflow", "tasks", "{{task_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Task Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"in-progress\",\n    \"note\": \"Started patient assessment\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/clinical-workflow/tasks/{{task_id}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "clinical-workflow", "tasks", "{{task_id}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "Assign Task",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"practitionerId\": \"practitioner-789\",\n    \"note\": \"Reassigned due to availability\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/clinical-workflow/tasks/{{task_id}}/assign",
+              "host": ["{{base_url}}"],
+              "path": ["api", "clinical-workflow", "tasks", "{{task_id}}", "assign"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Patient Tasks",
+      "item": [
+        {
+          "name": "Get Patient Tasks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/clinical-workflow/patients/{{patient_id}}/tasks?status=requested",
+              "host": ["{{base_url}}"],
+              "path": ["api", "clinical-workflow", "patients", "{{patient_id}}", "tasks"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "requested"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Practitioner Tasks",
+      "item": [
+        {
+          "name": "Get Practitioner Tasks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/clinical-workflow/practitioners/{{practitioner_id}}/tasks?status=in-progress&priority=urgent",
+              "host": ["{{base_url}}"],
+              "path": ["api", "clinical-workflow", "practitioners", "{{practitioner_id}}", "tasks"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "in-progress"
+                },
+                {
+                  "key": "priority",
+                  "value": "urgent"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Workflows",
+      "item": [
+        {
+          "name": "Get Workflow Templates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/clinical-workflow/templates",
+              "host": ["{{base_url}}"],
+              "path": ["api", "clinical-workflow", "templates"]
+            }
+          }
+        },
+        {
+          "name": "Create Workflow",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"templateId\": \"admission-workflow\",\n    \"patientId\": \"{{patient_id}}\",\n    \"encounterId\": \"encounter-789\",\n    \"parameters\": {\n        \"urgency\": \"high\",\n        \"department\": \"cardiology\"\n    }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/clinical-workflow/workflows",
+              "host": ["{{base_url}}"],
+              "path": ["api", "clinical-workflow", "workflows"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health Checks",
+      "item": [
+        {
+          "name": "Basic Health Check",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/health",
+              "host": ["{{base_url}}"],
+              "path": ["api", "health"]
+            }
+          }
+        },
+        {
+          "name": "Detailed Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/health/detailed",
+              "host": ["{{base_url}}"],
+              "path": ["api", "health", "detailed"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Test Scenarios",
+      "item": [
+        {
+          "name": "Complete Task Lifecycle",
+          "item": [
+            {
+              "name": "1. Create New Task",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"patientId\": \"{{patient_id}}\",\n    \"description\": \"Task lifecycle test\",\n    \"priority\": \"routine\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/clinical-workflow/tasks",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "clinical-workflow", "tasks"]
+                }
+              }
+            },
+            {
+              "name": "2. Accept Task",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"status\": \"accepted\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/clinical-workflow/tasks/{{task_id}}/status",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "clinical-workflow", "tasks", "{{task_id}}", "status"]
+                }
+              }
+            },
+            {
+              "name": "3. Start Task",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"status\": \"in-progress\",\n    \"note\": \"Work started\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/clinical-workflow/tasks/{{task_id}}/status",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "clinical-workflow", "tasks", "{{task_id}}", "status"]
+                }
+              }
+            },
+            {
+              "name": "4. Complete Task",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"status\": \"completed\",\n    \"note\": \"Task completed successfully\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/clinical-workflow/tasks/{{task_id}}/status",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "clinical-workflow", "tasks", "{{task_id}}", "status"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admission Workflow",
+          "item": [
+            {
+              "name": "1. Create Admission Workflow",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"templateId\": \"admission-workflow\",\n    \"patientId\": \"{{patient_id}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/clinical-workflow/workflows",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "clinical-workflow", "workflows"]
+                }
+              }
+            },
+            {
+              "name": "2. Get Created Tasks",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/clinical-workflow/patients/{{patient_id}}/tasks",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "clinical-workflow", "patients", "{{patient_id}}", "tasks"]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

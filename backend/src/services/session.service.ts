@@ -4,10 +4,14 @@
  */
 
 import { EventEmitter } from 'events';
+
 import { v4 as uuidv4 } from 'uuid';
+
+import { redisSessionStore } from './redis-session.service';
 
 import { AuditService } from '@/services/audit.service';
 import { SessionInfo, User, UserRole, UserRoles } from '@/types/auth.types';
+import logger from '@/utils/logger';
 
 const AUTH_CONFIG = {
   security: {
@@ -25,7 +29,8 @@ const ROLE_SESSION_TIMEOUTS: Record<UserRole, number> = {
   [UserRoles.RADIOLOGY_TECHNICIAN]: 20 * 60 * 1000, // 20 minutes
   [UserRoles.PATIENT]: 60 * 60 * 1000, // 60 minutes (patient portal)
   [UserRoles.BILLING]: 15 * 60 * 1000, // 15 minutes
-  [UserRoles.RECEPTIONIST]: 15 * 60 * 1000 // 15 minutes
+  [UserRoles.RECEPTIONIST]: 15 * 60 * 1000, // 15 minutes
+  [UserRoles.GUEST]: 10 * 60 * 1000 // 10 minutes (minimal access)
 };
 
 export interface SessionStore {
@@ -121,7 +126,14 @@ export class SessionManager extends EventEmitter {
 
   constructor(store?: SessionStore) {
     super();
-    this.store = store || new InMemorySessionStore();
+    // Use Redis session store by default if not in test environment
+    if (process.env.NODE_ENV === 'test' && !store) {
+      this.store = new InMemorySessionStore();
+      logger.info('SessionManager: Using in-memory session store for testing');
+    } else {
+      this.store = store || redisSessionStore;
+      logger.info('SessionManager: Using Redis session store for production');
+    }
     this.auditService = new AuditService();
     
     // Setup periodic cleanup
@@ -250,6 +262,13 @@ export class SessionManager extends EventEmitter {
   }
 
   /**
+   * Terminate a session (alias for destroySession)
+   */
+  async terminateSession(sessionId: string): Promise<void> {
+    return this.destroySession(sessionId);
+  }
+
+  /**
    * Get all active sessions for a user
    */
   async getUserSessions(userId: string): Promise<SessionInfo[]> {
@@ -364,3 +383,6 @@ export class SessionManager extends EventEmitter {
     this.removeAllListeners();
   }
 }
+
+// Export singleton instance with Redis session store
+export const sessionManager = new SessionManager(redisSessionStore);

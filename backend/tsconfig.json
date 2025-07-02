@@ -24,6 +24,7 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "moduleResolution": "node",
+    "composite": true,
     "baseUrl": "./src",
     "paths": {
       "@/*": ["*"],
@@ -47,5 +48,6 @@
     "node_modules",
     "dist",
     "tests"
-  ]
+  ],
+  "references": []
 }

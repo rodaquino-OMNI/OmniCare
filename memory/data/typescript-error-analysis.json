@@ -1,0 +1,199 @@
+{
+  "timestamp": "2025-07-02T19:05:00Z",
+  "namespace": "swarm-development-centralized-1751482515138/error-analyzer",
+  "analysis_complete": true,
+  "executive_summary": {
+    "total_errors": 525,
+    "frontend_errors": 382,
+    "backend_errors": 143,
+    "severity": "CRITICAL",
+    "compilation_blocked": true
+  },
+  "error_categorization": {
+    "missing_modules": {
+      "count": 9,
+      "severity": "HIGH",
+      "impact": "Compilation failure",
+      "examples": [
+        "react-router-dom",
+        "dexie", 
+        "@/test-utils/test-providers",
+        "@/components/dashboard/DashboardCharts",
+        "@/components/reports/ReportsGenerator"
+      ],
+      "root_cause": "Missing dependencies in package.json or incorrect path mappings"
+    },
+    "property_not_exist": {
+      "frontend_count": 150,
+      "backend_count": 65,
+      "severity": "HIGH", 
+      "impact": "Interface/Service contract violations",
+      "examples": [
+        "Property 'medplum' does not exist on TestProvidersProps",
+        "Property 'getPendingTasks' does not exist on BackgroundSyncService",
+        "Property 'COMPLIANCE_OFFICER' does not exist on USER_ROLES",
+        "Property 'saveDraft' does not exist on OfflineNotesService"
+      ],
+      "root_cause": "Interface definitions out of sync with implementations"
+    },
+    "type_incompatible": {
+      "frontend_count": 150,
+      "backend_count": 50,
+      "severity": "MEDIUM",
+      "impact": "Type safety violations",
+      "examples": [
+        "Type 'string' not assignable to union literal types",
+        "FHIR Patient gender type mismatches",
+        "Generic type constraint violations",
+        "Promise<T> vs Promise<void> mismatches"
+      ],
+      "root_cause": "Type definitions inconsistencies and FHIR type integration issues"
+    },
+    "undefined_null_issues": {
+      "frontend_count": 50,
+      "backend_count": 20,
+      "severity": "MEDIUM",
+      "impact": "Runtime null reference risks",
+      "examples": [
+        "Type 'undefined' not assignable to 'string'",
+        "Object is possibly 'undefined'",
+        "Property access on potentially undefined objects"
+      ],
+      "root_cause": "Insufficient null checking with strict TypeScript settings"
+    },
+    "interface_mismatches": {
+      "frontend_count": 32,
+      "backend_count": 8,
+      "severity": "HIGH",
+      "impact": "Structural type violations",
+      "examples": [
+        "User interface missing isMfaEnabled, passwordChangedAt, failedLoginAttempts",
+        "TestProvidersProps interface missing 'medplum' property",
+        "Service method signatures don't match interface definitions"
+      ],
+      "root_cause": "Interface definitions not updated when implementations changed"
+    }
+  },
+  "critical_blocker_analysis": {
+    "compilation_blockers": [
+      {
+        "category": "Missing Dependencies",
+        "count": 9,
+        "files_affected": ["test files", "performance components", "services"],
+        "priority": 1,
+        "estimated_fix_time": "30 minutes"
+      },
+      {
+        "category": "Interface Violations", 
+        "count": 215,
+        "files_affected": ["services", "stores", "components", "tests"],
+        "priority": 2,
+        "estimated_fix_time": "4-6 hours"
+      },
+      {
+        "category": "FHIR Type Integration",
+        "count": 50,
+        "files_affected": ["patient management", "clinical workflows", "test fixtures"],
+        "priority": 3,
+        "estimated_fix_time": "2-3 hours"
+      }
+    ]
+  },
+  "dependency_map": {
+    "error_cascades": [
+      {
+        "root_cause": "User interface definition incomplete",
+        "cascading_errors": 25,
+        "affected_areas": ["authentication", "stores", "tests"]
+      },
+      {
+        "root_cause": "BackgroundSyncService interface mismatch",
+        "cascading_errors": 15,
+        "affected_areas": ["offline sync", "integration tests"]
+      },
+      {
+        "root_cause": "FHIR Patient type inconsistencies",
+        "cascading_errors": 30,
+        "affected_areas": ["patient components", "workflows", "e2e tests"]
+      },
+      {
+        "root_cause": "TestProvidersProps missing medplum property",
+        "cascading_errors": 40,
+        "affected_areas": ["all test files using TestProviders"]
+      }
+    ]
+  },
+  "configuration_issues": {
+    "typescript_config": {
+      "frontend": {
+        "strict_mode": true,
+        "null_checks": true,
+        "module_resolution": "bundler",
+        "path_mappings": "configured"
+      },
+      "backend": {
+        "strict_mode": true,
+        "null_checks": true,
+        "module_resolution": "node",
+        "path_mappings": "configured",
+        "issues": ["Redis type definitions", "TypeORM config types", "Timer vs Timeout mismatches"]
+      }
+    }
+  },
+  "priority_fix_plan": {
+    "phase_1_critical": {
+      "duration": "1-2 hours",
+      "tasks": [
+        "Install missing dependencies (react-router-dom, dexie)",
+        "Fix TestProvidersProps interface to include medplum property",
+        "Update User interface with missing properties (isMfaEnabled, passwordChangedAt, failedLoginAttempts)"
+      ],
+      "expected_error_reduction": 100
+    },
+    "phase_2_high_impact": {
+      "duration": "3-4 hours", 
+      "tasks": [
+        "Align BackgroundSyncService interface with implementation",
+        "Fix OfflineNotesService method signatures",
+        "Resolve FHIR Patient type inconsistencies",
+        "Update USER_ROLES enum with missing values"
+      ],
+      "expected_error_reduction": 200
+    },
+    "phase_3_systematic": {
+      "duration": "4-6 hours",
+      "tasks": [
+        "Resolve all undefined/null safety issues",
+        "Fix Redis service type integration",
+        "Align all service interfaces with implementations",
+        "Clean up type assignment incompatibilities"
+      ],
+      "expected_error_reduction": 225
+    }
+  },
+  "risk_assessment": {
+    "compilation_risk": "CRITICAL - No builds possible",
+    "runtime_risk": "HIGH - Many null reference potentials",
+    "maintenance_risk": "HIGH - Interface contracts broken",
+    "testing_risk": "CRITICAL - Test infrastructure broken"
+  },
+  "recommendations": {
+    "immediate_actions": [
+      "Install missing dependencies immediately",
+      "Fix User and TestProvidersProps interfaces",
+      "Enable IDE TypeScript checking for developers"
+    ],
+    "systematic_improvements": [
+      "Implement interface validation in CI/CD",
+      "Add pre-commit hooks for TypeScript checking",
+      "Establish FHIR type integration standards",
+      "Create service interface testing patterns"
+    ],
+    "prevention_strategies": [
+      "Automated interface synchronization checks",
+      "FHIR schema validation in tests",
+      "Dependency audit automation",
+      "Type coverage reporting"
+    ]
+  }
+}

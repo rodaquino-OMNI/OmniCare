@@ -1,6 +1,8 @@
-import { Router, Request, Response } from 'express';
-import { authenticateToken } from '../middleware/auth.middleware';
 import crypto from 'crypto';
+
+import { Request, Response, Router } from 'express';
+
+import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
 

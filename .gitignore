@@ -219,3 +219,26 @@ docker-compose-*.yml
 
 # Test configuration variants
 **/tsconfig.test.json
+
+# Build and performance diagnostics
+.build-performance.json
+build-diagnostics-complete.json
+build-optimization-summary.json
+performance-history.json
+full_build_output.txt
+
+# Test results and error logs
+test-results-*.txt
+*-test-results-*.txt
+frontend/test-results.txt
+backend-error-samples.txt
+coverage-report.txt
+
+# Session and memory data
+memory_data.json
+memory_namespace.txt
+memory_path.txt
+
+# Temporary analysis files
+patient-cache-fixes.md
+type-fixes-summary.md

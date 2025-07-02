@@ -3,8 +3,10 @@
  * Comprehensive performance testing for all FHIR endpoints
  */
 
-import supertest from 'supertest';
 import { performance } from 'perf_hooks';
+
+import supertest from 'supertest';
+
 import { PerformanceTestBase, TestConfiguration } from '../framework/performance-test-base';
 
 export class FHIRPerformanceTests extends PerformanceTestBase {

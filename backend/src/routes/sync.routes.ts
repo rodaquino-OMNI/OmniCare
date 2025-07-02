@@ -1,8 +1,9 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
+
 import { syncController } from '@/controllers/sync.controller';
 import { authenticate } from '@/middleware/auth.middleware';
-// import { validate } from '@/middleware/validation.middleware';
 import { RateLimiters } from '@/middleware/rate-limit.middleware';
+// import { validate } from '@/middleware/validation.middleware';
 
 const router = Router();
 
@@ -122,7 +123,7 @@ router.post('/batch', syncRateLimiter, syncController.batchSync.bind(syncControl
  *       404:
  *         description: Client not found
  */
-router.get('/status/:clientId', syncController.getSyncStatus.bind(syncController));
+router.get('/status/:clientId', (req: Request, res: Response, next: NextFunction) => syncController.getSyncStatus(req, res, next));
 
 /**
  * @swagger
@@ -151,7 +152,7 @@ router.get('/status/:clientId', syncController.getSyncStatus.bind(syncController
  *       401:
  *         description: Unauthorized
  */
-router.post('/validate-token', syncController.validateToken.bind(syncController));
+router.post('/validate-token', syncRateLimiter, syncController.validateToken.bind(syncController));
 
 /**
  * @swagger
@@ -191,7 +192,7 @@ router.post('/validate-token', syncController.validateToken.bind(syncController)
  *       404:
  *         description: Conflict not found
  */
-router.post('/resolve-conflict', syncController.resolveConflict.bind(syncController));
+router.post('/resolve-conflict', syncRateLimiter, syncController.resolveConflict.bind(syncController));
 
 /**
  * @swagger
@@ -214,7 +215,7 @@ router.post('/resolve-conflict', syncController.resolveConflict.bind(syncControl
  *       401:
  *         description: Unauthorized
  */
-router.get('/conflicts', syncController.getConflicts.bind(syncController));
+router.get('/conflicts', (req: Request, res: Response, next: NextFunction) => syncController.getConflicts(req, res, next));
 
 /**
  * @swagger
@@ -230,7 +231,7 @@ router.get('/conflicts', syncController.getConflicts.bind(syncController));
  *       401:
  *         description: Unauthorized
  */
-router.get('/config', syncController.getConfig.bind(syncController));
+router.get('/config', (req: Request, res: Response, next: NextFunction) => syncController.getConfig(req, res, next));
 
 /**
  * @swagger
@@ -244,6 +245,6 @@ router.get('/config', syncController.getConfig.bind(syncController));
  *       503:
  *         description: Service unavailable
  */
-router.get('/health', syncController.healthCheck.bind(syncController));
+router.get('/health', (req: Request, res: Response, next: NextFunction) => syncController.healthCheck(req, res, next));
 
 export default router;

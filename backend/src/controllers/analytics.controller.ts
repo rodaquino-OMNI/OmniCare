@@ -4,14 +4,15 @@
  * Express-based controller for analytics and reporting endpoints
  */
 
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Response } from 'express';
 
-import logger from '../utils/logger';
 import { ClinicalQualityMeasuresService } from '../services/analytics/clinical-quality-measures.service';
 import { FinancialAnalyticsService } from '../services/analytics/financial-analytics.service';
 import { OperationalMetricsService } from '../services/analytics/operational-metrics.service';
 import { PopulationHealthService } from '../services/analytics/population-health.service';
 import { ReportingEngineService } from '../services/analytics/reporting-engine.service';
+import { AuthenticatedRequest } from '../types/auth.types';
+import logger from '../utils/logger';
 
 /**
  * Analytics Controller
@@ -42,8 +43,8 @@ export class AnalyticsController {
     return new ReportingEngineService();
   }
 
-  private checkAuthentication(req: Request, res: Response): boolean {
-    if (!(req as any).user) {
+  private checkAuthentication(req: AuthenticatedRequest, res: Response): boolean {
+    if (!req.user) {
       res.status(401).json({
         success: false,
         error: 'Unauthorized',
@@ -54,9 +55,8 @@ export class AnalyticsController {
     return true;
   }
 
-  private checkPermissions(req: Request, res: Response, permission: string): boolean {
-    const user = (req as any).user;
-    if (!user.permissions.includes(permission)) {
+  private checkPermissions(req: AuthenticatedRequest, res: Response, permission: string): boolean {
+    if (!req.user || !req.user.permissions || !req.user.permissions.includes(permission)) {
       res.status(403).json({
         success: false,
         error: 'Forbidden',
@@ -115,7 +115,7 @@ export class AnalyticsController {
   }
 
   // Clinical Quality Measures Endpoint
-  async getClinicalQualityMeasures(req: Request, res: Response, next?: NextFunction) {
+  async getClinicalQualityMeasures(req: AuthenticatedRequest, res: Response, next?: NextFunction) {
     try {
       if (!this.checkAuthentication(req, res)) return;
       if (!this.checkPermissions(req, res, 'analytics:read')) return;
@@ -154,7 +154,7 @@ export class AnalyticsController {
   }
 
   // Quality Measure Details Endpoint
-  async getQualityMeasureDetails(req: Request, res: Response, next?: NextFunction) {
+  async getQualityMeasureDetails(req: AuthenticatedRequest, res: Response, next?: NextFunction) {
     try {
       if (!this.checkAuthentication(req, res)) return;
       if (!this.checkPermissions(req, res, 'analytics:read')) return;
@@ -186,7 +186,7 @@ export class AnalyticsController {
   }
 
   // Financial Analytics Endpoint
-  async getFinancialAnalytics(req: Request, res: Response, next?: NextFunction) {
+  async getFinancialAnalytics(req: AuthenticatedRequest, res: Response, next?: NextFunction) {
     try {
       if (!this.checkAuthentication(req, res)) return;
       if (!this.checkPermissions(req, res, 'analytics:read')) return;
@@ -225,12 +225,12 @@ export class AnalyticsController {
   }
 
   // Revenue Analytics Endpoint
-  async getRevenueAnalytics(req: Request, res: Response, next?: NextFunction) {
+  async getRevenueAnalytics(req: AuthenticatedRequest, res: Response, next?: NextFunction) {
     try {
       if (!this.checkAuthentication(req, res)) return;
       if (!this.checkPermissions(req, res, 'analytics:read')) return;
 
-      const { startDate, endDate, groupBy } = req.query;
+      const { startDate, endDate } = req.query;
 
       if (startDate && endDate) {
         if (!this.validateDateRange(startDate as string, endDate as string, res)) return;
@@ -263,7 +263,7 @@ export class AnalyticsController {
   }
 
   // Cost Analytics Endpoint
-  async getCostAnalytics(req: Request, res: Response, next?: NextFunction) {
+  async getCostAnalytics(req: AuthenticatedRequest, res: Response, next?: NextFunction) {
     try {
       if (!this.checkAuthentication(req, res)) return;
       if (!this.checkPermissions(req, res, 'analytics:read')) return;
@@ -300,16 +300,14 @@ export class AnalyticsController {
   }
 
   // Operational Metrics Endpoint
-  async getOperationalMetrics(req: Request, res: Response, next?: NextFunction) {
+  async getOperationalMetrics(req: AuthenticatedRequest, res: Response, next?: NextFunction) {
     try {
       if (!this.checkAuthentication(req, res)) return;
       if (!this.checkPermissions(req, res, 'analytics:read')) return;
 
-      const { period, department, facilityId, startDate, endDate } = req.query;
+      const { facilityId } = req.query;
       
       // Use operational dashboard metrics as operational metrics
-      const start = this.parseDate(startDate as string || new Date(Date.now() - 30*24*60*60*1000).toISOString());
-      const end = this.parseDate(endDate as string || new Date().toISOString());
       const metrics = await this.getOperationalService().getOperationalDashboard(
         facilityId as string || 'default-facility'
       );
@@ -332,15 +330,13 @@ export class AnalyticsController {
   }
 
   // Performance Indicators Endpoint
-  async getPerformanceIndicators(req: Request, res: Response, next?: NextFunction) {
+  async getPerformanceIndicators(req: AuthenticatedRequest, res: Response, next?: NextFunction) {
     try {
       if (!this.checkAuthentication(req, res)) return;
       if (!this.checkPermissions(req, res, 'analytics:read')) return;
       
       // Use operational dashboard metrics as KPIs
-      const { facilityId, startDate, endDate } = req.query;
-      const start = this.parseDate(startDate as string || new Date(Date.now() - 30*24*60*60*1000).toISOString());
-      const end = this.parseDate(endDate as string || new Date().toISOString());
+      const { facilityId } = req.query;
       const operationalMetrics = await this.getOperationalService().getOperationalDashboard(
         facilityId as string || 'default-facility'
       );
@@ -364,7 +360,7 @@ export class AnalyticsController {
   }
 
   // Population Health Analytics Endpoint
-  async getPopulationHealthAnalytics(req: Request, res: Response, next?: NextFunction) {
+  async getPopulationHealthAnalytics(req: AuthenticatedRequest, res: Response, next?: NextFunction) {
     try {
       if (!this.checkAuthentication(req, res)) return;
       if (!this.checkPermissions(req, res, 'analytics:read')) return;
@@ -402,12 +398,11 @@ export class AnalyticsController {
   }
 
   // Population Health Metrics Endpoint (alias for test compatibility)
-  async getPopulationHealthMetrics(req: Request, res: Response, next?: NextFunction) {
+  async getPopulationHealthMetrics(req: AuthenticatedRequest, res: Response, next?: NextFunction) {
     try {
       if (!this.checkAuthentication(req, res)) return;
       if (!this.checkPermissions(req, res, 'analytics:read')) return;
 
-      const { population, riskLevel } = req.query;
       
       // getPopulationHealthMetrics method doesn't exist, using getPopulationHealthAnalytics
       const { facilityId, startDate, endDate } = req.query;
@@ -436,7 +431,7 @@ export class AnalyticsController {
   }
 
   // Reports Endpoint
-  async getReports(req: Request, res: Response, next?: NextFunction) {
+  async getReports(req: AuthenticatedRequest, res: Response, _next?: NextFunction) {
     try {
       if (!this.checkAuthentication(req, res)) return;
       if (!this.checkPermissions(req, res, 'analytics:read')) return;
@@ -455,8 +450,8 @@ export class AnalyticsController {
       });
     } catch (error: unknown) {
       logger.error('Error fetching reports:', error);
-      if (next) {
-        next(error);
+      if (_next) {
+        _next(error);
       } else {
         res.status(500).json({
           success: false,
@@ -467,13 +462,13 @@ export class AnalyticsController {
   }
 
   // Generate Report Endpoint
-  async generateReport(req: Request, res: Response, next?: NextFunction) {
+  async generateReport(req: AuthenticatedRequest, res: Response, next?: NextFunction) {
     try {
       if (!this.checkAuthentication(req, res)) return;
       if (!this.checkPermissions(req, res, 'analytics:read')) return;
 
-      const { reportType, parameters, format } = req.body;
-      const userId = (req as any).user?.id;
+      const { reportType, format } = req.body;
+      const userId = req.user?.id;
 
       const supportedTypes = ['quality-measures', 'financial', 'operational', 'population-health'];
       if (!supportedTypes.includes(reportType)) {
@@ -525,13 +520,12 @@ export class AnalyticsController {
   }
 
   // Report History Endpoint
-  async getReportHistory(req: Request, res: Response, next?: NextFunction) {
+  async getReportHistory(req: AuthenticatedRequest, res: Response, next?: NextFunction): Promise<void> {
     try {
       if (!this.checkAuthentication(req, res)) return;
       if (!this.checkPermissions(req, res, 'analytics:read')) return;
 
       const { page = '1', limit = '10' } = req.query;
-      const userId = (req as any).user?.id;
 
       if (!this.validatePagination(page as string, limit as string, res)) return;
       
@@ -545,11 +539,8 @@ export class AnalyticsController {
           total: 0
         }
       };
-      // const history = await this.getReportingService().getReportHistory({
-      //   userId,
-      //   page: parseInt(page as string),
-      //   limit: parseInt(limit as string)
-      // });
+      // Simulating async operation
+      await Promise.resolve();
 
       res.status(200).json({
         success: true,
@@ -569,13 +560,13 @@ export class AnalyticsController {
   }
 
   // Create Custom Report Endpoint
-  async createCustomReport(req: Request, res: Response, next?: NextFunction) {
+  async createCustomReport(req: AuthenticatedRequest, res: Response, next?: NextFunction) {
     try {
       if (!this.checkAuthentication(req, res)) return;
       if (!this.checkPermissions(req, res, 'analytics:write')) return;
 
       const reportConfig = req.body;
-      const userId = (req as any).user?.id;
+      const userId = req.user?.id;
       
       const report = await this.getReportingService().createCustomReport({
         ...reportConfig,
@@ -600,7 +591,7 @@ export class AnalyticsController {
   }
 
   // Real-time Metrics Endpoint
-  async getRealTimeMetrics(req: Request, res: Response, next?: NextFunction) {
+  async getRealTimeMetrics(req: AuthenticatedRequest, res: Response, next?: NextFunction) {
     try {
       if (!this.checkAuthentication(req, res)) return;
       if (!this.checkPermissions(req, res, 'analytics:read')) return;
@@ -630,7 +621,7 @@ export class AnalyticsController {
   }
 
   // Analytics Alerts Endpoint
-  async getAnalyticsAlerts(req: Request, res: Response, next?: NextFunction) {
+  async getAnalyticsAlerts(req: AuthenticatedRequest, res: Response, next?: NextFunction): Promise<void> {
     try {
       if (!this.checkAuthentication(req, res)) return;
       if (!this.checkPermissions(req, res, 'analytics:read')) return;
@@ -643,9 +634,8 @@ export class AnalyticsController {
         message: 'Analytics alerts not implemented',
         facilityId
       };
-      // const alerts = await this.getOperationalService().getAnalyticsAlerts({
-      //   facilityId
-      // });
+      // Simulating async operation
+      await Promise.resolve();
 
       res.status(200).json({
         success: true,
@@ -665,7 +655,7 @@ export class AnalyticsController {
   }
 
   // Benchmark Comparisons Endpoint
-  async getBenchmarkComparisons(req: Request, res: Response, next?: NextFunction) {
+  async getBenchmarkComparisons(req: AuthenticatedRequest, res: Response, next?: NextFunction): Promise<void> {
     try {
       if (!this.checkAuthentication(req, res)) return;
       if (!this.checkPermissions(req, res, 'analytics:read')) return;
@@ -680,10 +670,8 @@ export class AnalyticsController {
         facilityId,
         category: category as string
       };
-      // const benchmarks = await this.getOperationalService().getBenchmarkComparisons({
-      //   facilityId,
-      //   category: category as string
-      // });
+      // Simulating async operation
+      await Promise.resolve();
 
       res.status(200).json({
         success: true,

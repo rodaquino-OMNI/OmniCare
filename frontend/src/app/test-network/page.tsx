@@ -6,7 +6,7 @@ import { IconWifi, IconWifiOff, IconRefresh, IconDatabase } from '@tabler/icons-
 import { useNetworkStatusContext } from '@/contexts/NetworkStatusContext';
 import { NetworkStatusIndicator } from '@/components/network/NetworkStatusIndicator';
 import { NetworkAwareImage } from '@/components/network/NetworkAwareImage';
-import { useNetworkAwareFHIRResource, useNetworkAwareFHIRSearch, initializeFHIRBackgroundSync } from '@/hooks/useNetworkAwareFHIR';
+import { useNetworkAwareFHIRResource, initializeFHIRBackgroundSync } from '@/hooks/useNetworkAwareFHIR';
 import { getSyncStats, syncNow } from '@/services/background-sync.service';
 
 // Initialize background sync on mount
@@ -81,7 +81,7 @@ export default function TestNetworkPage() {
                 <td>Connection Quality</td>
                 <td>
                   <Badge color={qualityBadgeColor[networkStatus.connectionQuality as keyof typeof qualityBadgeColor] || 'gray'}>
-                    {networkStatus.connectionQuality.toUpperCase()}
+                    {networkStatus.connectionQuality ? networkStatus.connectionQuality.toUpperCase() : 'UNKNOWN'}
                   </Badge>
                 </td>
               </tr>
@@ -91,7 +91,7 @@ export default function TestNetworkPage() {
               </tr>
               <tr>
                 <td>Effective Type</td>
-                <td>{networkStatus.effectiveType.toUpperCase()}</td>
+                <td>{networkStatus.effectiveType ? networkStatus.effectiveType.toUpperCase() : 'UNKNOWN'}</td>
               </tr>
               <tr>
                 <td>Latency</td>

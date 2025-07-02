@@ -432,7 +432,7 @@ export function validatePatientAlert(alert: Partial<PatientAlert>): ValidationRe
 export function formatPatientName(nameOrPatient: HumanName | OmniCarePatient): string {
   // If it's a patient object, get the first name
   if ('resourceType' in nameOrPatient && nameOrPatient.resourceType === 'Patient') {
-    const patient = nameOrPatient as OmniCarePatient;
+    const patient = nameOrPatient;
     if (!patient.name || patient.name.length === 0) {
       return '';
     }

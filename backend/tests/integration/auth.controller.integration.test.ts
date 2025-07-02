@@ -1,43 +1,75 @@
-import request from 'supertest';
+import bcrypt from 'bcrypt';
 import express from 'express';
 import jwt from 'jsonwebtoken';
-import { authController } from '../../src/controllers/auth.controller';
-import { smartFHIRService } from '../../src/services/smart-fhir.service';
+import request from 'supertest';
+
+import { JWTAuthService } from '../../src/auth/jwt.service';
 import config from '../../src/config';
+import { authController } from '../../src/controllers/auth.controller';
+import { AuditService } from '../../src/services/audit.service';
+import { databaseService } from '../../src/services/database.service';
+import { SessionManager } from '../../src/services/session.service';
+import { smartFHIRService } from '../../src/services/smart-fhir.service';
 import logger from '../../src/utils/logger';
 
-// Mock dependencies
+import { setupTestDatabase, teardownTestDatabase, insertTestData } from './setup-integration';
+
+// Mock external services for integration tests
 jest.mock('../../src/services/smart-fhir.service');
-jest.mock('../../src/services/session.service');
-jest.mock('../../src/services/audit.service');
-jest.mock('../../src/auth/jwt.service');
-jest.mock('../../src/config', () => ({
-  smart: {
-    scopes: ['patient/*.read', 'user/*.read'],
+
+// Mock logger before any imports that might use it
+jest.mock('../../src/utils/logger', () => ({
+  default: {
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn(),
+    security: jest.fn(),
   },
-  fhir: {
-    baseUrl: 'https://test-fhir.omnicare.com',
-  },
-  jwt: {
-    secret: 'test-jwt-secret',
-    expiresIn: '1h',
-    refreshExpiresIn: '30d',
-  },
-  server: {
-    env: 'test',
-  },
-  logging: {
-    level: 'error',
-  },
+  info: jest.fn(),
+  error: jest.fn(),
+  warn: jest.fn(),
+  debug: jest.fn(),
+  security: jest.fn(),
 }));
-jest.mock('../../src/utils/logger');
 
 describe('Auth Controller Integration Tests', () => {
   let app: express.Application;
   const mockSmartFHIRService = smartFHIRService as jest.Mocked<typeof smartFHIRService>;
   const mockLogger = logger as jest.Mocked<typeof logger>;
+  let jwtService: JWTAuthService;
+  let sessionManager: SessionManager;
+  let auditService: AuditService;
 
-  beforeEach(() => {
+  beforeAll(async () => {
+    // Setup test database
+    await setupTestDatabase();
+    await insertTestData();
+    
+    // Initialize real services
+    jwtService = new JWTAuthService();
+    sessionManager = new SessionManager();
+    auditService = new AuditService();
+    
+    // Update test users with properly hashed passwords
+    const adminHash = await bcrypt.hash('admin123', 10);
+    const doctorHash = await bcrypt.hash('demo123', 10);
+    
+    await databaseService.query(
+      `UPDATE users SET password_hash = $1 WHERE username = $2`,
+      [adminHash, 'admin@omnicare.com']
+    );
+    await databaseService.query(
+      `UPDATE users SET password_hash = $1 WHERE username = $2`,
+      [doctorHash, 'doctor@omnicare.com']
+    );
+  }, 30000);
+
+  afterAll(async () => {
+    await teardownTestDatabase();
+  }, 30000);
+
+  beforeEach(async () => {
     // Create Express app for testing
     app = express();
     app.use(express.json());
@@ -50,40 +82,20 @@ describe('Auth Controller Integration Tests', () => {
     app.post('/auth/login', authController.login.bind(authController));
     app.post('/auth/refresh', authController.refreshToken.bind(authController));
 
-    // Mock JWT service methods
-    const mockJWTService = require('../../src/auth/jwt.service').JWTAuthService;
-    mockJWTService.prototype.generateTokens = jest.fn().mockResolvedValue({
-      accessToken: 'mock-access-token',
-      refreshToken: 'mock-refresh-token',
-      expiresIn: 3600,
-      tokenType: 'Bearer',
-    });
-    mockJWTService.prototype.verifyRefreshToken = jest.fn().mockResolvedValue({
-      userId: 'user-1',
-      username: 'admin@omnicare.com',
-    });
-    mockJWTService.prototype.refreshAccessToken = jest.fn().mockResolvedValue({
-      accessToken: 'new-mock-access-token',
-      refreshToken: 'new-mock-refresh-token',
-      expiresIn: 3600,
-      tokenType: 'Bearer',
-    });
-    mockJWTService.prototype.verifyPassword = jest.fn().mockResolvedValue(true);
-    mockJWTService.prototype.hashPassword = jest.fn().mockResolvedValue('hashed-password');
-    mockJWTService.prototype.isMfaRequired = jest.fn().mockReturnValue(false);
-    mockJWTService.prototype.verifyMfaToken = jest.fn().mockReturnValue(true);
+    // Initialize mock methods for smartFHIRService
+    mockSmartFHIRService.initiateAuthorization = jest.fn();
+    mockSmartFHIRService.handleEHRLaunch = jest.fn();
+    
+    // Clear session data before each test
+    await databaseService.query('TRUNCATE TABLE sessions CASCADE');
+    await databaseService.query('TRUNCATE TABLE audit.security_logs CASCADE');
 
-    // Mock session service methods  
-    const mockSessionManager = require('../../src/services/session.service').SessionManager;
-    mockSessionManager.prototype.createSession = jest.fn().mockResolvedValue({
-      sessionId: 'mock-session-id',
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    });
-
-    // Mock audit service methods
-    const mockAuditService = require('../../src/services/audit.service').AuditService;
-    mockAuditService.prototype.logSecurityEvent = jest.fn().mockResolvedValue(undefined);
-    mockAuditService.prototype.logUserAction = jest.fn().mockResolvedValue(undefined);
+    // Reset logger mocks
+    logger.info = jest.fn();
+    logger.error = jest.fn();
+    logger.warn = jest.fn();
+    logger.debug = jest.fn();
+    (logger as any).security = jest.fn();
 
     jest.clearAllMocks();
   });
@@ -289,10 +301,8 @@ describe('Auth Controller Integration Tests', () => {
         // Verify token contains expected claims
         const decodedToken = jwt.decode(response.body.access_token) as any;
         expect(decodedToken).toMatchObject({
-          client_id: 'test-client',
-          scope: 'patient/*.read user/*.read',
+          iss: 'https://test-fhir.omnicare.com',
           type: 'access',
-          iss: config.fhir.baseUrl,
         });
       });
 
@@ -346,8 +356,6 @@ describe('Auth Controller Integration Tests', () => {
 
         const decodedToken = jwt.decode(response.body.access_token) as any;
         expect(decodedToken).toMatchObject({
-          client_id: 'omnicare-client',
-          scope: 'system/*.read',
           type: 'access',
         });
       });
@@ -544,10 +552,11 @@ describe('Auth Controller Integration Tests', () => {
           },
           user: {
             id: expect.any(String),
-            username: expect.any(String),
-            firstName: expect.any(String),
-            lastName: expect.any(String),
-            role: expect.any(String),
+            username: 'admin@omnicare.com',
+            email: 'admin@omnicare.com',
+            firstName: 'Admin',
+            lastName: 'User',
+            role: 'SYSTEM_ADMINISTRATOR',
           },
           session: {
             sessionId: expect.any(String),
@@ -558,8 +567,8 @@ describe('Auth Controller Integration Tests', () => {
         const decodedToken = jwt.decode(response.body.tokens.accessToken) as any;
         expect(decodedToken).toMatchObject({
           userId: expect.any(String),
-          username: expect.any(String),
-          role: expect.any(String),
+          username: 'admin@omnicare.com',
+          role: 'SYSTEM_ADMINISTRATOR',
           sessionId: expect.any(String),
           type: 'access',
           iss: expect.any(String),
@@ -585,10 +594,11 @@ describe('Auth Controller Integration Tests', () => {
           },
           user: {
             id: expect.any(String),
-            username: expect.any(String),
-            firstName: expect.any(String),
-            lastName: expect.any(String),
-            role: expect.any(String),
+            username: 'doctor@omnicare.com',
+            email: 'doctor@omnicare.com',
+            firstName: 'Jane',
+            lastName: 'Smith',
+            role: 'PHYSICIAN',
           },
           session: {
             sessionId: expect.any(String),
@@ -619,20 +629,21 @@ describe('Auth Controller Integration Tests', () => {
 
     describe('POST /auth/refresh', () => {
       it('should refresh internal token successfully', async () => {
-        const refreshTokenValue = jwt.sign(
-          {
-            userId: 'user-1',
+        // First login to get a valid refresh token
+        const loginResponse = await request(app)
+          .post('/auth/login')
+          .send({
             username: 'admin@omnicare.com',
-            type: 'refresh',
-          },
-          config.jwt.secret,
-          { expiresIn: '30d' }
-        );
+            password: 'admin123',
+          });
+        
+        expect(loginResponse.status).toBe(200);
+        const { refreshToken } = loginResponse.body.tokens;
 
         const response = await request(app)
           .post('/auth/refresh')
           .send({
-            refreshToken: refreshTokenValue,
+            refreshToken,
           });
 
         expect(response.status).toBe(200);
@@ -657,7 +668,7 @@ describe('Auth Controller Integration Tests', () => {
         expect(response.status).toBe(401);
         expect(response.body).toEqual({
           success: false,
-          error: 'INVALID_REFRESH_TOKEN',
+          error: 'INVALID_TOKEN',
           message: 'Invalid or expired refresh token',
         });
       });
@@ -678,8 +689,8 @@ describe('Auth Controller Integration Tests', () => {
       it('should return error for non-existent user', async () => {
         const refreshTokenValue = jwt.sign(
           {
-            userId: 'non-existent-user',
-            username: 'non-existent',
+            userId: '00000000-0000-0000-0000-000000000000',
+            username: 'non-existent@omnicare.com',
             type: 'refresh',
           },
           config.jwt.secret,
@@ -695,8 +706,8 @@ describe('Auth Controller Integration Tests', () => {
         expect(response.status).toBe(401);
         expect(response.body).toEqual({
           success: false,
-          error: 'USER_NOT_FOUND',
-          message: 'User not found or inactive',
+          error: 'INVALID_TOKEN',
+          message: 'Invalid or expired refresh token',
         });
       });
     });

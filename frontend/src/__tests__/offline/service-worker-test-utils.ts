@@ -1,457 +1,314 @@
-// Service Worker Testing Utilities
-// Jest is available globally - no imports needed
+// Service Worker Test Utilities
+import type {
+  ServiceWorkerTestUtils as IServiceWorkerTestUtils,
+  ExtendableEvent,
+  FetchEvent,
+  ExtendableMessageEvent,
+  SyncManager,
+  CacheStorage,
+  Cache,
+  Client
+} from './offline-test.types';
 
-// Mock Response constructor for Node.js test environment
-if (typeof Response === 'undefined') {
-  global.Response = class Response {
-    constructor(public body: any, public options: any = {}) {}
-    status = this.options.status || 200;
-    statusText = this.options.statusText || 'OK';
-    ok = this.status >= 200 && this.status < 300;
-    headers = new Map(Object.entries(this.options.headers || {}));
-    json() { return Promise.resolve(JSON.parse(this.body)); }
-    text() { return Promise.resolve(this.body); }
-    clone() { return new Response(this.body, this.options); }
-  } as any;
+// Mock implementations
+class MockCache implements Cache {
+  private cache = new Map<string, Response>();
+
+  async match(request: RequestInfo, options?: any): Promise<Response | undefined> {
+    const url = request instanceof Request ? request.url : request.toString();
+    return this.cache.get(url);
+  }
+
+  async matchAll(request?: RequestInfo, options?: any): Promise<Response[]> {
+    if (!request) {
+      return Array.from(this.cache.values());
+    }
+    const url = request instanceof Request ? request.url : request.toString();
+    const response = this.cache.get(url);
+    return response ? [response] : [];
+  }
+
+  async add(request: RequestInfo): Promise<void> {
+    const url = request instanceof Request ? request.url : request.toString();
+    const response = new Response('', { status: 200 });
+    this.cache.set(url, response);
+  }
+
+  async addAll(requests: RequestInfo[]): Promise<void> {
+    await Promise.all(requests.map(req => this.add(req)));
+  }
+
+  async put(request: RequestInfo, response: Response): Promise<void> {
+    const url = request instanceof Request ? request.url : request.toString();
+    this.cache.set(url, response);
+  }
+
+  async delete(request: RequestInfo, options?: any): Promise<boolean> {
+    const url = request instanceof Request ? request.url : request.toString();
+    return this.cache.delete(url);
+  }
+
+  async keys(request?: RequestInfo, options?: any): Promise<Request[]> {
+    const urls = Array.from(this.cache.keys());
+    return urls.map(url => new Request(url));
+  }
 }
 
-// Mock Service Worker type definitions
-export interface Client {
-  frameType: 'auxiliary' | 'top-level' | 'nested' | 'none';
-  id: string;
-  type: 'window' | 'worker' | 'sharedworker';
-  url: string;
-  postMessage(message: any, transfer?: Transferable[]): void;
+class MockCacheStorage implements CacheStorage {
+  private caches = new Map<string, MockCache>();
+
+  async open(cacheName: string): Promise<Cache> {
+    if (!this.caches.has(cacheName)) {
+      this.caches.set(cacheName, new MockCache());
+    }
+    return this.caches.get(cacheName)!;
+  }
+
+  async has(cacheName: string): Promise<boolean> {
+    return this.caches.has(cacheName);
+  }
+
+  async delete(cacheName: string): Promise<boolean> {
+    return this.caches.delete(cacheName);
+  }
+
+  async keys(): Promise<string[]> {
+    return Array.from(this.caches.keys());
+  }
+
+  async match(request: RequestInfo, options?: any): Promise<Response | undefined> {
+    const cacheArray = Array.from(this.caches.values());
+    for (const cache of cacheArray) {
+      const response = await cache.match(request, options);
+      if (response) return response;
+    }
+    return undefined;
+  }
 }
 
-export interface ExtendableEvent extends Event {
-  waitUntil(promise: Promise<any>): void;
+class MockSyncManager implements SyncManager {
+  private tags = new Set<string>();
+
+  async getTags(): Promise<string[]> {
+    return Array.from(this.tags);
+  }
+
+  async register(tag: string): Promise<void> {
+    this.tags.add(tag);
+  }
 }
 
-export interface FetchEvent extends ExtendableEvent {
-  request: Request;
-  clientId: string;
-  resultingClientId: string;
-  replacesClientId: string;
-  handled: Promise<undefined>;
-  preloadResponse: Promise<any | undefined>;
-  respondWith(response: Response | Promise<Response>): void;
+class MockServiceWorker {
+  state: 'installing' | 'installed' | 'activating' | 'activated' = 'installing';
+  scriptURL: string = '/sw.js';
+  
+  postMessage(message: any): void {
+    // Mock message handling
+    console.log('Service Worker received message:', message);
+  }
 }
 
-export interface ExtendableMessageEvent extends ExtendableEvent {
-  data: any;
-  origin: string;
-  lastEventId: string;
-  source: Client | ServiceWorker | MockServiceWorker | MessagePort | null;
-  ports: readonly MessagePort[];
+class MockServiceWorkerRegistration {
+  installing: MockServiceWorker | null = null;
+  waiting: MockServiceWorker | null = null;
+  active: MockServiceWorker | null = null;
+  scope: string = '/';
+  updateViaCache: 'imports' | 'all' | 'none' = 'imports';
+  sync = new MockSyncManager();
+  
+  async update(): Promise<void> {
+    // Mock update logic
+    console.log('Service Worker update triggered');
+  }
+  
+  async unregister(): Promise<boolean> {
+    return true;
+  }
 }
 
-export interface SyncManager {
-  getTags(): Promise<string[]>;
-  register(tag: string): Promise<void>;
-}
+// Export MockServiceWorker for use in tests
+export { MockServiceWorker };
 
-// Mock ExtendableEvent implementation
+// Mock ExtendableEvent
 export class MockExtendableEvent implements ExtendableEvent {
   type: string;
+  defaultPrevented: boolean = false;
   promises: Promise<any>[] = [];
-  
+
   constructor(type: string) {
     this.type = type;
   }
-  
+
   waitUntil(promise: Promise<any>): void {
     this.promises.push(promise);
   }
-  
-  // Event interface properties
-  bubbles = false;
-  cancelBubble = false;
-  cancelable = false;
-  composed = false;
-  currentTarget = null;
-  defaultPrevented = false;
-  eventPhase = 0;
-  isTrusted = true;
-  returnValue = true;
-  srcElement = null;
-  target = null;
-  timeStamp = Date.now();
-  readonly NONE = 0 as const;
-  readonly CAPTURING_PHASE = 1 as const;
-  readonly AT_TARGET = 2 as const;
-  readonly BUBBLING_PHASE = 3 as const;
-  
-  composedPath(): EventTarget[] { return []; }
-  initEvent(): void {}
-  preventDefault(): void {}
-  stopImmediatePropagation(): void {}
-  stopPropagation(): void {}
-}
 
-// Note: ExtendableEvent is a type interface, not a constructor
-// MockExtendableEvent provides the implementation for testing
-
-// Mock Service Worker registration
-export interface MockServiceWorkerRegistration {
-  installing: MockServiceWorker | null;
-  waiting: MockServiceWorker | null;
-  active: MockServiceWorker | null;
-  navigationPreload: any;
-  updateViaCache: 'imports' | 'all' | 'none';
-  scope: string;
-  update: jest.Mock;
-  unregister: jest.Mock;
-  showNotification: jest.Mock;
-  getNotifications: jest.Mock;
-  addEventListener: jest.Mock;
-  removeEventListener: jest.Mock;
-  pushManager: any;
-  sync: any;
-  index: any;
-  paymentManager: any;
-  periodicSync: any;
-  backgroundFetch: any;
-  cookies: any;
-  taskQueue: any;
-  dispatchEvent: jest.Mock;
-  onupdatefound: ((this: ServiceWorkerRegistration, ev: Event) => any) | null;
-}
-
-export interface MockServiceWorker {
-  state: ServiceWorkerState;
-  scriptURL: string;
-  postMessage: jest.Mock;
-  addEventListener: jest.Mock;
-  removeEventListener: jest.Mock;
-  onstatechange: ((this: MockServiceWorker, ev: Event) => any) | null;
-  dispatchEvent: jest.Mock;
-  onerror: ((this: MockServiceWorker, ev: ErrorEvent) => any) | null;
-  onmessage: ((this: MockServiceWorker, ev: MessageEvent) => any) | null;
-}
-
-export class ServiceWorkerTestUtils {
-  private static mockRegistration: MockServiceWorkerRegistration | null = null;
-  private static mockWorker: MockServiceWorker | null = null;
-  private static registrationPromise: Promise<MockServiceWorkerRegistration> | null = null;
-  private static updateFoundCallbacks: Array<() => void> = [];
-  private static messageListeners: Map<string, Function> = new Map();
-
-  // Create a mock service worker
-  static createMockServiceWorker(state: ServiceWorkerState = 'activated'): MockServiceWorker {
-    const worker: MockServiceWorker = {
-      state,
-      scriptURL: '/sw.js',
-      postMessage: jest.fn(),
-      addEventListener: jest.fn((event, callback) => {
-        if (event === 'message') {
-          ServiceWorkerTestUtils.messageListeners.set(callback.toString(), callback);
-        }
-      }),
-      removeEventListener: jest.fn(),
-      onstatechange: null,
-      dispatchEvent: jest.fn(),
-      onerror: null,
-      onmessage: null
-    } as MockServiceWorker;
-
-    this.mockWorker = worker;
-    return worker;
+  preventDefault(): void {
+    this.defaultPrevented = true;
   }
 
-  // Create a mock service worker registration
-  static createMockRegistration(
-    activeWorker?: MockServiceWorker
-  ): MockServiceWorkerRegistration {
-    const registration = {
-      installing: null,
-      waiting: null,
-      active: activeWorker || this.createMockServiceWorker(),
-      navigationPreload: {},
-      updateViaCache: 'imports' as const,
-      scope: '/',
-      update: jest.fn().mockResolvedValue(undefined),
-      unregister: jest.fn().mockResolvedValue(true),
-      showNotification: jest.fn(),
-      getNotifications: jest.fn(() => Promise.resolve([])),
-      addEventListener: jest.fn((event, callback) => {
-        if (event === 'updatefound') {
-          this.updateFoundCallbacks.push(callback as () => void);
-        }
+  stopPropagation(): void {
+    // Mock implementation
+  }
+
+  stopImmediatePropagation(): void {
+    // Mock implementation
+  }
+
+  // Required Event properties
+  bubbles: boolean = false;
+  cancelBubble: boolean = false;
+  cancelable: boolean = false;
+  composed: boolean = false;
+  currentTarget: EventTarget | null = null;
+  eventPhase: number = 0;
+  isTrusted: boolean = false;
+  returnValue: boolean = true;
+  srcElement: EventTarget | null = null;
+  target: EventTarget | null = null;
+  timeStamp: number = Date.now();
+  
+  composedPath(): EventTarget[] {
+    return [];
+  }
+  
+  initEvent(type: string, bubbles?: boolean, cancelable?: boolean): void {
+    // Mock implementation
+  }
+
+  get NONE(): 0 { return 0; }
+  get CAPTURING_PHASE(): 1 { return 1; }
+  get AT_TARGET(): 2 { return 2; }
+  get BUBBLING_PHASE(): 3 { return 3; }
+}
+
+// Service Worker Test Utils Implementation
+class ServiceWorkerTestUtilsImpl implements IServiceWorkerTestUtils {
+  private originalServiceWorker: any;
+  private originalCaches: any;
+  private mockRegistration: MockServiceWorkerRegistration | null = null;
+
+  mockNavigatorServiceWorker(): void {
+    this.originalServiceWorker = (navigator as any).serviceWorker;
+    
+    const mockContainer = {
+      register: jest.fn(async (scriptURL: string, options?: any) => {
+        this.mockRegistration = new MockServiceWorkerRegistration();
+        const sw = new MockServiceWorker();
+        sw.scriptURL = scriptURL;
+        sw.state = 'installing';
+        this.mockRegistration.installing = sw;
+        
+        // Simulate installation
+        setTimeout(() => {
+          if (this.mockRegistration) {
+            sw.state = 'installed';
+            this.mockRegistration.installing = null;
+            this.mockRegistration.waiting = sw;
+          }
+        }, 100);
+        
+        return this.mockRegistration;
       }),
+      
+      getRegistration: jest.fn(async () => this.mockRegistration),
+      getRegistrations: jest.fn(async () => this.mockRegistration ? [this.mockRegistration] : []),
+      
+      addEventListener: jest.fn(),
       removeEventListener: jest.fn(),
-      pushManager: {} as PushManager,
-      sync: {
-        getTags: jest.fn(() => Promise.resolve([])),
-        register: jest.fn(() => Promise.resolve())
-      } as any,
-      index: {} as any,
-      paymentManager: {} as any,
-      periodicSync: {} as any,
-      backgroundFetch: {} as any,
-      cookies: {} as any,
-      taskQueue: {} as any,
-      dispatchEvent: jest.fn(),
-      onupdatefound: null
+      
+      ready: Promise.resolve(this.mockRegistration || new MockServiceWorkerRegistration())
     };
-
-    this.mockRegistration = registration;
-    return registration;
-  }
-
-  // Mock navigator.serviceWorker
-  static mockNavigatorServiceWorker() {
-    const registration = this.createMockRegistration();
-    this.registrationPromise = Promise.resolve(registration);
-
+    
     Object.defineProperty(navigator, 'serviceWorker', {
-      value: {
-        ready: this.registrationPromise,
-        register: jest.fn(() => this.registrationPromise),
-        getRegistration: jest.fn(() => this.registrationPromise),
-        getRegistrations: jest.fn(() => Promise.resolve([registration])),
-        controller: this.mockWorker,
-        addEventListener: jest.fn(),
-        removeEventListener: jest.fn(),
-        startMessages: jest.fn()
-      },
       configurable: true,
-      writable: true
+      value: mockContainer
     });
   }
 
-  // Simulate service worker update
-  static simulateUpdate(newWorker?: MockServiceWorker) {
-    if (!this.mockRegistration) {
-      throw new Error('No mock registration available');
-    }
-
-    const installing = newWorker || this.createMockServiceWorker('installing');
-    this.mockRegistration.installing = installing;
-
-    // Trigger updatefound event
-    this.updateFoundCallbacks.forEach(callback => callback());
-
-    // Simulate installation process
-    setTimeout(() => {
-      if (installing.state === 'installing') {
-        (installing as any).state = 'installed';
-        installing.onstatechange?.call(installing, new Event('statechange'));
-      }
-    }, 100);
+  mockCacheAPI(): void {
+    this.originalCaches = (global as any).caches;
+    (global as any).caches = new MockCacheStorage();
   }
 
-  // Simulate service worker activation
-  static simulateActivation() {
-    if (!this.mockRegistration?.installing) {
-      throw new Error('No installing worker available');
-    }
-
-    const worker = this.mockRegistration.installing;
-    (worker as any).state = 'activating';
-    worker.onstatechange?.call(worker, new Event('statechange'));
-
-    setTimeout(() => {
-      (worker as any).state = 'activated';
-      worker.onstatechange?.call(worker, new Event('statechange'));
-      this.mockRegistration!.active = worker;
-      this.mockRegistration!.installing = null;
-    }, 100);
+  mockBackgroundSync(): SyncManager {
+    return new MockSyncManager();
   }
 
-  // Simulate service worker message
-  static simulateMessage(data: any, source?: ServiceWorker | MockServiceWorker) {
-    const messageEvent = new MessageEvent('message', {
+  simulateUpdate(): void {
+    if (this.mockRegistration && this.mockRegistration.waiting) {
+      const sw = this.mockRegistration.waiting;
+      sw.state = 'activating';
+      this.mockRegistration.waiting = null;
+      this.mockRegistration.active = sw;
+      
+      setTimeout(() => {
+        sw.state = 'activated';
+      }, 50);
+    }
+  }
+
+  simulateActivation(): void {
+    if (this.mockRegistration && this.mockRegistration.active) {
+      this.mockRegistration.active.state = 'activated';
+    }
+  }
+
+  simulateMessage(data: any, source?: any): void {
+    const event = new MessageEvent('message', {
       data,
-      source: (source || this.mockWorker || undefined) as MessageEventSource,
-      origin: window.location.origin
+      source: source || (this.mockRegistration?.active || null)
     });
-
-    this.messageListeners.forEach(listener => {
-      listener(messageEvent);
-    });
+    
+    if ((navigator as any).serviceWorker) {
+      const listeners = (navigator as any).serviceWorker.addEventListener.mock.calls
+        .filter((call: any[]) => call[0] === 'message')
+        .map((call: any[]) => call[1]);
+      
+      listeners.forEach((listener: Function) => listener(event));
+    }
   }
 
-  // Simulate network conditions
-  static simulateOffline() {
-    Object.defineProperty(navigator, 'onLine', {
-      value: false,
-      configurable: true,
-      writable: true
-    });
-    window.dispatchEvent(new Event('offline'));
-  }
-
-  static simulateOnline() {
-    Object.defineProperty(navigator, 'onLine', {
-      value: true,
-      configurable: true,
-      writable: true
-    });
-    window.dispatchEvent(new Event('online'));
-  }
-
-  // Simulate cache operations
-  static mockCacheAPI() {
-    const cacheStorage = new Map<string, Map<string, Response>>();
-
-    const createCache = (name: string) => {
-      if (!cacheStorage.has(name)) {
-        cacheStorage.set(name, new Map());
-      }
-      const cache = cacheStorage.get(name)!;
-
-      return {
-        match: jest.fn(async (request: RequestInfo) => {
-          const url = typeof request === 'string' ? request : request.url;
-          return cache.get(url) || undefined;
-        }),
-        matchAll: jest.fn(async (request?: RequestInfo) => {
-          if (!request) {
-            return Array.from(cache.values());
-          }
-          const url = typeof request === 'string' ? request : request.url;
-          const match = cache.get(url);
-          return match ? [match] : [];
-        }),
-        add: jest.fn(async (request: RequestInfo) => {
-          const url = typeof request === 'string' ? request : request.url;
-          const response = new Response('cached', { status: 200 });
-          cache.set(url, response);
-        }),
-        addAll: jest.fn(async (requests: RequestInfo[]) => {
-          for (const request of requests) {
-            const url = typeof request === 'string' ? request : request.url;
-            const response = new Response('cached', { status: 200 });
-            cache.set(url, response);
-          }
-        }),
-        put: jest.fn(async (request: RequestInfo, response: Response) => {
-          const url = typeof request === 'string' ? request : request.url;
-          cache.set(url, response);
-        }),
-        delete: jest.fn(async (request: RequestInfo) => {
-          const url = typeof request === 'string' ? request : request.url;
-          return cache.delete(url);
-        }),
-        keys: jest.fn(async () => {
-          return Array.from(cache.keys()).map(url => new Request(url));
-        })
-      };
-    };
-
-    (global as any).caches = {
-      open: jest.fn(async (name: string) => createCache(name)),
-      has: jest.fn(async (name: string) => cacheStorage.has(name)),
-      delete: jest.fn(async (name: string) => cacheStorage.delete(name)),
-      keys: jest.fn(async () => Array.from(cacheStorage.keys())),
-      match: jest.fn(async (request: RequestInfo) => {
-        const url = typeof request === 'string' ? request : request.url;
-        for (const cache of cacheStorage.values()) {
-          const response = cache.get(url);
-          if (response) return response;
-        }
-        return undefined;
-      })
-    };
-  }
-
-  // Clean up all mocks
-  static cleanup() {
+  cleanup(): void {
+    if (this.originalServiceWorker !== undefined) {
+      Object.defineProperty(navigator, 'serviceWorker', {
+        configurable: true,
+        value: this.originalServiceWorker
+      });
+    }
+    
+    if (this.originalCaches !== undefined) {
+      (global as any).caches = this.originalCaches;
+    }
+    
     this.mockRegistration = null;
-    this.mockWorker = null;
-    this.registrationPromise = null;
-    this.updateFoundCallbacks = [];
-    this.messageListeners.clear();
-    
-    if ('serviceWorker' in navigator) {
-      delete (navigator as any).serviceWorker;
-    }
-    
-    if ('caches' in global) {
-      delete (global as any).caches;
-    }
   }
 
-  // Utility to wait for service worker state
-  static async waitForState(worker: ServiceWorker, state: ServiceWorkerState): Promise<void> {
-    if (worker.state === state) return;
-
+  async waitForState(sw: ServiceWorker | MockServiceWorker, state: string): Promise<void> {
     return new Promise((resolve) => {
-      const checkState = () => {
-        if (worker.state === state) {
-          worker.removeEventListener('statechange', checkState);
-          resolve();
-        }
-      };
-      worker.addEventListener('statechange', checkState);
+      if ((sw as any).state === state) {
+        resolve();
+        return;
+      }
+      
+      // Simulate state change
+      setTimeout(() => {
+        (sw as any).state = state;
+        resolve();
+      }, 100);
     });
   }
 
-  // Simulate background sync
-  static mockBackgroundSync() {
-    const syncTags = new Set<string>();
-
-    const syncManager = {
-      register: jest.fn(async (tag: string) => {
-        syncTags.add(tag);
-      }),
-      getTags: jest.fn(async () => Array.from(syncTags))
-    };
-
-    if (this.mockRegistration) {
-      (this.mockRegistration as any).sync = syncManager;
-    }
-
-    return syncManager;
-  }
-
-  // Simulate push notifications
-  static mockPushNotifications() {
-    const subscription = {
-      endpoint: 'https://example.com/push',
-      expirationTime: null,
-      options: {
-        applicationServerKey: new Uint8Array([1, 2, 3]),
-        userVisibleOnly: true
-      },
-      getKey: jest.fn(),
-      toJSON: jest.fn(() => ({
-        endpoint: 'https://example.com/push',
-        keys: { p256dh: 'key', auth: 'auth' }
-      })),
-      unsubscribe: jest.fn(() => Promise.resolve(true))
-    };
-
-    const pushManager = {
-      subscribe: jest.fn(() => Promise.resolve(subscription)),
-      getSubscription: jest.fn(() => Promise.resolve(subscription)),
-      permissionState: jest.fn(() => Promise.resolve('granted' as PermissionState))
-    };
-
-    if (this.mockRegistration) {
-      (this.mockRegistration as any).pushManager = pushManager;
-    }
-
-    return { pushManager, subscription };
+  createMockServiceWorker(): MockServiceWorker {
+    return new MockServiceWorker();
   }
 }
 
-// Helper function to setup service worker testing environment
-export function setupServiceWorkerTests() {
-  beforeEach(() => {
-    ServiceWorkerTestUtils.mockNavigatorServiceWorker();
-    ServiceWorkerTestUtils.mockCacheAPI();
-  });
+// Export singleton instance
+export const ServiceWorkerTestUtils = new ServiceWorkerTestUtilsImpl();
 
-  afterEach(() => {
-    ServiceWorkerTestUtils.cleanup();
-    jest.clearAllMocks();
-  });
-}
-
-// Mock service worker lifecycle events
-export function mockServiceWorkerLifecycle() {
+// Mock Service Worker Lifecycle
+export const mockServiceWorkerLifecycle = () => {
   const events = {
     install: jest.fn(),
     activate: jest.fn(),
@@ -460,54 +317,167 @@ export function mockServiceWorkerLifecycle() {
     sync: jest.fn(),
     push: jest.fn()
   };
-
-  (global as any).addEventListener = jest.fn((event, handler) => {
-    if (event in events) {
-      events[event as keyof typeof events] = handler;
+  
+  // Mock self for service worker context
+  const mockSelf = {
+    addEventListener: jest.fn((event: string, handler: Function) => {
+      events[event as keyof typeof events] = handler as any;
+    }),
+    
+    skipWaiting: jest.fn(() => Promise.resolve()),
+    
+    clients: {
+      claim: jest.fn(() => Promise.resolve()),
+      get: jest.fn(async (id: string) => null),
+      matchAll: jest.fn(async () => []),
+      openWindow: jest.fn(async (url: string) => null)
+    },
+    
+    registration: new MockServiceWorkerRegistration()
+  };
+  
+  (global as any).self = mockSelf;
+  
+  return {
+    mockSelf,
+    events,
+    triggerInstall: () => {
+      const event = new MockExtendableEvent('install');
+      events.install(event);
+      return event.promises;
+    },
+    triggerActivate: () => {
+      const event = new MockExtendableEvent('activate');
+      events.activate(event);
+      return event.promises;
+    },
+    triggerFetch: (request: Request) => {
+      const event = createMockFetchEvent(request);
+      events.fetch(event);
+      return event;
+    },
+    cleanup: () => {
+      delete (global as any).self;
     }
+  };
+};
+
+// Create Mock Fetch Event
+export const createMockFetchEvent = (request: Request): FetchEvent & { response?: Response } => {
+  let respondWithCalled = false;
+  let response: Response | undefined;
+  
+  const baseEvent = new MockExtendableEvent('fetch');
+  const event = Object.assign(baseEvent, {
+    request,
+    clientId: 'test-client-id',
+    resultingClientId: '',
+    replacesClientId: '',
+    handled: Promise.resolve(undefined),
+    preloadResponse: Promise.resolve(undefined),
+    response: undefined as Response | undefined,
+    
+    respondWith(r: Response | Promise<Response>): void {
+      if (respondWithCalled) {
+        throw new Error('respondWith() already called');
+      }
+      respondWithCalled = true;
+      
+      Promise.resolve(r).then(res => {
+        response = res;
+        event.response = res;
+      });
+    }
+  }) as FetchEvent & { response?: Response };
+  
+  return event;
+};
+
+// Helper to create mock clients
+export const createMockClient = (options: Partial<Client> = {}): Client => ({
+  id: 'test-client-123',
+  type: 'window',
+  url: 'http://localhost:3000/',
+  postMessage: jest.fn(),
+  ...options
+});
+
+// Helper to simulate network conditions in service worker
+export const simulateOfflineInServiceWorker = () => {
+  const originalFetch = global.fetch;
+  global.fetch = jest.fn(() => 
+    Promise.reject(new Error('Network request failed'))
+  ) as any;
+  
+  return () => {
+    global.fetch = originalFetch;
+  };
+};
+
+// Helper to test cache strategies
+export const testCacheStrategy = async (
+  strategy: 'cache-first' | 'network-first' | 'stale-while-revalidate',
+  request: Request,
+  cachedResponse?: Response,
+  networkResponse?: Response
+) => {
+  const cache = new MockCache();
+  if (cachedResponse) {
+    await cache.put(request, cachedResponse);
+  }
+  
+  const originalFetch = global.fetch;
+  global.fetch = jest.fn(() => 
+    networkResponse 
+      ? Promise.resolve(networkResponse)
+      : Promise.reject(new Error('Network error'))
+  ) as any;
+  
+  let result: Response | undefined;
+  
+  switch (strategy) {
+    case 'cache-first':
+      result = await cache.match(request) || await fetch(request).catch(() => undefined);
+      break;
+      
+    case 'network-first':
+      try {
+        result = await fetch(request);
+        await cache.put(request, result.clone());
+      } catch {
+        result = await cache.match(request);
+      }
+      break;
+      
+    case 'stale-while-revalidate':
+      const cached = await cache.match(request);
+      if (cached) {
+        result = cached;
+        // Update cache in background
+        fetch(request).then(response => {
+          cache.put(request, response);
+        }).catch(() => {});
+      } else {
+        result = await fetch(request);
+        await cache.put(request, result.clone());
+      }
+      break;
+  }
+  
+  global.fetch = originalFetch;
+  return result;
+};
+
+// Setup function for service worker tests
+export function setupServiceWorkerTests() {
+  beforeEach(() => {
+    ServiceWorkerTestUtils.mockNavigatorServiceWorker();
+    ServiceWorkerTestUtils.mockCacheAPI();
   });
 
-  return events;
+  afterEach(() => {
+    ServiceWorkerTestUtils.cleanup();
+  });
 }
 
-// Helper to create mock fetch event
-export function createMockFetchEvent(
-  request: Request,
-  clientId?: string
-): any {
-  const respondWith = jest.fn();
-  const waitUntil = jest.fn();
-
-  return {
-    request,
-    clientId: clientId || 'test-client',
-    resultingClientId: clientId || 'test-client',
-    replacesClientId: '',
-    handled: Promise.resolve(),
-    preloadResponse: Promise.resolve(undefined),
-    respondWith,
-    waitUntil,
-    type: 'fetch',
-    target: null,
-    currentTarget: null,
-    eventPhase: 0,
-    bubbles: false,
-    cancelable: false,
-    defaultPrevented: false,
-    composed: false,
-    isTrusted: true,
-    timeStamp: Date.now(),
-    srcElement: null,
-    returnValue: true,
-    cancelBubble: false,
-    NONE: 0,
-    CAPTURING_PHASE: 1,
-    AT_TARGET: 2,
-    BUBBLING_PHASE: 3,
-    composedPath: () => [],
-    initEvent: () => {},
-    preventDefault: () => {},
-    stopImmediatePropagation: () => {},
-    stopPropagation: () => {}
-  } as unknown as FetchEvent;
-}
+export default ServiceWorkerTestUtils;

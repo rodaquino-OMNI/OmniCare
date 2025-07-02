@@ -84,7 +84,9 @@ export const useAuthStore = create<AuthState>()(
           const frontendRole = mapToFrontendRole(data.user.role);
           const userData = {
             ...data.user,
-            role: frontendRole
+            role: frontendRole,
+            // Convert date string to Date object if present
+            passwordChangedAt: data.user.passwordChangedAt ? new Date(data.user.passwordChangedAt) : undefined
           };
           
           // Use permissions from API response or calculate from role
@@ -182,7 +184,9 @@ export const useAuthStore = create<AuthState>()(
           const frontendRole = mapToFrontendRole(data.user.role);
           const userData = {
             ...data.user,
-            role: frontendRole
+            role: frontendRole,
+            // Convert date string to Date object if present
+            passwordChangedAt: data.user.passwordChangedAt ? new Date(data.user.passwordChangedAt) : undefined
           };
           
           set({
@@ -238,7 +242,9 @@ export const useAuthStore = create<AuthState>()(
             const frontendRole = mapToFrontendRole(data.user.role);
             const userData = {
               ...data.user,
-              role: frontendRole
+              role: frontendRole,
+              // Convert date string to Date object
+              passwordChangedAt: data.user.passwordChangedAt ? new Date(data.user.passwordChangedAt) : new Date()
             };
             const userPermissions = getRolePermissions(frontendRole);
             
@@ -274,7 +280,13 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'omnicare-auth-storage',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => 
+        typeof window !== 'undefined' ? localStorage : {
+          getItem: () => null,
+          setItem: () => {},
+          removeItem: () => {},
+        }
+      ),
       partialize: (state) => ({
         user: state.user,
         tokens: state.tokens,
@@ -282,6 +294,7 @@ export const useAuthStore = create<AuthState>()(
         permissions: state.permissions,
         isAuthenticated: state.isAuthenticated,
       }),
+      skipHydration: true,
     }
   )
 );
@@ -314,29 +327,97 @@ export const useAuth = () => {
   };
 };
 
-// Auto-refresh token on app load
-if (typeof window !== 'undefined') {
+// Initialize auth store with proper SSR handling
+export const initializeAuthStore = () => {
+  if (typeof window === 'undefined') return;
+  
   const store = useAuthStore.getState();
   const savedTokens = localStorage.getItem('omnicare_access_token');
   
-  if (savedTokens && store.isAuthenticated) {
-    // Get current user info on app load
-    store.getCurrentUser();
+  // Check for interrupted session
+  const sessionData = localStorage.getItem('auth_session_data');
+  let wasInterrupted = false;
+  
+  if (sessionData) {
+    try {
+      const session = JSON.parse(sessionData);
+      const timeSinceLastActivity = Date.now() - session.lastActivity;
+      const maxResumeTime = 30 * 60 * 1000; // 30 minutes
+      
+      if (timeSinceLastActivity < maxResumeTime && session.wasAuthenticated) {
+        wasInterrupted = true;
+      }
+    } catch (error) {
+      console.error('Failed to parse session data:', error);
+    }
+  }
+  
+  if (savedTokens && (store.isAuthenticated || wasInterrupted)) {
+    // Restore session if interrupted
+    if (wasInterrupted && !store.isAuthenticated) {
+      // Resuming interrupted authentication session
+      // Try to refresh the token to restore session
+      store.refreshAuth();
+    } else {
+      // Get current user info on app load
+      store.getCurrentUser();
+    }
     
-    // Set up automatic token refresh
+    // Set up automatic token refresh with session monitoring
     const refreshInterval = setInterval(() => {
       const currentStore = useAuthStore.getState();
       if (currentStore.isAuthenticated && currentStore.tokens) {
+        // Save session activity
+        const sessionData = {
+          lastActivity: Date.now(),
+          wasAuthenticated: true,
+          tokenExpiry: Date.now() + (currentStore.tokens.expiresIn * 1000)
+        };
+        localStorage.setItem('auth_session_data', JSON.stringify(sessionData));
+        
         // Check if token is close to expiring (refresh 5 minutes before expiry)
         const expiryTime = Date.now() + (currentStore.tokens.expiresIn * 1000);
-        const refreshThreshold = 5 * 6 * 1000; // 5 minutes
+        const refreshThreshold = 5 * 60 * 1000; // 5 minutes
         
         if (expiryTime - Date.now() < refreshThreshold) {
           currentStore.refreshAuth();
         }
       } else {
+        // Clear session data when not authenticated
+        localStorage.removeItem('auth_session_data');
         clearInterval(refreshInterval);
       }
     }, 60000); // Check every minute
+    
+    // Handle page visibility for session management
+    document.addEventListener('visibilitychange', () => {
+      const currentStore = useAuthStore.getState();
+      if (currentStore.isAuthenticated) {
+        const sessionData = {
+          lastActivity: Date.now(),
+          wasAuthenticated: true,
+          tokenExpiry: currentStore.tokens ? Date.now() + (currentStore.tokens.expiresIn * 1000) : 0,
+          hidden: document.hidden
+        };
+        localStorage.setItem('auth_session_data', JSON.stringify(sessionData));
+      }
+    });
+    
+    // Handle before unload
+    window.addEventListener('beforeunload', () => {
+      const currentStore = useAuthStore.getState();
+      if (currentStore.isAuthenticated) {
+        const sessionData = {
+          lastActivity: Date.now(),
+          wasAuthenticated: true,
+          tokenExpiry: currentStore.tokens ? Date.now() + (currentStore.tokens.expiresIn * 1000) : 0,
+          isUnloading: true
+        };
+        localStorage.setItem('auth_session_data', JSON.stringify(sessionData));
+      }
+    });
+  } else {
+    // Clean up session data if no saved tokens
+    localStorage.removeItem('auth_session_data');
   }
-}
+};

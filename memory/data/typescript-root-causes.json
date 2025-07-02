@@ -1,0 +1,155 @@
+{
+  "namespace": "swarm-development-centralized-1751482515138/error-analyzer/root-causes",
+  "critical_root_causes": {
+    "1_missing_dependencies": {
+      "impact_score": 10,
+      "error_count": 9,
+      "fix_complexity": "LOW",
+      "description": "Missing npm packages preventing compilation",
+      "specific_issues": [
+        "react-router-dom not installed but imported",
+        "dexie package missing for IndexedDB optimization", 
+        "Path mappings pointing to non-existent modules"
+      ],
+      "fix_strategy": "Install missing packages: npm install react-router-dom dexie",
+      "estimated_time": "15 minutes"
+    },
+    "2_interface_contract_violations": {
+      "impact_score": 9,
+      "error_count": 215,
+      "fix_complexity": "MEDIUM",
+      "description": "Service interfaces not matching implementations",
+      "specific_issues": [
+        "BackgroundSyncService missing methods: getPendingTasks, removeTask, stopPeriodicSync",
+        "OfflineNotesService missing methods: saveDraft, getNotes, updateNote, deleteNote",
+        "NoteSyncQueueService methods marked private but called externally",
+        "TestProvidersProps missing medplum property"
+      ],
+      "fix_strategy": "Update interface definitions to match actual implementations",
+      "estimated_time": "3-4 hours"
+    },
+    "3_user_type_definition_incomplete": {
+      "impact_score": 8,
+      "error_count": 45,
+      "fix_complexity": "LOW",
+      "description": "User interface missing required properties",
+      "specific_issues": [
+        "Missing: isMfaEnabled, passwordChangedAt, failedLoginAttempts",
+        "USER_ROLES enum missing: COMPLIANCE_OFFICER, MEDICAL_ASSISTANT, LAB_TECHNICIAN"
+      ],
+      "fix_strategy": "Add missing properties to User interface and USER_ROLES enum",
+      "estimated_time": "30 minutes"
+    },
+    "4_fhir_type_integration_issues": {
+      "impact_score": 7,
+      "error_count": 80,
+      "fix_complexity": "MEDIUM",
+      "description": "FHIR type definitions inconsistent with usage",
+      "specific_issues": [
+        "Patient.gender type mismatch (string vs union literal)",
+        "Patient.telecom ContactPoint system type violations",
+        "Encounter missing 'vitals' property in tests",
+        "VitalSigns missing 'updatedAt' property"
+      ],
+      "fix_strategy": "Create proper FHIR type adapters and fix test fixtures",
+      "estimated_time": "2-3 hours"
+    },
+    "5_redis_service_type_mismatches": {
+      "impact_score": 6,
+      "error_count": 25,
+      "fix_complexity": "MEDIUM",
+      "description": "Redis client type definitions incompatible",
+      "specific_issues": [
+        "RedisOptions not exported from redis package",
+        "Timer vs Timeout type mismatches",
+        "Redis client method signatures changed",
+        "Connection pooling type issues"
+      ],
+      "fix_strategy": "Update Redis type imports and fix connection handling",
+      "estimated_time": "2 hours"
+    },
+    "6_strict_null_checking_violations": {
+      "impact_score": 5,
+      "error_count": 70,
+      "fix_complexity": "LOW-MEDIUM",
+      "description": "Insufficient null/undefined handling with strict TypeScript",
+      "specific_issues": [
+        "String | undefined not assignable to string",
+        "Object possibly undefined property access",
+        "Optional parameters used as required"
+      ],
+      "fix_strategy": "Add null checks and optional chaining throughout codebase",
+      "estimated_time": "3-4 hours"
+    },
+    "7_test_infrastructure_broken": {
+      "impact_score": 8,
+      "error_count": 60,
+      "fix_complexity": "MEDIUM",
+      "description": "Test utilities and mocks have type errors",
+      "specific_issues": [
+        "TestProviders missing medplum prop in all accessibility tests",
+        "Mock service implementations don't match real interfaces",
+        "Test fixtures have incorrect FHIR types",
+        "Zustand mock type incompatibilities"
+      ],
+      "fix_strategy": "Fix test provider interfaces and update all test mocks",
+      "estimated_time": "2-3 hours"
+    }
+  },
+  "dependency_chains": {
+    "user_interface_cascade": {
+      "root": "User interface incomplete",
+      "affects": ["auth stores", "test fixtures", "authentication components"],
+      "error_propagation": 25
+    },
+    "service_interface_cascade": {
+      "root": "Service method signatures mismatched",
+      "affects": ["offline sync", "notes management", "background services"],
+      "error_propagation": 50
+    },
+    "fhir_type_cascade": {
+      "root": "FHIR type definitions inconsistent", 
+      "affects": ["patient workflows", "clinical components", "e2e tests"],
+      "error_propagation": 35
+    },
+    "test_infrastructure_cascade": {
+      "root": "Test utilities type broken",
+      "affects": ["all test files", "accessibility tests", "integration tests"], 
+      "error_propagation": 60
+    }
+  },
+  "fix_order_optimization": {
+    "stage_1_foundations": [
+      "Install missing dependencies (react-router-dom, dexie)",
+      "Fix User interface (add isMfaEnabled, passwordChangedAt, failedLoginAttempts)",
+      "Fix TestProvidersProps interface (add medplum property)",
+      "Update USER_ROLES enum (add missing roles)"
+    ],
+    "stage_2_services": [
+      "Align BackgroundSyncService interface with implementation",
+      "Fix OfflineNotesService method signatures and visibility",
+      "Update NoteSyncQueueService private method access",
+      "Resolve Redis service type imports and method signatures"
+    ],
+    "stage_3_fhir_integration": [
+      "Create FHIR Patient type adapters for gender and telecom",
+      "Fix test fixtures to use proper FHIR types",
+      "Add missing properties to FHIR resource interfaces",
+      "Implement FHIR type validation utilities"
+    ],
+    "stage_4_strict_compliance": [
+      "Add null checks for all string | undefined cases",
+      "Implement optional chaining for object property access",
+      "Fix Timer vs Timeout type usage",
+      "Resolve all remaining type assignment issues"
+    ]
+  },
+  "success_metrics": {
+    "stage_1_target": "Reduce errors from 525 to ~400 (125 error reduction)",
+    "stage_2_target": "Reduce errors from 400 to ~250 (150 error reduction)", 
+    "stage_3_target": "Reduce errors from 250 to ~100 (150 error reduction)",
+    "stage_4_target": "Reduce errors from 100 to 0 (100 error reduction)",
+    "total_estimated_time": "12-16 hours",
+    "parallel_work_potential": "Stages 2-4 can be partially parallelized by different developers"
+  }
+}

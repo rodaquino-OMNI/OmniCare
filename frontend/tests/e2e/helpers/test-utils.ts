@@ -369,7 +369,7 @@ export class WaitHelpers {
   /**
    * Wait for toast notification
    */
-  async waitForToast(message?: string) {
+  async waitForToast(message?: string | RegExp) {
     const toast = this.page.locator('.toast, [data-testid="toast"], [role="alert"]');
     
     if (message) {

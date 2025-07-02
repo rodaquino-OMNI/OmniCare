@@ -1,131 +1,194 @@
-# OmniCare EMR - Administrative Workflows System
+# OmniCare EMR - FHIR-Compliant Healthcare Platform
 
 ![OmniCare EMR](https://img.shields.io/badge/OmniCare-EMR-blue.svg)
+![FHIR R4](https://img.shields.io/badge/FHIR-R4-green.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB)
 ![Next.js](https://img.shields.io/badge/Next.js-black?logo=next.js&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?logo=tailwind-css&logoColor=white)
+![Medplum](https://img.shields.io/badge/Medplum-4A90E2?logo=medplum&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-DC382D?logo=redis&logoColor=white)
 
-A comprehensive Electronic Medical Record (EMR) system focused on administrative workflows for healthcare facilities. Built with modern web technologies and designed for scalability, compliance, and user experience.
+A comprehensive FHIR R4-compliant Electronic Medical Record (EMR) system built for modern healthcare facilities. Features full clinical workflows, administrative tools, offline-first architecture, and enterprise-grade security and compliance.
 
 ## 🌟 Features
 
-### Core Administrative Modules
+### Core Clinical Modules
 
-#### 📋 Patient Registration & Management
+#### 🏥 FHIR R4 Compliance
 
-- **Multi-step Registration Wizard**: Streamlined patient onboarding process
-- **Duplicate Detection**: Advanced fuzzy matching to prevent duplicate records
-- **Insurance Verification**: Real-time eligibility checking and benefit verification
-- **Patient Portal Integration**: Automatic credential generation and activation
-- **Document Capture**: Digital consent forms and ID verification
-- **Emergency Contact Management**: Comprehensive contact information tracking
+- **Complete FHIR Coverage**: Full implementation of FHIR R4 resources and operations
+- **Medplum Integration**: Enterprise-grade FHIR server with Medplum platform
+- **Interoperability**: Seamless data exchange with external healthcare systems
+- **SMART on FHIR**: Support for SMART app ecosystem and third-party integrations
+- **Bulk Data Operations**: Efficient large-scale data import/export capabilities
+- **Real-time Subscriptions**: FHIR subscription-based real-time notifications
 
-#### 📅 Appointment Management
+#### 👨‍⚕️ Clinical Workflows
 
-- **Interactive Calendar**: Multiple view options (day, week, month) with drag-and-drop scheduling
-- **Provider Availability**: Real-time availability checking and conflict prevention
-- **Automated Reminders**: SMS, email, and phone reminder system
-- **Wait List Management**: Automated patient notification for cancellations
-- **Room & Resource Allocation**: Efficient facility resource management
-- **No-Show Tracking**: Analytics and follow-up automation
+- **Task Management**: FHIR Task-based clinical workflow coordination
+- **Clinical Notes**: Advanced clinical documentation with offline support
+- **Order Management**: Comprehensive order entry and tracking system
+- **Care Team Coordination**: Multi-provider care team communication and task assignment
+- **Clinical Decision Support**: CDS Hooks integration for evidence-based care
+- **Quality Measures**: Automated quality reporting and population health analytics
 
-#### 💰 Billing & Revenue Cycle
+#### 📋 Patient Management
 
-- **Claims Management**: Automated claim creation, submission, and tracking
-- **Code Validation**: ICD-10 and CPT code verification and suggestion
-- **Insurance Processing**: Authorization tracking and benefit verification
-- **Payment Processing**: Multiple payment methods and installment plans
-- **Aging Reports**: Comprehensive accounts receivable analytics
-- **Denial Management**: Automated appeals and resubmission workflows
+- **FHIR Patient Resources**: Complete patient demographics and identification
+- **Encounter Management**: Comprehensive visit tracking and documentation
+- **Care Plans**: Structured care planning with goal tracking
+- **Family History**: Detailed family medical history documentation
+- **Social Determinants**: Social determinants of health assessment and tracking
+- **Patient Portal**: Secure patient access to health records and communication
 
-#### 📊 Reporting & Analytics
+#### 🧪 Diagnostic Integration
 
-- **Real-time Dashboards**: Key performance indicators and operational metrics
-- **Compliance Monitoring**: Automated alerts for regulatory requirements
-- **Custom Reports**: Flexible report generation in multiple formats (PDF, Excel, CSV)
-- **Performance Analytics**: Provider productivity and facility efficiency metrics
-- **Patient Satisfaction**: Feedback collection and trend analysis
-- **Financial Reporting**: Revenue cycle performance and collection analytics
+- **Lab Results**: FHIR Observation resources for laboratory data
+- **Imaging**: FHIR ImagingStudy and Media resources for radiology integration
+- **Diagnostic Reports**: Structured reporting with FHIR DiagnosticReport
+- **Vital Signs**: Continuous vital sign monitoring and trending
+- **Specimen Tracking**: Laboratory specimen management and chain of custody
+- **Reference Ranges**: Age and gender-specific reference value management
 
-### 🔧 Administrative Tools
+#### 💊 Medication Management
 
-#### 👥 User Management
+- **FHIR MedicationRequest**: Electronic prescribing with decision support
+- **Medication Reconciliation**: Comprehensive medication history and reconciliation
+- **Drug Interaction Checking**: Real-time drug-drug and drug-allergy checking
+- **Pharmacy Integration**: Electronic prescription transmission to pharmacies
+- **Medication Administration**: FHIR MedicationAdministration tracking
+- **Formulary Management**: Health plan formulary integration and cost optimization
 
-- **Role-based Access Control**: Granular permissions and security
-- **Staff Scheduling**: Automated scheduling with conflict resolution
-- **Performance Tracking**: Individual and departmental metrics
-- **Audit Logging**: Comprehensive activity tracking for compliance
+### 🏗️ Enterprise Architecture
 
-#### 📁 Document Management
+#### 🔄 Offline-First Design
 
-- **Digital Storage**: Secure document upload and organization
-- **Release of Information**: Automated ROI request processing
-- **Retention Policies**: Automated archiving and deletion
-- **Version Control**: Document history and change tracking
+- **IndexedDB Storage**: Client-side FHIR resource caching and offline access
+- **Intelligent Sync**: Conflict resolution and delta synchronization
+- **Progressive Web App**: Service worker for offline functionality
+- **Background Sync**: Automatic synchronization when connectivity restored
+- **Selective Data**: Smart data prefetching based on user role and context
+- **Encrypted Storage**: Client-side encryption for sensitive offline data
 
-#### 📦 Inventory Management
+#### ⚡ Performance & Scalability
 
-- **Supply Tracking**: Real-time inventory levels and usage
-- **Automated Ordering**: Reorder point notifications and purchase orders
-- **Vendor Management**: Supplier relationship and contract tracking
-- **Cost Analysis**: Inventory turnover and cost optimization
+- **Redis Caching**: Multi-tier caching with Redis for optimal performance
+- **Database Optimization**: PostgreSQL with materialized views and indexing
+- **Connection Pooling**: Efficient database connection management
+- **Load Balancing**: Horizontal scaling with container orchestration
+- **CDN Integration**: Global content delivery for static assets
+- **Performance Monitoring**: Real-time application performance monitoring
+
+#### 🔐 Security & Compliance
+
+- **HIPAA Compliance**: Comprehensive HIPAA security and privacy controls
+- **OAuth 2.0 + SMART**: Industry-standard authentication and authorization
+- **JWT Security**: Secure token-based authentication with refresh mechanism
+- **Role-Based Access**: Granular permissions based on healthcare roles
+- **Audit Logging**: Complete audit trail for all data access and modifications
+- **Data Encryption**: End-to-end encryption for data in transit and at rest
 
 ## 🚀 Technology Stack
 
-### Frontend
+### Backend Services
 
-- **Next.js 14**: React framework with App Router for optimal performance
-- **TypeScript**: Full type safety and enhanced developer experience
-- **Tailwind CSS**: Utility-first CSS framework with custom healthcare theme
-- **React Hook Form**: Performant forms with validation
-- **Recharts**: Data visualization and analytics charts
-- **React Big Calendar**: Interactive appointment scheduling
-- **Heroicons**: Consistent and accessible icon library
+- **Node.js + TypeScript**: High-performance server runtime with full type safety
+- **Express.js**: Robust web application framework with security middleware
+- **Medplum SDK**: Enterprise FHIR R4 server and platform integration
+- **PostgreSQL**: Primary database with FHIR resource storage
+- **Redis**: Caching, session management, and rate limiting
+- **TypeORM**: Database ORM with migration support and optimization
+- **Winston**: Comprehensive logging and audit trail
 
-### Architecture
+### Frontend Application
 
-- **Component-based Design**: Modular and reusable UI components
-- **Service Layer**: Comprehensive API abstraction and business logic
-- **Utility Functions**: Extensive helper functions for all workflows
-- **Type System**: Complete TypeScript interfaces for all data models
-- **Responsive Design**: Mobile-first approach with accessibility
+- **Next.js 15**: React framework with App Router and Turbopack
+- **React 19**: Latest React with concurrent features and optimizations
+- **TypeScript**: Strict type safety across the entire application
+- **Mantine 7**: Modern React components with healthcare-focused theming
+- **TailwindCSS**: Utility-first CSS with custom medical design system
+- **TanStack Query**: Powerful data fetching with caching and synchronization
+- **Zustand**: Lightweight state management with persistence
+- **IndexedDB**: Client-side database for offline FHIR resources
 
-### Development Tools
+### FHIR & Healthcare Integration
 
-- **ESLint**: Code quality and consistency
-- **Prettier**: Code formatting
-- **Yup**: Schema validation for forms
-- **date-fns**: Modern date manipulation
-- **Lodash**: Utility functions for data processing
+- **FHIR R4**: Complete implementation of HL7 FHIR Release 4
+- **Medplum Core**: FHIR client library with TypeScript support
+- **SMART on FHIR**: OAuth 2.0 authorization framework for healthcare
+- **CDS Hooks**: Clinical decision support integration
+- **FHIR Subscriptions**: Real-time resource change notifications
+- **HL7 v2**: Legacy healthcare message format support
 
-## 🏗️ Project Structure
+### DevOps & Infrastructure
+
+- **Docker**: Containerization for consistent deployment environments
+- **Kubernetes**: Container orchestration for production scalability
+- **GitHub Actions**: CI/CD pipeline with automated testing and deployment
+- **Prometheus**: Application and infrastructure monitoring
+- **Grafana**: Performance dashboards and alerting
+- **Terraform**: Infrastructure as code for cloud deployment
+
+### Testing & Quality Assurance
+
+- **Jest**: Unit and integration testing framework
+- **Playwright**: End-to-end testing with cross-browser support
+- **React Testing Library**: Component testing with accessibility focus
+- **Artillery**: Load testing and performance validation
+- **ESLint**: Code quality enforcement with healthcare-specific rules
+- **SonarQube**: Code quality and security vulnerability scanning
+
+## 🏗️ Project Architecture
 
 ```text
-src/
-├── components/           # React components
-│   ├── AdminDashboard.tsx       # Main administrative dashboard
-│   ├── PatientRegistration.tsx  # Patient registration workflow
-│   ├── AppointmentManagement.tsx # Appointment scheduling system
-│   ├── BillingManagement.tsx    # Revenue cycle management
-│   └── ReportingAnalytics.tsx   # Reporting and analytics
+OmniCare/
+├── backend/                 # Node.js FHIR Backend
+│   ├── src/
+│   │   ├── controllers/     # API route controllers
+│   │   ├── services/        # Business logic and FHIR operations
+│   │   ├── middleware/      # Security, auth, and performance middleware
+│   │   ├── models/          # Database models and FHIR resources
+│   │   ├── repositories/    # Data access layer
+│   │   ├── types/           # TypeScript definitions
+│   │   └── utils/           # Utility functions and helpers
+│   ├── tests/               # Comprehensive test suites
+│   └── migrations/          # Database migration scripts
 │
-├── types/               # TypeScript type definitions
-│   └── administrative.ts       # Complete type system for admin workflows
+├── frontend/                # Next.js React Frontend
+│   ├── src/
+│   │   ├── app/             # Next.js App Router pages
+│   │   │   ├── dashboard/   # Clinical dashboard
+│   │   │   ├── patients/    # Patient management
+│   │   │   ├── clinical/    # Clinical workflows
+│   │   │   └── api/         # API route handlers
+│   │   ├── components/      # React components
+│   │   │   ├── patient/     # Patient-specific components
+│   │   │   ├── clinical/    # Clinical workflow components
+│   │   │   ├── offline/     # Offline-first components
+│   │   │   └── ui/          # Base UI components
+│   │   ├── services/        # API integration and business logic
+│   │   ├── stores/          # Zustand state management
+│   │   ├── hooks/           # Custom React hooks
+│   │   ├── types/           # TypeScript definitions
+│   │   └── utils/           # Utility functions
+│   └── __tests__/           # Frontend test suites
 │
-├── utils/               # Utility functions
-│   └── administrative.ts       # Helper functions for all workflows
+├── shared/                  # Shared types and utilities
+│   ├── types/               # Common TypeScript definitions
+│   └── utils/               # Shared utility functions
 │
-├── services/            # API service layer
-│   └── administrative.ts       # Service classes for backend integration
+├── devops/                  # Infrastructure and deployment
+│   ├── docker/              # Container configurations
+│   ├── kubernetes/          # K8s deployment manifests
+│   └── monitoring/          # Monitoring and alerting configs
 │
-├── styles/              # Global styles
-│   └── globals.css            # Tailwind CSS and custom styles
+├── docs/                    # Documentation
+│   ├── api-docs/            # API documentation
+│   ├── deployment/          # Deployment guides
+│   └── architecture/        # System architecture docs
 │
-└── pages/               # Next.js pages
-    ├── _app.tsx               # Application entry point
-    └── admin/
-        └── dashboard.tsx      # Main dashboard page
+└── scripts/                 # Build and deployment scripts
 ```
 
 ## 📖 Getting Started
@@ -168,11 +231,22 @@ src/
 ### Available Scripts
 
 ```bash
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run start        # Start production server
-npm run lint         # Run ESLint
-npm run typecheck    # Run TypeScript type checking
+# Root Project Scripts
+npm run dev              # Start both backend and frontend in development
+npm run build            # Build both backend and frontend
+npm run test             # Run all tests (unit, integration, e2e)
+npm run lint             # Lint both backend and frontend
+npm run typecheck        # Type check both projects
+
+# Backend Scripts
+npm run build:backend    # Build backend only
+npm run start:backend    # Start backend production server
+npm run test:backend     # Run backend tests
+
+# Frontend Scripts
+npm run build:frontend   # Build frontend only
+npm run start:frontend   # Start frontend production server
+npm run test:frontend    # Run frontend tests
 ```
 
 ## 🔐 Security & Compliance
@@ -218,24 +292,66 @@ npm run typecheck    # Run TypeScript type checking
 
 ## 🔧 Configuration
 
-### Environment Variables
+### Environment Configuration
 
-Create a `.env.local` file in the root directory:
+#### Backend (.env)
+
+```bash
+# Server Configuration
+PORT=8080
+NODE_ENV=development
+
+# Database
+DATABASE_URL=postgresql://username:password@localhost:5432/omnicare
+DATABASE_SSL=false
+
+# Redis
+REDIS_URL=redis://localhost:6379
+REDIS_PASSWORD=your-redis-password
+
+# Medplum FHIR Server
+MEDPLUM_BASE_URL=https://api.medplum.com
+MEDPLUM_CLIENT_ID=your-medplum-client-id
+MEDPLUM_CLIENT_SECRET=your-medplum-client-secret
+
+# Authentication
+JWT_SECRET=your-super-secure-jwt-secret
+JWT_EXPIRES_IN=15m
+REFRESH_TOKEN_EXPIRES_IN=7d
+
+# Security
+BCRYPT_ROUNDS=12
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+
+# Monitoring
+PROMETHEUS_PORT=9090
+GRAFANA_URL=http://localhost:3000
+```
+
+#### Frontend (.env.local)
 
 ```bash
 # API Configuration
-API_BASE_URL=http://localhost:3001
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8080/api
+NEXT_PUBLIC_WS_URL=ws://localhost:8080
 
-# Database Configuration
-DATABASE_URL=postgresql://username:password@localhost:5432/omnicare
+# Medplum Configuration
+NEXT_PUBLIC_MEDPLUM_BASE_URL=https://api.medplum.com/fhir/R4
+NEXT_PUBLIC_MEDPLUM_CLIENT_ID=your-medplum-client-id
 
 # Authentication
-AUTH_SECRET=your-secret-key
+NEXT_PUBLIC_AUTH_DOMAIN=your-auth-domain
+NEXT_PUBLIC_AUTH_CLIENT_ID=your-auth-client-id
 
-# External Services
-INSURANCE_API_KEY=your-insurance-api-key
-SMS_API_KEY=your-sms-api-key
-EMAIL_API_KEY=your-email-api-key
+# Feature Flags
+NEXT_PUBLIC_ENABLE_OFFLINE_MODE=true
+NEXT_PUBLIC_ENABLE_VOICE_RECOGNITION=false
+NEXT_PUBLIC_ENABLE_CDS_HOOKS=true
+
+# Analytics
+NEXT_PUBLIC_ANALYTICS_ID=your-analytics-id
+NEXT_PUBLIC_SENTRY_DSN=your-sentry-dsn
 ```
 
 ### Tailwind Configuration
@@ -290,38 +406,78 @@ npm run start
 ### Docker Deployment
 
 ```bash
-docker build -t omnicare-emr .
-docker run -p 3000:3000 omnicare-emr
+# Development Environment
+docker-compose up -d
+
+# Production Build
+docker build -f devops/docker/backend/Dockerfile -t omnicare-backend .
+docker build -f devops/docker/frontend/Dockerfile -t omnicare-frontend .
+
+# Run Production Containers
+docker run -d -p 8080:8080 omnicare-backend
+docker run -d -p 3000:3000 omnicare-frontend
 ```
 
-### Vercel Deployment
+### Kubernetes Deployment
 
 ```bash
-vercel --prod
+# Deploy to Kubernetes cluster
+kubectl apply -f devops/kubernetes/
+
+# Monitor deployment
+kubectl get pods -n omnicare
+kubectl logs -f deployment/omnicare-backend -n omnicare
+```
+
+### Cloud Deployment
+
+```bash
+# AWS ECS
+terraform init devops/terraform/aws
+terraform apply
+
+# Azure Container Instances
+terraform init devops/terraform/azure
+terraform apply
 ```
 
 ## 🔮 Roadmap
 
-### Phase 2: Backend Integration
+### Phase 1: Core FHIR Implementation ✅
 
-- [ ] REST API development with Node.js
-- [ ] PostgreSQL database implementation
-- [ ] Authentication and authorization system
-- [ ] Real-time notifications with WebSocket
+- [x] FHIR R4 server with Medplum integration
+- [x] PostgreSQL database with FHIR resource storage
+- [x] OAuth 2.0 + SMART on FHIR authentication
+- [x] Real-time WebSocket notifications
+- [x] Offline-first frontend with IndexedDB
+- [x] Clinical workflow task management
 
-### Phase 3: Advanced Features
+### Phase 2: Advanced Clinical Features 🚧
 
-- [ ] HL7 FHIR integration for interoperability
-- [ ] AI-powered clinical decision support
-- [ ] Advanced analytics and machine learning
+- [x] Clinical decision support (CDS Hooks)
+- [x] Advanced clinical documentation
+- [x] Laboratory and imaging integration
+- [x] Medication management with e-prescribing
+- [ ] Quality measure reporting (in progress)
+- [ ] Population health analytics
+
+### Phase 3: Enterprise Integration 📋
+
+- [ ] Multi-tenant architecture
+- [ ] HL7 v2 message processing
+- [ ] Epic/Cerner integration connectors
+- [ ] Advanced analytics and ML insights
 - [ ] Mobile application development
+- [ ] Telehealth integration
 
-### Phase 4: Enterprise Features
+### Phase 4: Platform Expansion 🎯
 
 - [ ] Multi-facility support
-- [ ] Advanced reporting suite
-- [ ] Integration marketplace
+- [ ] Healthcare marketplace integration
+- [ ] API ecosystem and third-party apps
 - [ ] White-label solutions
+- [ ] International localization
+- [ ] Advanced AI/ML clinical tools
 
 ## 🤝 Contributing
 
@@ -354,13 +510,15 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Issue Tracker](https://github.com/omnicare/issues)
 - [Slack Community](https://omnicare-emr.slack.com)
 
-### Professional Support
+### Enterprise Support
 
-For enterprise support and custom development:
+For enterprise support, integration assistance, and custom development:
 
-- Email: [support@omnicare-emr.com](mailto:support@omnicare-emr.com)
-- Phone: 1-800-OMNICARE
-- Website: <https://www.omnicare-emr.com>
+- **Technical Support**: [support@omnicare-emr.com](mailto:support@omnicare-emr.com)
+- **Sales & Partnerships**: [sales@omnicare-emr.com](mailto:sales@omnicare-emr.com)
+- **Security & Compliance**: [security@omnicare-emr.com](mailto:security@omnicare-emr.com)
+- **Status & Monitoring**: [https://status.omnicare-emr.com](https://status.omnicare-emr.com)
+- **Developer Portal**: [https://developers.omnicare-emr.com](https://developers.omnicare-emr.com)
 
 ## 🙏 Acknowledgments
 

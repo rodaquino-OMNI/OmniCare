@@ -106,7 +106,7 @@ export function LoginForm() {
               <IconStethoscope size={32} className="text-primary" />
             </div>
             <div>
-              <Title order={2} className="text-gray-8ResourceHistoryTable">
+              <Title order={2} className="text-gray-800">
                 {APP_NAME}
               </Title>
               <Text size="sm" c="dimmed">
@@ -116,7 +116,7 @@ export function LoginForm() {
           </div>
         </Stack>
 
-        <Title order={3} ta="center" mb="md" className="text-gray-7ResourceHistoryTable">
+        <Title order={3} ta="center" mb="md" className="text-gray-700">
           Sign in to your account
         </Title>
 

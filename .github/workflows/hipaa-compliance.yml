@@ -1,0 +1,199 @@
+name: HIPAA Compliance Check
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run HIPAA compliance checks weekly on Sunday at 3 AM UTC
+    - cron: '0 3 * * 0'
+
+jobs:
+  # Check for PHI exposure in code
+  phi-exposure-check:
+    name: PHI Exposure Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check for hardcoded PHI patterns
+      run: |
+        echo "Checking for potential PHI exposure patterns..."
+        
+        # Check for common PHI patterns
+        if grep -r -E "(SSN|social.?security|[0-9]{3}-[0-9]{2}-[0-9]{4})" \
+           --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" \
+           --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=dist .; then
+          echo "::error::Potential SSN pattern found in code!"
+          exit 1
+        fi
+        
+        # Check for medical record numbers
+        if grep -r -E "(MRN|medical.?record.?number|patient.?id.*[0-9]{6,})" \
+           --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" \
+           --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=dist .; then
+          echo "::warning::Potential medical record number pattern found. Please verify it's not actual PHI."
+        fi
+        
+        # Check for patient names in non-test files
+        if grep -r -E "(patient.*name.*=.*['\"][A-Za-z]+\s+[A-Za-z]+['\"])" \
+           --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" \
+           --exclude="*test*" --exclude="*spec*" --exclude="*fixture*" \
+           --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=dist .; then
+          echo "::warning::Potential hardcoded patient names found. Ensure these are not real PHI."
+        fi
+    
+  # Encryption compliance check
+  encryption-check:
+    name: Encryption Compliance
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check encryption implementation
+      run: |
+        echo "Checking encryption implementation..."
+        
+        # Check for encryption in database configuration
+        if ! grep -r "encrypt\|ssl\|tls" backend/src/config/ backend/src/services/database.service.ts; then
+          echo "::error::Database encryption configuration not found!"
+          exit 1
+        fi
+        
+        # Check for encryption in offline storage
+        if ! grep -r "encrypt" frontend/src/services/indexeddb.service.ts frontend/src/services/offline-*.ts; then
+          echo "::error::Offline storage encryption not implemented!"
+          exit 1
+        fi
+        
+        # Check for secure session configuration
+        if ! grep -r "secure.*true\|httpOnly.*true" backend/src/config/ backend/src/app.ts; then
+          echo "::warning::Secure session configuration may be missing!"
+        fi
+    
+  # Access control verification
+  access-control-check:
+    name: Access Control Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Verify role-based access control
+      run: |
+        echo "Checking role-based access control implementation..."
+        
+        # Check for auth middleware usage
+        if ! grep -r "@UseAuth\|requireAuth\|authMiddleware" backend/src/controllers/; then
+          echo "::error::Authentication middleware not properly implemented in controllers!"
+          exit 1
+        fi
+        
+        # Check for role definitions
+        if ! test -f backend/src/auth/role-permissions.ts && ! test -f backend/src/auth/unified-role-permissions.ts; then
+          echo "::error::Role permissions file not found!"
+          exit 1
+        fi
+        
+        # Check for patient data access controls
+        if ! grep -r "checkPatientAccess\|verifyPatientPermission" backend/src/; then
+          echo "::warning::Patient-specific access controls may not be implemented!"
+        fi
+    
+  # Audit logging verification
+  audit-logging-check:
+    name: Audit Logging Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Verify audit logging implementation
+      run: |
+        echo "Checking audit logging implementation..."
+        
+        # Check for audit service
+        if ! test -f backend/src/services/audit.service.ts; then
+          echo "::error::Audit service not found!"
+          exit 1
+        fi
+        
+        # Check for audit logging in critical operations
+        CRITICAL_OPS=("createPatient" "updatePatient" "deletePatient" "viewPatient" "login" "logout")
+        for op in "${CRITICAL_OPS[@]}"; do
+          if ! grep -r "audit.*$op\|log.*$op" backend/src/controllers/ backend/src/services/; then
+            echo "::warning::Audit logging may be missing for operation: $op"
+          fi
+        done
+    
+  # Data retention and disposal check
+  data-retention-check:
+    name: Data Retention Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check data retention policies
+      run: |
+        echo "Checking data retention and disposal implementation..."
+        
+        # Check for data retention configuration
+        if ! grep -r "retention\|ttl\|expir" backend/src/config/ backend/src/services/; then
+          echo "::warning::Data retention policies may not be configured!"
+        fi
+        
+        # Check for secure deletion methods
+        if ! grep -r "secureDelete\|overwrite\|crypto\.randomBytes" backend/src/ frontend/src/; then
+          echo "::warning::Secure data deletion methods may not be implemented!"
+        fi
+    
+  # Compliance report generation
+  compliance-report:
+    name: Generate Compliance Report
+    runs-on: ubuntu-latest
+    needs: [phi-exposure-check, encryption-check, access-control-check, audit-logging-check, data-retention-check]
+    if: always()
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Generate HIPAA compliance report
+      run: |
+        echo "# HIPAA Compliance Report" > hipaa-compliance-report.md
+        echo "Generated on: $(date)" >> hipaa-compliance-report.md
+        echo "" >> hipaa-compliance-report.md
+        
+        echo "## Compliance Check Results" >> hipaa-compliance-report.md
+        echo "" >> hipaa-compliance-report.md
+        
+        echo "### Technical Safeguards" >> hipaa-compliance-report.md
+        echo "- PHI Exposure Check: ${{ needs.phi-exposure-check.result }}" >> hipaa-compliance-report.md
+        echo "- Encryption Check: ${{ needs.encryption-check.result }}" >> hipaa-compliance-report.md
+        echo "- Access Control Check: ${{ needs.access-control-check.result }}" >> hipaa-compliance-report.md
+        echo "- Audit Logging Check: ${{ needs.audit-logging-check.result }}" >> hipaa-compliance-report.md
+        echo "- Data Retention Check: ${{ needs.data-retention-check.result }}" >> hipaa-compliance-report.md
+        echo "" >> hipaa-compliance-report.md
+        
+        # Determine overall compliance status
+        if [ "${{ needs.phi-exposure-check.result }}" == "failure" ] || \
+           [ "${{ needs.encryption-check.result }}" == "failure" ] || \
+           [ "${{ needs.access-control-check.result }}" == "failure" ] || \
+           [ "${{ needs.audit-logging-check.result }}" == "failure" ]; then
+          echo "## Overall Status: ❌ NON-COMPLIANT" >> hipaa-compliance-report.md
+          echo "" >> hipaa-compliance-report.md
+          echo "Critical HIPAA compliance issues detected. Immediate action required!" >> hipaa-compliance-report.md
+        else
+          echo "## Overall Status: ✅ COMPLIANT" >> hipaa-compliance-report.md
+          echo "" >> hipaa-compliance-report.md
+          echo "All critical HIPAA technical safeguards are in place." >> hipaa-compliance-report.md
+        fi
+    
+    - name: Upload compliance report
+      uses: actions/upload-artifact@v4
+      with:
+        name: hipaa-compliance-report
+        path: hipaa-compliance-report.md

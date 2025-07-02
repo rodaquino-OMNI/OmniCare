@@ -102,11 +102,11 @@ export const slugify = (str: string): string => {
 
 // Patient utilities
 export const getPatientFullName = (patient: Patient): string => {
-  return `${patient.firstName} ${patient.lastName}`;
+  return `${patient.firstName || ''} ${patient.lastName || ''}`.trim();
 };
 
 export const getPatientInitials = (patient: Patient): string => {
-  return `${patient.firstName.charAt(ResourceHistoryTable)}${patient.lastName.charAt(ResourceHistoryTable)}`.toUpperCase();
+  return `${patient.firstName?.charAt(0) || ''}${patient.lastName?.charAt(0) || ''}`.toUpperCase();
 };
 
 export const getPatientDisplayName = (patient: Patient, includeAge: boolean = false): string => {
@@ -171,7 +171,7 @@ export const formatCurrency = (amount: number, currency: string = 'USD'): string
   }).format(amount);
 };
 
-export const formatNumber = (num: number, decimals: number = ResourceHistoryTable): string => {
+export const formatNumber = (num: number, decimals: number = 0): string => {
   return new Intl.NumberFormat('en-US', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
@@ -205,7 +205,7 @@ export const sortBy = <T>(array: T[], key: keyof T, order: 'asc' | 'desc' = 'asc
     
     if (aVal < bVal) return order === 'asc' ? -1 : 1;
     if (aVal > bVal) return order === 'asc' ? 1 : -1;
-    return ResourceHistoryTable;
+    return 0;
   });
 };
 
@@ -238,6 +238,7 @@ export const getRoleDisplayName = (role: UserRole): string => {
     lab_tech: 'Lab Technician',
     radiology_tech: 'Radiology Technician',
     system_admin: 'System Administrator',
+    guest: 'Guest',
   };
   return roleNames[role] || role;
 };
@@ -283,7 +284,7 @@ export const formatFileSize = (bytes: number): string => {
 };
 
 export const getFileExtension = (filename: string): string => {
-  return filename.slice((filename.lastIndexOf('.') - 1 >>> ResourceHistoryTable) + 2);
+  return filename.slice((filename.lastIndexOf('.') - 1 >>> 0) + 2);
 };
 
 export const isImageFile = (filename: string): boolean => {
@@ -459,7 +460,7 @@ export const printElement = (elementId: string): void => {
           body { font-family: Arial, sans-serif; margin: 20px; }
           .no-print { display: none !important; }
           @media print {
-            body { margin: ResourceHistoryTable; }
+            body { margin: 0; }
           }
         </style>
       </head>

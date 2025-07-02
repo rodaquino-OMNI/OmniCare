@@ -1,0 +1,221 @@
+name: Security Scanning
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run security scans daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  # Dependency vulnerability scanning
+  dependency-scan:
+    name: Dependency Scanning
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Run npm audit - Root
+      run: |
+        npm audit --production || true
+        npm audit --json --production > npm-audit-root.json || true
+    
+    - name: Run npm audit - Backend
+      working-directory: ./backend
+      run: |
+        npm audit --production || true
+        npm audit --json --production > npm-audit-backend.json || true
+    
+    - name: Run npm audit - Frontend
+      working-directory: ./frontend
+      run: |
+        npm audit --production || true
+        npm audit --json --production > npm-audit-frontend.json || true
+    
+    - name: Upload npm audit results
+      uses: actions/upload-artifact@v4
+      with:
+        name: npm-audit-results
+        path: |
+          npm-audit-root.json
+          backend/npm-audit-backend.json
+          frontend/npm-audit-frontend.json
+    
+    # Check for known vulnerabilities using GitHub's database
+    - name: Run Dependency Review
+      if: github.event_name == 'pull_request'
+      uses: actions/dependency-review-action@v4
+      with:
+        fail-on-severity: moderate
+    
+  # Code scanning with CodeQL
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'javascript', 'typescript' ]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        queries: security-and-quality
+    
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v3
+    
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{ matrix.language }}"
+    
+  # Secret scanning
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Detect secrets with Gitleaks
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+  # SAST (Static Application Security Testing)
+  sast:
+    name: SAST Scanning
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js 18.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18.x
+    
+    - name: Install Semgrep
+      run: |
+        python3 -m pip install semgrep
+    
+    - name: Run Semgrep security scan
+      run: |
+        semgrep --config=auto --json --output=semgrep-results.json . || true
+    
+    - name: Upload Semgrep results
+      uses: actions/upload-artifact@v4
+      with:
+        name: semgrep-results
+        path: semgrep-results.json
+    
+  # Docker image scanning (if applicable)
+  docker-scan:
+    name: Docker Image Scanning
+    runs-on: ubuntu-latest
+    if: false  # Enable when Docker images are built
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Build Docker image
+      run: docker build -t omnicare:scan .
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'omnicare:scan'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+    
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: 'trivy-results.sarif'
+    
+  # License compliance check
+  license-check:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js 18.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18.x
+    
+    - name: Install license checker
+      run: npm install -g license-checker
+    
+    - name: Check licenses - Root
+      run: |
+        license-checker --summary --excludePrivatePackages > license-summary-root.txt
+        license-checker --excludePrivatePackages --onlyAllow 'MIT;Apache-2.0;BSD;ISC;CC0-1.0;Unlicense' || echo "::warning::Non-standard licenses detected in root"
+    
+    - name: Check licenses - Backend
+      working-directory: ./backend
+      run: |
+        license-checker --summary --excludePrivatePackages > license-summary-backend.txt
+        license-checker --excludePrivatePackages --onlyAllow 'MIT;Apache-2.0;BSD;ISC;CC0-1.0;Unlicense' || echo "::warning::Non-standard licenses detected in backend"
+    
+    - name: Check licenses - Frontend
+      working-directory: ./frontend
+      run: |
+        license-checker --summary --excludePrivatePackages > license-summary-frontend.txt
+        license-checker --excludePrivatePackages --onlyAllow 'MIT;Apache-2.0;BSD;ISC;CC0-1.0;Unlicense' || echo "::warning::Non-standard licenses detected in frontend"
+    
+    - name: Upload license reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: license-reports
+        path: |
+          license-summary-root.txt
+          backend/license-summary-backend.txt
+          frontend/license-summary-frontend.txt
+    
+  # Security summary
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, codeql, secret-scan, sast, license-check]
+    if: always()
+    
+    steps:
+    - name: Security scan summary
+      run: |
+        echo "## Security Scan Summary"
+        echo ""
+        echo "✅ Security scans completed. Check individual job results for details."
+        echo ""
+        echo "### Scan Results:"
+        echo "- Dependency Scanning: ${{ needs.dependency-scan.result }}"
+        echo "- CodeQL Analysis: ${{ needs.codeql.result }}"
+        echo "- Secret Scanning: ${{ needs.secret-scan.result }}"
+        echo "- SAST Scanning: ${{ needs.sast.result }}"
+        echo "- License Compliance: ${{ needs.license-check.result }}"
+        echo ""
+        if [ "${{ needs.dependency-scan.result }}" == "failure" ] || \
+           [ "${{ needs.codeql.result }}" == "failure" ] || \
+           [ "${{ needs.secret-scan.result }}" == "failure" ] || \
+           [ "${{ needs.sast.result }}" == "failure" ]; then
+          echo "❌ Security issues detected! Please review the scan results."
+          exit 1
+        else
+          echo "✅ All security scans passed!"
+        fi

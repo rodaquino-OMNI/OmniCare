@@ -1,18 +1,48 @@
 import { FHIRService, fhirService as baseFhirService } from './fhir.service';
 import { serviceWorkerManager, offlineApiCall } from '@/lib/service-worker';
-import { Bundle, Patient, Resource } from '@medplum/fhirtypes';
-import { showNotification } from '@mantine/notifications';
+import { Bundle, Patient, Resource, Observation, MedicationRequest, Condition, AllergyIntolerance } from '@medplum/fhirtypes';
+import { notifications } from '@mantine/notifications';
+import { indexedDBService } from './indexeddb.service';
+import { encryptionService } from './encryption.service';
+import { getOfflineSyncService } from './offline-sync.service';
+import { shouldEncryptResource, getResourceOfflineConfig, isResourceCritical } from '@/config/offline-manifest';
 
 /**
- * Offline-aware FHIR Service
- * Extends the base FHIR service with offline capabilities
+ * Offline-aware FHIR Service with IndexedDB and encryption integration
+ * Extends the base FHIR service with secure offline capabilities
  */
 export class OfflineFHIRService extends FHIRService {
   private offlineStorage: Map<string, any> = new Map();
+  private offlineSyncService = typeof window !== 'undefined' ? getOfflineSyncService() : null;
+  private isInitialized = false;
 
   constructor(baseURL?: string) {
     super(baseURL);
     this.setupOfflineHandlers();
+  }
+
+  /**
+   * Initialize offline services with encryption
+   */
+  async initialize(userId: string, password: string): Promise<void> {
+    try {
+      // Initialize encryption service
+      await encryptionService.initialize(password, userId);
+      
+      // Initialize IndexedDB with encryption enabled
+      await indexedDBService.initialize(true);
+      
+      // Initialize offline sync service
+      if (this.offlineSyncService) {
+        await this.offlineSyncService.initialize();
+      }
+      
+      this.isInitialized = true;
+      console.log('[OfflineFHIR] Initialized with encryption');
+    } catch (error) {
+      console.error('[OfflineFHIR] Initialization failed:', error);
+      throw error;
+    }
   }
 
   private setupOfflineHandlers() {
@@ -20,6 +50,15 @@ export class OfflineFHIRService extends FHIRService {
     if (typeof window !== 'undefined') {
       window.addEventListener('online', () => this.handleOnline());
       window.addEventListener('offline', () => this.handleOffline());
+      
+      // Listen for sync events from service worker
+      serviceWorkerManager.onServiceWorkerMessage('sync-success', (data) => {
+        this.handleSyncSuccess(data);
+      });
+      
+      serviceWorkerManager.onServiceWorkerMessage('sync-failed', (data) => {
+        this.handleSyncFailure(data);
+      });
     }
   }
 
@@ -30,38 +69,42 @@ export class OfflineFHIRService extends FHIRService {
 
   private handleOffline() {
     console.log('[OfflineFHIR] Switched to offline mode');
+    notifications.show({
+      title: 'Offline Mode',
+      message: 'You can continue working. Changes will sync when back online.',
+      color: 'orange',
+    });
+  }
+
+  private handleSyncSuccess(data: any) {
+    notifications.show({
+      title: 'Sync Complete',
+      message: `Successfully synced ${data.request?.resource || 'data'}`,
+      color: 'green',
+    });
+  }
+
+  private handleSyncFailure(data: any) {
+    notifications.show({
+      title: 'Sync Failed',
+      message: `Failed to sync ${data.request?.resource || 'data'}. Will retry later.`,
+      color: 'red',
+    });
   }
 
   private async syncPendingChanges() {
-    // Get pending changes from IndexedDB/localStorage
-    const pendingChanges = this.getPendingChanges();
+    if (!this.offlineSyncService) return;
     
-    for (const change of pendingChanges) {
-      try {
-        await this.processPendingChange(change);
-      } catch (error) {
-        console.error('[OfflineFHIR] Failed to sync change:', error);
-      }
-    }
-  }
-
-  private getPendingChanges(): any[] {
-    // TODO: Implement IndexedDB storage for pending changes
-    return [];
-  }
-
-  private async processPendingChange(change: any) {
-    // Process individual pending change
-    switch (change.type) {
-      case 'create':
-        await super.createResource(change.resource);
-        break;
-      case 'update':
-        await super.updateResource(change.resource);
-        break;
-      case 'delete':
-        await super.deleteResource(change.resourceType, change.id);
-        break;
+    try {
+      await this.offlineSyncService.syncNow();
+      
+      notifications.show({
+        title: 'Syncing Data',
+        message: 'Synchronizing offline changes...',
+        color: 'blue',
+      });
+    } catch (error) {
+      console.error('[OfflineFHIR] Failed to sync changes:', error);
     }
   }
 
@@ -71,10 +114,10 @@ export class OfflineFHIRService extends FHIRService {
     return offlineApiCall(
       () => super.getPatient(patientId),
       async () => {
-        // Try to get from offline storage
-        const cached = this.offlineStorage.get(`Patient/${patientId}`);
+        // Try to get from IndexedDB
+        const cached = await indexedDBService.readResource<Patient>('Patient', patientId);
         if (cached) {
-          showNotification({
+          notifications.show({
             title: 'Offline Mode',
             message: 'Showing cached patient data',
             color: 'orange',
@@ -95,22 +138,23 @@ export class OfflineFHIRService extends FHIRService {
     return offlineApiCall(
       () => super.searchPatients(searchParams),
       async () => {
-        // Return cached patient list
-        const cachedBundle = this.offlineStorage.get('PatientBundle');
-        if (cachedBundle) {
-          showNotification({
+        // Search from IndexedDB
+        const bundle = await indexedDBService.searchResources<Patient>('Patient', searchParams);
+        
+        if (bundle.entry && bundle.entry.length > 0) {
+          notifications.show({
             title: 'Offline Mode',
-            message: 'Showing cached patient list',
+            message: `Showing ${bundle.total} cached patients`,
             color: 'orange',
           });
-          return cachedBundle;
+          return bundle;
         }
         
         // Return empty bundle if no cache
         return {
           resourceType: 'Bundle',
           type: 'searchset',
-          total: ResourceHistoryTable,
+          total: 0,
           entry: [],
         };
       },
@@ -125,7 +169,7 @@ export class OfflineFHIRService extends FHIRService {
   async createResource<T extends Resource>(resource: T): Promise<T> {
     if (!navigator.onLine) {
       // Queue for sync when offline
-      const tempId = `temp-${Date.now()}`;
+      const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const offlineResource = {
         ...resource,
         id: tempId,
@@ -142,58 +186,78 @@ export class OfflineFHIRService extends FHIRService {
         },
       };
 
-      // Store locally
-      this.offlineStorage.set(`${resource.resourceType}/${tempId}`, offlineResource);
+      try {
+        // Store in IndexedDB with encryption if required
+        await indexedDBService.createResource(offlineResource);
 
-      // Queue for sync
-      await serviceWorkerManager.queueForSync({
-        url: `/fhir/R4/${resource.resourceType}`,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/fhir+json',
-        },
-        body: JSON.stringify(resource),
-        resource: resource.resourceType,
-      });
+        // Queue for sync using offline sync service
+        if (this.offlineSyncService) {
+          const priority = isResourceCritical(resource.resourceType) ? 'critical' : 'high';
+          await this.offlineSyncService.queueOperation('create', offlineResource, { priority });
+        }
 
-      showNotification({
-        title: 'Saved Offline',
-        message: `${resource.resourceType} will be synced when connection is restored`,
-        color: 'blue',
-      });
+        notifications.show({
+          title: 'Saved Offline',
+          message: `${resource.resourceType} will be synced when connection is restored`,
+          color: 'blue',
+        });
 
-      return offlineResource as T;
+        return offlineResource as T;
+      } catch (error) {
+        console.error('[OfflineFHIR] Failed to save offline:', error);
+        throw error;
+      }
     }
 
-    return super.createResource(resource);
+    // Online mode - save normally and cache for offline
+    const savedResource = await super.createResource(resource);
+    
+    // Cache for offline use
+    try {
+      await indexedDBService.createResource(savedResource);
+    } catch (error) {
+      console.error('[OfflineFHIR] Failed to cache resource:', error);
+    }
+    
+    return savedResource;
   }
 
   async updateResource<T extends Resource>(resource: T): Promise<T> {
     if (!navigator.onLine) {
-      // Store update locally
-      this.offlineStorage.set(`${resource.resourceType}/${resource.id}`, resource);
+      try {
+        // Update in IndexedDB
+        await indexedDBService.updateResource(resource);
 
-      // Queue for sync
-      await serviceWorkerManager.queueForSync({
-        url: `/fhir/R4/${resource.resourceType}/${resource.id}`,
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/fhir+json',
-        },
-        body: JSON.stringify(resource),
-        resource: resource.resourceType,
-      });
+        // Queue for sync using offline sync service
+        if (this.offlineSyncService) {
+          const priority = isResourceCritical(resource.resourceType) ? 'critical' : 'high';
+          await this.offlineSyncService.queueOperation('update', resource, { priority });
+        }
 
-      showNotification({
-        title: 'Updated Offline',
-        message: `${resource.resourceType} changes will be synced when online`,
-        color: 'blue',
-      });
+        notifications.show({
+          title: 'Updated Offline',
+          message: `${resource.resourceType} changes will be synced when online`,
+          color: 'blue',
+        });
 
-      return resource;
+        return resource;
+      } catch (error) {
+        console.error('[OfflineFHIR] Failed to update offline:', error);
+        throw error;
+      }
     }
 
-    return super.updateResource(resource);
+    // Online mode - update normally and cache
+    const updatedResource = await super.updateResource(resource);
+    
+    // Update cache
+    try {
+      await indexedDBService.updateResource(updatedResource);
+    } catch (error) {
+      console.error('[OfflineFHIR] Failed to update cache:', error);
+    }
+    
+    return updatedResource;
   }
 
   // Proactive caching methods
@@ -202,32 +266,66 @@ export class OfflineFHIRService extends FHIRService {
     try {
       // Cache patient demographics
       const patient = await super.getPatient(patientId);
-      this.offlineStorage.set(`Patient/${patientId}`, patient);
+      await indexedDBService.createResource(patient);
 
-      // Cache related resources
-      const [vitals, medications, conditions, allergies] = await Promise.all([
-        super.getPatientVitalSigns(patientId).catch(() => null),
-        super.getPatientMedications(patientId).catch(() => null),
-        super.getPatientConditions(patientId).catch(() => null),
-        super.getPatientAllergies(patientId).catch(() => null),
-      ]);
+      // Cache related resources in parallel
+      const promises: Promise<void>[] = [];
+      
+      // Vital signs
+      const vitals = await super.getPatientVitalSigns(patientId).catch(() => null);
+      if (vitals?.entry) {
+        for (const entry of vitals.entry) {
+          if (entry.resource) {
+            promises.push(indexedDBService.createResource(entry.resource).then(() => {}));
+          }
+        }
+      }
 
-      if (vitals) this.offlineStorage.set(`Vitals/${patientId}`, vitals);
-      if (medications) this.offlineStorage.set(`Medications/${patientId}`, medications);
-      if (conditions) this.offlineStorage.set(`Conditions/${patientId}`, conditions);
-      if (allergies) this.offlineStorage.set(`Allergies/${patientId}`, allergies);
+      // Medications
+      const medications = await super.getPatientMedications(patientId).catch(() => null);
+      if (medications?.entry) {
+        for (const entry of medications.entry) {
+          if (entry.resource) {
+            promises.push(indexedDBService.createResource(entry.resource).then(() => {}));
+          }
+        }
+      }
+
+      // Conditions
+      const conditions = await super.getPatientConditions(patientId).catch(() => null);
+      if (conditions?.entry) {
+        for (const entry of conditions.entry) {
+          if (entry.resource) {
+            promises.push(indexedDBService.createResource(entry.resource).then(() => {}));
+          }
+        }
+      }
+
+      // Allergies
+      const allergies = await super.getPatientAllergies(patientId).catch(() => null);
+      if (allergies?.entry) {
+        for (const entry of allergies.entry) {
+          if (entry.resource) {
+            promises.push(indexedDBService.createResource(entry.resource).then(() => {}));
+          }
+        }
+      }
+
+      // Wait for all resources to be cached
+      await Promise.all(promises);
 
       // Tell service worker to cache as well
       await serviceWorkerManager.cachePatientData(patientId);
 
-      showNotification({
+      const totalCached = promises.length + 1; // +1 for patient
+      notifications.show({
         title: 'Patient Data Cached',
-        message: 'Patient data is now available offline',
+        message: `${totalCached} resources are now available offline`,
         color: 'green',
       });
     } catch (error) {
       console.error('[OfflineFHIR] Failed to cache patient data:', error);
-      showNotification({
+      notifications.show({
         title: 'Cache Failed',
         message: 'Unable to cache patient data for offline use',
         color: 'red',
@@ -269,13 +367,31 @@ export class OfflineFHIRService extends FHIRService {
     return !navigator.onLine;
   }
 
-  getOfflineStorageSize(): number {
-    return this.offlineStorage.size;
+  async getOfflineStorageSize(): Promise<number> {
+    const stats = await indexedDBService.getStorageStats();
+    return stats.totalRecords;
   }
 
-  clearOfflineStorage(): void {
-    this.offlineStorage.clear();
-    serviceWorkerManager.clearCache();
+  async clearOfflineStorage(): Promise<void> {
+    try {
+      // Clear IndexedDB
+      await indexedDBService.clearAllData();
+      
+      // Clear service worker caches
+      await serviceWorkerManager.clearCache();
+      
+      // Clear encryption keys
+      encryptionService.clear();
+      
+      notifications.show({
+        title: 'Cache Cleared',
+        message: 'All offline data has been removed',
+        color: 'yellow',
+      });
+    } catch (error) {
+      console.error('[OfflineFHIR] Failed to clear offline storage:', error);
+      throw error;
+    }
   }
 
   async getOfflineStatus(): Promise<{
@@ -283,14 +399,22 @@ export class OfflineFHIRService extends FHIRService {
     cachedItems: number;
     pendingSync: number;
     cacheStatus: any;
+    storageStats: any;
+    syncStatus: any;
   }> {
-    const cacheStatus = await serviceWorkerManager.getCacheStatus();
+    const [cacheStatus, storageStats, syncStatus] = await Promise.all([
+      serviceWorkerManager.getCacheStatus(),
+      indexedDBService.getStorageStats(),
+      this.offlineSyncService?.getSyncStatus()
+    ]);
     
     return {
       isOffline: this.isOffline(),
-      cachedItems: this.offlineStorage.size,
-      pendingSync: this.getPendingChanges().length,
+      cachedItems: storageStats.totalRecords,
+      pendingSync: syncStatus?.pendingChanges || 0,
       cacheStatus,
+      storageStats,
+      syncStatus
     };
   }
 }

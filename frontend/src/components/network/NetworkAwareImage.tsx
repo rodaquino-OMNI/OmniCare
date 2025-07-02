@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, ImgHTMLAttributes } from 'react';
 import { useNetworkStatusContext } from '@/contexts/NetworkStatusContext';
 import { cn } from '@/lib/utils';
-import { Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { IconPhoto, IconAlertCircle } from '@tabler/icons-react';
 
 interface ImageSource {
   src: string;
@@ -200,7 +200,7 @@ export const NetworkAwareImage: React.FC<NetworkAwareImageProps> = ({
           )}
         >
           <div className="animate-pulse">
-            <ImageIcon className="w-8 h-8 text-gray-4ResourceHistoryTable" />
+            <IconPhoto className="w-8 h-8 text-gray-400" />
           </div>
         </div>
       )}
@@ -215,7 +215,7 @@ export const NetworkAwareImage: React.FC<NetworkAwareImageProps> = ({
         >
           {errorComponent || (
             <div className="flex flex-col items-center gap-2 text-gray-500">
-              <AlertCircle className="w-8 h-8" />
+              <IconAlertCircle className="w-8 h-8" />
               <span className="text-sm">Failed to load image</span>
             </div>
           )}

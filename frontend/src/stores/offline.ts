@@ -26,6 +26,12 @@ interface OfflineState {
   // Cache metadata
   cacheMetadata: Record<string, CacheMetadata>;
   
+  // Session resume
+  sessionRestored: boolean;
+  lastActivity: string | null;
+  interruptedOperations: string[];
+  resumeInProgress: boolean;
+  
   // Actions - Settings
   setOfflineEnabled: (enabled: boolean) => void;
   setAutoSync: (enabled: boolean) => void;
@@ -49,6 +55,13 @@ interface OfflineState {
   // Actions - Cache Validation
   validateCache: () => void;
   cleanExpiredCache: () => void;
+  
+  // Actions - Session Resume
+  restoreSession: () => Promise<void>;
+  resumeInterruptedOperations: () => Promise<void>;
+  addInterruptedOperation: (operation: string) => void;
+  removeInterruptedOperation: (operation: string) => void;
+  updateLastActivity: () => void;
 }
 
 export const useOfflineStore = create<OfflineState>()(
@@ -66,6 +79,12 @@ export const useOfflineStore = create<OfflineState>()(
       conflictResolution: 'ask',
       selectedDataTypes: ['patients', 'encounters', 'medications', 'vitalSigns'],
       cacheMetadata: {},
+      
+      // Session resume state
+      sessionRestored: false,
+      lastActivity: null,
+      interruptedOperations: [],
+      resumeInProgress: false,
 
       // Settings actions
       setOfflineEnabled: (enabled) => set({ isOfflineEnabled: enabled }),
@@ -137,7 +156,7 @@ export const useOfflineStore = create<OfflineState>()(
       forceSync: async () => {
         // This would trigger a sync through your sync service
         // Example: await syncService.forceSync();
-        console.log('Force sync triggered');
+        // Force sync triggered
       },
 
       downloadOfflineData: async () => {
@@ -146,7 +165,7 @@ export const useOfflineStore = create<OfflineState>()(
         // This would download data for offline use
         // Example implementation:
         for (const dataType of selectedDataTypes) {
-          console.log(`Downloading ${dataType} for offline use...`);
+          // Downloading data for offline use
           // await offlineService.downloadDataType(dataType);
         }
       },
@@ -183,6 +202,111 @@ export const useOfflineStore = create<OfflineState>()(
         });
         
         set({ cacheMetadata: validMetadata });
+      },
+      
+      // Session resume actions
+      restoreSession: async () => {
+        const { sessionRestored } = get();
+        if (sessionRestored) return;
+        
+        try {
+          // Restore from localStorage or IndexedDB
+          const sessionData = localStorage.getItem('offline_session_data');
+          if (sessionData) {
+            const session = JSON.parse(sessionData);
+            const timeSinceLastActivity = Date.now() - new Date(session.lastActivity).getTime();
+            const maxResumeTime = 60 * 60 * 1000; // 1 hour
+            
+            if (timeSinceLastActivity < maxResumeTime) {
+              set({
+                interruptedOperations: session.interruptedOperations || [],
+                lastActivity: session.lastActivity,
+                sessionRestored: true
+              });
+              
+              // Auto-resume operations
+              const { resumeInterruptedOperations } = get();
+              await resumeInterruptedOperations();
+            } else {
+              // Clear stale session data
+              localStorage.removeItem('offline_session_data');
+              set({ sessionRestored: true });
+            }
+          } else {
+            set({ sessionRestored: true });
+          }
+        } catch (error) {
+          console.error('Failed to restore offline session:', error);
+          set({ sessionRestored: true });
+        }
+      },
+      
+      resumeInterruptedOperations: async () => {
+        const { interruptedOperations, resumeInProgress } = get();
+        if (resumeInProgress || interruptedOperations.length === 0) return;
+        
+        set({ resumeInProgress: true });
+        
+        try {
+          // Resuming interrupted offline operations
+          
+          // Resume each operation
+          for (const operation of interruptedOperations) {
+            try {
+              switch (operation) {
+                case 'sync':
+                  await get().forceSync();
+                  break;
+                case 'download':
+                  await get().downloadOfflineData();
+                  break;
+                case 'cache_cleanup':
+                  get().cleanExpiredCache();
+                  break;
+                default:
+                  // Unknown operation to resume
+              }
+              
+              // Remove completed operation
+              get().removeInterruptedOperation(operation);
+            } catch (error) {
+              console.error(`Failed to resume operation ${operation}:`, error);
+            }
+          }
+        } finally {
+          set({ resumeInProgress: false });
+        }
+      },
+      
+      addInterruptedOperation: (operation: string) => {
+        set((state) => ({
+          interruptedOperations: [...state.interruptedOperations, operation]
+        }));
+        get().updateLastActivity();
+      },
+      
+      removeInterruptedOperation: (operation: string) => {
+        set((state) => ({
+          interruptedOperations: state.interruptedOperations.filter(op => op !== operation)
+        }));
+        get().updateLastActivity();
+      },
+      
+      updateLastActivity: () => {
+        const now = new Date().toISOString();
+        set({ lastActivity: now });
+        
+        // Save to localStorage for persistence
+        try {
+          const { interruptedOperations } = get();
+          const sessionData = {
+            lastActivity: now,
+            interruptedOperations
+          };
+          localStorage.setItem('offline_session_data', JSON.stringify(sessionData));
+        } catch (error) {
+          console.error('Failed to save offline session data:', error);
+        }
       }
     }),
     {
@@ -197,8 +321,18 @@ export const useOfflineStore = create<OfflineState>()(
         backgroundSync: state.backgroundSync,
         conflictResolution: state.conflictResolution,
         selectedDataTypes: state.selectedDataTypes,
-        cacheMetadata: state.cacheMetadata
-      })
+        cacheMetadata: state.cacheMetadata,
+        lastActivity: state.lastActivity,
+        interruptedOperations: state.interruptedOperations
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          // Auto-restore session on rehydration
+          setTimeout(() => {
+            state.restoreSession();
+          }, 1000);
+        }
+      }
     }
   )
 );

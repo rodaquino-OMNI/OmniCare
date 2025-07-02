@@ -64,7 +64,7 @@ export function useNetworkAware<T = any>(
     if (networkStatus.networkAwareMode === 'save-data') return true;
     
     if (networkStatus.networkAwareMode === 'auto') {
-      const qualityOrder = { poor: ResourceHistoryTable, fair: 1, good: 2, excellent: 3 };
+      const qualityOrder = { poor: 0, fair: 1, good: 2, excellent: 3 };
       const currentQuality = qualityOrder[networkStatus.quality.quality];
       const threshold = qualityOrder[qualityThreshold];
       return currentQuality < threshold;
